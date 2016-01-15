@@ -1,0 +1,105 @@
+//pref
+Ambient|float|0.0|0.1|2
+Diffuse|float|0.0|1.2|2
+Specular|float|0.0|0.3|2
+Roughness|float|0.0|0.5|1
+Fresnel|float|0.0|0.5|1
+Oren-nayer diffuse with Cook-Torrance specular highlights shader. Adapted from glslify, Copyright 2015 Chris Dickinson and stackgl contributors, MIT License|note
+//vert
+#version 330
+layout(location = 0) in vec3 Vert;
+layout(location = 3) in vec3 Norm;
+layout(location = 6) in vec4 Clr;
+out vec3 vL, vN, vV;
+out vec4 vClr, vP;
+uniform mat4 ModelViewProjectionMatrix;
+uniform mat4 ModelViewMatrix;
+uniform mat3 NormalMatrix;
+uniform vec3 LightPos = vec3(0.0, 20.0, 30.0); //LR, -DU+, -FN+
+void main() {
+    vN = normalize((NormalMatrix * Norm));
+    vP = vec4(Vert, 1.0);
+    gl_Position = ModelViewProjectionMatrix * vec4(Vert, 1.0);
+    vL = (LightPos);
+    vV = -vec3(ModelViewMatrix*vec4(Vert,1.0));
+    vClr = Clr;
+}
+//frag
+#version 330
+in vec4 vClr, vP;
+in vec3 vL, vN, vV;
+out vec4 color;
+uniform float Ambient = 0.5;
+uniform float Diffuse = 1.0;
+uniform float Specular = 1.0;
+uniform float Roughness = 0.5;
+uniform float Fresnel = 0.5;
+uniform vec4 ClipPlane = vec4(2.0, 0.0, 0.0, 0.0);
+#define PI 3.14159265
+
+float orenNayarDiffuse(vec3 lightDirection, vec3 viewDirection, vec3 N, float roughness, float albedo) {
+  float LdotV = dot(lightDirection, viewDirection);
+  float NdotL = dot(lightDirection, N);
+  float NdotV = dot(N, viewDirection);
+  float s = LdotV - NdotL * NdotV;
+  float t = mix(1.0, max(NdotL, NdotV), step(0.0, s));
+  float sigma2 = roughness * roughness;
+  float A = 1.0 + sigma2 * (albedo / (sigma2 + 0.13) + 0.5 / (sigma2 + 0.33));
+  float B = 0.45 * sigma2 / (sigma2 + 0.09);
+  return albedo * max(0.0, NdotL) * (A + B * s / t) / PI;
+}
+
+float beckmannDistribution(float x, float roughness) {
+  float NdotH = max(x, 0.0001);
+  float cos2Alpha = NdotH * NdotH;
+  float tan2Alpha = (cos2Alpha - 1.0) / cos2Alpha;
+  float roughness2 = roughness * roughness;
+  float denom = PI * roughness2 * cos2Alpha * cos2Alpha;
+  return exp(tan2Alpha / roughness2) / denom;
+}
+
+float cookTorranceSpec(vec3 lightDirection, vec3 viewDirection, vec3 N, float roughness, float fresnel) {
+  float VdotN = max(dot(viewDirection, N), 0.0);
+  float LdotN = max(dot(lightDirection, N), 0.0);
+  //Half angle vector
+  vec3 H = normalize(lightDirection + viewDirection);
+  //Geometric term
+  float NdotH = max(dot(N, H), 0.0);
+  float VdotH = max(dot(viewDirection, H), 0.000001);
+  float LdotH = max(dot(lightDirection, H), 0.000001);
+  float G1 = (2.0 * NdotH * VdotN) / VdotH;
+  float G2 = (2.0 * NdotH * LdotN) / LdotH;
+  float G = min(1.0, min(G1, G2));
+  //Distribution term
+  float D = beckmannDistribution(NdotH, roughness);
+  //Fresnel term
+  float F = pow(1.0 - VdotN, fresnel);
+  //Multiply terms and done
+  return  G * F * D / max(PI * VdotN, 0.000001);
+}
+
+vec3 desaturate(vec3 color, float amount) {
+    vec3 gray = vec3(dot(vec3(0.2126,0.7152,0.0722), color));
+    return vec3(mix(color, gray, amount));
+}
+
+void main() {
+  if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
+  vec3 a = vClr.rgb;
+  vec3 d = a * Diffuse;
+  a *= Ambient;
+  vec3 l = normalize(vL);
+  vec3 n = normalize(vN);
+  vec3 v = normalize(vV);
+  vec3 backcolor = desaturate(0.75 * a + 0.75 * d * abs(dot(l,n)), 0.5);
+  //Compute diffuse power
+  d *= orenNayarDiffuse(l, v, n, Roughness, Diffuse);
+  //Compute specular power
+  float s = cookTorranceSpec(l, v, n, Roughness, Fresnel)* Specular;
+  float backface = step(0.00, n.z);
+  color = vec4(mix(backcolor, a + d + s,  backface), 1.0);
+}
+//http://stack.gl
+//https://github.com/stackgl/glslify/blob/master/LICENSE.md
+//https://github.com/stackgl/glsl-specular-beckmann/blob/master/distribution.glsl
+//https://github.com/stackgl/glsl-diffuse-oren-nayar/blob/master/index.glsl

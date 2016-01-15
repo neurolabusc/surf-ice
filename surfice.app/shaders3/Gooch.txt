@@ -1,0 +1,73 @@
+//pref
+Specular|float|0.0|0.66|1
+OutlineWidth|float|0.0|0.1|0.25
+Warm|float|0.0|0.9|1
+Cool|float|0.0|0.9|1
+Amount|float|0.0|0.6|1
+Gooch Non-Photorealistic Rendering. Adapted from Fluxus Library, Copyright 2007 Dave Griffiths, GPLv2|note
+//vert
+#version 330
+layout(location = 0) in vec3 Vert;
+layout(location = 3) in vec3 Norm;
+layout(location = 6) in vec4 Clr;
+out vec3 vN, vL, vV;
+out vec4 vClr, vP;
+uniform mat4 ModelViewProjectionMatrix;
+uniform mat4 ModelViewMatrix;
+uniform mat3 NormalMatrix;
+uniform vec3 LightPos = vec3(0.0, 20.0, 30.0); //LR, -DU+, -FN+
+void main() {
+    vN = normalize((NormalMatrix * Norm));
+    vP = vec4(Vert, 1.0);
+    gl_Position = ModelViewProjectionMatrix * vec4(Vert, 1.0);
+    vL = normalize(LightPos);
+    vV = -vec3(ModelViewMatrix*vec4(Vert,1.0));
+    vClr = Clr;
+}
+//frag
+#version 330
+in vec4 vClr, vP;
+in vec3 vN, vL, vV;
+out vec4 color;
+uniform float Specular = 0.6;
+uniform float OutlineWidth = 0.1;
+uniform float Warm = 0.9;
+uniform float Cool = 0.5;
+uniform float Amount = 0.5;
+uniform vec4 ClipPlane = vec4(2.0, 0.0, 0.0, 0.0);
+vec3 desaturate(vec3 color, float amount) {
+    vec3 gray = vec3(dot(vec3(0.2126,0.7152,0.0722), color));
+    return vec3(mix(color, gray, amount));
+}
+void main() {
+	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
+	vec3  warm = vec3(1.0, 1.0, 0.0) * Warm;
+	vec3  cool = vec3(0.0, 0.0, 1.0) * Cool;
+	vec3 l = normalize(vL);
+	vec3 n = normalize(vN);
+	float diffuse = dot(l,n);
+	cool = mix(vClr.rgb, cool, Amount);
+	warm = mix(vClr.rgb, warm, Amount);
+	if (n.z < 0.0) { //i.e. if (!gl_FrontFacing)
+		vec3 backsurface = desaturate(min(mix(0.75*cool,0.75*warm,abs(diffuse)),1.0),0.5);
+		color = vec4(backsurface, 1.0);
+		return;
+	}
+	vec3 v = normalize(vV);
+	vec3 h = normalize(l+v);
+	float specular = pow(dot(n,h),Specular * 80.0);
+	vec3 Color = min(mix(cool,warm,diffuse)+specular,1.0);
+	if (dot(n,v) < OutlineWidth) Color=vec3(0,0,0);
+	color = vec4(Color, 1.0);
+}
+// Copyright (C) 2007 Dave Griffiths
+// Licence: GPLv2 (see COPYING)
+// Fluxus Shader Library
+// ---------------------
+// Gooch NPR Shading Model
+// Orginally for technical drawing style
+// rendering, uses warm and cool colours
+// to depict shading to keep detail in the
+// shadowed areas
+// http://www.pawfal.org/fluxus/
+// https://github.com/danomatika/fluxus/blob/master/LICENCE

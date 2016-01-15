@@ -1,0 +1,64 @@
+//pref
+Specular|float|0.0|80|120
+OutlineWidth|float|0.0|0.05|0.5
+Warm|float|0.0|0.9|1
+Cool|float|0.0|0.9|1
+Amount|float|0.0|0.6|1
+Gooch Non-Photorealistic Rendering. Adapted from Fluxus Library, Copyright 2007 Dave Griffiths, GPLv2|note
+//vert
+varying vec3 N,V,L;
+varying vec4 P, vClr;
+void main()
+{
+    P = gl_Vertex;
+    N = gl_NormalMatrix * gl_Normal;
+    V = -vec3(gl_ModelViewMatrix*gl_Vertex);
+    //V = vec3(0.0, 0.0, 1.0);
+    L = gl_LightSource[0].position.xyz;
+    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+    vClr = gl_Color;
+}
+//frag
+uniform float  OutlineWidth, Specular, Warm, Cool, Amount;
+uniform vec4 ClipPlane;
+varying vec4 P, vClr;
+varying vec3 N, V, L;
+vec3 desaturate(vec3 color, float amount) {
+    vec3 gray = vec3(dot(vec3(0.2126,0.7152,0.0722), color));
+    return vec3(mix(color, gray, amount));
+}
+void main()
+{
+	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, P) > 0.0)) discard;
+	vec3  warm = vec3(1.0, 1.0, 0.0) * Warm;
+	vec3  cool = vec3(0.0, 0.0, 1.0) * Cool;
+	vec3 d = gl_FrontMaterial.diffuse.rgb;
+	d = mix(d.rgb, vClr.rgb, vClr.a);
+	cool = mix(d, cool, Amount);
+	warm = mix(d, warm, Amount);
+    vec3 l = normalize(L);
+    vec3 n = normalize(N);
+    float diffuse = dot(l,n);
+    if (n.z < 0.0) { //i.e. if (!gl_FrontFacing)
+    	vec3 backsurface = desaturate(min(mix(0.75*cool,0.75*warm,abs(diffuse)),1.0),0.5);
+    	gl_FragColor = vec4(backsurface, 1.0);
+    	return;
+    }
+    vec3 v = normalize(V);
+    vec3 h = normalize(l+v);
+    float specular = pow(dot(n,h),Specular);
+    vec3 colour = min(mix(cool,warm,diffuse)+specular,1.0);
+    if (dot(n,v) < OutlineWidth) colour=vec3(0,0,0);
+    gl_FragColor = vec4(colour, 1.0);
+}
+// Copyright (C) 2007 Dave Griffiths
+// Licence: GPLv2 (see COPYING)
+// Fluxus Shader Library
+// ---------------------
+// Gooch NPR Shading Model
+// Orginally for technical drawing style
+// rendering, uses warm and cool colours
+// to depict shading to keep detail in the
+// shadowed areas
+// http://www.pawfal.org/fluxus/
+// https://github.com/danomatika/fluxus/blob/master/LICENCE

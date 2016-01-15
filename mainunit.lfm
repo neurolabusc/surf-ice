@@ -1,0 +1,1394 @@
+object GLForm1: TGLForm1
+  Left = 582
+  Height = 828
+  Top = 224
+  Width = 1005
+  AllowDropFiles = True
+  Caption = 'Surf Ice'
+  ClientHeight = 828
+  ClientWidth = 1005
+  Menu = MainMenu1
+  OnClose = FormClose
+  OnCreate = FormCreate
+  OnDropFiles = FormDropFiles
+  Position = poDesktopCenter
+  LCLVersion = '1.6.0.1'
+  object ToolPanel: TPanel
+    Left = 0
+    Height = 828
+    Top = 0
+    Width = 272
+    Align = alLeft
+    ClientHeight = 828
+    ClientWidth = 272
+    TabOrder = 1
+    object ClipBox: TGroupBox
+      Left = 1
+      Height = 110
+      Top = 542
+      Width = 270
+      Align = alTop
+      Caption = 'Clipping'
+      ClientHeight = 88
+      ClientWidth = 262
+      ParentFont = False
+      TabOrder = 0
+      object DepthLabel: TLabel
+        Left = 4
+        Height = 16
+        Top = 2
+        Width = 38
+        Caption = 'Depth'
+        ParentColor = False
+        OnClick = DepthLabelClick
+      end
+      object AzimuthLabel: TLabel
+        Left = 4
+        Height = 16
+        Top = 32
+        Width = 53
+        Caption = 'Azimuth'
+        ParentColor = False
+        OnClick = AzimuthLabelClick
+      end
+      object ElevationLabel: TLabel
+        Left = 4
+        Height = 16
+        Top = 62
+        Width = 57
+        Caption = 'Elevation'
+        ParentColor = False
+        OnClick = ElevationLabelClick
+      end
+      object ClipTrack: TTrackBar
+        Left = 70
+        Height = 30
+        Top = 0
+        Width = 190
+        Max = 1000
+        OnChange = ClipTrackChange
+        Position = 0
+        TickStyle = tsNone
+        TabOrder = 0
+      end
+      object ClipAziTrack: TTrackBar
+        Left = 70
+        Height = 30
+        Top = 30
+        Width = 190
+        Max = 360
+        OnChange = ClipTrackChange
+        Position = 180
+        TickStyle = tsNone
+        TabOrder = 1
+      end
+      object ClipElevTrack: TTrackBar
+        Left = 70
+        Height = 30
+        Top = 60
+        Width = 190
+        Max = 180
+        Min = -180
+        OnChange = ClipTrackChange
+        Position = 0
+        TickStyle = tsNone
+        TabOrder = 2
+      end
+    end
+    object ShaderBox: TGroupBox
+      Left = 1
+      Height = 175
+      Top = 652
+      Width = 270
+      Align = alClient
+      Caption = 'Shader'
+      ClientHeight = 153
+      ClientWidth = 262
+      ParentFont = False
+      TabOrder = 1
+      OnResize = ShaderBoxResize
+      object Label2: TLabel
+        Left = 4
+        Height = 16
+        Hint = 'Set the elevation and azimuth of the illumination'
+        Top = 62
+        Width = 32
+        Caption = 'Light'
+        ParentColor = False
+        ParentShowHint = False
+        ShowHint = True
+      end
+      object ShaderDrop: TComboBox
+        Left = 2
+        Height = 20
+        Top = 0
+        Width = 127
+        DropDownCount = 24
+        ItemHeight = 0
+        OnChange = ShaderDropChange
+        Style = csDropDownList
+        TabOrder = 0
+      end
+      object LightElevTrack: TTrackBar
+        Left = 52
+        Height = 30
+        Top = 60
+        Width = 92
+        Max = 90
+        Min = -90
+        OnChange = SurfaceAppearanceChange
+        Position = 25
+        TickStyle = tsNone
+        TabOrder = 1
+      end
+      object LightAziTrack: TTrackBar
+        Left = 170
+        Height = 30
+        Top = 60
+        Width = 92
+        Max = 90
+        Min = -90
+        OnChange = SurfaceAppearanceChange
+        Position = 0
+        TickStyle = tsNone
+        TabOrder = 2
+      end
+      object Memo1: TMemo
+        Left = 0
+        Height = 58
+        Top = 95
+        Width = 262
+        Align = alBottom
+        Lines.Strings = (
+          'Memo1'
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+        )
+        TabOrder = 3
+      end
+      object meshAlphaTrack: TTrackBar
+        Left = 52
+        Height = 30
+        Hint = 'Adjust main mesh transparency'
+        Top = 30
+        Width = 92
+        Max = 100
+        OnChange = SurfaceAppearanceChange
+        Position = 100
+        TickStyle = tsNone
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 4
+      end
+      object XRayLabel: TLabel
+        Left = 4
+        Height = 16
+        Hint = 'Set the elevation and azimuth of the illumination'
+        Top = 34
+        Width = 30
+        Caption = 'XRay'
+        ParentColor = False
+        ParentShowHint = False
+        ShowHint = True
+      end
+      object MeshBlendTrack: TTrackBar
+        Left = 170
+        Height = 30
+        Hint = 'XRay: make internal overlays, tracks and nodes visible'
+        Top = 30
+        Width = 92
+        Max = 100
+        OnChange = SurfaceAppearanceChange
+        Position = 0
+        TickStyle = tsNone
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 5
+      end
+      object occlusionTrack: TTrackBar
+        Left = 170
+        Height = 30
+        Hint = 'Ambient Occlusion: make sulci and other crevices darker'
+        Top = 0
+        Width = 92
+        Max = 100
+        OnChange = SurfaceAppearanceChange
+        Position = 25
+        TickStyle = tsNone
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 6
+      end
+      object AOLabel: TLabel
+        Left = 138
+        Height = 16
+        Hint = 'Ambient occlusion makes sucli and other crevices darker'
+        Top = 4
+        Width = 19
+        Caption = 'AO'
+        ParentColor = False
+        ParentShowHint = False
+        ShowHint = True
+      end
+    end
+    object TrackBox: TGroupBox
+      Tag = 270
+      Left = 1
+      Height = 118
+      Top = 1
+      Width = 270
+      Align = alTop
+      Caption = 'Tracks'
+      ClientHeight = 96
+      ClientWidth = 262
+      ParentFont = False
+      TabOrder = 2
+      Visible = False
+      object TrackLengthLabel: TLabel
+        Left = 4
+        Height = 16
+        Top = 2
+        Width = 43
+        Caption = 'Length'
+        ParentColor = False
+      end
+      object TrackLengthTrack: TTrackBar
+        Left = 70
+        Height = 30
+        Top = 0
+        Width = 190
+        Max = 100
+        Min = 1
+        OnChange = TrackBoxChange
+        Position = 20
+        TickStyle = tsNone
+        TabOrder = 0
+      end
+      object TrackWidthTrack: TTrackBar
+        Left = 70
+        Height = 30
+        Top = 30
+        Width = 190
+        Max = 6
+        Min = 1
+        OnChange = TrackBoxChange
+        Position = 2
+        TickStyle = tsNone
+        TabOrder = 1
+      end
+      object TrackWidthLabel: TLabel
+        Left = 4
+        Height = 16
+        Top = 32
+        Width = 36
+        Caption = 'Width'
+        ParentColor = False
+      end
+      object TrackDitherTrack: TTrackBar
+        Left = 72
+        Height = 30
+        Top = 60
+        Width = 190
+        OnChange = TrackBoxChange
+        Position = 3
+        TickStyle = tsNone
+        TabOrder = 2
+      end
+      object TrackDitherLabel: TLabel
+        Left = 4
+        Height = 16
+        Top = 62
+        Width = 39
+        Caption = 'Dither'
+        ParentColor = False
+      end
+    end
+    object OverlayBox: TGroupBox
+      Left = 1
+      Height = 82
+      Top = 374
+      Width = 270
+      Align = alTop
+      Caption = 'Overlays'
+      ClientHeight = 60
+      ClientWidth = 262
+      TabOrder = 4
+      Visible = False
+      object StringGrid1: TStringGrid
+        Left = 0
+        Height = 60
+        Top = 0
+        Width = 262
+        Align = alClient
+        AutoEdit = False
+        BorderStyle = bsNone
+        ColCount = 4
+        DefaultColWidth = 66
+        DefaultRowHeight = 23
+        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goDrawFocusSelected, goTabs, goSmoothScroll]
+        RowCount = 2
+        ScrollBars = ssNone
+        TabOrder = 0
+        OnDrawCell = StringGrid1DrawCell
+        OnExit = StringGrid1Exit
+        OnKeyPress = StringGrid1KeyPress
+        OnMouseDown = StringGrid1MouseDown
+        OnSelectCell = StringGrid1SelectCell
+      end
+      object LUTdrop: TComboBox
+        Left = 88
+        Height = 20
+        Top = 40
+        Width = 73
+        DropDownCount = 22
+        ItemHeight = 0
+        Items.Strings = (
+          'a'
+          'b'
+          'c'
+          'd'
+          'e'
+          'f'
+          'g'
+        )
+        OnChange = LUTdropChange
+        ParentFont = False
+        Style = csDropDownList
+        TabOrder = 1
+        Visible = False
+      end
+    end
+    object NodeBox: TGroupBox
+      Tag = 270
+      Left = 1
+      Height = 140
+      Top = 119
+      Width = 270
+      Align = alTop
+      Caption = 'Nodes'
+      ClientHeight = 118
+      ClientWidth = 262
+      ParentFont = False
+      TabOrder = 5
+      Visible = False
+      object TrackWidthLabel1: TLabel
+        Left = 0
+        Height = 16
+        Top = 90
+        Width = 34
+        Caption = 'Color'
+        ParentColor = False
+      end
+      object LUTdropNode: TComboBox
+        Left = 97
+        Height = 20
+        Top = 88
+        Width = 161
+        DropDownCount = 22
+        ItemHeight = 0
+        Items.Strings = (
+          'a'
+          'b'
+          'c'
+          'd'
+          'e'
+          'f'
+          'g'
+        )
+        OnChange = NodePrefChange
+        ParentFont = False
+        Style = csDropDownList
+        TabOrder = 0
+      end
+      object NodeColorVariesCheck: TCheckBox
+        Left = 58
+        Height = 18
+        Hint = 'If checked, node color varies'
+        Top = 90
+        Width = 20
+        Checked = True
+        OnChange = NodePrefChange
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 1
+      end
+      object NodeScaleTrack: TTrackBar
+        Left = 98
+        Height = 30
+        Top = 0
+        Width = 162
+        Max = 100
+        OnChange = NodePrefChange
+        Position = 10
+        TickStyle = tsNone
+        TabOrder = 2
+      end
+      object NodeScaleLabel: TLabel
+        Left = 4
+        Height = 16
+        Top = 2
+        Width = 32
+        Caption = 'Scale'
+        ParentColor = False
+      end
+      object NodeThreshDrop: TComboBox
+        Left = 15
+        Height = 20
+        Top = 64
+        Width = 242
+        DropDownCount = 22
+        ItemHeight = 0
+        ItemIndex = 0
+        Items.Strings = (
+          'Threshold based on size'
+          'Threshold based on color'
+        )
+        OnChange = NodePrefChange
+        ParentFont = False
+        Style = csDropDownList
+        TabOrder = 3
+        Text = 'Threshold based on size'
+      end
+      object NodeMinEdit: TFloatSpinEdit
+        Left = 58
+        Height = 16
+        Top = 40
+        Width = 90
+        Increment = 1
+        MaxValue = 65535
+        MinValue = 0
+        OnChange = NodePrefChange
+        TabOrder = 4
+        Value = 0
+      end
+      object EdgeMinLabel1: TLabel
+        Left = 4
+        Height = 16
+        Top = 40
+        Width = 44
+        Caption = 'Thresh'
+        ParentColor = False
+      end
+      object NodeMaxEdit: TFloatSpinEdit
+        Left = 162
+        Height = 16
+        Top = 40
+        Width = 90
+        Increment = 1
+        MaxValue = 65535
+        MinValue = 0
+        OnChange = NodePrefChange
+        TabOrder = 5
+        Value = 1
+      end
+      object NodeSizeVariesCheck: TCheckBox
+        Left = 58
+        Height = 18
+        Hint = 'If checked, node size varies'
+        Top = 2
+        Width = 20
+        Checked = True
+        OnChange = NodePrefChange
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 6
+        Visible = False
+      end
+    end
+    object EdgeBox: TGroupBox
+      Tag = 270
+      Left = 1
+      Height = 115
+      Top = 259
+      Width = 270
+      Align = alTop
+      Caption = 'Edges'
+      ClientHeight = 93
+      ClientWidth = 262
+      ParentFont = False
+      TabOrder = 6
+      Visible = False
+      object TrackWidthLabel2: TLabel
+        Left = 2
+        Height = 16
+        Top = 66
+        Width = 34
+        Caption = 'Color'
+        ParentColor = False
+      end
+      object LUTdropEdge: TComboBox
+        Left = 99
+        Height = 20
+        Top = 64
+        Width = 161
+        DropDownCount = 22
+        ItemHeight = 0
+        Items.Strings = (
+          'a'
+          'b'
+          'c'
+          'd'
+          'e'
+          'f'
+          'g'
+        )
+        OnChange = NodePrefChange
+        ParentFont = False
+        Style = csDropDownList
+        TabOrder = 0
+      end
+      object EdgeColorVariesCheck: TCheckBox
+        Left = 58
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 66
+        Width = 20
+        Checked = True
+        OnChange = NodePrefChange
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 1
+      end
+      object EdgeMinLabel: TLabel
+        Left = 4
+        Height = 16
+        Top = 40
+        Width = 44
+        Caption = 'Thresh'
+        ParentColor = False
+      end
+      object EdgeMinEdit: TFloatSpinEdit
+        Left = 58
+        Height = 16
+        Top = 40
+        Width = 90
+        Increment = 1
+        MaxValue = 65535
+        MinValue = 0
+        OnChange = NodePrefChange
+        TabOrder = 2
+        Value = 0
+      end
+      object EdgeMaxEdit: TFloatSpinEdit
+        Left = 162
+        Height = 16
+        Top = 40
+        Width = 90
+        Increment = 1
+        MaxValue = 65535
+        MinValue = 0
+        OnChange = NodePrefChange
+        TabOrder = 3
+        Value = 1
+      end
+      object edgeScaleTrack: TTrackBar
+        Left = 98
+        Height = 30
+        Top = 0
+        Width = 162
+        Max = 100
+        OnChange = NodePrefChange
+        Position = 10
+        TickStyle = tsNone
+        TabOrder = 4
+      end
+      object NodeScaleLabel1: TLabel
+        Left = 4
+        Height = 16
+        Top = 2
+        Width = 32
+        Caption = 'Scale'
+        ParentColor = False
+      end
+      object EdgeSizeVariesCheck: TCheckBox
+        Left = 58
+        Height = 18
+        Hint = 'If checked, edge size varies'
+        Top = 2
+        Width = 20
+        Checked = True
+        OnChange = NodePrefChange
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 5
+      end
+    end
+    object MeshColorBox: TGroupBox
+      Tag = 270
+      Left = 1
+      Height = 86
+      Top = 456
+      Width = 270
+      Align = alTop
+      Caption = 'Mesh Color'
+      ClientHeight = 64
+      ClientWidth = 262
+      ParentFont = False
+      TabOrder = 7
+      Visible = False
+      object TrackLengthLabel1: TLabel
+        Left = 4
+        Height = 16
+        Top = 2
+        Width = 64
+        Caption = 'Saturation'
+        ParentColor = False
+      end
+      object MeshSaturationTrack: TTrackBar
+        Left = 100
+        Height = 30
+        Top = 0
+        Width = 160
+        Max = 100
+        OnChange = MeshColorBoxChange
+        Position = 100
+        TickStyle = tsNone
+        TabOrder = 0
+      end
+      object MeshTransparencyTrack: TTrackBar
+        Left = 100
+        Height = 30
+        Top = 30
+        Width = 160
+        Max = 100
+        OnChange = MeshColorBoxChange
+        Position = 100
+        TickStyle = tsNone
+        TabOrder = 1
+      end
+      object TrackWidthLabel3: TLabel
+        Left = 4
+        Height = 16
+        Top = 32
+        Width = 85
+        Caption = 'Transparency'
+        ParentColor = False
+      end
+    end
+    object CollapseToolPanelBtn: TButton
+      Left = 252
+      Height = 16
+      Hint = 'Click here to hide the tool panel'
+      Top = 1
+      Width = 16
+      OnClick = CollapseToolPanelBtnClick
+      ParentShowHint = False
+      ShowHint = True
+      TabOrder = 3
+    end
+  end
+  object CollapsedToolPanel: TPanel
+    Left = 272
+    Height = 828
+    Top = 0
+    Width = 6
+    Align = alLeft
+    TabOrder = 0
+    Visible = False
+    OnClick = CollapseToolPanelBtnClick
+  end
+  object GLBox: TOpenGLControl
+    Left = 278
+    Height = 828
+    Top = 0
+    Width = 727
+    Align = alClient
+    OpenGLMajorVersion = 2
+    OpenGLMinorVersion = 1
+    MultiSampling = 4
+    OnMouseWheel = GLBoxMouseWheel
+  end
+  object ColorDialog1: TColorDialog
+    Color = 15119026
+    CustomColors.Strings = (
+      'ColorA=000000'
+      'ColorB=000080'
+      'ColorC=008000'
+      'ColorD=008080'
+      'ColorE=800000'
+      'ColorF=800080'
+      'ColorG=808000'
+      'ColorH=808080'
+      'ColorI=C0C0C0'
+      'ColorJ=0000FF'
+      'ColorK=00FF00'
+      'ColorL=00FFFF'
+      'ColorM=FF0000'
+      'ColorN=FF00FF'
+      'ColorO=FFFF00'
+      'ColorP=FFFFFF'
+      'ColorQ=C0DCC0'
+      'ColorR=F0CAA6'
+      'ColorS=F0FBFF'
+      'ColorT=A4A0A0'
+    )
+    left = 352
+    top = 528
+  end
+  object MainMenu1: TMainMenu
+    left = 352
+    top = 24
+    object AppleMenu: TMenuItem
+      Caption = ''
+      object AboutMenu: TMenuItem
+        Caption = 'About'
+        OnClick = AboutMenuClick
+      end
+      object PrefMenu: TMenuItem
+        Caption = 'Preferences...'
+        OnClick = PrefMenuClick
+      end
+    end
+    object FileMenu: TMenuItem
+      Caption = 'File'
+      object OpenMenu: TMenuItem
+        Caption = 'Open'
+        ShortCut = 16463
+        OnClick = OpenMenuClick
+      end
+      object CloseMenu: TMenuItem
+        Caption = 'Close'
+        OnClick = CloseMenuClick
+      end
+      object SaveMenu: TMenuItem
+        Caption = 'Save bitmap'
+        ShortCut = 16467
+        OnClick = SaveMenuClick
+      end
+      object ExitMenu: TMenuItem
+        Caption = 'Exit'
+        OnClick = ExitMenuClick
+      end
+      object FileSepMenu: TMenuItem
+        Caption = '-'
+      end
+    end
+    object EditMenu: TMenuItem
+      Caption = 'Edit'
+      object CopyMenu: TMenuItem
+        Caption = 'Copy'
+        ShortCut = 16451
+        OnClick = CopyMenuClick
+      end
+    end
+    object OverlaysMenu: TMenuItem
+      Caption = 'Overlays'
+      object AddOverlayMenu: TMenuItem
+        Caption = 'Add overlay'
+        OnClick = AddOverlayMenuClick
+      end
+      object CloseOverlaysMenu: TMenuItem
+        Caption = 'Close overlays'
+        OnClick = CloseOverlaysMenuClick
+      end
+      object TransparencyMenu: TMenuItem
+        Caption = 'Transparency on background'
+        object Transparency0: TMenuItem
+          AutoCheck = True
+          Caption = '0% Opaque'
+          Checked = True
+          GroupIndex = 123
+          RadioItem = True
+          OnClick = SetOverlayTransparency
+        end
+        object Transparency25: TMenuItem
+          Tag = 25
+          AutoCheck = True
+          Caption = '25%'
+          GroupIndex = 123
+          RadioItem = True
+          OnClick = SetOverlayTransparency
+        end
+        object Transparency50: TMenuItem
+          Tag = 50
+          AutoCheck = True
+          Caption = '50%'
+          GroupIndex = 123
+          RadioItem = True
+          OnClick = SetOverlayTransparency
+        end
+        object Transparency75: TMenuItem
+          Tag = 75
+          AutoCheck = True
+          Caption = '75%'
+          GroupIndex = 123
+          RadioItem = True
+          OnClick = SetOverlayTransparency
+        end
+        object TransparencySepMenu: TMenuItem
+          Caption = '-'
+        end
+        object AdditiveOverlayMenu: TMenuItem
+          AutoCheck = True
+          Caption = 'Additive'
+          OnClick = AdditiveOverlayMenuClick
+        end
+      end
+    end
+    object TracksMenu: TMenuItem
+      Caption = 'Tracks'
+      object AddTracksMenu: TMenuItem
+        Caption = 'Add tracks'
+        OnClick = AddTracksMenuClick
+      end
+      object CloseTracksMenu: TMenuItem
+        Caption = 'Close tracks'
+        OnClick = CloseTracksMenuClick
+      end
+      object SaveTracksMenu: TMenuItem
+        Caption = 'Save tracks'
+        OnClick = SaveTracksMenuClick
+      end
+    end
+    object NodeMenu: TMenuItem
+      Caption = 'Nodes'
+      object AddNodesMenu: TMenuItem
+        Caption = 'Add nodes or edges'
+        OnClick = AddNodesMenuClick
+      end
+      object CloseNodesMenu: TMenuItem
+        Caption = 'Close nodes'
+        OnClick = CloseNodesMenuClick
+      end
+      object RestrictMenu: TMenuItem
+        Caption = 'Restrict'
+        object RestrictNoMenu: TMenuItem
+          AutoCheck = True
+          Caption = 'Either hemisphere'
+          Checked = True
+          GroupIndex = 123
+          RadioItem = True
+          OnClick = RestrictMenuClick
+        end
+        object RestrictLeftMenu: TMenuItem
+          Tag = 1
+          AutoCheck = True
+          Caption = 'Left hemisphere only'
+          GroupIndex = 123
+          RadioItem = True
+          OnClick = RestrictMenuClick
+        end
+        object RestrictRightMenu: TMenuItem
+          Tag = 2
+          AutoCheck = True
+          Caption = 'Right  hemisphere only'
+          GroupIndex = 123
+          RadioItem = True
+          OnClick = RestrictMenuClick
+        end
+        object RestrictSepMenu: TMenuItem
+          Caption = '-'
+        end
+        object RestrictAnyEdgeMenu: TMenuItem
+          AutoCheck = True
+          Caption = 'Any edges'
+          Checked = True
+          GroupIndex = 124
+          RadioItem = True
+          OnClick = RestrictEdgeMenuClick
+        end
+        object RestrictPosEdgeMenu: TMenuItem
+          Tag = 1
+          AutoCheck = True
+          Caption = 'Positive edges only'
+          GroupIndex = 124
+          RadioItem = True
+          OnClick = RestrictEdgeMenuClick
+        end
+        object RestrictNegEdgeMenu: TMenuItem
+          Tag = 2
+          AutoCheck = True
+          Caption = 'Negative edges only'
+          GroupIndex = 124
+          RadioItem = True
+          OnClick = RestrictEdgeMenuClick
+        end
+      end
+    end
+    object DisplayMenu: TMenuItem
+      Caption = 'Display'
+      object LeftMenu: TMenuItem
+        Caption = 'Left'
+        ShortCut = 16460
+        OnClick = DisplayMenuClick
+      end
+      object RightMenu: TMenuItem
+        Tag = 1
+        Caption = 'Right'
+        ShortCut = 16466
+        OnClick = DisplayMenuClick
+      end
+      object PosteriorMenu: TMenuItem
+        Tag = 2
+        Caption = 'Posterior'
+        ShortCut = 16464
+        OnClick = DisplayMenuClick
+      end
+      object AnteriorMenu: TMenuItem
+        Tag = 3
+        Caption = 'Anterior'
+        ShortCut = 16449
+        OnClick = DisplayMenuClick
+      end
+      object InferiorMenu: TMenuItem
+        Tag = 4
+        Caption = 'Inferior'
+        ShortCut = 16452
+        OnClick = DisplayMenuClick
+      end
+      object SuperiorMenu: TMenuItem
+        Tag = 5
+        Caption = 'Superior'
+        ShortCut = 16469
+        OnClick = DisplayMenuClick
+      end
+      object DisplaySepMenu: TMenuItem
+        Caption = '-'
+      end
+      object OrientCubeMenu: TMenuItem
+        AutoCheck = True
+        Caption = 'Orientation cube'
+        OnClick = OrientCubeMenuClick
+      end
+    end
+    object ColorMenu: TMenuItem
+      Caption = 'Color'
+      object BackColorMenu: TMenuItem
+        Caption = 'Back color'
+        OnClick = BackColorMenuClick
+      end
+      object ObjectColorMenu: TMenuItem
+        Caption = 'Object color'
+        OnClick = ObjectColorMenuClick
+      end
+      object QuickColorMenu: TMenuItem
+        Caption = 'Quick colors'
+        object GrayColorMenu: TMenuItem
+          Caption = 'Gray'
+          OnClick = QuickColorClick
+        end
+        object RedColorItem: TMenuItem
+          Tag = 1
+          Caption = 'Red'
+          OnClick = QuickColorClick
+        end
+        object GreenColorMenu: TMenuItem
+          Tag = 2
+          Caption = 'Green'
+          OnClick = QuickColorClick
+        end
+        object BlueColorMenu: TMenuItem
+          Tag = 3
+          Caption = 'Blue'
+          OnClick = QuickColorClick
+        end
+      end
+      object ColorbarMenu: TMenuItem
+        Caption = 'Colorbar'
+        OnClick = ColorBarMenuClick
+      end
+    end
+    object AdvancedMenu: TMenuItem
+      Caption = 'Advanced'
+      object SaveMeshMenu: TMenuItem
+        Caption = 'Save mesh'
+        OnClick = SaveMeshMenuClick
+      end
+      object SwapYZMenu: TMenuItem
+        Caption = 'Rotate mesh'
+        OnClick = SwapYZMenuClick
+      end
+      object ReverseFacesMenu: TMenuItem
+        Caption = 'Reverse faces'
+        OnClick = ReverseFacesMenuClick
+      end
+      object VolumeToMeshMenu: TMenuItem
+        Caption = 'Convert voxelwise volume to mesh'
+        Hint = 'Convert NIfTI voxel based volume to mesh'
+        OnClick = VolumeToMeshMenuClick
+      end
+      object ResetMenu: TMenuItem
+        Caption = 'Reset defaults'
+        OnClick = ResetMenuClick
+      end
+    end
+    object HelpMenu: TMenuItem
+      Caption = 'Help'
+      object About2Menu: TMenuItem
+        Caption = 'About'
+        OnClick = AboutMenuClick
+      end
+      object Pref2Menu: TMenuItem
+        Caption = 'Preferences...'
+        OnClick = PrefMenuClick
+      end
+    end
+  end
+  object SaveDialog1: TSaveDialog
+    DefaultExt = '.png'
+    left = 352
+    top = 80
+  end
+  object OpenDialog: TOpenDialog
+    Title = 'Open mesh file'
+    left = 352
+    top = 304
+  end
+  object ErrorTimer: TTimer
+    Enabled = False
+    Interval = 300
+    OnTimer = ErrorTimerTimer
+    left = 352
+    top = 136
+  end
+  object UpdateTimer: TTimer
+    Enabled = False
+    Interval = 67
+    OnTimer = UpdateTimerTimer
+    left = 352
+    top = 192
+  end
+  object OverlayTimer: TTimer
+    Enabled = False
+    Interval = 200
+    OnTimer = OverlayTimerTimer
+    left = 352
+    top = 248
+  end
+  object SaveMeshDialog: TSaveDialog
+    DefaultExt = '.gii'
+    left = 448
+    top = 24
+  end
+end

@@ -1,0 +1,66 @@
+//pref
+Ambient|float|0.0|0.4|1
+Diffuse|float|0.0|0.7|1
+Specular|float|0.0|0.0|1
+DiffuseRough|float|0.0|1|5
+SpecularRough|float|0.001|0.1|1
+Sharpness|float|0.0|0.5|1
+Edge|float|0|0.3|1.0
+LightBackfaces|bool|false
+Blinn-Phong shading. Adapted from Fluxus Library, Copyright 2007 Dave Griffiths, GPLv2.|note
+//vert
+varying vec3 vN, vV, vL;
+varying vec4 vP, vClr;
+
+void main()
+{
+    vN = normalize(gl_NormalMatrix * gl_Normal);
+    vV = -vec3(gl_ModelViewMatrix*gl_Vertex);
+    vL = normalize(gl_LightSource[0].position.xyz);
+    vP = gl_Vertex;
+    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+    vClr = gl_Color;
+}
+//frag
+uniform float Ambient, Diffuse, Specular, SpecularRough, DiffuseRough, Edge, Sharpness;
+uniform bool LightBackfaces;
+uniform vec4 ClipPlane;
+varying vec3 vN, vV, vL;
+varying vec4 vP, vClr;
+
+vec3 desaturate(vec3 color, float amount) {
+    vec3 gray = vec3(dot(vec3(0.2126,0.7152,0.0722), color));
+    return vec3(mix(color, gray, amount));
+}
+
+void main() {
+	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
+	vec3 l = normalize(vL);
+	vec3 n = normalize(vN);
+	vec3 v = normalize(vV);
+	vec3 h = normalize(l+v);
+	vec3 a = gl_FrontMaterial.ambient.rgb;
+	a = mix(a.rgb, vClr.rgb, vClr.a);
+	vec3 d = a * Diffuse;
+	a *= Ambient;
+	vec3 backcolor = desaturate(0.75 * a + 0.75 * d *  abs(dot(n,l)), 0.5);
+	float backface = 1.0 - step(0.0, n.z); //1=backface
+	n = mix(n, -n, backface * float(LightBackfaces)); //reverse normal if backface AND two-sided lighting
+	d *= max(pow(max(dot( l, n), 0.0), DiffuseRough), 0.0);
+	float s = pow(max(0.0,dot(n,h)), 1.0/(SpecularRough * SpecularRough));
+	float w = 0.72*(1.0-Sharpness);
+	s = smoothstep(0.72-w,0.72+w,s) * Specular;
+	vec3 frontcolor = a + d + s;
+	frontcolor *= min((max(dot(n,normalize(v)), 0.0) - 0.5) * Edge, 0.0) + 1.0;
+	backface = 1.0 - step(0.0, n.z); //1=backface
+	gl_FragColor = vec4(mix(frontcolor,backcolor,   backface), 1.0);
+}
+// Copyright (C) 2007 Dave Griffiths
+// Fluxus Shader Library
+// ---------------------
+// Glossy Specular Reflection Shader
+// A more controllable version of blinn shading,
+// Useful for ceramic or fluids - from Advanced
+// Renderman, thanks to Larry Gritz
+// http://www.pawfal.org/fluxus/
+// https://github.com/danomatika/fluxus/blob/master/LICENCE

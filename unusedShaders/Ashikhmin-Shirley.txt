@@ -1,0 +1,90 @@
+//pref
+Ambient|float|0|0.35|2
+Diffuse|float|0|2|3
+Specular|float|0|0.1|1
+Shininess|float|0|20|128
+Blinn-Phong shading with Lambertian diffuse. Copyright 2015 Chris Rorden, BSD2clause.|note
+//vert
+varying vec3 vL, vN, vV;
+varying vec4 vP, vClr;
+
+void main() {
+    vN = normalize(gl_NormalMatrix * gl_Normal);
+    vV = -vec3(gl_ModelViewMatrix * gl_Vertex);
+    vL = normalize(gl_LightSource[0].position.xyz);
+    vP = gl_Vertex;
+    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+    vClr = gl_Color;
+}
+//frag
+uniform float Ambient, Diffuse, Specular, Shininess;
+uniform vec4 ClipPlane;
+varying vec3 vL, vN, vV;
+varying vec4 vP, vClr;
+
+float pi= 3.1415926535;
+
+
+float Fd(float NdotV, float NdotL, float diff, float spec) {
+    //vec3 fd= (28.0 * diff) / (23.0 * pi) * (1.0 - spec);
+    float fd= ((28.0 * diff) / (23.0 * pi)) * (1.0 - spec);
+    fd*= 1.0 - pow(1.0-NdotV/2.0,5.0);
+    fd*= 1.0 - pow(1.0-NdotL/2.0, 5.0);
+    fd = max(fd, 0.0);
+    return fd;
+}
+
+float Fr(float u, float specular) {
+    return specular + (1.0-specular) * pow(1.0 - u, 5.0);
+}
+
+// f= phi
+float Fs(float VdotH, float NdotH, float NdotL, float NdotV, float et, float eb, float f, float spec) {
+    float fs= Fr(VdotH, spec);
+    fs*= sqrt((et+1.0) * (eb+1.0)) / (8.0 * pi);
+    fs*=  pow(NdotH, et*pow(cos(f),2.0) + eb*pow(sin(f),2.0)) / (VdotH * max(NdotL, NdotV));
+    fs = max(fs, 0.0);
+    return fs;
+}
+
+vec3 AshikhminShirley (vec3 H, vec3 L, vec3 N, vec3 V, float diff, float spec, vec3 clr) {
+	float NdotL= max(dot(N,L),0.0);
+    float NdotV= max(dot(N,V),0.0);
+    float NdotH= max(dot(N,H),0.0);
+    float VdotH= max(dot(V,H),0.0);
+    float d = Fd(NdotV, NdotL, diff, spec);
+    float s = Fs(VdotH, NdotH, NdotL, NdotV, Shininess, Shininess,1.0, spec);
+    return clr * d + s;
+}
+
+vec3 desaturate(vec3 color, float amount) {
+    vec3 gray = vec3(dot(vec3(0.2126,0.7152,0.0722), color));
+    return vec3(mix(color, gray, amount));
+}
+
+void main() {
+	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
+	vec3 l = normalize(vL);
+	vec3 n = normalize(vN);
+	vec3 v = normalize(vV);
+	vec3 h = normalize(l+v);
+	vec3 clr = gl_FrontMaterial.ambient.rgb;
+	clr = mix(clr.rgb, vClr.rgb, vClr.a);
+	vec3 backcolor = desaturate(0.75 * Ambient * clr + 0.33 * clr * Diffuse *  abs(dot(n,l)), 0.9);
+	float backface = 1.0 - step(0.0, n.z); //1=backface
+	float NdotL= max(dot(n,l),0.0);
+    float NdotV= max(dot(n,v),0.0);
+    float NdotH= max(dot(n,h),0.0);
+    float VdotH= max(dot(v,h),0.0);
+    float d = Fd(NdotV, NdotL, (1.0 - Specular), Specular) * Diffuse;
+    float s = Fs(VdotH, NdotH, NdotL, NdotV, Shininess, Shininess,1.0, Specular);
+
+
+	//vec3 frontcolor = AshikhminShirley (h,l,n,v, (1.0 - Reflectivity), Reflectivity, a);
+	vec3 frontcolor = Ambient * clr + d * clr + s;
+	//gl_FragColor = vec4 (frontcolor, 1.0);
+	//float backface = step(0.00, n.z);
+	gl_FragColor = vec4(mix(frontcolor, backcolor,  backface), 1.0);
+}
+// http://stackoverflow.com/questions/20195139/ashikhmin-shirley-model-implementation-ugly-result
+// https://github.com/lubosz/liblub/blob/master/shaders/Shading/ashikhmin.glsl

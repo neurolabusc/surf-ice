@@ -1,0 +1,108 @@
+//pref
+Ambient|float|0.0|0.5|1
+Diffuse|float|0.0|0.7|1
+Specular|float|0.0|0.2|1
+Shininess|float|1|60|120
+FaceAlpha|float|0.0|1|1
+WireWidth|float|0.1|0.7|6
+WireColor|float|0|0.2|1
+Hint: setting FaceAlpha less than one can cause object to shimmer as is rotates. Wireframe useful for evaluating mesh quality. Copyright 2015 Chris Rorden, BSD2clause.|note
+//vert
+varying vec3 vL, vN, vV;
+varying vec4 vP, vClr;
+
+void main() {
+    vN = normalize(gl_NormalMatrix * gl_Normal);
+    vV = -vec3(gl_ModelViewMatrix * gl_Vertex);
+    vL = normalize(gl_LightSource[0].position.xyz);
+    vP = gl_Vertex;
+    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+    vClr = gl_Color;
+}
+//geom
+#version 120
+#extension GL_EXT_geometry_shader4 : enable
+
+//Intel OpenGL 4.20 Build 10.18.10.3496 on Windows 8.1 does not correctly implement
+// early geometry shaders. Works fine on NVidia GPU on same setup (hybrid laptop) and with
+// Intel drivers that come with OSX.
+
+//#define INTELBUG // <- ENALBE THIS LINE TO WORK WITH BORKED INTEL DRIVERS
+#ifdef INTELBUG
+in vec3 vL[3];   //[3] because this makes a triangle
+in vec3 vN[3];
+in vec3 vV[3];
+in vec4 vP[3];
+in vec4 vClr[3];
+out vec3 gE; //Edge value
+out vec3 gL;
+out vec3 gN;
+out vec3 gV;
+out vec4 gP;
+out vec4 gClr;
+#else
+varying in vec3 vL[3];   //[3] because this makes a triangle
+varying in vec3 vN[3];
+varying in vec3 vV[3];
+varying in vec4 vP[3];
+varying in vec4 vClr[3];
+varying out vec3 gE; //Edge value
+varying out vec3 gL;
+varying out vec3 gN;
+varying out vec3 gV;
+varying out vec4 gP;
+varying out vec4 gClr;
+#endif
+void main(void) {
+    //for(int i=0; i < gl_VerticesIn; i++) { //Intel Bug
+    for(int i=0; i < 3; i++) {
+    	gl_Position = gl_PositionIn[i];
+    	if (i == 0)
+    		gE = vec3(1.0, 0.0, 0.0);
+    	else if (i == 1)
+    		gE = vec3(0.0, 1.0, 0.0);
+    	else
+    		gE = vec3(0.0, 0.0, 1.0);
+    	gL = vL[i];
+    	gN = vN[i];
+    	gV = vV[i];
+    	gP = vP[i];
+    	gClr = vClr[i];
+        EmitVertex();
+    }
+    EndPrimitive();
+}
+//frag
+uniform float Ambient, Diffuse, Specular, Shininess, WireColor, WireWidth, FaceAlpha;
+uniform vec4 ClipPlane;
+varying vec3 gE, gL, gN, gV;
+varying vec4 gP, gClr;
+
+float edgeFactor(){
+    vec3 d = fwidth(gE);
+    vec3 a3 = smoothstep(vec3(0.0), d*WireWidth, gE);
+    return min(min(a3.x, a3.y), a3.z);
+}
+
+void main() {
+	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, gP) > 0.0)) discard;
+	vec3 l = normalize(gL);
+	vec3 n = normalize(gN);
+	vec3 h = normalize(l+normalize(gV));
+	vec3 a = gl_FrontMaterial.ambient.rgb;
+	a = mix(a.rgb, gClr.rgb, gClr.a);
+	vec3 d = a *Diffuse;
+	a *= Ambient;
+	float diff = dot(n,l);
+	float spec = pow(max(0.0,dot(n,h)), Shininess);
+	vec3 backcolor = Ambient*vec3(0.1+0.1+0.1) + d*abs(diff);
+	float backface = step(0.00, n.z);
+	vec4 face = vec4(mix(backcolor.rgb, a + d*diff + spec*Specular,  backface), FaceAlpha);
+	vec4 wire = vec4(WireColor, WireColor, WireColor, 1.0 - edgeFactor() );
+	face.rgb = mix(face.rgb, wire.rgb,  wire.a);
+	face.a = max(face.a, wire.a);
+	gl_FragColor = face;
+}
+// Solid Wireframe, NVIDIA Whitepaper WP-03014-001_v01
+// http://codeflow.org/entries/2012/aug/02/easy-wireframe-display-with-barycentric-coordinates/
+// http://www.imm.dtu.dk/~janba/Wireframe/
