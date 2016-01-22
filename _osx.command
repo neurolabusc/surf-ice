@@ -19,7 +19,7 @@ cp surfice /Users/rorden/Desktop/Surf_Ice/surfice.app/Contents/MacOS/surfice
 cp ./optsCompat.inc ./opts.inc
 /Developer/lazarus/lazbuild ./surfice.lpr
 strip ./surfice
-cp surfice /Users/rorden/Desktop/Surf_Ice/surfice32.app/Contents/MacOS/surfice
+cp surfice /Users/rorden/Desktop/Surf_Ice/surficeOld.app/Contents/MacOS/surfice
 
 
 

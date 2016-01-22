@@ -479,7 +479,6 @@ begin
   glBufferData(GL_ARRAY_BUFFER, Length(g2Dvnc)*SizeOf(TVtxClr), @g2Dvnc[0], GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   // Prepare vertrex array object (VAO)
-
   glBindVertexArray(gShader.vao_point2d);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_point);
   //Vertices
@@ -491,8 +490,6 @@ begin
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
   glDeleteBuffers(1, @vbo_point);
-
-
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gShader.vbo_face2d);
   nface := Length(g2Dvnc); //each face has 3 vertices
   setlength(faces,nface);

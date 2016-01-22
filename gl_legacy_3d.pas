@@ -107,7 +107,7 @@ const kTrackShaderFrag = 'varying vec3 N;'
 procedure SetLighting (var lPrefs: TPrefs);
 function BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA): GLuint;
 function BuildDisplayListStrip(Indices: TInts; Verts, vNorms: TVertices; vRGBA: TVertexRGBA; LineWidth: integer): GLuint;
-procedure DrawScene(w,h: integer; isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin, lightPos : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
+procedure DrawScene(w,h: integer; isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin: TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
 
 implementation
 
@@ -239,7 +239,7 @@ begin
 end;
 
 
-procedure DrawScene(w,h: integer; isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin, lightPos : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
+procedure DrawScene(w,h: integer; isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin: TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
 var
    clr: TRGBA;
 begin
@@ -265,7 +265,7 @@ begin
 
  glMatrixMode (GL_MODELVIEW);
  glLoadIdentity ();
- glLightfv(GL_LIGHT0, GL_POSITION, @lightpos);
+ glLightfv(GL_LIGHT0, GL_POSITION, @gShader.lightpos);
  //caption := floattostr(lightpos[1])+'x'+ floattostr(lightpos[2])+'x'+ floattostr(lightpos[3]);
  //glDisable(GL_CULL_FACE);
  //glEnable(GL_DEPTH_TEST);
@@ -291,18 +291,18 @@ begin
  //glLineWidth(0);   // GL_INVALID_VALUE is generated if width is less than or equal to 0.
  if lTrack.n_count > 0 then begin
     if lTrack.isTubes then
-         RunMeshGLSL (2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W, lightPos, lPrefs.ShaderForBackgroundOnly) //disable clip plane
+         RunMeshGLSL (2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W,  lPrefs.ShaderForBackgroundOnly) //disable clip plane
      else
-         RunTrackGLSL(lTrack.LineWidth);
+         RunTrackGLSL(lTrack.LineWidth, w, h);
    lTrack.DrawGL;
  end;
  if length(lNode.nodes) > 0 then begin
-     RunMeshGLSL (2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W, lightPos, lPrefs.ShaderForBackgroundOnly); //disable clip plane
+     RunMeshGLSL (2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W,  lPrefs.ShaderForBackgroundOnly); //disable clip plane
    lNode.DrawGL(clr);
  end;
  if  (length(lMesh.faces) > 0) then begin
     lMesh.isVisible := isDrawMesh;
-    RunMeshGLSL (ClipPlane.X,ClipPlane.Y,ClipPlane.Z,ClipPlane.W, lightPos, false);
+    RunMeshGLSL (ClipPlane.X,ClipPlane.Y,ClipPlane.Z,ClipPlane.W,  false);
     lMesh.DrawGL(clr);
     lMesh.isVisible := true;
  end;

@@ -11,6 +11,7 @@ uses
 Type
 
 TTrack = class
+  utime: QWord;
   scale, minFiberLength, ditherColorFrac : single;
   origin : TPoint3f;
   isBusy, isRebuildList, isTubes: boolean;
@@ -90,15 +91,104 @@ var
   normRGBA : TRGBA;
   pts, norms: array of TPoint3f;
   len: single;
-  m, mi, i, ntracks, count: integer;
+  maxLinks, m, mi, i,j, ntracks: integer;
+  trackLinks : array of integer;
+  startPt, endPt:TPoint3f;
 begin
+  maxLinks := 0;
   n_faces := 0;
   n_vertices := 0;
   if (length(tracks) < 4) then exit;
   if minFiberLinks < 3 then minFiberLinks := 3; //minimum to compute normal;
   ntracks := length(tracks);
+  uTime := GetTickCount64();
+  {$DEFINE TWOPASS_STRIP} //two passes is ~2 times quicker as we do not waste time re-allocating memory
+  {$IFDEF TWOPASS_STRIP}
+  //first pass: find mesh size
+  setlength(trackLinks, ntracks);
   i := 0;
-  count := 0;
+  while i < ntracks do begin
+    trackLinks[i] := 0;
+    m := asInt( tracks[i]);
+    if m >= minFiberLinks then begin
+       startPt.X := tracks[i+1];
+       startPt.Y := tracks[i+2];
+       startPt.Z := tracks[i+3];
+       j := (3 * (m-1));
+       endPt.X := tracks[j+i+1];
+       endPt.Y := tracks[j+i+2];
+       endPt.Z := tracks[j+i+3];
+       normRGB := vector2RGB(startPt, endPt, len);
+       if len >= minFiberLength then begin
+          trackLinks[i] := m;
+          n_vertices := n_vertices + m;
+          {$IFDEF COREGL}
+          n_faces := n_faces + m + 3;//adjacent start + adjacent end + primitive restart!
+          {$ELSE}
+          n_faces := n_faces + m + 1;//primitive restart!
+          {$ENDIF}
+          if (m > maxLinks) then
+             maxLinks := m;
+       end;
+    end; //len >= minFiberLength
+    i := i + 1 + (3 * m);
+  end;
+  if (maxLinks < 1) then exit;
+  //allocate memory
+  setlength(pts, maxLinks);
+  setlength(norms, maxLinks);
+  setlength(vRGBA, n_vertices);
+  setlength(Verts, n_vertices);
+  setlength(vNorms, n_vertices);
+  setlength(Indices, n_faces);
+  //second pass: fill arrays
+  i := 0;
+  n_vertices := 0;
+  n_faces := 0;
+  while i < ntracks do begin
+        m :=   asInt( tracks[i]);
+        if trackLinks[i] >= minFiberLinks then begin
+          inc(i);
+          for mi := 0 to (m-1) do begin
+              pts[mi].X := tracks[i]; inc(i);
+              pts[mi].Y := tracks[i]; inc(i);
+              pts[mi].Z := tracks[i]; inc(i);
+          end;
+          normRGB := vector2RGB(pts[0], pts[m-1], len);
+          normRGBA := mixRandRGBA(normRGB, ditherColorFrac);
+          for mi := 1 to (m-2) do
+              norms[mi] := normalDirection(pts[mi-1], pts[mi+1]); //line does not have a surface normal, but a direction
+          //create as line strip - repeat start/end to end primitive
+          for mi := 0 to (m-1) do begin
+              vRGBA[mi+n_vertices] := normRGBA;
+              Verts[mi+n_vertices] := pts[mi];
+              vNorms[mi+n_vertices] := norms[mi];
+              {$IFDEF COREGL}
+               Indices[mi+1+n_faces] := mi+n_vertices;
+              {$ELSE}
+              Indices[mi+n_faces] := mi+n_vertices;
+              {$ENDIF}
+          end;
+          {$IFDEF COREGL} // COREGL : glDrawElements(GL_LINE_STRIP_ADJACENCY... ; LEGACY : glBegin(GL_LINE_STRIP);
+          Verts[n_vertices] := Verts[n_vertices+1];
+          Verts[n_vertices+m-1] := Verts[n_vertices+m-2];
+
+          Indices[n_faces] := n_vertices;
+          Indices[m+n_faces+1] := Indices[m+n_faces];
+          Indices[m+n_faces+2] := kPrimitiveRestart;
+          n_faces := n_faces + m + 3;
+          {$ELSE}
+          Indices[m+n_faces] := kPrimitiveRestart;
+          n_faces := n_faces + m + 1;
+          {$ENDIF}
+          n_vertices := n_vertices + m ;
+
+        end else
+            i := i + 1 + (3 * m);
+  end;
+  {$ELSE}
+   {$IFDEF COREGL} Use two pass or change code below for GL_LINE_STRIP_ADJACENCY {$ENDIF}
+  i := 0;
   while i < ntracks do begin
         m :=   asInt( tracks[i]); inc(i);
         if m >= minFiberLinks then begin
@@ -131,8 +221,10 @@ begin
           end;
         end else
             i := i + (3 * m);
-        count := count + 1;
   end;
+  {$ENDIF}
+  uTime := GetTickCount64() - uTime;
+
   {$IFDEF COREGL}
   BuildDisplayListStrip(Indices, Verts, vNorms, vRGBA, LineWidth, vao, vbo);
   {$ELSE}
@@ -146,31 +238,109 @@ end; // BuildList()
 procedure TTrack.BuildListTubes ;
 // create displaylist where tracks are drawn as connected cylinders
 const
-  kSlices = 7; //the cylinder is a pie cut into this many slices: fewer = simpler,  more = less boxy
+  kSlices = 5; //the cylinder is a pie cut into this many slices: fewer = simpler,  more = less boxy
 var
   vRGBA: TVertexRGBA;
   normRGB: TPoint3f;
   normRGBA: TRGBA;
   pts: array of TPoint3f;
   len, radius: single;
-  numCylVert, numVert,  mprev, m, mi, i, j, ntracks, count: integer;
+  numCylVert, numVert,  mprev, m, mi, i, j, ntracks: integer;
   vertices: TVertices;
   faces, cylFace: TFaces;
-  numFaces, numCylFace: integer;
+  numFaces, numCylFace,  maxLinks: integer;
   cylVert: TVertices;
+  startPt, endPt: TPoint3f;
+  trackLinks : array of integer;
 begin
+  //tm := gettickcount64();
   n_indices := 0;
   n_faces := 0;
   n_vertices := 0;
+  maxLinks := 0;
   if (length(tracks) < 4) then exit;
   if minFiberLinks < 3 then minFiberLinks := 3; //minimum to compute normal;
   MakeCylinder( 1, 71, cylFace, cylVert, kSlices);
   numCylFace := length(cylFace);
   numCylVert := kSlices;//numCylVert div 2; //number of faces for half of cylinder (top or bottom disk)
   ntracks := length(tracks);
-  i := 0;
-  count := 0;
   radius := LineWidth * 0.25;
+  {$DEFINE TWOPASS} //two passes is ~4 times quicker as we do not waste time re-allocating memory
+  {$IFDEF TWOPASS}
+  //first pass: find mesh size
+  setlength(trackLinks, ntracks);
+  i := 0;
+  while i < ntracks do begin
+    trackLinks[i] := 0;
+    m := asInt( tracks[i]);
+    if m >= minFiberLinks then begin
+       startPt.X := tracks[i+1];
+       startPt.Y := tracks[i+2];
+       startPt.Z := tracks[i+3];
+       j := (3 * (m-1));
+       endPt.X := tracks[j+i+1];
+       endPt.Y := tracks[j+i+2];
+       endPt.Z := tracks[j+i+3];
+       normRGB := vector2RGB(startPt, endPt, len);
+       if len >= minFiberLength then begin
+          trackLinks[i] := m;
+          n_vertices := n_vertices + (m * numCylVert);
+          n_faces := n_faces + ((m - 1) * numCylFace); //fence post problem
+          if (m > maxLinks) then
+             maxLinks := m;
+       end;
+    end; //len >= minFiberLength
+    i := i + 1 + (3 * m);
+  end;
+  if (n_faces < 1) then exit;
+  //allocate memory
+  setlength(vertices, n_vertices); //each node as 1 disk (bottom of cylinder)
+  setlength(vRGBA, n_vertices); //each node as 1 disk (bottom of cylinder)
+  setlength(faces, n_faces);
+  setlength(pts, maxLinks);
+  //second pass - load geometry for links that are long enough
+  n_vertices := 0;
+  n_faces := 0;
+  i := 0;
+  while i < ntracks do begin
+    m := asInt( tracks[i]);
+    if (trackLinks[i] >= minFiberLinks) then begin
+       inc(i);
+       for mi := 0 to (m-1) do begin
+              pts[mi].X := tracks[i]; inc(i);
+              pts[mi].Y := tracks[i]; inc(i);
+              pts[mi].Z := tracks[i]; inc(i);
+       end;
+       normRGB := vector2RGB(pts[0], pts[m-1], len);
+       numFaces := 0;
+       numVert := 0;
+       mprev := 0; //location of previous vertex
+       for mi := 0 to (m-2) do begin
+           makeCylinderEnd(radius, pts[mprev], pts[mi], pts[mi+1], cylVert, kSlices);
+           for j := 0 to (numCylFace - 1) do //add this cylinder
+               faces[j+numFaces+n_faces] := vectorAdd(cylFace[j], numVert+n_vertices);
+           numFaces := numFaces + numCylFace;
+           for j := 0 to (numCylVert - 1) do //add bottom of this cylinder
+               vertices[j+numVert+n_vertices] := cylVert[j];
+           numVert := numVert + numCylVert;
+           mprev := mi;
+       end;
+       makeCylinderEnd(radius, pts[m-2], pts[m-1], pts[m-1], cylVert, kSlices);
+       for j := 0 to (numCylVert - 1) do //add top of last cylinder
+           vertices[j+numVert+n_vertices] := cylVert[j];
+       numVert := numVert + numCylVert;
+       normRGBA := mixRandRGBA(normRGB, ditherColorFrac);
+       for j := 0 to ((m * numCylVert) -1) do
+           vRGBA[j+n_vertices] := normRGBA;
+       n_vertices := n_vertices + (m * numCylVert); //each node as 1 disk (bottom of cylinder)
+       n_faces := n_faces + (m - 1) * numCylFace; //-1: fencepost error
+    end else //len >= minFiberLength
+        i := i + 1 + (3 * m);
+  end;
+  setlength(trackLinks,0);
+  setlength(pts, 0);
+{$ELSE}
+  i := 0;
   while i < ntracks do begin
         m :=   asInt( tracks[i]); inc(i);
         if m >= minFiberLinks then begin
@@ -211,8 +381,10 @@ begin
           end; //len >= minFiberLength
         end else
             i := i + (3 * m);
-        count := count + 1;
   end;
+{$ENDIF}
+  //utime := gettickcount64() - tm;
+
   {$IFDEF COREGL}
   BuildDisplayList(faces, vertices, vRGBA, vao, vbo, normRGBA);
   {$ELSE}
@@ -251,9 +423,8 @@ begin
   if isTubes then begin
     //666 RunMeshGLSL (2,0,0,0);
     glDrawElements(GL_TRIANGLES, n_faces* 3, GL_UNSIGNED_INT, nil)
-  end
-  else if n_indices > 0 then begin
-     RunTrackGLSL(lineWidth);
+  end else if n_indices > 0 then begin
+     //RunTrackGLSL(lineWidth, lPrefs);
      //GLForm1.Caption := inttostr(n_indices);
      glPrimitiveRestartIndex(kPrimitiveRestart);
      glDrawElements(GL_LINE_STRIP_ADJACENCY, n_indices, GL_UNSIGNED_INT, nil)  ;
@@ -681,6 +852,7 @@ begin
   if abs(mx.Z - origin.Z) > Scale then
         Scale := abs(mx.Z - origin.Z);
     //Scale := 2 * scale;
+    //GLForm1.Caption := format('%g..%g %g..%g %g..%g',[mn.X,mx.X, mn.Y,mx.Y, mn.Z, mx.Z]) ;
 end; // SetDescriptives()
 
 function TTrack.LoadFromFile(const FileName: string): boolean;

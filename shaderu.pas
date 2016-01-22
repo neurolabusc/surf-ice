@@ -39,6 +39,7 @@ type
     OverlayVolume: integer;
     nUniform: integer;
     f1, f2,  fScreenShot: TFrameBuffer;
+    lightPos : TPoint3f;
     FragmentProgram,VertexProgram, GeometryProgram, Note, Vendor: AnsiString;
     Uniform: array [1..kMaxUniform] of TUniform;
   end;
@@ -48,8 +49,8 @@ var
 function LoadShader(lFilename: string; var Shader: TShader): boolean;
 function InitGLSL (isStartUp: boolean): boolean;
 procedure RunOverlayGLSL;
-procedure RunMeshGLSL (cp1,cp2,cp3,cp4: single; lightPos: TPoint3f; UseDefaultShader: boolean);
-procedure RunTrackGLSL (lineWidth: integer);
+procedure RunMeshGLSL (cp1,cp2,cp3,cp4: single;  UseDefaultShader: boolean);
+procedure RunTrackGLSL (lineWidth, ScreenPixelX, ScreenPixelY: integer);
 procedure RunAoGLSL (var f1, f2 : TFrameBuffer; zoom : integer; alpha1, blend1, fracAO, distance: single);
 function setFrame (wid, ht: integer; var f : TFrameBuffer; isMultiSample: boolean) : boolean; //returns true if multi-sampling
 procedure releaseFrame;
@@ -57,7 +58,6 @@ procedure Set2DDraw (w,h: integer; r,g,b: byte);
 
 implementation
 uses mainunit, gl_2d;
-
 
 procedure Set2DDraw (w,h: integer; r,g,b: byte);
 begin
@@ -454,12 +454,15 @@ begin
       else
           gShader.programAoID := initVertFrag(kAoShaderVert, '', kAoShaderFrag);
        {$IFDEF TUBES}
-       if LoadShader(AppDir+'tracks3.glsl', lShader)  then
+       if LoadShader(AppDir+'tubes3.glsl', lShader)  then
           gShader.programTrackID :=  initVertFrag(lShader.VertexProgram, lShader.GeometryProgram,  lShader.FragmentProgram)
       else
        gShader.programTrackID :=  initVertFrag(kVert3d, '', kTrackShaderFrag);
        {$ELSE}
-       gShader.programTrackID :=  initVertFrag(kVert3d, '', kTrackShaderFrag);
+       if LoadShader(AppDir+'tracks3.glsl', lShader)  then
+          gShader.programTrackID :=  initVertFrag(lShader.VertexProgram, lShader.GeometryProgram,  lShader.FragmentProgram)
+      else
+          gShader.programTrackID :=  initVertFrag(kTrackShaderVert, kTrackShaderGeom, kTrackShaderFrag);
        {$ENDIF}
       {$ELSE}
       if (not Assigned(glBindFramebufferEXT)) or
@@ -471,10 +474,7 @@ begin
       else
           gShader.programAoID := initVertFrag('','', kAoShaderFrag);
       //showmessage(AppDir+'tracks.glsl');
-      (*if LoadShader(AppDir+'tracks.glsl', lShader)  then
-          gShader.programTrackID :=  initVertFrag(lShader.VertexProgram, lShader.GeometryProgram,  lShader.FragmentProgram)
-      else  *)
-          gShader.programTrackID :=  initVertFrag(kTrackShaderVert,'',  kTrackShaderFrag);
+      gShader.programTrackID :=  initVertFrag(kTrackShaderVert,'',  kTrackShaderFrag);
       {$ENDIF}
       initFrame(gShader.f1);
       initFrame(gShader.f2);
@@ -654,17 +654,16 @@ begin
       result := true;
 end;
 
-procedure RunTrackGLSL (lineWidth: integer);
+procedure RunTrackGLSL (lineWidth, ScreenPixelX, ScreenPixelY: integer);
 begin
      glUseProgram(gShader.programTrackID);
      {$IFDEF COREGL}
-     SetTrackUniforms (lineWidth);
+     SetTrackUniforms (lineWidth, ScreenPixelX, ScreenPixelY);
      {$ENDIF}
 end;
 
 
-
-procedure RunMeshGLSL (cp1,cp2,cp3,cp4: single; lightPos: TPoint3f; UseDefaultShader: boolean);
+procedure RunMeshGLSL (cp1,cp2,cp3,cp4: single;  UseDefaultShader: boolean);
 var
   lProg: gluint;
 begin
@@ -672,15 +671,14 @@ begin
   if UseDefaultShader then begin
     lProg := gShader.programDefault;
     glUseProgram(lProg) ;
-  end
-  else begin
+  end else begin
     lProg := gShader.program3dx;
     glUseProgram(lProg);
     AdjustShaders(gShader);
   end;
   uniform4fx(lProg, 'ClipPlane',cp1,cp2,cp3,cp4);
   {$IFDEF COREGL}
-  uniform3fx(lProg, 'LightPos',lightPos.X, lightPos.Y, lightPos.Z);
+  uniform3fx(lProg, 'LightPos',gShader.lightPos.X, gShader.lightPos.Y, gShader.lightPos.Z);
   SetCoreUniforms(lProg);
   {$ENDIF}
 end;
@@ -688,7 +686,7 @@ end;
 procedure RunOverlayGLSL;
 begin
   //if not gPrefs.ShaderForBackgroundOnly then exit;
-  RunMeshGLSL(2.0, 0.0, 0.0, 0.0, ptf(1, 0, 0), gPrefs.ShaderForBackgroundOnly);
+  RunMeshGLSL(2.0, 0.0, 0.0, 0.0,  gPrefs.ShaderForBackgroundOnly);
 end;
 
 {$IFDEF COREGL}

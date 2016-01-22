@@ -17,9 +17,9 @@ type
   TMRU =  array [1..knMRU] of string;
   TPrefs = record
     SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube,
-     TracksAreTubes,Colorbar, ScreenCaptureTransparentBackground,
-     ZDimIsUp, SmoothVoxelwiseData, ShaderForBackgroundOnly: boolean;
-    window_width, window_height, RenderQuality, SaveAsFormat: integer;
+     TracksAreTubes,Colorbar, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,
+     ZDimIsUp, SmoothVoxelwiseData, ShaderForBackgroundOnly, CoreTrackDisableDepth: boolean;
+    window_width, window_height, RenderQuality, SaveAsFormat, OcclusionAmount: integer;
     ObjColor,BackColor: TColor;
     PrevFilename: TMRU;
     PrevTrackname, PrevNodename, PrevOverlayname : string;
@@ -35,6 +35,8 @@ procedure SetDefaultPrefs (var lPrefs: TPrefs; lEverything: boolean);
 procedure IniRGBA(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lValue: TRGBA);
 
 implementation
+
+uses userdir;
 
 procedure IniFloat(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lValue: single);
 //read or write an integer value to the initialization file
@@ -64,7 +66,24 @@ begin
 		lValue := StrToInt(lStr);
 end; //IniFloat
 
+function DefaultMeshName: string;
+var
+  lPath,lName,lExt: string;
+begin
+ lPath := ExtractFileDir(AppDir());
+ {$IFDEF Darwin}
+ FilenameParts (lPath, lPath,lName,lExt) ;
+ {$ENDIF}
+ lName := lPath + PathDelim + 'sample'+ PathDelim + 'mni152_2009.mz3';
+ if fileexists(lName) then
+   result := lName
+ else
+     lName := '';
+end;
+
 procedure SetDefaultPrefs (var lPrefs: TPrefs; lEverything: boolean);
+var
+   i: integer;
 begin
   if lEverything then begin  //These values are typically not changed...
        with lPrefs do begin
@@ -75,6 +94,9 @@ begin
             TextBorder := RGBA(92,92,132,255);
             GridAndBorder := RGBA(106,106,142,222);
             ColorBarPos:= CreateUnitRect (0.1,0.1,0.9,0.14);
+            for i := 1 to knMRU do
+              PrevFilename[i] := '';
+            PrevFilename[1] := DefaultMeshName;
        end;
   end;
   with lPrefs do begin
@@ -83,8 +105,11 @@ begin
     Colorbar := false;
     ZDimIsUp := true;
     ShaderForBackgroundOnly := false;
+    CoreTrackDisableDepth := false;
+    LoadTrackOnLaunch := false;
     TracksAreTubes := true;
     SaveAsFormat := kSaveAsObj;
+    OcclusionAmount := 25;
     //MultiPassRendering := true;
     OrientCube := true;
     Perspective := false;
@@ -97,7 +122,7 @@ begin
   end;//with lPrefs
 end; //Proc SetDefaultPrefs
 
-procedure SetDefaultPrefsMRU (var lPrefs: TPrefs);
+(*procedure SetDefaultPrefsMRU (var lPrefs: TPrefs);
 var
   lI: integer;
 begin
@@ -105,7 +130,7 @@ begin
     for lI := 1 to knMRU do begin
       lPrefs.PrevFilename[lI] := '';
     end;
-end;
+end; *)
 
 procedure IniInt(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lValue: integer);
 //read or write an integer value to the initialization file
@@ -310,7 +335,7 @@ var
 begin
   result := false;
   if (lRead) then
-    SetDefaultPrefsMRU (lPrefs);
+    SetDefaultPrefs (lPrefs, true);
   if (lRead) and (not Fileexists(lFilename)) then begin
         exit;
   end;
@@ -323,6 +348,8 @@ begin
   IniBool(lRead,lIniFile, 'TracksAreTubes',lPrefs.TracksAreTubes);
   IniBool(lRead,lIniFile, 'ZDimIsUp',lPrefs.ZDimIsUp);
   IniBool(lRead,lIniFile, 'ShaderForBackgroundOnly',lPrefs.ShaderForBackgroundOnly);
+  IniBool(lRead,lIniFile, 'CoreTrackDisableDepth',lPrefs.CoreTrackDisableDepth);
+  IniBool(lRead,lIniFile, 'LoadTrackOnLaunch',lPrefs.LoadTrackOnLaunch);
   IniBool(lRead,lIniFile, 'Colorbar',lPrefs.Colorbar);
   IniBool(lRead,lIniFile, 'SmoothVoxelwiseData',lPrefs.SmoothVoxelwiseData);
   IniBool(lRead,lIniFile, 'ScreenCaptureTransparentBackground',lPrefs.ScreenCaptureTransparentBackground);
@@ -338,6 +365,7 @@ begin
   IniUnitRect(lRead,lIniFile, 'ColorBarPos',lPrefs.ColorBarPos);
   IniInt(lRead,lIniFile,'RenderQuality',lPrefs.RenderQuality);
   IniInt(lRead,lIniFile,'SaveAsFormat',lPrefs.SaveAsFormat);
+  IniInt(lRead,lIniFile,'OcclusionAmount',lPrefs.OcclusionAmount);
   if (lPrefs.RenderQuality < kRenderPoor) then lPrefs.RenderQuality:= kRenderPoor;
   if (lPrefs.RenderQuality > kRenderBetter) then lPrefs.RenderQuality:= kRenderBetter;
   lIniFile.Free;

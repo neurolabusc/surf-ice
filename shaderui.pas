@@ -215,10 +215,10 @@ begin
     {$IFDEF HEMISSAO}
     result := AppDir+'shader'
     {$ELSE}
-    result := AppDir+'shaders3'
+    result := AppDir+'shaders'
     {$ENDIF}
   {$ELSE}
-  result := AppDir+'shaders'
+  result := AppDir+'shadersOld'
   {$ENDIF}
 end;
 

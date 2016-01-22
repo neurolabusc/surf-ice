@@ -1927,6 +1927,10 @@ var
   i,j, szExpected, szRead,  daStart, dhEnd, daEnd, ddStart,ddEnd, Dim0, Dim1, nOverlays: integer;
   isOverlay, isAscii, isVertColor, isInt32, isFloat32, isBase64, isBase64Gz, isLEndian, isFace, isVert, isTransposed: boolean;
 begin
+  if (lOverlayIndex = 0) then begin
+     setlength(faces, 0);
+     setlength(vertices, 0);
+  end;
   result := 0;
   nOverlays := 0;
   gz := TMemoryStream.Create;
@@ -1972,6 +1976,10 @@ begin
        nOverlays := nOverlays + 1;
     isTransposed := pos('ColumnMajorOrder"', Hdr) > 0;
     if (Dim1 = 0) then Dim1 := 1;
+    if (isOverlay) and (lOverlayIndex = 0) and ((length(vertices) > 0) or (length(faces) > 0)) then begin
+       //
+       isOverlay := false;
+    end;
     if (isOverlay) and (lOverlayIndex = 0) then begin
        Showmessage('Please load GIfTI mesh (using File/Open) BEFORE loading the GIFTI overlay (using Overlay/Add)');
        goto 666;
@@ -1986,7 +1994,9 @@ begin
     end;
     if ((isVert) and (isFloat32) and (Dim1 = 3)) or ((lOverlayItem = nOverlays) and (isOverlay) and (isFloat32) and (Dim1 = 1))
       or ((isVertColor) and (isFloat32) and (Dim1 = 3))  or ((isVertColor) and (isInt32) and (Dim1 = 1)) or ((isFace) and (isInt32) and (Dim1 = 3)) then begin
-       if  ((isBase64) or (isBase64Gz))  and (Dim0 > 0) and (ddStart > 6) and (ddEnd > ddStart) and (isLEndian) then begin
+
+
+       if  ((isBase64) or (isBase64Gz))  and (Dim0 > 0) and (ddStart > 6) and (ddEnd > ddStart) then begin
         debase64 :=  DecodeStringBase64(Copy(Str, ddStart, ddEnd-ddStart)); //raw GZ binary, see  http://lazarus-ccr.sourceforge.net/docs/fcl/base64/decodestringbase64.html
         if (Dim1 <> 3) and (isVertColor) and (length(labelTable) < 1) then begin
            showmessage('Error found Intent="NIFTI_INTENT_LABEL" without a "<LabelTable>"');
@@ -1997,6 +2007,7 @@ begin
            goto 666;
         end;
         szExpected :=  4 * dim0 * Dim1;
+
         if isBase64Gz then begin
            if (ord(debase64[1]) <> $78) then begin
             showmessage('Deflate compressed stream should begin with 0x78, not '+inttohex(ord(debase64[1]), 2));
@@ -2015,6 +2026,17 @@ begin
             setlength(dat,szExpected);
             Move(debase64[1], dat[0], szExpected);
         end;
+        {$IFDEF ENDIAN_LITTLE}
+        if not isLEndian then
+           for i := 0 to (dim0 * Dim1) -1 do
+            SwapLongInt(dat[i]);
+        {$ELSE}
+        if not isLEndian then
+           for i := 0 to (dim0 * Dim1) -1 do
+               SwapLongInt(dat[i]);
+           big endian not tested - please check!!!!
+
+        {$ENDIF}
           if szExpected <> szRead then begin
              showmessage(format('decompressed size incorrect %d != %d',[szExpected, szRead]));
              goto 666;
@@ -2301,6 +2323,7 @@ procedure TMesh.LoadVtk(const FileName: string);
 // http://www.ifb.ethz.ch/education/statisticalphysics/file-formats.pdf
 // ftp://ftp.tuwien.ac.at/visual/vtk/www/FileFormats.pdf
 //  "The VTK data files described here are written in big endian form"
+//n.b. ASCII reading is slow - strlst.DelimitedText much slower than readln!
 label
    666;
 var
@@ -2309,7 +2332,9 @@ var
    str: string;
    i, num_v, num_f, cnt: integer;
    nV: LongInt;
+   isBinary: boolean = true;
 begin
+  strlst:=TStringList.Create;
   AssignFile(f, FileName);
   Reset(f,1);
   ReadLnBin(f, str); //signature: '# vtk DataFile'
@@ -2319,8 +2344,12 @@ begin
   end;
   ReadLnBin(f, str); //comment: 'Comment: created with MRIcroS'
   ReadLnBin(f, str); //kind: 'BINARY' or 'ASCII'
-  if pos('BINARY', UpperCase(str)) <> 1 then begin  // '# vtk DataFile'
-     showmessage('Only able to read binary VTK file (convert with MRIcroS or another tool):'+str);
+  if pos('BINARY', UpperCase(str)) <> 0 then
+     isBinary := true
+  else if pos('ASCII', UpperCase(str)) <> 0 then
+     isBinary := false
+  else begin  // '# vtk DataFile'
+     showmessage('VTK data should be ASCII or binary, not '+str);
      goto 666;
   end;
   ReadLnBin(f, str); // kind, e.g. "DATASET POLYDATA" or "DATASET STRUCTURED_ POINTS"
@@ -2333,7 +2362,6 @@ begin
     showmessage('Expected header to report "POINTS" not '+ str);
     goto 666;
   end;
-  strlst:=TStringList.Create;
   num_v := 0;
   strlst.DelimitedText := str;
   num_v := StrToIntDef(strlst[1],0);
@@ -2341,9 +2369,18 @@ begin
     showmessage('Expected at least 1 point of type FLOAT, not '+ str);
     goto 666;
   end;
-  num_v := num_v;
   setlength(vertices, num_v); //vertices = zeros(num_f, 9);
-  blockread(f, vertices[0], 3 * 4 * num_v);
+  if isBinary then
+     blockread(f, vertices[0], 3 * 4 * num_v)
+  else begin //if binary else ASCII
+       for i := 0 to (num_v-1) do begin
+           ReadLnBin(f, str);
+           strlst.DelimitedText := str;
+           vertices[i].X := StrToFloatDef(strlst[0],0);
+           vertices[i].Y := StrToFloatDef(strlst[1],0);
+           vertices[i].Z := StrToFloatDef(strlst[2],0);
+       end;
+  end;
   ReadLnBin(f, str); // number of vertices, e.g. "POLYGONS 1380 5520"
   if str = '' then ReadLnBin(f, str);
   if pos('LINES', UpperCase(str)) > 0 then begin
@@ -2357,39 +2394,47 @@ begin
   strlst.DelimitedText := str;
   num_f := StrToIntDef(strlst[1],0);
   cnt := StrToIntDef(strlst[2],0);
-  strlst.free;
   if cnt <> (num_f * 4) then begin
      showmessage('Only able to read triangular meshes, not '+ str);
      goto 666;
   end;
   setlength(faces, num_f);
-  for i := 0 to (num_f -1) do begin
-      blockread(f, nV, sizeof(LongInt));
-      {$IFDEF ENDIAN_LITTLE}
-      SwapLongInt(nV);
-      {$ENDIF}
-      if (nV <> 3) then begin
-         showmessage('VTK file is borked');
-         goto 666;
+  if isBinary then begin
+    for i := 0 to (num_f -1) do begin
+        blockread(f, nV, sizeof(LongInt));
+        {$IFDEF ENDIAN_LITTLE}
+        SwapLongInt(nV);
+        {$ENDIF}
+        if (nV <> 3) then begin
+           showmessage('VTK file is borked');
+           goto 666;
+        end;
+        blockread(f, faces[i],  3 * 4);
+    end;
+    {$IFDEF ENDIAN_LITTLE} // VTK is ALWAYS big endian!
+    for i := 0 to (num_f -1) do begin
+           SwapLongInt(faces[i].X);
+           SwapLongInt(faces[i].Y);
+           SwapLongInt(faces[i].Z);
+    end;
+    for i := 0 to (num_v -1) do begin
+           SwapSingle(vertices[i].X);
+           SwapSingle(vertices[i].Y);
+           SwapSingle(vertices[i].Z);
+    end;
+    {$ENDIF}
+  end else begin //if binary else ASCII - indexed from 0
+      for i := 0 to (num_f -1) do begin
+          ReadLnBin(f, str);
+           strlst.DelimitedText := str;
+           faces[i].X := StrToIntDef(strlst[1],0);
+           faces[i].Y := StrToIntDef(strlst[2],0);
+           faces[i].Z := StrToIntDef(strlst[3],0);
       end;
-      blockread(f, faces[i],  3 * 4);
-  end;
-  closefile(f);
-  {$IFDEF ENDIAN_LITTLE} // VTK is ALWAYS big endian!
-     for i := 0 to (num_f -1) do begin
-         SwapLongInt(faces[i].X);
-         SwapLongInt(faces[i].Y);
-         SwapLongInt(faces[i].Z);
-     end;
-     for i := 0 to (num_v -1) do begin
-         SwapSingle(vertices[i].X);
-         SwapSingle(vertices[i].Y);
-         SwapSingle(vertices[i].Z);
-     end;
- {$ENDIF}
-  exit;
+  end; //if binary else ASCII
 666:
    closefile(f);
+   strlst.free;
 end;
 
 function TMesh.CheckMesh: boolean;

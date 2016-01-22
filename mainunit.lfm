@@ -1,25 +1,25 @@
 object GLForm1: TGLForm1
-  Left = 582
-  Height = 828
-  Top = 224
+  Left = 316
+  Height = 740
+  Top = 23
   Width = 1005
   AllowDropFiles = True
   Caption = 'Surf Ice'
-  ClientHeight = 828
+  ClientHeight = 740
   ClientWidth = 1005
   Menu = MainMenu1
   OnClose = FormClose
   OnCreate = FormCreate
   OnDropFiles = FormDropFiles
   Position = poDesktopCenter
-  LCLVersion = '1.6.0.1'
+  LCLVersion = '1.6.0.2'
   object ToolPanel: TPanel
     Left = 0
-    Height = 828
+    Height = 740
     Top = 0
     Width = 272
     Align = alLeft
-    ClientHeight = 828
+    ClientHeight = 740
     ClientWidth = 272
     TabOrder = 1
     object ClipBox: TGroupBox
@@ -97,12 +97,12 @@ object GLForm1: TGLForm1
     end
     object ShaderBox: TGroupBox
       Left = 1
-      Height = 175
+      Height = 87
       Top = 652
       Width = 270
       Align = alClient
       Caption = 'Shader'
-      ClientHeight = 153
+      ClientHeight = 65
       ClientWidth = 262
       ParentFont = False
       TabOrder = 1
@@ -156,11 +156,27 @@ object GLForm1: TGLForm1
       object Memo1: TMemo
         Left = 0
         Height = 58
-        Top = 95
+        Top = 7
         Width = 262
         Align = alBottom
         Lines.Strings = (
           'Memo1'
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
           ''
           ''
           ''
@@ -1010,7 +1026,7 @@ object GLForm1: TGLForm1
   end
   object CollapsedToolPanel: TPanel
     Left = 272
-    Height = 828
+    Height = 740
     Top = 0
     Width = 6
     Align = alLeft
@@ -1020,7 +1036,7 @@ object GLForm1: TGLForm1
   end
   object GLBox: TOpenGLControl
     Left = 278
-    Height = 828
+    Height = 740
     Top = 0
     Width = 727
     Align = alClient

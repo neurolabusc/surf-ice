@@ -1,0 +1,9 @@
+
+motor_4t95.nii.gz is a 3D volume from on a fMRI study where the participant was asked to move his right hand on some blocks and left hand on other blocks. SPM12 suggests that this t-statistic should be thresholded at 4.95 for p <0.05 with familywise error correction. From http://www.mccauslandcenter.sc.edu/CRNL/sw/tutorial/index.html
+
+motor_4t95.gii is a mesh based on a fMRI study where the participant was asked to move his right hand on some blocks and left hand on other blocks. This is based on motor_4t95.nii.gz with an isosurface of 4.95. From http://www.mccauslandcenter.sc.edu/CRNL/sw/tutorial/index.html
+
+
+mni152_2009_50.gii is a surface mesh based on brain extraction of an average brain template based on 152 individuals. An isosurface threshold of 50 was chosen. From http://www.bic.mni.mcgill.ca/ServicesAtlases/ICBM152NLin2009
+
+Stroke.ply and stroke.trk are the surface rendering and tractography of an individual who has suffered a unilateral brain injury. Provided by Leonardo Bonilha.

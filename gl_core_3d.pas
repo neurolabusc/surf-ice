@@ -12,15 +12,14 @@ uses
 //function BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA): GLuint;
 procedure BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA; var vao, vbo: gluint; Clr: TRGBA);
 //procedure SetLighting (var lPrefs: TPrefs);
-procedure DrawScene(w,h: integer; isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin, lightPos : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
+procedure DrawScene(w,h: integer; isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
 procedure SetCoreUniforms(lProg: Gluint);
-procedure SetTrackUniforms (lineWidth: integer);
+procedure SetTrackUniforms (lineWidth, ScreenPixelX, ScreenPixelY: integer);
 //procedure BuildDisplayListStrip(Indices: TInts; Verts, vNorms: TVertices; vRGBA: TVertexRGBA; LineWidth: integer; var vao, vbo: gluint);
 procedure BuildDisplayListStrip(Indices: TInts; vertices, vNorm: TVertices; vRGBA: TVertexRGBA; LineWidth: integer; var vao, vbo: gluint);
 
 const
   kPrimitiveRestart = 2147483647;
-
 const
 kVert3d = '#version 330'
 +#10'layout(location = 0) in vec3 Vert;'
@@ -97,6 +96,12 @@ kFrag3d = '#version 330'
 +#10' color = vec4(AmbientColor*Ambient + DiffuseColor*diffuse*Diffuse +SpecularColor*specular* Specular, 1.0);'
 +#10'}';
   *)
+
+//{$DEFINE SIMPLE_TRACK_GLSL}  //SIMPLE GLSL is fast, but CORE limits line widths to 1 pixel! the slow version fixes this
+{$IFDEF SIMPLE_TRACK_GLSL}
+const kTrackShaderVert = kVert3d;
+const kTrackShaderGeom = '';
+
 const kTrackShaderFrag = '#version 330'
 +#10'in vec4 vClr;'
 +#10'in vec3 vN;'
@@ -112,8 +117,107 @@ const kTrackShaderFrag = '#version 330'
 +#10'    float spec = pow(dot(n,L),100.0);'
 +#10'    float dif = dot(L,n);'
 +#10'    color = vec4(specClr*spec + difClr*dif + ambClr,1.0);'
-+#10'    //color = vec4(vClr.rgb,1.0);'
 +#10'}';
+{$ELSE}
+
+const kTrackShaderVert = '#version 330'
++#10'layout(location = 0) in vec3 Vert;'
++#10'layout(location = 3) in vec3 Norm;'
++#10'layout(location = 6) in vec4 Clr;'
++#10'uniform mat4 ModelViewProjectionMatrix;'
++#10'uniform mat3 NormalMatrix;'
++#10'out vec4 vClr;'
++#10'out vec4 vP;'
++#10'out vec3 vN;'
++#10'void main() {'
++#10'    gl_Position = ModelViewProjectionMatrix * vec4(Vert, 1.0);'
++#10'    vP = gl_Position;'
++#10'    vClr = Clr;'
++#10'    vN = normalize((NormalMatrix * Norm));'
++#10'}';
+
+const kTrackShaderGeom ='#version 330'
++#10'layout (triangle_strip, max_vertices = 5) out;'
++#10'layout (lines_adjacency) in;'
++#10'in vec4 vP[4];'
++#10'in vec4 vClr[4];'
++#10'in vec3 vN[4];'
++#10'uniform float Radius = 1.0;'
++#10'float THICKNESS = Radius;'
++#10'uniform vec2 ScreenPixels = vec2(1600,1600);'
++#10'out vec4 gClr;'
++#10'out vec3 gN;'
++#10'vec2 screen_space(vec4 vertex) {'
++#10'	return vec2( vertex.xy / vertex.w ) * ScreenPixels;'
++#10'}'
++#10'void main(void) {'
++#10'  vec2 p0 = screen_space( vP[0] );'
++#10'  vec2 p1 = screen_space( vP[1] );'
++#10'  vec2 p2 = screen_space( vP[2] );'
++#10'  vec2 p3 = screen_space( vP[3] );'
++#10'  vec2 v0 = normalize(p1-p0);'
++#10'  vec2 v1 = normalize(p2-p1);'
++#10'  vec2 v2 = normalize(p3-p2);'
++#10'  vec2 n0 = vec2(-v0.y, v0.x);'
++#10'  vec2 n1 = vec2(-v1.y, v1.x);'
++#10'  vec2 n2 = vec2(-v2.y, v2.x);'
++#10'  vec2 miter_a = normalize(n0 + n1);'
++#10'  vec2 miter_b = normalize(n1 + n2);'
++#10'  float kEps = 0.1;'
++#10'  float length_a = 0.0;'
++#10'  float length_b = 0.0;'
++#10'  if ( abs(dot(miter_a, n1)) > kEps)'
++#10'  	length_a = THICKNESS / dot(miter_a, n1);'
++#10'  if ( abs(dot(miter_b, n1)) > kEps)'
++#10'  	length_b = THICKNESS / dot(miter_b, n1);'
++#10'  gN = normalize(vN[1] + vN[2]);'
++#10'  gClr = vClr[1];'
++#10'  if( dot(v0,n1) > 0 ) {'
++#10'	gl_Position = vec4( (p1 - length_a * miter_a) / ScreenPixels, vP[1].z, 1.0 );'
++#10'	EmitVertex();'
++#10'    gl_Position = vec4( (p1 + THICKNESS * n1) / ScreenPixels, vP[1].z, 1.0 );'
++#10'	EmitVertex();'
++#10' } else {'
++#10'    gl_Position = vec4( (p1 - THICKNESS * n1) / ScreenPixels, vP[1].z, 1.0 );'
++#10'	EmitVertex();'
++#10'	gl_Position = vec4( (p1 + length_a * miter_a) / ScreenPixels, vP[1].z, 1.0 );'
++#10'	EmitVertex();'
++#10'  }'
++#10'  gClr = vClr[2];'
++#10'  if( dot(v2,n1) < 0 ) {'
++#10'    gl_Position = vec4( (p2 - length_b * miter_b) / ScreenPixels, vP[2].z, 1.0 );'
++#10'	EmitVertex();'
++#10'    gl_Position = vec4( (p2 + THICKNESS * n1) / ScreenPixels, vP[2].z, 1.0 );'
++#10'	EmitVertex();'
++#10'    gl_Position = vec4( (p2 + THICKNESS * n2) / ScreenPixels, vP[2].z, 1.0 );'
++#10'	EmitVertex();'
++#10'  } else {'
++#10'    gl_Position = vec4( (p2 - THICKNESS * n1) / ScreenPixels, vP[2].z, 1.0 );'
++#10'	EmitVertex();'
++#10'	gl_Position = vec4( (p2 + length_b * miter_b) / ScreenPixels, vP[2].z, 1.0 );'
++#10'	EmitVertex();'
++#10'	gl_Position = vec4( (p2 - THICKNESS * n2) / ScreenPixels, vP[2].z, 1.0 );'
++#10'	EmitVertex();'
++#10'  }'
++#10'  EndPrimitive();'
++#10'}';
+
+const kTrackShaderFrag = '#version 330'
++#10'in vec4 gClr;'
++#10'in vec3 gN;'
++#10'out vec4 color;'
++#10'void main() {'
++#10'	vec3 specClr = vec3(0.7, 0.7, 0.7);'
++#10'	vec3 difClr = gClr.rgb * 0.9;'
++#10'	vec3 ambClr = gClr.rgb * 0.1;'
++#10'	vec3 L = vec3(0.707, 0.707, 0.0);'
++#10'    vec3 n = abs(normalize(gN));'
++#10'   	float spec = pow(dot(n,L),100.0);'
++#10'    float dif = dot(L,n);'
++#10'	color = vec4(specClr*spec + difClr*dif + ambClr,1.0);'
++#10'}';
+
+{$ENDIF}
 
 
 
@@ -121,26 +225,23 @@ implementation
 
 uses shaderu;
 
-procedure SetTrackUniforms(lineWidth: integer);
+procedure SetTrackUniforms(lineWidth, ScreenPixelX, ScreenPixelY: integer);
  var
-    {$IFDEF TUBES}
     p : TnMat44;
     pMat: GLint;
-    {$ENDIF}
 
   mv, mvp : TnMat44;
   n : TnMat33;
   mvpMat, mvMat, normMat: GLint;
+  px: array [0..1] of single;
 begin
   glUseProgram(gShader.programTrackID);
   //AdjustShaders(gShader);
   //uniform4f('ClipPlane',cp1,cp2,cp3,cp4)
-  {$IFDEF TUBES}
   p := ngl_ProjectionMatrix;
   pMat := glGetUniformLocation(gShader.programTrackID, pAnsiChar('ProjectionMatrix'));
   glUniformMatrix4fv(pMat, 1, kGL_FALSE, @p[0,0]); // note model not MVP!
   glUniform1f(glGetUniformLocation(gShader.programTrackID, pAnsiChar('Radius')), lineWidth/ 4.0) ;
-  {$ENDIF}
 
   mvp := ngl_ModelViewProjectionMatrix;
   mv := ngl_ModelViewMatrix;
@@ -149,11 +250,15 @@ begin
   mvpMat := glGetUniformLocation(gShader.programTrackID, pAnsiChar('ModelViewProjectionMatrix'));
   mvMat := glGetUniformLocation(gShader.programTrackID, pAnsiChar('ModelViewMatrix'));
   normMat := glGetUniformLocation(gShader.programTrackID, pAnsiChar('NormalMatrix'));
-
+  glUniform1f(glGetUniformLocation(gShader.programTrackID, pAnsiChar('Radius')), lineWidth) ;
   glUniformMatrix4fv(mvpMat, 1, kGL_FALSE, @mvp[0,0]);
   glUniformMatrix4fv(mvMat, 1, kGL_FALSE, @mv[0,0]);
   glUniformMatrix3fv(normMat, 1, kGL_FALSE, @n[0,0]);
-  glPrimitiveRestartIndex(kPrimitiveRestart);
+  px[0] := ScreenPixelX;
+  px[1] := ScreenPixelY;
+  glUniform2fv(glGetUniformLocation(gShader.programTrackID, pAnsiChar('ScreenPixels')), 1, @px[0]);
+    glPrimitiveRestartIndex(kPrimitiveRestart);
+  //glUniform3f(glGetUniformLocation(gShader.programTrackID, pAnsiChar('LightPos')),gShader.lightPos.X, gShader.lightPos.Y, gShader.lightPos.Z);
   glEnable(GL_PRIMITIVE_RESTART);
 end;
 
@@ -169,7 +274,6 @@ begin
   mvp := ngl_ModelViewProjectionMatrix;
   mv := ngl_ModelViewMatrix;
   n :=  ngl_NormalMatrix;
-
   mvpMat := glGetUniformLocation(lProg, pAnsiChar('ModelViewProjectionMatrix'));
    mvMat := glGetUniformLocation(lProg, pAnsiChar('ModelViewMatrix'));
    normMat := glGetUniformLocation(lProg, pAnsiChar('NormalMatrix'));
@@ -342,31 +446,6 @@ begin
   //Done by shader
 end;
 
-(*procedure nSetOrtho (w,h: integer; Distance, MaxDistance: single; isMultiSample, isPerspective: boolean);
-const
- kScaleX  = 0.7;
-var
-   aspectRatio, scaleX: single;
-   zz: single;
-begin
- if (isMultiSample) then //and (gZoom <= 1) then
-   zz := 1.5
- else
-   zz := 1;
- glViewport( 0, 0, round(w*zz), round(h*zz) );
- ScaleX := kScaleX * Distance;
- AspectRatio := w / h;
- if isPerspective then
-    ngluPerspective(40.0, w/h, 0.01, MaxDistance+1)
-  else begin
-     if AspectRatio > 1 then //Wide window                                           xxx
-        nglOrtho (-ScaleX * AspectRatio, ScaleX * AspectRatio, -ScaleX, ScaleX, 0.0, 2.0) //Left, Right, Bottom, Top
-     else //Tall window
-       nglOrtho (-ScaleX, ScaleX, -ScaleX/AspectRatio, ScaleX/AspectRatio, 0.0,  2.0); //Left, Right, Bottom, Top
-
-  end;
-end; *)
-
 procedure SetOrtho (w,h: integer; Distance, MaxDistance: single; isMultiSample, isPerspective: boolean);
 const
  kScaleX  = 0.7;
@@ -392,7 +471,7 @@ begin
   end;
 end;
 
-procedure DrawScene(w,h: integer; isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin, lightPos : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
+procedure DrawScene(w,h: integer; isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
 var
    clr: TRGBA;
 begin
@@ -419,18 +498,31 @@ begin
   nglTranslatef(-origin.X, -origin.Y, -origin.Z);
    if lTrack.n_count > 0 then begin
      if lTrack.isTubes then
-         RunMeshGLSL (2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W, lightPos, lPrefs.ShaderForBackgroundOnly) //disable clip plane
-     else
-         RunTrackGLSL(lTrack.LineWidth);
+         RunMeshGLSL (2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W,  lPrefs.ShaderForBackgroundOnly) //disable clip plane
+     else begin
+        if lPrefs.CoreTrackDisableDepth then begin
+           glEnable(GL_DEPTH_TEST);
+           glDisable(GL_BLEND);
+        end;
+       if isMultiSample then
+        RunTrackGLSL(lTrack.LineWidth, w * 2, h * 2)
+       else
+         RunTrackGLSL(lTrack.LineWidth, w, h);
+
+       if lPrefs.CoreTrackDisableDepth then
+          glEnable(GL_BLEND);
+        //glBlendEquation(GL_FUNC_ADD);
+        //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+     end;
    lTrack.DrawGL;
  end;
  if length(lNode.nodes) > 0 then begin
-     RunMeshGLSL (2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W, lightPos, lPrefs.ShaderForBackgroundOnly); //disable clip plane
+     RunMeshGLSL (2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W, lPrefs.ShaderForBackgroundOnly); //disable clip plane
    lNode.DrawGL(clr);
  end;
  if  (length(lMesh.faces) > 0) then begin
     lMesh.isVisible := isDrawMesh;
-    RunMeshGLSL (ClipPlane.X,ClipPlane.Y,ClipPlane.Z,ClipPlane.W, lightPos, false);
+    RunMeshGLSL (ClipPlane.X,ClipPlane.Y,ClipPlane.Z,ClipPlane.W, false);
     lMesh.DrawGL(clr);
     lMesh.isVisible := true;
  end;

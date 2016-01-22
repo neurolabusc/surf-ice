@@ -11,9 +11,7 @@ uses
   colorTable, Track, types,  define_types, meshify,  gl_2d, zstream, gl_core_matrix;
 
 type
-
   { TGLForm1 }
-
   TGLForm1 = class(TForm)
     AOLabel: TLabel;
     ColorbarMenu: TMenuItem;
@@ -145,6 +143,7 @@ type
     ObjectColorMenu: TMenuItem;
     OpenMenu: TMenuItem;
     procedure AdditiveOverlayMenuClick(Sender: TObject);
+    procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
     procedure MeshColorBoxChange(Sender: TObject);
     procedure OpenNode(Filename: string);
     procedure OpenTrack(Filename: string);
@@ -178,7 +177,7 @@ type
     procedure OverlayBoxCreate;
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
-    procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
+    procedure AppDropFiles(Sender: TObject; const FileNames: array of String);
     procedure CreateRender(w,h: integer; isToScreen: boolean);
     procedure GLboxPaint(Sender: TObject);
     procedure GLboxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
@@ -259,7 +258,7 @@ var
   gMouseY : integer = -1;
   GLerror : string = '';
   clipPlane : TPoint4f; //clipping bottom
-  lightPos : TPoint3f;//array [1..3] of single = (0.0, 0.0, 0.0); //light RGB
+  //lightPos : TPoint3f;//array [1..3] of single = (0.0, 0.0, 0.0); //light RGB
 const
   kScreenShotZoom  = 3;
 
@@ -757,11 +756,11 @@ var
   scale: single;
 begin
  GetOrigin(scale);
-  sph2cartDeg90x(LightAziTrack.position,LightElevTrack.position, scale * 2, lightPos.X,lightPos.Z,lightPos.Y);
-  lightPos.Z := -lightPos.Z;
-  lightPos.X := lightPos.X * scale;
-  lightPos.Y := lightPos.Y * scale;
-  lightPos.Z := lightPos.Z * scale;
+  sph2cartDeg90x(LightAziTrack.position,LightElevTrack.position, scale * 2, gShader.lightPos.X, gShader.lightPos.Z,gShader.lightPos.Y);
+  gShader.lightPos.Z := -gShader.lightPos.Z;
+  gShader.lightPos.X := gShader.lightPos.X * scale;
+  gShader.lightPos.Y := gShader.lightPos.Y * scale;
+  gShader.lightPos.Z := gShader.lightPos.Z * scale;
   UpdateTimer.Enabled := true;
 end;
 
@@ -1263,12 +1262,13 @@ begin
     meshAlpha := meshAlphaTrack.position/meshAlphaTrack.max;
     meshBlend := MeshBlendTrack.position/MeshBlendTrack.max;
     ambientOcclusionFrac := occlusionTrack.Position/occlusionTrack.max;
+
     //first pass: 3D draw all items: framebuffer f1
     isMultiSample := setFrame (w, h, gShader.f1, true );
-    DrawScene(w,h, true,isMultiSample, gPrefs, origin, lightPos , ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
+    DrawScene(w,h, true,isMultiSample, gPrefs, origin, ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
     //second pass: 3D draw overlay items only: framebuffer f2
     isMultiSample := setFrame (w, h, gShader.f2, true );
-    DrawScene(w,h, false,isMultiSample, gPrefs, origin, lightPos , ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
+    DrawScene(w,h, false,isMultiSample, gPrefs, origin,  ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
     if (isToScreen)  then begin
        releaseFrame; //GOOD: multipass, no multisampling
        Set2DDraw (w,h, red(gPrefs.BackColor) ,green(gPrefs.BackColor), blue(gPrefs.BackColor));
@@ -1283,7 +1283,7 @@ begin
          releaseFrame;
       //else
       //    setFrame (w, h, gShader.fScreenShot, true ); //SCREENSHOT - supersampled
-      DrawScene(w, h, true, false, gPrefs, origin, lightPos, ClipPlane, scale, gDistance, gelevation, gazimuth, gMesh,gNode, gTrack);
+      DrawScene(w, h, true, false, gPrefs, origin, ClipPlane, scale, gDistance, gelevation, gazimuth, gMesh,gNode, gTrack);
   end;
   if gPrefs.OrientCube then
      DrawCube (w, h,  gAzimuth, gElevation);
@@ -1313,6 +1313,7 @@ begin
  CreateRender(GLBox.Width, GLBox.Height, true);
  if UpdateTimer.enabled then
     UpdateTimerTimer(Sender);
+
 end;
 
 function TGLForm1.ScreenShot: TBitmap;
@@ -1386,11 +1387,6 @@ begin
   GLboxRequestUpdate(GLForm1);
 end;
 
-procedure TGLForm1.FormDropFiles(Sender: TObject; const FileNames: array of String);
-begin
- OpenMesh(Filenames[0]);
-end;
-
 procedure TGLForm1.AboutMenuClick(Sender: TObject);
 const
   kSamp = 36;
@@ -1398,12 +1394,13 @@ var
   s: dword;
   i: integer;
 begin
+ //showmessage(inttostr(gTrack.utime)); exit;
  s := gettickcount();
  for i := 1 to kSamp do begin
      gAzimuth := (gAzimuth + 10) mod 360;
      GLbox.Repaint;
   end;
-  showmessage( 'Surf Ice '+' 24 Dec 2015 '
+  showmessage( 'Surf Ice '+' 1 Jan 2016 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
@@ -1468,7 +1465,7 @@ begin
  if Fileexists(gPrefs.PrevTrackname) then
     OpenDialog.InitialDir := ExtractFileDir(gPrefs.PrevTrackname);
  if not OpenDialog.Execute then exit;
- //OpenDialog.Filename := '/Users/rorden/Desktop/Surf_Ice/other/stroke.trk';
+ //OpenDialog.Filename := '/Users/rorden/Desktop/Surf_Ice/sample/stroke.trk';
  OpenTrack(OpenDialog.FileName);
 end;
 
@@ -1843,7 +1840,7 @@ begin
   DefaultFormatSettings.DecimalSeparator := '.'; //OBJ/GII/Etc write real numbers as 1.23 not 1,23
 
   OverlayBoxCreate;//after we read defaults
-  Application.OnDropFiles:= FormDropFiles;
+  {$IFDEF Darwin} Application.OnDropFiles:= AppDropFiles; {$ENDIF}
   {$IFDEF Windows}
   StringGrid1.DefaultRowHeight := 28;
   {$ENDIF}
@@ -1854,7 +1851,7 @@ begin
   gMesh := TMesh.Create;
   gMesh.isBusy := true;
   gNode := TMesh.Create;
-    gMesh.isZDimIsUp := gPrefs.ZDimIsUp;
+  gMesh.isZDimIsUp := gPrefs.ZDimIsUp;
   gNode.isZDimIsUp := gPrefs.ZDimIsUp;
   gTrack := TTrack.Create;
   gTrack.isTubes := gPrefs.TracksAreTubes;
@@ -1878,18 +1875,18 @@ begin
   GLBox.OnPaint := GLboxPaint;
   FormCreateShaders;
   UpdateMRU;
+  if (gPrefs.OcclusionAmount <> occlusionTrack.Position) and (gPrefs.OcclusionAmount >= 0) and (gPrefs.OcclusionAmount <= 100) then
+     occlusionTrack.Position:= gPrefs.OcclusionAmount;
   ColorBarMenu.Checked := gPrefs.Colorbar;
   AdditiveOverlayMenu.Checked := gPrefs.AdditiveOverlay;
   gMesh.isAdditiveOverlay := gPrefs.AdditiveOverlay;
-  {$IFDEF RELOADTRACK}
-  if fileexists(gPrefs.PrevTrackname) then
-    OpenTrack(gPrefs.PrevTrackname);
-  {$ELSE}
-  if fileexists(gPrefs.PrevFilename[1]) then
+  if (gPrefs.LoadTrackOnLaunch) and fileexists(gPrefs.PrevTrackname) then
+    OpenTrack(gPrefs.PrevTrackname)
+  else if fileexists(gPrefs.PrevFilename[1]) then
     OpenMesh(gPrefs.PrevFilename[1])
   else
     gMesh.MakePyramid;
-  {$ENDIF}
+  gMesh.isBusy := false;
   isBusy := false;
   {$IFDEF Darwin}
   OpenMenu.ShortCut :=  ShortCut(Word('O'), [ssMeta]);
@@ -1920,6 +1917,17 @@ begin
   //AddOverlayMenuClick(sender);
   //AddTracksMenuClick(sender);
   //VolumeToMeshMenuClick(sender);
+end;
+
+procedure TGLForm1.FormDropFiles(Sender: TObject;
+  const FileNames: array of String);
+begin
+   OpenMesh(Filenames[0]);
+end;
+
+procedure TGLForm1.AppDropFiles(Sender: TObject; const FileNames: array of String);
+begin
+ OpenMesh(Filenames[0]);
 end;
 
 end.
