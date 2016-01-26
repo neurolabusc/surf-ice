@@ -123,7 +123,7 @@ begin
         faces[(i * 2)+1] := pti( i+1,  i + slices + 1, i + slices);
      end else begin
         faces[i * 2] := pti( i,  0, i+slices);
-        faces[(i * 2)+1] := pti( 0,  0 + slices + 1, i + slices);
+        faces[i * 2 + 1] := pti( 0,  0 + slices, i + slices);
      end;
   end;
 end; // MakeCylinder()

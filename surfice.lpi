@@ -3,7 +3,11 @@
   <ProjectOptions>
     <Version Value="9"/>
     <General>
-      <SessionStorage Value="InProjectDir"/>
+      <Flags>
+        <SaveOnlyProjectUnits Value="True"/>
+        <SaveJumpHistory Value="False"/>
+        <SaveFoldState Value="False"/>
+      </Flags>
       <MainUnit Value="0"/>
       <Title Value="Surf Ice"/>
       <ResourceType Value="res"/>
@@ -22,10 +26,10 @@
     <MacroValues Count="1">
       <Macro1 Name="LCLWidgetType" Value="cocoa"/>
     </MacroValues>
-    <BuildModes Count="1">
+    <BuildModes Count="1" Active="Default">
       <Item1 Name="Default" Default="True"/>
       <SharedMatrixOptions Count="1">
-        <Item1 ID="584414801632" Modes="Default" Type="IDEMacro" MacroName="LCLWidgetType" Value="cocoa"/>
+        <Item1 ID="394853231063" Modes="Default" Type="IDEMacro" MacroName="LCLWidgetType" Value="cocoa"/>
       </SharedMatrixOptions>
     </BuildModes>
     <PublishOptions>
@@ -48,6 +52,7 @@
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
+        <UsageCount Value="21"/>
       </Unit0>
       <Unit1>
         <Filename Value="mainunit.pas"/>
@@ -55,46 +60,66 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="3"/>
+        <TopLine Value="1303"/>
+        <CursorPos X="21" Y="1307"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
+        <UsageCount Value="21"/>
       </Unit2>
       <Unit3>
         <Filename Value="nifti_loader.pas"/>
         <IsPartOfProject Value="True"/>
+        <UsageCount Value="21"/>
       </Unit3>
       <Unit4>
         <Filename Value="colorTable.pas"/>
         <IsPartOfProject Value="True"/>
+        <UsageCount Value="21"/>
       </Unit4>
       <Unit5>
         <Filename Value="track.pas"/>
         <IsPartOfProject Value="True"/>
+        <TopLine Value="470"/>
+        <CursorPos X="15" Y="497"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
       </Unit5>
       <Unit6>
         <Filename Value="glisosurface.pas"/>
         <IsPartOfProject Value="True"/>
+        <UsageCount Value="21"/>
       </Unit6>
       <Unit7>
         <Filename Value="isosurface.pas"/>
         <IsPartOfProject Value="True"/>
+        <UsageCount Value="21"/>
       </Unit7>
       <Unit8>
         <Filename Value="unifyverticesu.pas"/>
         <IsPartOfProject Value="True"/>
+        <UsageCount Value="21"/>
       </Unit8>
       <Unit9>
         <Filename Value="progmesh.pas"/>
         <IsPartOfProject Value="True"/>
+        <UsageCount Value="21"/>
       </Unit9>
       <Unit10>
         <Filename Value="mergevertices.pas"/>
         <IsPartOfProject Value="True"/>
+        <UsageCount Value="21"/>
       </Unit10>
       <Unit11>
         <Filename Value="meshdisplay.pas"/>
         <IsPartOfProject Value="True"/>
+        <UsageCount Value="21"/>
       </Unit11>
     </Units>
   </ProjectOptions>

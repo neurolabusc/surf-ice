@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
-  Left = 316
+  Left = 308
   Height = 740
-  Top = 23
+  Top = 158
   Width = 1005
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -131,7 +131,7 @@ object GLForm1: TGLForm1
       end
       object LightElevTrack: TTrackBar
         Left = 52
-        Height = 30
+        Height = 38
         Top = 60
         Width = 92
         Max = 90
@@ -143,7 +143,7 @@ object GLForm1: TGLForm1
       end
       object LightAziTrack: TTrackBar
         Left = 170
-        Height = 30
+        Height = 38
         Top = 60
         Width = 92
         Max = 90
@@ -506,12 +506,15 @@ object GLForm1: TGLForm1
           ''
           ''
           ''
+          ''
+          ''
+          ''
         )
         TabOrder = 3
       end
       object meshAlphaTrack: TTrackBar
         Left = 52
-        Height = 30
+        Height = 38
         Hint = 'Adjust main mesh transparency'
         Top = 30
         Width = 92
@@ -536,7 +539,7 @@ object GLForm1: TGLForm1
       end
       object MeshBlendTrack: TTrackBar
         Left = 170
-        Height = 30
+        Height = 38
         Hint = 'XRay: make internal overlays, tracks and nodes visible'
         Top = 30
         Width = 92
@@ -550,7 +553,7 @@ object GLForm1: TGLForm1
       end
       object occlusionTrack: TTrackBar
         Left = 170
-        Height = 30
+        Height = 38
         Hint = 'Ambient Occlusion: make sulci and other crevices darker'
         Top = 0
         Width = 92
@@ -612,7 +615,7 @@ object GLForm1: TGLForm1
         Height = 30
         Top = 30
         Width = 190
-        Max = 6
+        Max = 12
         Min = 1
         OnChange = TrackBoxChange
         Position = 2

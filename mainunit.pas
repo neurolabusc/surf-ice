@@ -3,7 +3,7 @@ unit mainunit;
 {$mode delphi}{$H+}
 interface
 uses
-  {$IFDEF DGL} dglOpenGL, {$ELSE} gl, glext, {$ENDIF}
+  {$IFDEF DGL} dglOpenGL, {$ELSE} gl,  {$ENDIF}
   {$IFDEF COREGL} gl_core_3d, {$ELSE}     gl_legacy_3d, {$ENDIF}
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,math,
   ExtCtrls, OpenGLContext, mesh, LCLintf, ComCtrls, Menus, graphtype,
@@ -1305,7 +1305,6 @@ begin
      GLbox.SwapBuffers;
   //nDraw;
     isBusy := false;
-
 end;
 
 procedure TGLForm1.GLboxPaint(Sender: TObject);

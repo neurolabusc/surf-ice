@@ -4,7 +4,7 @@ unit track;
 interface
 
 uses
-  {$IFDEF DGL} dglOpenGL, {$ELSE} gl, glext, {$ENDIF}
+  {$IFDEF DGL} dglOpenGL, {$ELSE} gl, {$IFDEF COREGL}glext,{$ENDIF} {$ENDIF}
   Classes, SysUtils,  dialogs, matmath, math, define_types;
 //http://www.trackvis.org/docs/?subsect=fileformat
 
@@ -172,7 +172,6 @@ begin
           {$IFDEF COREGL} // COREGL : glDrawElements(GL_LINE_STRIP_ADJACENCY... ; LEGACY : glBegin(GL_LINE_STRIP);
           Verts[n_vertices] := Verts[n_vertices+1];
           Verts[n_vertices+m-1] := Verts[n_vertices+m-2];
-
           Indices[n_faces] := n_vertices;
           Indices[m+n_faces+1] := Indices[m+n_faces];
           Indices[m+n_faces+2] := kPrimitiveRestart;
@@ -325,9 +324,11 @@ begin
            numVert := numVert + numCylVert;
            mprev := mi;
        end;
+       //faces[numFaces+n_faces-1] := vectorAdd(cylFace[j], 0);
        makeCylinderEnd(radius, pts[m-2], pts[m-1], pts[m-1], cylVert, kSlices);
        for j := 0 to (numCylVert - 1) do //add top of last cylinder
            vertices[j+numVert+n_vertices] := cylVert[j];
+
        numVert := numVert + numCylVert;
        normRGBA := mixRandRGBA(normRGB, ditherColorFrac);
        for j := 0 to ((m * numCylVert) -1) do
