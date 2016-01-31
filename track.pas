@@ -11,10 +11,11 @@ uses
 Type
 
 TTrack = class
-  utime: QWord;
+  //utime: QWord;
   scale, minFiberLength, ditherColorFrac : single;
   origin : TPoint3f;
   isBusy, isRebuildList, isTubes: boolean;
+  TrackTubeSlices, //e.g. if 5 then cross section of fiber is pentagon
   n_count, n_faces, n_vertices, n_indices, minFiberLinks, LineWidth: integer;
   {$IFDEF COREGL}
   vao, vbo : GLuint;
@@ -98,10 +99,11 @@ begin
   maxLinks := 0;
   n_faces := 0;
   n_vertices := 0;
+  TrackTubeSlices := 5;
   if (length(tracks) < 4) then exit;
   if minFiberLinks < 3 then minFiberLinks := 3; //minimum to compute normal;
   ntracks := length(tracks);
-  uTime := GetTickCount64();
+  //uTime := GetTickCount64();
   {$DEFINE TWOPASS_STRIP} //two passes is ~2 times quicker as we do not waste time re-allocating memory
   {$IFDEF TWOPASS_STRIP}
   //first pass: find mesh size
@@ -222,7 +224,7 @@ begin
             i := i + (3 * m);
   end;
   {$ENDIF}
-  uTime := GetTickCount64() - uTime;
+  //uTime := GetTickCount64() - uTime;
 
   {$IFDEF COREGL}
   BuildDisplayListStrip(Indices, Verts, vNorms, vRGBA, LineWidth, vao, vbo);
@@ -236,8 +238,8 @@ end; // BuildList()
 
 procedure TTrack.BuildListTubes ;
 // create displaylist where tracks are drawn as connected cylinders
-const
-  kSlices = 5; //the cylinder is a pie cut into this many slices: fewer = simpler,  more = less boxy
+//const
+//  kSlices = 5; //the cylinder is a pie cut into this many slices: fewer = simpler,  more = less boxy
 var
   vRGBA: TVertexRGBA;
   normRGB: TPoint3f;
@@ -259,9 +261,9 @@ begin
   maxLinks := 0;
   if (length(tracks) < 4) then exit;
   if minFiberLinks < 3 then minFiberLinks := 3; //minimum to compute normal;
-  MakeCylinder( 1, 71, cylFace, cylVert, kSlices);
+  MakeCylinder( 1, 71, cylFace, cylVert, TrackTubeSlices);
   numCylFace := length(cylFace);
-  numCylVert := kSlices;//numCylVert div 2; //number of faces for half of cylinder (top or bottom disk)
+  numCylVert := TrackTubeSlices;//numCylVert div 2; //number of faces for half of cylinder (top or bottom disk)
   ntracks := length(tracks);
   radius := LineWidth * 0.25;
   {$DEFINE TWOPASS} //two passes is ~4 times quicker as we do not waste time re-allocating memory
@@ -315,7 +317,7 @@ begin
        numVert := 0;
        mprev := 0; //location of previous vertex
        for mi := 0 to (m-2) do begin
-           makeCylinderEnd(radius, pts[mprev], pts[mi], pts[mi+1], cylVert, kSlices);
+           makeCylinderEnd(radius, pts[mprev], pts[mi], pts[mi+1], cylVert, TrackTubeSlices);
            for j := 0 to (numCylFace - 1) do //add this cylinder
                faces[j+numFaces+n_faces] := vectorAdd(cylFace[j], numVert+n_vertices);
            numFaces := numFaces + numCylFace;
@@ -325,7 +327,7 @@ begin
            mprev := mi;
        end;
        //faces[numFaces+n_faces-1] := vectorAdd(cylFace[j], 0);
-       makeCylinderEnd(radius, pts[m-2], pts[m-1], pts[m-1], cylVert, kSlices);
+       makeCylinderEnd(radius, pts[m-2], pts[m-1], pts[m-1], cylVert, TrackTubeSlices);
        for j := 0 to (numCylVert - 1) do //add top of last cylinder
            vertices[j+numVert+n_vertices] := cylVert[j];
 

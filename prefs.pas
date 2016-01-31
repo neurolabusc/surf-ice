@@ -19,6 +19,7 @@ type
     SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube,
      TracksAreTubes,Colorbar, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,
      ZDimIsUp, SmoothVoxelwiseData, ShaderForBackgroundOnly, CoreTrackDisableDepth: boolean;
+    TrackTubeSlices,
     window_width, window_height, RenderQuality, SaveAsFormat, OcclusionAmount: integer;
     ObjColor,BackColor: TColor;
     PrevFilename: TMRU;
@@ -108,6 +109,7 @@ begin
     CoreTrackDisableDepth := false;
     LoadTrackOnLaunch := false;
     TracksAreTubes := true;
+    TrackTubeSlices := 5;
     SaveAsFormat := kSaveAsObj;
     OcclusionAmount := 25;
     //MultiPassRendering := true;
@@ -363,6 +365,7 @@ begin
   IniRGBA(lRead,lIniFile, 'TextBorder',lPrefs.TextBorder);
   IniRGBA(lRead,lIniFile, 'GridAndBorder',lPrefs.GridAndBorder);
   IniUnitRect(lRead,lIniFile, 'ColorBarPos',lPrefs.ColorBarPos);
+  IniInt(lRead,lIniFile,'TrackTubeSlices',lPrefs.TrackTubeSlices);
   IniInt(lRead,lIniFile,'RenderQuality',lPrefs.RenderQuality);
   IniInt(lRead,lIniFile,'SaveAsFormat',lPrefs.SaveAsFormat);
   IniInt(lRead,lIniFile,'OcclusionAmount',lPrefs.OcclusionAmount);

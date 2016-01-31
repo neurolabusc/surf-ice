@@ -263,11 +263,14 @@ begin
      {$ELSE}
      glDrawBuffers(1, @drawBuf[0]); // draw colors only
      {$ENDIF}
+     {$IFDEF COREGL}
      if(glCheckFramebufferStatus(GL_FRAMEBUFFER) <> GL_FRAMEBUFFER_COMPLETE) then begin
        GLForm1.ShowmessageError('Frame buffer error 0x'+inttohex(glCheckFramebufferStatus(GL_FRAMEBUFFER),4) );
        exit;
      end;
+     {$ENDIF}
 end;
+
 
 procedure initFrame(var f : TFrameBuffer);
 begin

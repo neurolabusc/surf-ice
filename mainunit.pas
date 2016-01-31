@@ -138,7 +138,7 @@ type
     OverlayTimer: TTimer;
     UpdateTimer: TTimer;
     ToolPanel: TPanel;
-    SaveDialog1: TSaveDialog;
+    SaveBitmapDialog: TSaveDialog;
     SaveMenu: TMenuItem;
     ObjectColorMenu: TMenuItem;
     OpenMenu: TMenuItem;
@@ -1319,22 +1319,29 @@ function TGLForm1.ScreenShot: TBitmap;
 var
   RawImage: TRawImage;
   p: array of byte;
-  w, h, x, y, BytePerPixel,trackLineWidth: integer;
+  zoom, w, h, x, y, BytePerPixel,trackLineWidth: integer;
   z:longword;
   DestPtr: PInteger;
+  maxXY : array[0..1] of GLuint;
 begin
+ GLBox.MakeCurrent;
+ glGetIntegerv(GL_MAX_VIEWPORT_DIMS, @maxXY);
+ //caption := inttostr(maxXY[0]) +'x'+inttostr(maxXY[1]);
+ w := GLbox.Width * kScreenShotZoom;
+ h := GLbox.Height * kScreenShotZoom;
+ if (w > maxXY[0]) or (h > maxXY[1]) or (gPrefs.RenderQuality = kRenderPoor) or (not (gPrefs.SupportBetterRenderQuality)) then begin
+  w := GLbox.Width;
+  h := GLbox.Height;
+  zoom := 1
+ end else
+     zoom := kScreenShotZoom;
   if (gTrack.n_count > 0) and (not gTrack.isTubes) then begin  //tracks are drawn in pixels, so zoom appropriately!
      trackLineWidth := gTrack.LineWidth;
-     gTrack.LineWidth := 2 * gTrack.LineWidth * kScreenShotZoom;
+     gTrack.LineWidth := 2 * gTrack.LineWidth * zoom;
      gTrack.isRebuildList:= true;
   end;
-  if gPrefs.RenderQuality <> kRenderPoor then begin
-     w := GLbox.Width * kScreenShotZoom;
-     h := GLbox.Height * kScreenShotZoom;
-  end else begin //poor does not use frame buffer - assume resolution limited to window
-      w := GLbox.Width;
-      h := GLbox.Height;
-  end;
+
+
 
   Result:=TBitmap.Create;
   Result.Width:=w;
@@ -1346,7 +1353,7 @@ begin
   RawImage := Result.RawImage;
   BytePerPixel := RawImage.Description.BitsPerPixel div 8;
   setlength(p, 4*w* h);
-  GLBox.MakeCurrent;
+  //GLBox.MakeCurrent;
   CreateRender(w, h, false); //draw to framebuffer fScreenShot
   {$IFDEF Darwin} //http://lists.apple.com/archives/mac-opengl/2006/Nov/msg00196.html
   glReadPixels(0, 0, w, h, $80E1, $8035, @p[0]); //OSX-Darwin   GL_BGRA = $80E1;  GL_UNSIGNED_INT_8_8_8_8_EXT = $8035;
@@ -1399,11 +1406,12 @@ begin
      gAzimuth := (gAzimuth + 10) mod 360;
      GLbox.Repaint;
   end;
-  showmessage( 'Surf Ice '+' 1 Jan 2016 '
+  showmessage( 'Surf Ice '+' 2 Feb 2016 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
    {$IFDEF DGL} + ' DGL'{$ENDIF}
+   {$IFNDEF COREGL}+' (Legacy OpenGL)'{$ENDIF}
    +LineEnding+' www.mricro.com :: BSD 2-Clause License (opensource.org/licenses/BSD-2-Clause)'
    +LineEnding+' FPS ' +inttostr(round( (kSamp*1000)/(gettickcount-s)))
    +LineEnding+' Mesh Vertices '+inttostr(length(gMesh.vertices))+' Faces '+  inttostr(length(gMesh.faces)) +' Colors '+  inttostr(length(gMesh.vertexRGBA))
@@ -1745,12 +1753,12 @@ var
    bmp: TBitmap;
    png: TPortableNetworkGraphic;
 begin
-  if not SaveDialog1.execute then exit;
+  if not SaveBitmapDialog.execute then exit;
   bmp := ScreenShot;
   png := TPortableNetworkGraphic.Create;
   try
     png.Assign(bmp);    //Convert data into png
-    png.SaveToFile(SaveDialog1.Filename);
+    png.SaveToFile(SaveBitmapDialog.Filename);
   finally
     png.Free;
   end;
@@ -1780,6 +1788,7 @@ begin
   if gPrefs.SaveAsFormat = kSaveAsGii then begin
     SaveMeshDialog.Title := 'Save mesh as GIfTI';
     SaveMeshDialog.DefaultExt := '.gii';
+    SaveMeshDialog.Filter := 'GIfTI|*.gii';
     SaveMeshDialog.FileName:= changeFileExt(nam, SaveMeshDialog.DefaultExt);
     if not SaveMeshDialog.Execute then exit;
     gMesh.SaveGii(SaveMeshDialog.Filename);
@@ -1788,12 +1797,14 @@ begin
   if gPrefs.SaveAsFormat = kSaveAsMz3 then begin
     SaveMeshDialog.Title := 'Save mesh as Mz3';
     SaveMeshDialog.DefaultExt := '.mz3';
+    SaveMeshDialog.Filter := 'Surf Ice Mesh|*.mz3';
     SaveMeshDialog.FileName:= changeFileExt(nam, SaveMeshDialog.DefaultExt);
     SaveMesh;
     exit;
   end;
   SaveMeshDialog.Title := 'Save mesh as WaveFront Obj';
   SaveMeshDialog.DefaultExt := '.obj';
+  SaveMeshDialog.Filter := 'OBJ mesh|*.obj';
   SaveMeshDialog.FileName:= changeFileExt(nam, SaveMeshDialog.DefaultExt);
   if not SaveMeshDialog.Execute then exit;
   gMesh.SaveObj(SaveMeshDialog.Filename);
@@ -1853,6 +1864,8 @@ begin
   gMesh.isZDimIsUp := gPrefs.ZDimIsUp;
   gNode.isZDimIsUp := gPrefs.ZDimIsUp;
   gTrack := TTrack.Create;
+  if (gPrefs.TrackTubeSlices > 2) and (gPrefs.TrackTubeSlices < 22) then
+     gTrack.TrackTubeSlices := gPrefs.TrackTubeSlices;
   gTrack.isTubes := gPrefs.TracksAreTubes;
   Application.ShowButtonGlyphs:= sbgNever;
   //GLbox:= TOpenGLControl.Create(GLForm1);

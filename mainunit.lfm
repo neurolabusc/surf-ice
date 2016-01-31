@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
-  Left = 308
+  Left = 345
   Height = 740
-  Top = 158
+  Top = 320
   Width = 1005
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -161,6 +161,7 @@ object GLForm1: TGLForm1
         Align = alBottom
         Lines.Strings = (
           'Memo1'
+          ''
           ''
           ''
           ''
@@ -1374,8 +1375,9 @@ object GLForm1: TGLForm1
       end
     end
   end
-  object SaveDialog1: TSaveDialog
+  object SaveBitmapDialog: TSaveDialog
     DefaultExt = '.png'
+    Filter = 'PNG Bitmap|*.png'
     left = 352
     top = 80
   end
