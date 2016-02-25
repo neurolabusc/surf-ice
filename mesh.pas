@@ -4,7 +4,7 @@ unit mesh;
 interface
 
 uses
-  {$IFDEF DGL} dglOpenGL, {$ELSE} gl, glext, {$ENDIF}
+  {$IFDEF DGL} dglOpenGL, {$ELSE} gl, {$IFDEF COREGL}glext,  {$ENDIF}  {$ENDIF}
   {$IFDEF CTM} ctm_loader, {$ENDIF}
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, strutils,
   base64, zstream, LcLIntf, nifti_loader, colorTable, matmath,
@@ -86,7 +86,7 @@ type
     procedure LoadStl(const FileName: string);
     procedure LoadVtk(const FileName: string);
     procedure LoadW(const FileName: string; lOverlayIndex: integer);
-    procedure LoadNii(const FileName: string; lOverlayIndex: integer; isSmooth: boolean);
+    procedure LoadNii(const FileName: string; lOverlayIndex: integer);
     procedure LoadMeshAsOverlay(const FileName: string; lOverlayIndex: integer);
   public
     procedure MakePyramid;
@@ -97,7 +97,7 @@ type
     procedure SwapZY;
     function LoadFromFile(const FileName: string): boolean;
     function LoadEdge(const FileName: string): boolean;
-    function LoadOverlay(const FileName: string; isSmooth: boolean): boolean;
+    function LoadOverlay(const FileName: string): boolean;
     procedure CloseOverlays;
     procedure Close;
     constructor Create;
@@ -967,7 +967,7 @@ end;
 procedure TMesh.Node2Mesh;
 var
    i,j, v,f, n, nNode, nNodeThresh, nEdgeThresh, vert, face,  sphereF, sphereV,  cylF, cylV: integer;
-   denom,frac, radius, thresholdNode: single;
+   denom,frac, radius: single;
    lSphere: TMesh;
    cylFace: TFaces;
    cylVert: TVertices;
@@ -2843,7 +2843,7 @@ begin
      CloseFile(f);
 end; // LoadW()
 
-procedure TMesh.LoadNii(const FileName: string; lOverlayIndex: integer; isSmooth: boolean);
+procedure TMesh.LoadNii(const FileName: string; lOverlayIndex: integer);
 //Load NIfTI image as overlay
 var
    i, num_v: integer;
@@ -2911,7 +2911,7 @@ begin
   //showmessage('overlay'+floattostr(mn)+'  '+floattostr(mx));
 end; // SetOverlayDescriptives()
 
-function TMesh.LoadOverlay(const FileName: string; isSmooth: boolean): boolean;
+function TMesh.LoadOverlay(const FileName: string): boolean; //; isSmooth: boolean
 var
    i, nOverlays: integer;
    ext: string;
@@ -2974,7 +2974,7 @@ begin
      end;
   end;
   if (ext = '.NII') or (ext = '.IMG') or (ext = '.HDR')  or (ext = '.GZ') then
-     LoadNii(FileName, OpenOverlays, isSmooth);
+     LoadNii(FileName, OpenOverlays);
   if (length(overlay[OpenOverlays].intensity) < 1 )  then
        LoadW(FileName, OpenOverlays);
   //if (length(overlay[OpenOverlays].intensity) < 1 )   then

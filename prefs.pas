@@ -12,6 +12,8 @@ const
   kSaveAsObj = 0;
   kSaveAsGii = 1;
   kSaveAsMz3 = 2;
+  kSaveAsTrackVtk = 0;
+  kSaveAsTrackBfloat = 1;
 
 type
   TMRU =  array [1..knMRU] of string;
@@ -19,10 +21,10 @@ type
     SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube,
      TracksAreTubes,Colorbar, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,
      ZDimIsUp, SmoothVoxelwiseData, ShaderForBackgroundOnly, CoreTrackDisableDepth: boolean;
-    TrackTubeSlices,
-    window_width, window_height, RenderQuality, SaveAsFormat, OcclusionAmount: integer;
+    TrackTubeSlices, ScreenCaptureZoom,
+    window_width, window_height, RenderQuality, SaveAsFormat,SaveAsFormatTrack, OcclusionAmount: integer;
     ObjColor,BackColor: TColor;
-    PrevFilename: TMRU;
+    PrevFilename, PrevScriptName: TMRU;
     PrevTrackname, PrevNodename, PrevOverlayname : string;
     TextColor,TextBorder,GridAndBorder: TRGBA;
     ColorBarPos: TUnitRect;
@@ -34,10 +36,96 @@ procedure IniFloat(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lVal
 procedure IniColor(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lValue: TColor);
 procedure SetDefaultPrefs (var lPrefs: TPrefs; lEverything: boolean);
 procedure IniRGBA(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lValue: TRGBA);
+procedure FillMRU (var lMRU: TMRU; lSearchPath,lSearchExt: string; lForce: boolean);
+procedure Add2MRU (var lMRU: TMRU;  lNewFilename: string); //add new file to most-recent list
 
 implementation
 
 uses userdir;
+
+function IsNovel (lName: string; var lMRU: TMRU; lnOK: integer):boolean;
+var lI,lN: integer;
+begin
+  result := false;
+  lN := lNOK;
+  if lnOK > knMRU then
+    lN := knMRU;
+  if lN < 1 then begin
+    result := true;
+    exit;
+  end;
+  for lI := 1 to lN do
+    if lMRU[lI] = lName then
+      exit;
+  result := true;
+end;
+
+procedure Add2MRU (var lMRU: TMRU;  lNewFilename: string); //add new file to most-recent list
+var
+  lNewM,lOldM,lStr: string;
+  lPos,lN : integer;
+begin
+  lNewM := extractfilename(lNewFilename);
+  //first, increase position of all old MRUs
+  lN := 0; //Number of MRU files
+  for lPos := 1 to (knMRU) do begin//first, eliminate duplicates
+	  lStr := lMRU[lPos];
+          lOldM := extractfilename(lStr);
+          if (lStr <> '') {and (lStr <> lNewFileName)} and (lNewM <> lOldM) then begin
+             inc(lN);
+	     lMRU[lN] := lStr;
+	  end; //keep in MRU list
+  end; //for each MRU
+  //next, increment positions
+  if lN >= knMRU then
+	 lN := knMRU - 1;
+  for lPos := lN downto 1 do
+	  lMRU[lPos+1] := lMRU[lPos];
+  if (lN+2) < (knMRU) then //+1 as we have added a file
+	 for lPos := (lN+2) to knMRU do
+	   lMRU[lPos] := '';
+  lMRU[1] := lNewFilename;
+end;//Add2MRU
+
+procedure FillMRU (var lMRU: TMRU; lSearchPath,lSearchExt: string; lForce: boolean);
+//e.g. SearchPath  includes final pathdelim, e.g. c:\filedir\
+var
+	lSearchRec: TSearchRec;
+  lI,lMax,lOK: integer;
+  lS: TStringList;
+begin
+  lOK := 0;
+  if (not lForce) and (lMRU[1] <> '') then begin
+      //exit; //only fill empty MRUs...
+      for lI := 1 to knMRU do begin
+        if (lMRU[lI] <> '') and (fileexists(lMRU[lI])) and (IsNovel (lMRU[lI], lMRU, lOK)) then begin
+          inc(lOK);
+          lMRU[lOK] := lMRU[lI];
+        end; //if file exists
+      end; //for each MRU
+      if lOK = knMRU then
+        exit; //all slots filled;
+      for lI := (lOK+1) to knMRU do
+        lMRU[lI] :=  '';//empty slot
+  end; //check exisiting MRUs
+  lS := TStringList.Create;
+  if FindFirst(lSearchPath+'*'+lSearchExt, faAnyFile, lSearchRec) = 0 then
+	 repeat
+      if IsNovel (lSearchPath+lSearchRec.Name, lMRU, lOK) then
+        lS.Add(lSearchPath+lSearchRec.Name) ;
+	 until (FindNext(lSearchRec) <> 0);
+  FindClose(lSearchRec);
+  lMax := lS.count;
+
+  if lMax > 0 then begin
+    lS.sort;
+    if lMax > knMRU then
+      lMax := knMRU;
+    for lI := (lOK+1) to lMax do
+      lMRu[lI] := lS[lI-1];
+  end;
+  Freeandnil(lS);
+end;//UpdateLUT
 
 procedure IniFloat(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lValue: single);
 //read or write an integer value to the initialization file
@@ -69,7 +157,7 @@ end; //IniFloat
 
 function DefaultMeshName: string;
 var
-  lPath,lName,lExt: string;
+  lPath,lName {$IFDEF Darwin}, lExt {$ENDIF}: string;
 begin
  lPath := ExtractFileDir(AppDir());
  {$IFDEF Darwin}
@@ -95,8 +183,10 @@ begin
             TextBorder := RGBA(92,92,132,255);
             GridAndBorder := RGBA(106,106,142,222);
             ColorBarPos:= CreateUnitRect (0.1,0.1,0.9,0.14);
-            for i := 1 to knMRU do
+            for i := 1 to knMRU do  begin
               PrevFilename[i] := '';
+              PrevScriptName[i] := '';
+            end;
             PrevFilename[1] := DefaultMeshName;
        end;
   end;
@@ -110,7 +200,9 @@ begin
     LoadTrackOnLaunch := false;
     TracksAreTubes := true;
     TrackTubeSlices := 5;
+    ScreenCaptureZoom := 3;
     SaveAsFormat := kSaveAsObj;
+    SaveAsFormatTrack := kSaveAsTrackVtk;
     OcclusionAmount := 25;
     //MultiPassRendering := true;
     OrientCube := true;
@@ -361,13 +453,20 @@ begin
   IniStr(lRead, lIniFile, 'PrevNodename', lPrefs.PrevNodename);
   IniStr(lRead, lIniFile, 'PrevOverlayname', lPrefs.PrevOverlayname);
   IniMRU(lRead,lIniFile,'PrevFilename',lPrefs.PrevFilename);
+  IniMRU(lRead,lIniFile,'PrevScriptName',lPrefs.PrevScriptName);
+
   IniRGBA(lRead,lIniFile, 'TextColor',lPrefs.TextColor);
   IniRGBA(lRead,lIniFile, 'TextBorder',lPrefs.TextBorder);
   IniRGBA(lRead,lIniFile, 'GridAndBorder',lPrefs.GridAndBorder);
   IniUnitRect(lRead,lIniFile, 'ColorBarPos',lPrefs.ColorBarPos);
   IniInt(lRead,lIniFile,'TrackTubeSlices',lPrefs.TrackTubeSlices);
+  IntBound(lPrefs.TrackTubeSlices, 3,13);
+  IniInt(lRead,lIniFile,'ScreenCaptureZoom',lPrefs.ScreenCaptureZoom);
+  IntBound(lPrefs.ScreenCaptureZoom, 1,7);
+
   IniInt(lRead,lIniFile,'RenderQuality',lPrefs.RenderQuality);
   IniInt(lRead,lIniFile,'SaveAsFormat',lPrefs.SaveAsFormat);
+  IniInt(lRead,lIniFile,'SaveAsFormatTrack',lPrefs.SaveAsFormatTrack);
   IniInt(lRead,lIniFile,'OcclusionAmount',lPrefs.OcclusionAmount);
   if (lPrefs.RenderQuality < kRenderPoor) then lPrefs.RenderQuality:= kRenderPoor;
   if (lPrefs.RenderQuality > kRenderBetter) then lPrefs.RenderQuality:= kRenderBetter;

@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <Version Value="9"/>
+    <BuildModes Active="Default"/>
+    <Units Count="12">
+      <Unit0>
+        <Filename Value="trackshrink.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
+        <TopLine Value="549"/>
+        <CursorPos X="20" Y="568"/>
+        <UsageCount Value="22"/>
+        <Loaded Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="opts.inc"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="3" Y="5"/>
+        <UsageCount Value="10"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="define_types.pas"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="120" Y="2"/>
+        <UsageCount Value="10"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="track.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="611"/>
+        <CursorPos Y="623"/>
+        <UsageCount Value="10"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="/usr/local/share/fpcsrc/packages/fv/src/dialogs.pas"/>
+        <UnitName Value="Dialogs"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1025"/>
+        <CursorPos X="6" Y="1039"/>
+        <UsageCount Value="10"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="prefs.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="188"/>
+        <CursorPos X="22" Y="202"/>
+        <UsageCount Value="10"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="ctm_loader.pas"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="17" Y="94"/>
+        <UsageCount Value="10"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="mesh.pas"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="62" Y="9"/>
+        <UsageCount Value="10"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="gl_legacy_3d.pas"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="29" Y="8"/>
+        <UsageCount Value="10"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="mainunit.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="799"/>
+        <CursorPos Y="799"/>
+        <UsageCount Value="10"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="track_simplify.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="57"/>
+        <CursorPos Y="75"/>
+        <UsageCount Value="10"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="/usr/local/share/fpcsrc/packages/fcl-base/src/custapp.pp"/>
+        <UnitName Value="CustApp"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="57"/>
+        <CursorPos X="23" Y="64"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit11>
+    </Units>
+    <JumpHistory Count="20" HistoryIndex="19">
+      <Position1>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="83" Column="24" TopLine="60"/>
+      </Position1>
+      <Position2>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="350" Column="5" TopLine="328"/>
+      </Position2>
+      <Position3>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="398" TopLine="375"/>
+      </Position3>
+      <Position4>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="353" Column="32" TopLine="342"/>
+      </Position4>
+      <Position5>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="106" Column="82" TopLine="103"/>
+      </Position5>
+      <Position6>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="353" Column="74" TopLine="355"/>
+      </Position6>
+      <Position7>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="4" Column="31"/>
+      </Position7>
+      <Position8>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="414" Column="83" TopLine="399"/>
+      </Position8>
+      <Position9>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="487" Column="20" TopLine="473"/>
+      </Position9>
+      <Position10>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="368" Column="38" TopLine="356"/>
+      </Position10>
+      <Position11>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="488" Column="23" TopLine="474"/>
+      </Position11>
+      <Position12>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="497" Column="25" TopLine="477"/>
+      </Position12>
+      <Position13>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="540" Column="15" TopLine="521"/>
+      </Position13>
+      <Position14>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="543" Column="34" TopLine="522"/>
+      </Position14>
+      <Position15>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="538" Column="33" TopLine="522"/>
+      </Position15>
+      <Position16>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="504" Column="15" TopLine="492"/>
+      </Position16>
+      <Position17>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="500" Column="42" TopLine="493"/>
+      </Position17>
+      <Position18>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="529" Column="48" TopLine="515"/>
+      </Position18>
+      <Position19>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="496" Column="28" TopLine="494"/>
+      </Position19>
+      <Position20>
+        <Filename Value="trackshrink.lpr"/>
+        <Caret Line="529" Column="40" TopLine="514"/>
+      </Position20>
+    </JumpHistory>
+  </ProjectSession>
+</CONFIG>

@@ -1,0 +1,4 @@
+Images are from BrainNet Viewer (http://www.nitrc.org/projects/bnv/) : Xia M, Wang J, He Y (2013) BrainNet Viewer: A Network Visualization Tool for Human Brain Connectomics. PLoS ONE 8: e68910.
+
+
+LPBA40.node and LPBA40.edge from : Shattuck, D.W., Mirza, M., Adisetiyo, V., Hojatkashani, C., Salamon, G., Narr, K.L., Poldrack, R.A., Bilder, R.M., and Toga, A.W. (2008). Construction of a 3D probabilistic atlas of human cortical structures. Neuroimage 39, 1064-1080.

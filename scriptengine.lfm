@@ -1,0 +1,369 @@
+object ScriptForm: TScriptForm
+  Tag = 2
+  Left = 775
+  Height = 375
+  Top = 188
+  Width = 387
+  ActiveControl = Memo1
+  Caption = 'ScriptForm'
+  ClientHeight = 375
+  ClientWidth = 387
+  Menu = ScriptMenu1
+  OnCloseQuery = FormCloseQuery
+  OnCreate = FormCreate
+  Position = poScreenCenter
+  LCLVersion = '1.6.0.4'
+  object Splitter1: TSplitter
+    Cursor = crVSplit
+    Left = 0
+    Height = 3
+    Top = 216
+    Width = 387
+    Align = alBottom
+    ResizeAnchor = akBottom
+  end
+  object Memo1: TMemo
+    Left = 0
+    Height = 216
+    Top = 0
+    Width = 387
+    Align = alClient
+    OnChange = Memo1Change
+    OnClick = Memo1Click
+    OnKeyUp = Memo1KeyUp
+    ParentFont = False
+    ScrollBars = ssVertical
+    TabOrder = 0
+    WantTabs = True
+  end
+  object Memo2: TMemo
+    Left = 0
+    Height = 156
+    Top = 219
+    Width = 387
+    Align = alBottom
+    ParentFont = False
+    ReadOnly = True
+    ScrollBars = ssVertical
+    TabOrder = 1
+  end
+  object ScriptMenu1: TMainMenu
+    left = 104
+    top = 32
+    object File1: TMenuItem
+      Caption = '&File'
+      object New1: TMenuItem
+        Caption = '&New'
+        OnClick = New1Click
+      end
+      object Open1: TMenuItem
+        Caption = '&Open...'
+        OnClick = Open1Click
+      end
+      object Save1: TMenuItem
+        Caption = '&Save'
+        OnClick = Save1Click
+      end
+      object SaveAs1: TMenuItem
+        Caption = 'Save &As...'
+        OnClick = SaveAs1Click
+      end
+      object Exit1: TMenuItem
+        Caption = 'E&xit'
+        OnClick = Exit1Click
+      end
+      object N1: TMenuItem
+        Caption = '-'
+      end
+      object MRU1: TMenuItem
+        Caption = 'MRU1'
+      end
+      object MRU2: TMenuItem
+        Caption = 'MRU2'
+      end
+      object MRU3: TMenuItem
+        Caption = 'MRU3'
+      end
+      object MRU4: TMenuItem
+        Caption = 'MRU4'
+      end
+      object MRU5: TMenuItem
+        Caption = 'MRU5'
+      end
+      object MRU6: TMenuItem
+        Caption = 'MRU6'
+      end
+      object MRU7: TMenuItem
+        Caption = 'MRU7'
+      end
+      object MRU8: TMenuItem
+        Caption = 'MRU8'
+      end
+      object MRU9: TMenuItem
+        Caption = 'MRU9'
+      end
+      object MRU10: TMenuItem
+        Caption = 'MRU10'
+      end
+    end
+    object Edit1: TMenuItem
+      Caption = 'Edit'
+      object Cut1: TMenuItem
+        Caption = 'Cut'
+        ShortCut = 16472
+        OnClick = Cut1Click
+      end
+      object Copy1: TMenuItem
+        Caption = 'Copy'
+        ShortCut = 16451
+        OnClick = Copy1Click
+      end
+      object Paste1: TMenuItem
+        Caption = 'Paste'
+        ShortCut = 16470
+        OnClick = Paste1Click
+      end
+    end
+    object Insert1: TMenuItem
+      Caption = 'Insert'
+      object Colorbar1: TMenuItem
+        Caption = 'Colorbar'
+        object colorbarvisible1: TMenuItem
+          Tag = 1
+          Caption = 'colorbarvisible'
+          Hint = 'COLORBARVISIBLE (VISIBLE: boolean). Shows a colorbar on the main images.'
+          OnClick = InsertCommand
+        end
+      end
+      object Dialogs1: TMenuItem
+        Caption = 'Dialogs'
+        object modalmessage1: TMenuItem
+          Tag = 4
+          Caption = 'modalmessage'
+          Hint = 'modalmessage(str: string) Shows a modal dialog, script stops until user presses ''OK'' button to dismiss dialog.'
+          OnClick = InsertCommand
+        end
+        object modelessmessage1: TMenuItem
+          Tag = 4
+          Caption = 'modelessmessage'
+          Hint = 'modelessmessage(str: string) Shows text in the rendering window. This text is displayed until the text is changed.'
+          OnClick = InsertCommand
+        end
+      end
+      object Overlays1: TMenuItem
+        Caption = 'Overlays'
+        object overlayload1: TMenuItem
+          Tag = 4
+          Caption = 'overlayload'
+          Hint = 'OVERLAYLOAD (lFilename: string): integer; Will add the overlay named filename and return the number of the overlay.'
+          OnClick = InsertCommand
+        end
+        object overlaycloseall1: TMenuItem
+          Caption = 'overlaycloseall'
+          Hint = 'OVERLAYCLOSEALL. This function has no parameters. All open overlays will be closed.'
+          OnClick = InsertCommand
+        end
+        object overlaycolornumber1: TMenuItem
+          Tag = 22
+          Caption = 'overlaycolornumber'
+          Hint = 'OVERLAYCOLORNUMBER (lOverlay,lLUTIndex: integer) Sets the color scheme for a overlay.'
+          OnClick = InsertCommand
+        end
+        object overlaycolorname1: TMenuItem
+          Tag = 1214
+          Caption = 'overlaycolorname'
+          Hint = 'OVERLAYCOLORNAME (lOverlay: integer; lFilename: string); Set the colorscheme for the target overlay to a specified name.'
+          OnClick = InsertCommand
+        end
+        object overlayminmax1: TMenuItem
+          Tag = 1223
+          Caption = 'overlayminmax'
+          Hint = 'OVERLAYMINMAX (lOverlay: integer; lMin,lMax: single) Sets the color range for the overlay.'
+          OnClick = InsertCommand
+        end
+        object overlaytransparencyonbackground1: TMenuItem
+          Tag = 2
+          Caption = 'overlaytransparencyonbackground'
+          Hint = 'OVERLAYTRANSPARENCYONBACKGROUND (lPct: integer). Controls the opacity of the overlays on the background.'
+          OnClick = InsertCommand
+        end
+        object overlaytransparencyonoverlay1: TMenuItem
+          Tag = 2
+          Caption = 'overlaytransparencyonoverlay'
+          Hint = 'OVERLAYTRANSPARENCYONOVERLAY (lPct: integer); Controls the opacity of the overlays on other overlays.'
+          OnClick = InsertCommand
+        end
+        object overlaycolorfromzero1: TMenuItem
+          Tag = 1
+          Caption = 'overlaycolorfromzero'
+          Hint = 'OVERLAYCOLORFROMZERO (FROMZERO: Boolean) If set to false, then the full color range is used to show the overlay.'
+          OnClick = InsertCommand
+        end
+        object overlaymaskedbybackground1: TMenuItem
+          Tag = 1
+          Caption = 'overlaymaskedbybackground'
+          Hint = 'OVERLAYMASKEDBYBACKGROUND (MASK: BOOLEAN). If true, than a overlay will be transparent on any voxel where the background image is transparent.'
+          OnClick = InsertCommand
+        end
+        object overlayvisible1: TMenuItem
+          Tag = 1211
+          Caption = 'overlayvisible'
+          Hint = 'OVERLAYVISIBLE(OVERLAY: integer; VISIBLE: boolean) The feature allows you to make individual overlays visible or invisible.'
+          OnClick = InsertCommand
+        end
+      end
+      object Shaders1: TMenuItem
+        Caption = 'Shaders'
+        object shadername1: TMenuItem
+          Tag = 4
+          Caption = 'shadername'
+          Hint = 'SHADERNAME (Filename: string) Loads the requested shader.'
+          OnClick = InsertCommand
+        end
+        object shaderlightazimuthelevation1: TMenuItem
+          Tag = 22
+          Caption = 'shaderlightazimuthelevation'
+          Hint = 'SHADERLIGHTAZIMUTHELEVATION(AZI, ELEV: integer). Changes location of light source.'
+          OnClick = InsertCommand
+        end
+        object shaderadjust1: TMenuItem
+          Tag = 1413
+          Caption = 'shaderadjust'
+          Hint = 'SHADERADJUST(PROPERTY: string; VALUE: single). Sets one of the user-adjustable properties.'
+          OnClick = InsertCommand
+        end
+      end
+      object Render1: TMenuItem
+        Caption = '3D'
+        object azimuth1: TMenuItem
+          Tag = 2
+          Caption = 'azimuth'
+          Hint = 'AZIMUTH (DEG: integer) This command rotates the rendering.'
+          OnClick = InsertCommand
+        end
+        object azimuthelevation1: TMenuItem
+          Tag = 22
+          Caption = 'azimuthelevation'
+          Hint = 'AZIMUTHELEVATION (AZI, ELEV: integer). Sets the viewer location.'
+          OnClick = InsertCommand
+        end
+        object cameradistance1: TMenuItem
+          Tag = 3
+          Caption = 'cameradistance'
+          Hint = 'CAMERADISTANCE (Z: single) Sets the viewing distance from the object.'
+          OnClick = InsertCommand
+        end
+        object clip1: TMenuItem
+          Tag = 3
+          Caption = 'clip'
+          Hint = 'CLIP (DEPTH: single) Creates a clip plane that hides information close to the viewer.'
+          OnClick = InsertCommand
+        end
+        object clipazimuthelevation1: TMenuItem
+          Tag = 33
+          Caption = 'clipazimuthelevation'
+          Hint = 'CLIPAZIMUTHELEVATION (DEPTH, AZI, ELEV: single). Set a view-point independent clip plane.'
+          OnClick = InsertCommand
+        end
+        object elevation1: TMenuItem
+          Tag = 2
+          Caption = 'elevation'
+          Hint = 'ELEVATION (DEG: integer) changes the render camera up or down.'
+          OnClick = InsertCommand
+        end
+        object viewaxial1: TMenuItem
+          Tag = 1
+          Caption = 'viewaxial'
+          Hint = 'VIEWAXIAL (STD: boolean) creates rendering from an axial viewpoint.'
+          OnClick = InsertCommand
+        end
+        object viewcoronal1: TMenuItem
+          Tag = 1
+          Caption = 'viewcoronal'
+          Hint = 'VIEWCORONAL (STD: boolean) creates rendering from a coronal viewpoint.'
+          OnClick = InsertCommand
+        end
+        object viewsagittal1: TMenuItem
+          Tag = 1
+          Caption = 'viewsagittal'
+          Hint = 'VIEWSAGITTAL (STD: boolean) creates rendering from an sagittal viewpoint.'
+          OnClick = InsertCommand
+        end
+      end
+      object loadimage1: TMenuItem
+        Tag = 4
+        Caption = 'loadimage'
+        Hint = 'LOADIMAGE (lFilename: string) Opens a NIfTI format image to view.'
+        OnClick = InsertCommand
+      end
+      object savebmp1: TMenuItem
+        Tag = 4
+        Caption = 'savebmp'
+        Hint = 'SAVEBMP (lFilename: string) Saves the currently viewed image as a PNG format compressed bitmap image.'
+        OnClick = InsertCommand
+      end
+      object wait1: TMenuItem
+        Tag = 2
+        Caption = 'wait'
+        Hint = 'WAIT (MSEC: integer) The program pauses for the specified duration. For example WAIT(1000) delays the script for one second.'
+        OnClick = InsertCommand
+      end
+      object backcolor1: TMenuItem
+        Tag = 36
+        Caption = 'backcolor'
+        Hint = 'BACKCOLOR (R,G,B: byte) Changes the background color, for example BACKCOLOR(255, 0, 0) will set a bright red background'
+        OnClick = InsertCommand
+      end
+      object MenuItem1: TMenuItem
+        Tag = 36
+        Caption = 'objectcolor'
+        Hint = 'OBJECTCOLOR (R,G,B: byte) Changes the color, for example OBJECTCOLOR(255, 0, 0) will  result in a bright red item'
+      end
+      object resetdefaults1: TMenuItem
+        Caption = 'resetdefaults'
+        Hint = 'RESETDEFAULTS. Sets all of the user adjustable settings to their default values.'
+        OnClick = InsertCommand
+      end
+    end
+    object Toosl1: TMenuItem
+      Caption = '&Script'
+      object Compile1: TMenuItem
+        Caption = 'Run'
+        ShortCut = 16466
+        OnClick = Compile1Click
+      end
+      object N2: TMenuItem
+        Caption = '-'
+      end
+      object Stop1: TMenuItem
+        Caption = 'Halt'
+        ShortCut = 16456
+        OnClick = Stop1Click
+      end
+    end
+  end
+  object OpenDialog1: TOpenDialog
+    DefaultExt = '.gls'
+    FileName = '*.gls'
+    Filter = 'scripts (*.gls)|*.gls'
+    Options = [ofHideReadOnly, ofNoChangeDir, ofPathMustExist, ofFileMustExist, ofDontAddToRecent]
+    left = 40
+    top = 104
+  end
+  object SaveDialog1: TSaveDialog
+    DefaultExt = '.gls'
+    FileName = '*.gls'
+    Filter = 'scripts (*.gls)|*.gls'
+    Options = [ofHideReadOnly, ofPathMustExist]
+    left = 40
+    top = 144
+  end
+  object PSScript1: TPSScript
+    CompilerOptions = []
+    OnCompile = PSScript1Compile
+    Plugins = <>
+    UsePreProcessor = False
+    left = 39
+    top = 64
+  end
+end

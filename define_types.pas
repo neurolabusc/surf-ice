@@ -7,6 +7,7 @@ const
   kCR = chr (13);
   kDel = #127 ; // Delete
   kBS = #8 ; // Backspace
+  UNIXeoln = chr(10);
 
 type
    TRGBA = packed record //Next: analyze Format Header structure
@@ -34,6 +35,7 @@ type
  TInts = array of integer;
  TFloats = array of single;
  TMat33 = array [1..3, 1..3] of single;
+  TMat44 = array [1..4, 1..4] of single;
   TFByte =  File of Byte;
   TStrRA = Array of String;
   TUnitRect = record
@@ -46,6 +48,7 @@ procedure SortSingle(var lLo,lHi: single);
 function RealToStr(lR: double; lDec: integer): string;
 function RGBA(lR,lG,lB,lA: byte): TRGBA;
 function CreateUnitRect (L,T,R,B: single) : TUnitRect;
+procedure IntBound (var lVal: integer; lMin, lMax: integer);
 function UnitBound (lS: single): single;
 procedure ReadLnBin(var f: TFByte; var s: string);
 procedure SwapSingle(var s : single);
@@ -56,10 +59,28 @@ function asSingle(b0,b1,b2,b3: byte): single; overload;
 function asInt(s : single): longint;
 function specialsingle (var s:single): boolean; //isFinite
 function asRGBA(clr: TColor): TRGBA;
+function ExtractFileExtGzUpper(FileName: string): string;
 
 implementation
 
-uses sysutils;
+uses sysutils, dialogs;
+
+function ExtractFileExtGzUpper(FileName: string): string;
+//the file 'img.nii.gz' returns '.NII.GZ', not just '.gz'
+var
+  lPath,lName,lExt: string;
+begin
+  //result := UpperCase(ExtractFileExt(FileName));
+
+  FilenameParts (FileName, lPath,lName,lExt);
+  result := UpperCase(lExt);
+end;
+
+procedure IntBound (var lVal: integer; lMin, lMax: integer);
+begin
+    if lVal < lMin then lVal := lMin;
+    if lVal > lMax then lVal := lMax;
+end;
 
 function asRGBA(clr: TColor): TRGBA;
 begin
@@ -104,7 +125,7 @@ type
       0:(b0,b1,b2,b3 : byte);
       1:(Sngl : single);
   end;
-  swaptypep = ^swaptype;
+  //swaptypep = ^swaptype;
 var
   //inguy:swaptypep;
   outguy:swaptype;
@@ -166,7 +187,7 @@ begin
   outguy.Word1 := swap(inguy^.Word2);
   outguy.Word2 := swap(inguy^.Word1);
   s := outguy.Long;
-end; // SwapLongWord()
+end; // SwapLongInt()
 
 procedure SwapLongWord(var s : LongWord);
 type
@@ -216,6 +237,23 @@ end;
 
 function FilenameParts (lInName: string; var lPath,lName,lExt: string): boolean;
 var
+   lX: string;
+begin
+  lPath := ExtractFilePath(lInName);
+  lName := ExtractFileName(lInName);
+  lExt := ExtractFileExt(lInName);
+  if lExt = '' then exit;
+  Delete(lName, length(lName)-length(lExt)+1, length(lExt)); //nam.ext -> nam
+  lX := lExt;
+  if UpperCase(lX) <> '.GZ' then exit;
+  lExt := ExtractFileExt(lName);
+  Delete(lName, length(lName)-length(lExt)+1, length(lExt)); //nam.ext -> nam
+  lExt := lExt + lX;
+  //showmessage(lName+':'+lExt);
+end;
+
+(*function FilenameParts (lInName: string; var lPath,lName,lExt: string): boolean;
+var
    lLen,lPos,lExtPos,lPathPos: integer;
 begin
     result := false;
@@ -253,7 +291,7 @@ begin
        for lPos := lPathPos to lExtPos do
            lName := lName + lInName[lPos];
     result := true;
-end;
+end; *)
 
 procedure SortSingle(var lLo,lHi: single);
 var lSwap: single;

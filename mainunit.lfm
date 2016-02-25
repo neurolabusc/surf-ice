@@ -1,25 +1,25 @@
 object GLForm1: TGLForm1
-  Left = 345
-  Height = 740
-  Top = 320
-  Width = 1005
+  Left = 1093
+  Height = 865
+  Top = 23
+  Width = 1060
   AllowDropFiles = True
   Caption = 'Surf Ice'
-  ClientHeight = 740
-  ClientWidth = 1005
+  ClientHeight = 865
+  ClientWidth = 1060
   Menu = MainMenu1
   OnClose = FormClose
   OnCreate = FormCreate
   OnDropFiles = FormDropFiles
   Position = poDesktopCenter
-  LCLVersion = '1.6.0.2'
+  LCLVersion = '1.6.0.4'
   object ToolPanel: TPanel
     Left = 0
-    Height = 740
+    Height = 865
     Top = 0
     Width = 272
     Align = alLeft
-    ClientHeight = 740
+    ClientHeight = 865
     ClientWidth = 272
     TabOrder = 1
     object ClipBox: TGroupBox
@@ -97,12 +97,12 @@ object GLForm1: TGLForm1
     end
     object ShaderBox: TGroupBox
       Left = 1
-      Height = 87
+      Height = 212
       Top = 652
       Width = 270
       Align = alClient
       Caption = 'Shader'
-      ClientHeight = 65
+      ClientHeight = 190
       ClientWidth = 262
       ParentFont = False
       TabOrder = 1
@@ -131,7 +131,7 @@ object GLForm1: TGLForm1
       end
       object LightElevTrack: TTrackBar
         Left = 52
-        Height = 38
+        Height = 30
         Top = 60
         Width = 92
         Max = 90
@@ -143,7 +143,7 @@ object GLForm1: TGLForm1
       end
       object LightAziTrack: TTrackBar
         Left = 170
-        Height = 38
+        Height = 30
         Top = 60
         Width = 92
         Max = 90
@@ -156,11 +156,33 @@ object GLForm1: TGLForm1
       object Memo1: TMemo
         Left = 0
         Height = 58
-        Top = 7
+        Top = 132
         Width = 262
         Align = alBottom
         Lines.Strings = (
           'Memo1'
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
           ''
           ''
           ''
@@ -515,7 +537,7 @@ object GLForm1: TGLForm1
       end
       object meshAlphaTrack: TTrackBar
         Left = 52
-        Height = 38
+        Height = 30
         Hint = 'Adjust main mesh transparency'
         Top = 30
         Width = 92
@@ -540,7 +562,7 @@ object GLForm1: TGLForm1
       end
       object MeshBlendTrack: TTrackBar
         Left = 170
-        Height = 38
+        Height = 30
         Hint = 'XRay: make internal overlays, tracks and nodes visible'
         Top = 30
         Width = 92
@@ -554,7 +576,7 @@ object GLForm1: TGLForm1
       end
       object occlusionTrack: TTrackBar
         Left = 170
-        Height = 38
+        Height = 30
         Hint = 'Ambient Occlusion: make sulci and other crevices darker'
         Top = 0
         Width = 92
@@ -765,9 +787,9 @@ object GLForm1: TGLForm1
         Height = 30
         Top = 0
         Width = 162
-        Max = 100
+        Max = 200
         OnChange = NodePrefChange
-        Position = 10
+        Position = 20
         TickStyle = tsNone
         TabOrder = 2
       end
@@ -775,8 +797,9 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 2
-        Width = 32
-        Caption = 'Scale'
+        Width = 25
+        Alignment = taRightJustify
+        Caption = 'Size'
         ParentColor = False
       end
       object NodeThreshDrop: TComboBox
@@ -938,7 +961,7 @@ object GLForm1: TGLForm1
         Width = 162
         Max = 100
         OnChange = NodePrefChange
-        Position = 10
+        Position = 20
         TickStyle = tsNone
         TabOrder = 4
       end
@@ -946,8 +969,8 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 2
-        Width = 32
-        Caption = 'Scale'
+        Width = 25
+        Caption = 'Size'
         ParentColor = False
       end
       object EdgeSizeVariesCheck: TCheckBox
@@ -1030,7 +1053,7 @@ object GLForm1: TGLForm1
   end
   object CollapsedToolPanel: TPanel
     Left = 272
-    Height = 740
+    Height = 865
     Top = 0
     Width = 6
     Align = alLeft
@@ -1040,13 +1063,14 @@ object GLForm1: TGLForm1
   end
   object GLBox: TOpenGLControl
     Left = 278
-    Height = 740
+    Height = 865
     Top = 0
-    Width = 727
+    Width = 782
     Align = alClient
     OpenGLMajorVersion = 2
     OpenGLMinorVersion = 1
     MultiSampling = 4
+    OnClick = GLBoxClick
     OnMouseWheel = GLBoxMouseWheel
   end
   object ColorDialog1: TColorDialog
@@ -1189,6 +1213,10 @@ object GLForm1: TGLForm1
       object SaveTracksMenu: TMenuItem
         Caption = 'Save tracks'
         OnClick = SaveTracksMenuClick
+      end
+      object SimplifyTracks1: TMenuItem
+        Caption = 'Simplify tracks'
+        OnClick = SimplifyTracks1Click
       end
     end
     object NodeMenu: TMenuItem
@@ -1362,6 +1390,11 @@ object GLForm1: TGLForm1
         Caption = 'Reset defaults'
         OnClick = ResetMenuClick
       end
+      object ScriptMenu: TMenuItem
+        Caption = 'Scripting'
+        ShortCut = 4186
+        OnClick = ScriptMenuClick
+      end
     end
     object HelpMenu: TMenuItem
       Caption = 'Help'
@@ -1409,6 +1442,10 @@ object GLForm1: TGLForm1
   end
   object SaveMeshDialog: TSaveDialog
     DefaultExt = '.gii'
+    FileName = '/Users/rorden/Desktop/track'
+    FilterIndex = 0
+    InitialDir = '/Users/rorden/Desktop/'
+    Options = [ofOverwritePrompt, ofEnableSizing, ofViewDetail]
     left = 448
     top = 24
   end

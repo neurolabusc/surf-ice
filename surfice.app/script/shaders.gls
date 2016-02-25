@@ -1,0 +1,39 @@
+const
+ 	kFramesPerRotation = 180;
+var
+	i: integer;
+	s: single;
+BEGIN
+	RESETDEFAULTS;
+	OBJECTCOLOR(210, 148, 148);
+	LOADIMAGE('BrainMesh_ICBM152Left.mz3');
+	EDGELOAD('LPBA40.edge');
+	CLIPAZIMUTHELEVATION(0.3, 0, 130);
+	NODESIZE(6, true);
+	EDGESIZE(3,true);
+	NODEHEMISPHERE(-1);
+	AZIMUTHELEVATION(250, 35);
+	EDGECOLOR('ACTC',TRUE);
+	NODECOLOR('RED',TRUE);
+    NODETHRESH(1.0,1.0);
+    EDGETHRESH(0.5,1.0);
+    FOR i := 1 to kFramesPerRotation * 4 DO BEGIN
+		s := 0.5 + (i+0.0)/72;
+		IF s <= 1 THEN
+			CAMERADISTANCE(s);
+		IF (i MOD kFramesPerRotation) = 0 THEN BEGIN
+			CASE (i DIV kFramesPerRotation) OF
+				1:  SHADERNAME('metal');
+				2: SHADERNAME('wireframe');
+				3:  begin
+					SHADERNAME('toon');
+					SHADERAMBIENTOCCLUSION(0);
+				   end;
+			END;
+		END;
+		AZIMUTH( round(360.0/kFramesPerRotation));
+		WAIT(20);
+    END;
+END.
+
+

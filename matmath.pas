@@ -12,11 +12,13 @@ uses
  function getSurfaceNormal(v1, v2, v3: TPoint3f): TPoint3f;
  function normalDirection(v1, v2: TPoint3f): TPoint3f;
  function crossProduct(v1, v2: TPoint3f): TPoint3f;
+ procedure vectorTransform(var v: TPoint3f; mat:  TMat44);
  procedure vectorNormalize(var v: TPoint3f);  inline;
+ function vectorAbs(var v: TPoint3f): TPoint3f;
  function vectorDot (A: TPoint3f; B: TPoint3f): single;
  procedure vectorAdd (var A: TPoint3f; B: TPoint3f);  inline; overload;
  function vectorAdd (var A: TPoint3i; B: integer): TPoint3i;  inline; overload;
-
+ procedure matrixEye(var a: TMat33);
  procedure vectorSubtract (var A: TPoint3f; B: TPoint3f);  inline;
  procedure minMax(var v, mn, mx: TPoint3f); overload;
  procedure minMax(var v: TPoint3i; var mn, mx: integer); overload;
@@ -33,10 +35,20 @@ uses
  function vectorScale(A: TPoint3f; Scale: single): TPoint3f;
  procedure MakeCylinder(radius: single; start, dest: TPoint3f; var faces: TFaces; var vertices: TVertices; slices: integer = 20); overload;
  procedure MakeCylinder( radius, len: single; var faces: TFaces; var vertices: TVertices; slices: integer = 20); overload;
- procedure makeCylinderEnd(radius: single; prevPos, Pos, nextPos: TPoint3f; var vertices: TVertices; slices: integer = 20);
+ procedure makeCylinderEnd(radius: single; prevPos, Pos, nextPos: TPoint3f; var vertices: TVertices; var  B: TPoint3f; slices: integer = 20);
 
 
 implementation
+
+procedure vectorTransform(var v: TPoint3f; mat : TMat44);
+var
+   vx: TPoint3f;
+begin
+        vx := v;
+        v.X := vx.X*mat[1,1] + vx.Y*mat[1,2] + vx.Z*mat[1,3] + mat[1,4];
+        v.Y := vx.X*mat[2,1] + vx.Y*mat[2,2] + vx.Z*mat[2,3] + mat[2,4];
+        v.Z := vx.X*mat[3,1] + vx.Y*mat[3,2] + vx.Z*mat[3,3] + mat[3,4];
+end;
 
 function vectorScale(A: TPoint3f; Scale: single): TPoint3f;
 begin
@@ -79,6 +91,22 @@ var
   GG, FFi, invFFi, UU: TMat33;
   dotAB: single;
 begin
+  if (alignmentVector.Y = 0.0) and (alignmentVector.Z = 0.0) then begin
+     alignmentVector.Y := 0.0001;
+     alignmentVector.Z := 0.0001;
+
+     (*matrixEye(result);
+
+     if (alignmentVector.X < 0.0) then
+        matrixNegate(result)
+     else begin
+          //result[1,1] := - result[1,1];
+          //result[2,2] := - result[2,2];
+          result[3,3] := - result[3,3];
+     end;
+     exit;*)
+  end;
+
   A := ptf(-1, 0, 0);
   B := alignmentVector;
   GG := matrixSet( vectorDot(A,B), -lengthCross(A,B), 0,
@@ -151,7 +179,93 @@ begin
   end;
 end; // makeCylinder()
 
-procedure makeCylinderEnd(radius: single; prevPos, Pos, nextPos: TPoint3f; var vertices: TVertices; slices: integer = 20);
+function perp_hm(u: TPoint3f): TPoint3f;
+//given vector u return an perpendicular (orthogonal) vector
+// http://blog.selfshadow.com/2011/10/17/perp-vectors/
+var
+	a: TPoint3f;
+begin
+  a := vectorAbs(u);
+  if (a.x <= a.y) and (a.x <= a.z) then
+      result := ptf(0, -u.z, u.y)
+  else if (a.y <= a.x) and (a.y <= a.z)  then
+      result := ptf(-u.z, 0, u.x)
+  else
+      result := ptf(-u.y, u.x, 0);
+end; //perp_hm()
+
+procedure frenet(prevPos, nextPos: TPoint3f; var N,B: TPoint3f);
+//Compute (N)ormal and (B)inormal of a line
+//https://en.wikipedia.org/wiki/Frenet–Serret_formulas
+var
+   T : TPoint3f; //Tangent
+begin
+  //compute Normal and Binormal for each tangent
+  N := ptf(0,0,0);
+  B := N;
+  T := nextPos;
+  vectorSubtract(T, prevPos); //line tangent
+  vectorNormalize(T);  //unit length
+  N := perp_hm(T); //normal
+  B := crossProduct(N,T); //binormal
+end; //frenet()
+
+procedure sloan(prevPos, nextPos: TPoint3f; var N,B: TPoint3f);
+//Compute (N)ormal and (B)inormal of a line using prior binormal
+// https://en.wikipedia.org/wiki/Frenet–Serret_formulas
+// http://www.cs.cmu.edu/afs/andrew/scs/cs/15-462/web/old/asst2camera.html
+// Bloomenthal Graphics Gems 1, "Calculation of Reference Frames along a Space Curve"
+//    http://webhome.cs.uvic.ca/~blob/courses/305/notes/pdf/ref-frames.pdf
+// As noted by Bloomenthal, this is undefined if T1 = B0 (e.g. precise 90-degree joint)
+//    In this special case we will resort to Frenet
+var
+   T : TPoint3f; //Tangent
+begin
+  //compute Normal and Binormal for each tangent
+  T := nextPos;
+  vectorSubtract(T, prevPos); //line tangent
+  vectorNormalize(T);  //unit length
+  if abs(vectorDot(T,B)) > 0.98 then begin
+     //hack for Bloomenthal's critique of Sloan's solution :
+     // if joint is ~90-degrees default to frenet frames
+     // note that this can lead to some twisting
+     // however, 90-degree joints are not physiologically plausible in DTI
+     frenet(prevPos, nextPos, N,B);
+     exit;
+  end;
+  //vectorNegate(B);
+  //N := crossProduct(B,T); //normal
+  N := crossProduct(T,B); //normal
+  vectorNormalize(N);  //unit length
+  B := crossProduct(N,T); //binormal
+end; //sload()
+
+
+procedure makeCylinderEnd(radius: single; prevPos, Pos, nextPos: TPoint3f; var vertices: TVertices; var B: TPoint3f; slices: integer = 20);
+// http://www.lab4games.net/zz85/blog/2012/04/24/spline-extrusions-tubes-and-knots-of-sorts/
+//make an end cap disk located at Pos and oriented along the axis of the previous and next entry
+//Use Ken Sloan's trick to stabilize orientation
+// http://www.cs.cmu.edu/afs/andrew/scs/cs/15-462/web/old/asst2camera.html
+var
+   i: integer;
+   cosT, sinT: single;
+   N: TPoint3f;
+begin
+  if (B.x = 0) and (B.y = 0) and (B.z = 0) then //if first cylinder (so no prior binormal)
+     frenet(prevPos, nextPos, N,B)
+  else
+      sloan(prevPos, nextPos, N,B);
+  setlength(vertices, slices);
+  for i := 0 to (slices-1) do begin
+     cosT :=  radius * -cos(i/slices * 2 *PI);
+     sinT :=  radius * sin(i/slices * 2 * PI);
+     vertices[i].X := n.X * cosT + b.X * sinT + Pos.X;
+     vertices[i].Y := n.Y * cosT + b.Y * sinT + Pos.Y;
+     vertices[i].Z := n.Z * cosT + b.Z * sinT + Pos.Z;
+  end;
+end; // makeCylinderEnd()
+
+(*procedure makeCylinderEnd(radius: single; prevPos, Pos, nextPos: TPoint3f; var vertices: TVertices; slices: integer = 20);
 //make an end cap disk located at Pos and oriented along the axis of the previous and next entry
 var
    i: integer;
@@ -175,7 +289,19 @@ begin
       vertices[i].Y := v.X * m[1,2] + v.Y * m[2,2] + v.Z * m[3,2] + Pos.Y;
       vertices[i].Z := v.X * m[1,3] + v.Y * m[2,3] + v.Z * m[3,3] + Pos.Z;
   end;
-end; // makeCylinderEnd()
+end; // makeCylinderEnd()    *)
+
+procedure matrixEye(var a: TMat33);
+var
+   i,j: integer;
+begin
+     for i := 1 to 3 do
+         for j := 1 to 3 do
+             a[i,j] := 0;
+     a[1,1] := 1.0;
+     a[2,2] := 1.0;
+     a[3,3] := 1.0;
+end; // matrixEve()
 
 procedure matrixTranspose(var a: TMat33);
 var
@@ -186,7 +312,6 @@ begin
  for i := 1 to 3 do
          for j := 1 to 3 do
              a[i,j] := b[j,i];
-
 end; // matrixTranspose()
 
 procedure matrixNegate(var a: TMat33);
@@ -268,16 +393,16 @@ end; // pti()
 procedure minMax(var v, mn, mx: TPoint3f); overload;
 begin
      if v.X > mx.X then
-        mx.X := v.X
-     else if v.X < mn.X then
+        mx.X := v.X;
+     if v.X < mn.X then
         mn.X := v.X;
      if v.Y > mx.Y then
-        mx.Y := v.Y
-     else if v.Y < mn.Y then
+        mx.Y := v.Y;
+     if v.Y < mn.Y then
         mn.Y := v.Y;
      if v.Z > mx.Z then
-        mx.Z := v.Z
-     else if v.Z < mn.Z then
+        mx.Z := v.Z;
+     if v.Z < mn.Z then
         mn.Z := v.Z;
 end; // minMax()
 
@@ -303,6 +428,13 @@ begin
      result := ptf(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z,
      v1.x * v2.y - v1.y * v2.x);
 end; // CrossProduct()
+
+function vectorAbs(var v: TPoint3f): TPoint3f;
+begin
+     result.X := abs(v.X);
+     result.Y := abs(v.Y);
+     result.Z := abs(v.Z);
+end; // abs()
 
 procedure vectorNormalize(var v: TPoint3f);  inline;
 var

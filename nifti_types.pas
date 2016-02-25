@@ -4,7 +4,7 @@ unit nifti_types;
 interface
 
 uses
-  Classes, SysUtils, define_types;
+  Classes, SysUtils; //, define_types;
 
 type
   TNIFTIhdr = packed record //Next: analyze Format Header structure
@@ -99,16 +99,16 @@ kDT_COMPLEX256           =2048;     // long double pair (256 bits)
  kNIFTI_XFORM_MNI_152 = 4; //MNI 152 normalized coordinates
 {$IFDEF ENDIAN_BIG}
  //Magic values
- kswapNIFTI_MAGIC_SEPARATE_HDR = $0031696E;//$6E693100;
- kswapNIFTI_MAGIC_EMBEDDED_HDR = $00312B6E;//$6E2B3100;
+ kswapNIFTI_MAGIC_SEPARATE_HDR = $0031696E;
+ kswapNIFTI_MAGIC_EMBEDDED_HDR = $00312B6E;
   kNIFTI_MAGIC_DCM = $0044434D;//DCM
  //byte-swapped magic values
  kNIFTI_MAGIC_SEPARATE_HDR = $6E693100;
  kNIFTI_MAGIC_EMBEDDED_HDR = $6E2B3100;
 {$ELSE}
  //Magic values
- kNIFTI_MAGIC_SEPARATE_HDR = $0031696E;//$6E693100;
- kNIFTI_MAGIC_EMBEDDED_HDR = $00312B6E;//$6E2B3100;
+ kNIFTI_MAGIC_SEPARATE_HDR = $0031696E;
+ kNIFTI_MAGIC_EMBEDDED_HDR = $00312B6E;
   kNIFTI_MAGIC_DCM = $0044434D;//DCM
  //byte-swapped magic values
  kswapNIFTI_MAGIC_SEPARATE_HDR = $6E693100;

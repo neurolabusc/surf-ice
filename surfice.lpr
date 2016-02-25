@@ -8,8 +8,8 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms,  lazopenglcontext, mainunit, Shaderu, prefs, nifti_loader, colorTable,
-  track;
+  Forms, lazopenglcontext, pascalscript, mainunit, Shaderu, prefs, nifti_loader,
+  colorTable, track, scriptengine;
 
 {$R *.res}
 
@@ -19,6 +19,7 @@ begin
 
   Application.Initialize;
   Application.CreateForm(TGLForm1, GLForm1);
+    Application.CreateForm(TScriptForm, ScriptForm);
   {$IFDEF FPC}{$IFNDEF UNIX}HighDPI(96);{$ENDIF}{$ENDIF}
   Application.Run;
 end.

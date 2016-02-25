@@ -3,12 +3,15 @@ unit mainunit;
 {$mode delphi}{$H+}
 interface
 uses
+  //{$IFDEF SCRIPTING}
+  commandsu, scriptengine,
+  //{$ENDIF}
   {$IFDEF DGL} dglOpenGL, {$ELSE} gl,  {$ENDIF}
   {$IFDEF COREGL} gl_core_3d, {$ELSE}     gl_legacy_3d, {$ENDIF}
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,math,
   ExtCtrls, OpenGLContext, mesh, LCLintf, ComCtrls, Menus, graphtype,
   ClipBrd, shaderui, shaderu, prefs, userdir, LCLtype, Grids, Spin, matmath,
-  colorTable, Track, types,  define_types, meshify,  gl_2d, zstream, gl_core_matrix;
+  colorTable, Track, types,  define_types, meshify,  gl_2d, zstream, gl_core_matrix, Process;
 
 type
   { TGLForm1 }
@@ -20,6 +23,8 @@ type
     AdvancedMenu: TMenuItem;
     AdditiveOverlayMenu: TMenuItem;
     GLBox: TOpenGLControl;
+    ScriptMenu: TMenuItem;
+    SimplifyTracks1: TMenuItem;
     TransparencySepMenu: TMenuItem;
     ReverseFacesMenu: TMenuItem;
     SwapYZMenu: TMenuItem;
@@ -142,14 +147,16 @@ type
     SaveMenu: TMenuItem;
     ObjectColorMenu: TMenuItem;
     OpenMenu: TMenuItem;
+    procedure Quit2TextEditor;
     procedure AdditiveOverlayMenuClick(Sender: TObject);
     procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
+    procedure GLBoxClick(Sender: TObject);
     procedure MeshColorBoxChange(Sender: TObject);
-    procedure OpenNode(Filename: string);
-    procedure OpenTrack(Filename: string);
-    procedure OpenOverlay(Filename: string);
-    procedure OpenEdge(Filename: string);
-    procedure OpenMesh(Filename: string);
+    procedure OpenNode(FilenameIn: string);
+    procedure OpenTrack(FilenameIn: string);
+    procedure OpenOverlay(FilenameIn: string);
+    procedure OpenEdge(FilenameIn: string);
+    procedure OpenMesh(FilenameIn: string);
     procedure AboutMenuClick(Sender: TObject);
     procedure AddNodesMenuClick(Sender: TObject);
     procedure AddOverlayMenuClick(Sender: TObject);
@@ -194,16 +201,20 @@ type
     procedure RestrictEdgeMenuClick(Sender: TObject);
     procedure RestrictMenuClick(Sender: TObject);
     procedure ReverseFacesMenuClick(Sender: TObject);
+    procedure SaveBitmap(FilenameIn: string);
     procedure SaveMenuClick(Sender: TObject);
-    procedure SaveMesh;
+    procedure SaveMz3;
+    procedure SaveTrack (var lTrack: TTrack);
     procedure SaveMeshMenuClick(Sender: TObject);
     procedure SaveTracksMenuClick(Sender: TObject);
     function ScreenShot: TBitmap;
+    procedure ScriptMenuClick(Sender: TObject);
     procedure SetOverlayTransparency(Sender: TObject);
     procedure ShaderBoxResize(Sender: TObject);
     procedure ShaderDropChange(Sender: TObject);
     procedure ShowmessageError(s: string);
     procedure GLboxRequestUpdate(Sender: TObject);
+    procedure SimplifyTracks1Click(Sender: TObject);
     procedure SurfaceAppearanceChange(Sender: TObject);
     procedure ReadCell (ACol,ARow: integer; Update: boolean);
     procedure StringGrid1DrawCell(Sender: TObject; aCol, aRow: Integer;
@@ -220,6 +231,10 @@ type
     procedure UpdateTimerTimer(Sender: TObject);
     procedure UpdateImageIntensity;
     procedure UpdateLUT(lOverlay,lLUTIndex: integer; lChangeDrop: boolean);
+    function ComboBoxName2Index(var lCombo: TComboBox; lName: string): integer;
+    procedure SetDistance(Distance: single);
+    procedure OVERLAYMINMAX (lOverlay: integer; lMin,lMax: single);
+    procedure OVERLAYCOLORNAME(lOverlay: integer; lFilename: string);
     procedure UpdateOverlaySpread;// (lIndex: integer);
     //procedure SetOrtho (w,h: integer; isMultiSample: boolean);
     procedure AddMRU(lFilename: string);
@@ -238,6 +253,8 @@ type
 var
   GLForm1: TGLForm1;
   gPrefs : TPrefs;
+    gElevation : integer =20;
+  gAzimuth : integer = 250;
 
 implementation
 
@@ -252,20 +269,50 @@ var
 
   gPrevCol, gPrevRow: integer; //last selected overlay
   gDistance : single = 1;
-  gElevation : integer =20;
-  gAzimuth : integer = 250;
+
   gMouseX : integer = -1;
   gMouseY : integer = -1;
   GLerror : string = '';
   clipPlane : TPoint4f; //clipping bottom
   //lightPos : TPoint3f;//array [1..3] of single = (0.0, 0.0, 0.0); //light RGB
 const
-  kScreenShotZoom  = 3;
 
   kFname=0;
   kLUT=1;
   kMin=2;
   kMax=3;
+     kTrackFilter = 'Camino, VTK, MRTrix, Quench/Cinch/Query, TrakVis|*.Bfloat;*.Bfloat.gz;*.trk;*.tck;*.pdb;*.fib;*.vtk|Any file|*.*';
+
+function FindFile(Filename: string): string;
+var
+  p,n,x: string;
+  searchResult : TSearchRec;
+begin
+   result := Filename;
+   if FileExists(result) then exit;
+   FilenameParts (Filename, p,n,x);
+   p := AppDir2;
+   result := p+n+x;
+   if FileExists(result) then exit;
+   SetCurrentDir(p);
+   if findfirst('*', faDirectory, searchResult) = 0 then begin
+    repeat
+      // Only show directories
+      if (searchResult.attr and faDirectory) = faDirectory then begin
+       //ShowMessage('Directory = '+searchResult.Name);
+       result := p+ searchResult.Name + pathdelim+n+x;
+       if FileExists(result) then begin
+          FindClose(searchResult);
+          exit;
+       end;
+      end;
+    until FindNext(searchResult) <> 0;
+
+    // Must free up resources used by these successful finds
+    FindClose(searchResult);
+  end;
+   result := ''; //failed!
+end;
 
 procedure TGLForm1.MultiPassRenderingToolsUpdate;
 var
@@ -299,10 +346,12 @@ begin
  Memo1.Lines.clear;
 end; //UpdateToolbar()
 
-procedure TGLForm1.OpenNode(Filename: string);
+procedure TGLForm1.OpenNode(FilenameIn: string);
  var
-     edgename: string;
+     FileName, edgename: string;
 begin
+ Filename := FindFile(FileNameIn);
+ if Filename = '' then exit;
   if not gNode.LoadFromFile(FileName) then exit;
   gPrefs.PrevNodename := FileName;
  NodeMinEdit.value := gNode.nodePrefs.minNodeThresh;
@@ -332,7 +381,7 @@ var
     i: integer;
     isIntensityOverlay: boolean;
 begin
-   gPrefs.AdditiveOverlay :=  AdditiveOverlayMenu.Checked ;
+   gPrefs.AdditiveOverlay :=  AdditiveOverlayMenu.Checked;
    if gMesh.OpenOverlays < 1 then exit;
    isIntensityOverlay := false;
    for i :=  gMesh.OpenOverlays downto 1 do
@@ -345,10 +394,12 @@ begin
    OverlayTimerStart;
 end;
 
-procedure TGLForm1.OpenEdge(Filename: string);
+procedure TGLForm1.OpenEdge(FilenameIn: string);
 var
-  ext, nodename: string;
+  Filename, ext, nodename: string;
 begin
+   Filename := FindFile(FilenameIn);
+   if Filename = '' then exit;
  ext := UpperCase(ExtractFileExt(Filename));
  if (ext = '.NODE') or (length(gNode.nodes) < 1) then begin
      nodename := ChangeFileExt(FileName, '.node');
@@ -365,9 +416,13 @@ begin
  GLBoxRequestUpdate(nil);
 end;
 
-procedure TGLForm1.OpenOverlay(Filename: string);
+procedure TGLForm1.OpenOverlay(FilenameIn: string);
+var
+  Filename: string;
 begin
-   if not gMesh.LoadOverlay(FileName, gPrefs.SmoothVoxelwiseData) then begin
+   Filename := FindFile(FilenameIn);
+   if Filename = '' then exit;
+   if not gMesh.LoadOverlay(FileName) then begin //gPrefs.SmoothVoxelwiseData
      GLBOxRequestUpdate(nil);
      UpdateToolbar;
      exit;
@@ -379,11 +434,17 @@ begin
    UpdateOverlaySpread;
 end;
 
-procedure TGLForm1.OpenTrack(Filename: string);
+procedure TGLForm1.OpenTrack(FilenameIN: string);
+var
+  Filename: string;
 begin
+ Filename := FindFile(FilenameIN);
+ if Filename = '' then exit;
  if gTrack.LoadFromFile(FileName) then begin
     OpenDialog.InitialDir:= ExtractFileDir(FileName);
     gPrefs.PrevTrackname := FileName;
+    if (gTrack.maxObservedFiberLength * 0.5) < TrackLengthTrack.Position then
+       TrackLengthTrack.Position := round(gTrack.maxObservedFiberLength * 0.5);
  end;
  UpdateToolbar;
  GLBoxRequestUpdate(nil);
@@ -466,13 +527,15 @@ begin
      mStream.Free;
 end; //isMz3Mesh
 
-procedure TGLForm1.OpenMesh(Filename: string);
+procedure TGLForm1.OpenMesh(FilenameIN: string);
 var
-    curvname, ext: string;
+    Filename, curvname, ext: string;
 begin
-  if not FileExists(Filename) then exit;
-  ext := UpperCase(ExtractFileExt(Filename));
-  if (ext = '.NII') or (ext = '.HDR')  or (ext = '.GZ') or (ext = '.ANNOT') or (ext = '.W') or (ext = '.CURV')  then begin
+  Filename := FindFile(FilenameIN);
+  if Filename = '' then exit;
+  ext := ExtractFileExtGzUpper(Filename);
+  //ext := UpperCase(ExtractFileExt(Filename));
+  if (ext = '.NII') or (ext = '.HDR')  or (ext = '.NII.GZ') or (ext = '.ANNOT') or (ext = '.W') or (ext = '.CURV')  then begin
     OpenOverlay(Filename);
     exit;
   end else if (ext = '.VTK') and (not isVtkMesh (Filename)) then begin
@@ -484,7 +547,7 @@ begin
   end else if (length(gMesh.Faces) > 0) and (ext = '.GII') and (not isGiiMesh (Filename)) then begin
     OpenOverlay(Filename);  //GIfTI files can be meshes or overlays - autodetect
     exit;
-  end else if (ext = '.TRK') or (ext = '.FIB') then begin
+  end else if (ext = '.TRK') or (ext = '.FIB') or (ext = '.PDB') or (ext = '.TCK') or (ext = '.BFLOAT') or (ext = '.BFLOAT.GZ')  then begin
     OpenTrack(Filename);
     exit;
   end else if (ext = '.EDGE') then begin
@@ -763,6 +826,89 @@ begin
   gShader.lightPos.Z := gShader.lightPos.Z * scale;
   UpdateTimer.Enabled := true;
 end;
+
+procedure TGLForm1.SaveTrack (var lTrack: TTrack);
+const
+    kTrackFilter  = 'VTK|*.vtk|Camino|*.Bfloat';
+begin
+  if (lTrack.n_count < 1) then begin
+   showmessage('Unable to save tracks: no tracks open (use Tracks/AddTracks)');
+   exit;
+ end;
+ SaveMeshDialog.Filter := kTrackFilter;
+ SaveMeshDialog.Title := 'Save track file';
+ if gPrefs.SaveAsFormatTrack = kSaveAsTrackBfloat then begin
+   SaveMeshDialog.DefaultExt:= '.BFloat';
+   SaveMeshDialog.FileName := changeFileExt(gPrefs.PrevTrackname, '.BFloat');
+   SaveMeshDialog.FilterIndex := 2;
+ end else begin
+     SaveMeshDialog.DefaultExt:= '.vtk';
+     SaveMeshDialog.FileName := changeFileExt(gPrefs.PrevTrackname, '.vtk');
+     SaveMeshDialog.FilterIndex := 1;
+ end;
+ if not SaveMeshDialog.Execute then exit;
+ if SaveMeshDialog.FilterIndex = 2 then
+    lTrack.SaveBfloat(SaveMeshDialog.Filename)
+ else
+     lTrack.SaveVtk(SaveMeshDialog.Filename);
+ //lTrack.SaveBfloat(SaveMeshDialog.Filename);
+end;
+
+procedure TGLForm1.SimplifyTracks1Click(Sender: TObject);
+var
+  s: string;
+  tol: single;
+  lTrack: TTrack;
+begin
+  if DefaultFormatSettings.DecimalSeparator = '.' then
+    s := '0.1'
+  else
+      s := '0,1';
+  if not inputquery('Track simplify', 'Enter tolerance (e.g. "1" will allow track to deviate 1mm from original)', s) then exit;
+  if not TryStrToFloat(s, tol) then begin
+    showmessage('Unable convert value to a number');
+    exit;
+  end;
+  OpenDialog.Filter := kTrackFilter;
+  OpenDialog.Title := 'Select track file';
+  if Fileexists(gPrefs.PrevTrackname) then
+     OpenDialog.InitialDir := ExtractFileDir(gPrefs.PrevTrackname);
+  if not OpenDialog.Execute then exit;
+  lTrack := TTrack.Create;
+
+
+  if lTrack.LoadFromFile(OpenDialog.FileName) then begin
+     gPrefs.PrevTrackname := OpenDialog.FileName;
+     if lTrack.SimplifyMM(Tol) then
+       SaveTrack(lTrack);
+     //nam := changeFileExt(OpenDialog.FileName, 'd.vtk');
+     //lTrack.SaveVtk(nam);
+     //lTrack.SaveBfloat(nam);
+  end;
+  lTrack.Close;
+  lTrack.Free;
+end;
+
+procedure TGLForm1.SaveTracksMenuClick(Sender: TObject);
+begin
+     SaveTrack(gTrack);
+end;
+
+(*const
+    kTrackFilter  = 'VTK|*.vtk';
+begin
+ if (gTrack.n_count < 1) then begin
+   showmessage('Unable to save tracks: no tracks open (use Tracks/AddTracks)');
+   exit;
+ end;
+ SaveMeshDialog.Filter := kTrackFilter;
+ SaveMeshDialog.DefaultExt:= '.vtk';
+ SaveMeshDialog.Title := 'Save tracks as VTK';
+ SaveMeshDialog.FileName := changeFileExt(gPrefs.PrevTrackname, '.vtk');
+ if not SaveMeshDialog.Execute then exit;
+ //gTrack.SaveVtk(SaveMeshDialog.Filename);
+ gTrack.SaveBfloat(SaveMeshDialog.Filename);
+end;*)
 
 procedure TGLForm1.SurfaceAppearanceChange(Sender: TObject);
 begin
@@ -1062,12 +1208,16 @@ end;
 
 procedure TGLForm1.ResetMenuClick(Sender: TObject);
 begin
+     gPrefs.BackColor := RGBToColor(255,255,255);
+     gPrefs.Colorbar := true;
      gDistance := 1;
      gElevation := 20;
      gAzimuth := 250;
+     Transparency0.Click;
      gPrefs.AdditiveOverlay:= false;
      gMesh.isAdditiveOverlay:= gPrefs.AdditiveOverlay;
      AdditiveOverlayMenu.Checked:= gPrefs.AdditiveOverlay;
+     gPrefs.ObjColor:= RGBToColor(192,192,192);
      //set tracks
      TrackLengthTrack.Position:= 20;
      TrackWidthTrack.Position := 2;
@@ -1239,6 +1389,15 @@ begin
   if Update then UpdateImageIntensity;
 end;
 
+procedure TGLForm1.OVERLAYMINMAX (lOverlay: integer; lMin,lMax: single);
+begin
+  if (gMesh.OpenOverlays < 1) or (lOverlay > gMesh.OpenOverlays)  then exit;
+  gMesh.Overlay[lOverlay].WindowScaledMin := lMin;
+  gMesh.Overlay[lOverlay].WindowScaledMax := lMax;
+  UpdateOverlaySpread;
+
+end;
+
 
 procedure TGLForm1.CreateRender(w,h: integer; isToScreen: boolean);
 var
@@ -1270,15 +1429,15 @@ begin
     isMultiSample := setFrame (w, h, gShader.f2, true );
     DrawScene(w,h, false,isMultiSample, gPrefs, origin,  ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
     if (isToScreen)  then begin
-       releaseFrame; //GOOD: multipass, no multisampling
+       releaseFrame; //GOOD: multipass, multisampling
        Set2DDraw (w,h, red(gPrefs.BackColor) ,green(gPrefs.BackColor), blue(gPrefs.BackColor));
        RunAoGLSL( gShader.f1,  gShader.f2, 1,  meshAlpha, meshBlend, ambientOcclusionFrac, gDistance);
-    end else begin  //SCREENSHOT - supersampled
+    end else begin  //SCREENSHOT - multipass, multisampling, supersampled
         setFrame (w, h, gShader.fScreenShot, true );
         Set2DDraw (w,h, red(gPrefs.BackColor) ,green(gPrefs.BackColor), blue(gPrefs.BackColor));
-        RunAoGLSL( gShader.f1,  gShader.f2, kScreenShotZoom,  meshAlpha,meshBlend,ambientOcclusionFrac,gDistance);
+        RunAoGLSL( gShader.f1,  gShader.f2, gPrefs.ScreenCaptureZoom,  meshAlpha,meshBlend,ambientOcclusionFrac,gDistance);
     end;
-  end else begin //else POOR quality : do not use framebuffers
+  end else begin //else POOR quality : do not use framebuffers (single pass)
       //if isToScreen then
          releaseFrame;
       //else
@@ -1327,22 +1486,19 @@ begin
  GLBox.MakeCurrent;
  glGetIntegerv(GL_MAX_VIEWPORT_DIMS, @maxXY);
  //caption := inttostr(maxXY[0]) +'x'+inttostr(maxXY[1]);
- w := GLbox.Width * kScreenShotZoom;
- h := GLbox.Height * kScreenShotZoom;
+ w := GLbox.Width * gPrefs.ScreenCaptureZoom;
+ h := GLbox.Height * gPrefs.ScreenCaptureZoom;
  if (w > maxXY[0]) or (h > maxXY[1]) or (gPrefs.RenderQuality = kRenderPoor) or (not (gPrefs.SupportBetterRenderQuality)) then begin
   w := GLbox.Width;
   h := GLbox.Height;
   zoom := 1
  end else
-     zoom := kScreenShotZoom;
+     zoom := gPrefs.ScreenCaptureZoom;
   if (gTrack.n_count > 0) and (not gTrack.isTubes) then begin  //tracks are drawn in pixels, so zoom appropriately!
      trackLineWidth := gTrack.LineWidth;
      gTrack.LineWidth := 2 * gTrack.LineWidth * zoom;
      gTrack.isRebuildList:= true;
   end;
-
-
-
   Result:=TBitmap.Create;
   Result.Width:=w;
   Result.Height:=h;
@@ -1393,10 +1549,78 @@ begin
   GLboxRequestUpdate(GLForm1);
 end;
 
+procedure TGLForm1.ScriptMenuClick(Sender: TObject);
+begin
+ ScriptForm.Show;
+ //doScript;
+end;
+
+procedure TGLForm1.Quit2TextEditor;
+{$IFDEF UNIX}
+var
+  AProcess: TProcess;
+  {$IFDEF LINUX} I: integer; EditorFName : string; {$ENDIF}
+begin
+    {$IFDEF LINUX}
+    EditorFName := FindDefaultExecutablePath('gedit');
+   if EditorFName = '' then
+     EditorFName := FindDefaultExecutablePath('tea');
+    if EditorFName = '' then
+      EditorFName := FindDefaultExecutablePath('nano');
+    if EditorFName = '' then
+      EditorFName := FindDefaultExecutablePath('pico');
+    if EditorFName = '' then begin
+       Showmessage(ExtractFilename(paramstr(0))+' will now quit. You can then use a text editor to modify the file '+IniName);
+       Clipboard.AsText := EditorFName;
+    end else begin
+      EditorFName := '"'+EditorFName +'" "'+IniName+'"';
+      Showmessage(ExtractFilename(paramstr(0))+' will now quit. Modify the settings with the command "'+EditorFName+'"');
+         AProcess := TProcess.Create(nil);
+         AProcess.InheritHandles := False;
+         AProcess.Options := [poNewProcessGroup, poNewConsole];
+         AProcess.ShowWindow := swoShow;
+        for I := 1 to GetEnvironmentVariableCount do
+            AProcess.Environment.Add(GetEnvironmentString(I));
+         AProcess.Executable := EditorFName;
+         AProcess.Execute;
+         AProcess.Free;
+    end;
+    Clipboard.AsText := EditorFName;
+    GLForm1.close;
+    exit;
+    {$ENDIF}
+    Showmessage('Preferences will be opened in a text editor. The program '+ExtractFilename(paramstr(0))+' will now quit, so that the file will not be overwritten.');
+    AProcess := TProcess.Create(nil);
+    {$IFDEF UNIX}
+      //AProcess.CommandLine := 'open -a TextEdit '+IniName;
+      AProcess.Executable := 'open';
+      AProcess.Parameters.Add('-e');
+      AProcess.Parameters.Add(IniName);
+    {$ELSE}
+      AProcess.CommandLine := 'notepad '+IniName;
+    {$ENDIF}
+   Clipboard.AsText := AProcess.CommandLine;
+  //AProcess.Options := AProcess.Options + [poWaitOnExit];
+  AProcess.Execute;
+  AProcess.Free;
+  GLForm1.close;
+end;
+{$ELSE} //ShellExecute(Handle,'open', 'c:\windows\notepad.exe','c:\SomeText.txt', nil, SW_SHOWNORMAL) ;
+begin
+  gPrefs.SkipPrefWriting := true;
+    Showmessage('Preferences will be opened in a text editor. The program '+ExtractFilename(paramstr(0))+' will now quit, so that the file will not be overwritten.');
+   //GLForm1.SavePrefs;
+    ShellExecute(Handle,'open', 'notepad.exe',PAnsiChar(AnsiString(IniName)), nil, SW_SHOWNORMAL) ;
+  //WritePrefsOnQuit.checked := false;
+  GLForm1.close;
+end;
+{$ENDIF}
+
 procedure TGLForm1.AboutMenuClick(Sender: TObject);
 const
   kSamp = 36;
 var
+  str : string;
   s: dword;
   i: integer;
 begin
@@ -1406,7 +1630,7 @@ begin
      gAzimuth := (gAzimuth + 10) mod 360;
      GLbox.Repaint;
   end;
-  showmessage( 'Surf Ice '+' 2 Feb 2016 '
+  str :=  'Surf Ice '+' 2 Feb 2016 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
@@ -1417,7 +1641,11 @@ begin
    +LineEnding+' Mesh Vertices '+inttostr(length(gMesh.vertices))+' Faces '+  inttostr(length(gMesh.faces)) +' Colors '+  inttostr(length(gMesh.vertexRGBA))
    +LineEnding+' Track Vertices '+inttostr(gTrack.n_vertices)+' Faces '+  inttostr(gTrack.n_faces) +' Count ' +inttostr(gTrack.n_count)
    +LineEnding+' Node Vertices '+inttostr(length(gNode.vertices))+' Faces '+  inttostr(length(gNode.faces))
-   +LineEnding+' GPU '+gShader.Vendor);
+   +LineEnding+' GPU '+gShader.Vendor
+   +LineEnding+'Press "Abort" to quit and open settings '+ininame;
+
+  i := MessageDlg(str,mtInformation,[mbAbort, mbOK],0);
+  if i  = mrAbort then Quit2TextEditor;
 end;
 
 procedure TGLForm1.AddNodesMenuClick(Sender: TObject);
@@ -1464,8 +1692,6 @@ begin
 end;
 
 procedure TGLForm1.AddTracksMenuClick(Sender: TObject);
-const
-     kTrackFilter = 'VTK or TrakVis|*.trk;*.fib;*.vtk|Any file|*.*';
 begin
  OpenDialog.Filter := kTrackFilter;
  OpenDialog.Title := 'Select track file';
@@ -1557,22 +1783,27 @@ begin
   GLerror := '';
 end;
 
+procedure TGLForm1.SetDistance(Distance: single);
+begin
+     gDistance := Distance;
+     if gDistance > kMaxDistance then gDistance := kMaxDistance;
+     if gDistance < 0.5 then gDistance := 0.5;
+     GLBox.Invalidate;
+end;
+
 procedure TGLForm1.GLBoxMouseWheel(Sender: TObject; Shift: TShiftState;
   WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
 begin
  if abs(WheelDelta) < 5 then exit;
   if WheelDelta < 0 then
-     gDistance := gDistance * 0.9
+     SetDistance(gDistance * 0.9)
   else
-    gDistance := gDistance * 1.1;
-  if gDistance > kMaxDistance then gDistance := kMaxDistance;
-  if gDistance < 0.5 then gDistance := 0.5;
-  GLBox.Invalidate;
+    SetDistance(gDistance * 1.1);
 end;
 
 procedure TGLForm1.UpdateLUT(lOverlay,lLUTIndex: integer; lChangeDrop: boolean);
 begin
-  if gMesh.OpenOverlays > kMaxOverlays then
+  if (gMesh.OpenOverlays > kMaxOverlays)  then
     exit;
   if lLUTIndex >= LUTdrop.Items.Count then
     gMesh.Overlay[lOverlay].LUTindex:= 0
@@ -1584,6 +1815,44 @@ begin
   end;
   gMesh.overlay[lOverlay].LUT := UpdateTransferFunction (gMesh.Overlay[lOverlay].LUTindex);
   //LUTdropLoad(gMesh.Overlay[lOverlay].LUTindex, gMesh.Overlay[lOverlay].LUT, LUTdrop.Items[lLUTindex], gOverlayCLUTrec[lOverlay]);
+end;
+
+function TGLForm1.ComboBoxName2Index(var lCombo: TComboBox; lName: string): integer;
+var
+    lNameU, lItem : string;
+    i: integer;
+begin
+     result := 0;
+     if lCombo.Items.Count < 2 then exit;
+     lNameU := uppercase(lName);
+     i := 0;
+     while i < lCombo.Items.Count do begin
+         lItem := uppercase (lCombo.Items[i]);
+         if (lItem = lNameU) then begin
+            result := i;
+            i := maxint-1;
+         end;
+         i := i + 1;
+ end;//for each shader
+end;
+
+procedure TGLForm1.OVERLAYCOLORNAME(lOverlay: integer; lFilename: string);
+//var
+   //lLUTIndex, i: integer;
+   //lName, lItem : string;
+begin
+ if (gMesh.OpenOverlays < 1) or (lOverlay > gMesh.OpenOverlays)  then exit;
+
+ (*if GLForm1.LUTdrop.Items.Count < 2 then exit;
+ lLUTIndex := 0;
+ lName := uppercase(lFilename);
+ for i := 0 to (GLForm1.LUTdrop.Items.Count-1) do begin
+     lItem := uppercase (GLForm1.LUTdrop.Items[i]);
+     if (lItem = lName) then
+       lLUTindex := i;
+ end;//for each shader
+ UpdateLUT(lOverlay,lLUTIndex,true); *)
+ UpdateLUT(lOverlay,ComboBoxName2Index(LUTdrop, lFilename),true);
 end;
 
 procedure TGLForm1.LUTdropChange(Sender: TObject);
@@ -1608,7 +1877,7 @@ procedure TGLForm1.NodePrefChange(Sender: TObject);
 var
   lo, hi: single;
 begin
-  gNode.nodePrefs.scaleNodeSize := NodeScaleTrack.Position/5;
+  gNode.nodePrefs.scaleNodeSize := NodeScaleTrack.Position / 10;
   gNode.nodePrefs.nodeLUTindex := LUTdropNode.itemIndex;
   //gNode.nodePrefs.isNodeSizeVaries := NodeSizeVariesCheck.checked;
   gNode.nodePrefs.isEdgeSizeVaries := EdgeSizeVariesCheck.checked;
@@ -1620,7 +1889,7 @@ begin
   gNode.nodePrefs.minNodeThresh := lo;
   gNode.nodePrefs.maxNodeThresh := hi;
   gNode.nodePrefs.edgeLUTindex:= LUTdropEdge.itemIndex;
-  gNode.nodePrefs.scaleEdgeSize:= edgeScaleTrack.Position/10;
+  gNode.nodePrefs.scaleEdgeSize:= edgeScaleTrack.Position / 10;
   lo := edgeMinEdit.Value;
   hi := edgeMaxEdit.value;
   sortsingle(lo, hi);
@@ -1748,29 +2017,42 @@ begin
      GLbox.Invalidate;
 end;
 
-procedure TGLForm1.SaveMenuClick(Sender: TObject);
-var
-   bmp: TBitmap;
-   png: TPortableNetworkGraphic;
-begin
-  if not SaveBitmapDialog.execute then exit;
+procedure TGLForm1.SaveBitmap(FilenameIn: string);
+ var
+    bmp: TBitmap;
+    png: TPortableNetworkGraphic;
+    p,n,x,filename: string;
+ begin
+
+  FilenameParts (FilenameIn,p,n,x);
+  if (p ='') or (not directoryexists(p)) then
+     p := DesktopFolder;
+  if (n = '') then n := 'SurfIce';
+  if (x = '') then x := '.png';
+  Filename := p+n+x;
+  //showmessage(Filename); exit;
   bmp := ScreenShot;
-  png := TPortableNetworkGraphic.Create;
-  try
-    png.Assign(bmp);    //Convert data into png
-    png.SaveToFile(SaveBitmapDialog.Filename);
-  finally
-    png.Free;
-  end;
-  bmp.Free;
+   png := TPortableNetworkGraphic.Create;
+   try
+     png.Assign(bmp);    //Convert data into png
+     png.SaveToFile(changefileext(Filename,'.png'));
+   finally
+     png.Free;
+   end;
+   bmp.Free;
 end;
 
-procedure TGLForm1.SaveMesh;
+procedure TGLForm1.SaveMenuClick(Sender: TObject);
+begin
+  if not SaveBitmapDialog.execute then exit;
+  SaveBitmap(SaveBitmapDialog.Filename);
+end;
+
+procedure TGLForm1.SaveMz3;
 var
    i : integer;
    nam: string;
 begin
-  if not SaveMeshDialog.Execute then exit;
   gMesh.SaveMz3(SaveMeshDialog.Filename);
   for i :=  1 to gMesh.OpenOverlays do begin
         nam := changefileext(SaveMeshDialog.Filename, '_'+inttostr(i)+extractfileext(SaveMeshDialog.Filename));
@@ -1779,44 +2061,38 @@ begin
 end;
 
 procedure TGLForm1.SaveMeshMenuClick(Sender: TObject);
+const
+      kMeshFilter = 'OBJ (Widely supported)|*.obj|GIfTI (Neuroimaging)|*.gii|MZ3 (Small and fast)|*.mz3';
 var
-   nam: string;
+
+   nam, ext: string;
 begin
-  nam := '';
-  if fileexists(gPrefs.PrevFilename[1]) then
+  if length(gMesh.Faces) < 1 then begin
+     showmessage('Unable to save: no mesh is loaded (use File/Open).');
+     exit;
+  end;
+  SaveMeshDialog.Filter  := kMeshFilter;
+  SaveMeshDialog.FilterIndex := gPrefs.SaveAsFormat + 1;
+  if gPrefs.SaveAsFormat = 0 then
+     ext := '.obj'
+  else if gPrefs.SaveAsFormat = 1 then
+    ext := '.gii'
+  else
+    ext := '.mz3';
+  SaveMeshDialog.DefaultExt := ext;
+  if fileexists(gPrefs.PrevFilename[1]) then begin
     nam := gPrefs.PrevFilename[1];
-  if gPrefs.SaveAsFormat = kSaveAsGii then begin
-    SaveMeshDialog.Title := 'Save mesh as GIfTI';
-    SaveMeshDialog.DefaultExt := '.gii';
-    SaveMeshDialog.Filter := 'GIfTI|*.gii';
-    SaveMeshDialog.FileName:= changeFileExt(nam, SaveMeshDialog.DefaultExt);
-    if not SaveMeshDialog.Execute then exit;
-    gMesh.SaveGii(SaveMeshDialog.Filename);
-    exit;
-  end;
-  if gPrefs.SaveAsFormat = kSaveAsMz3 then begin
-    SaveMeshDialog.Title := 'Save mesh as Mz3';
-    SaveMeshDialog.DefaultExt := '.mz3';
-    SaveMeshDialog.Filter := 'Surf Ice Mesh|*.mz3';
-    SaveMeshDialog.FileName:= changeFileExt(nam, SaveMeshDialog.DefaultExt);
-    SaveMesh;
-    exit;
-  end;
-  SaveMeshDialog.Title := 'Save mesh as WaveFront Obj';
-  SaveMeshDialog.DefaultExt := '.obj';
-  SaveMeshDialog.Filter := 'OBJ mesh|*.obj';
-  SaveMeshDialog.FileName:= changeFileExt(nam, SaveMeshDialog.DefaultExt);
+    nam := changeFileExt(nam, ext);
+    SaveMeshDialog.Filename := nam;
+  end else
+      SaveMeshDialog.Filename := '';
   if not SaveMeshDialog.Execute then exit;
-  gMesh.SaveObj(SaveMeshDialog.Filename);
-
-end;
-
-procedure TGLForm1.SaveTracksMenuClick(Sender: TObject);
-begin
- SaveMeshDialog.DefaultExt:= '.vtk';
- SaveMeshDialog.Title := 'Save tracks as VTK';
- if not SaveMeshDialog.Execute then exit;
- gTrack.SaveVtk(SaveMeshDialog.Filename);
+  if SaveMeshDialog.FilterIndex = 3 then
+     SaveMz3
+  else if SaveMeshDialog.FilterIndex = 2 then
+     gMesh.SaveGii(SaveMeshDialog.Filename)
+  else
+      gMesh.SaveObj(SaveMeshDialog.Filename);
 end;
 
 procedure TGLForm1.UniformChange(Sender: TObject);
@@ -1935,6 +2211,11 @@ procedure TGLForm1.FormDropFiles(Sender: TObject;
   const FileNames: array of String);
 begin
    OpenMesh(Filenames[0]);
+end;
+
+procedure TGLForm1.GLBoxClick(Sender: TObject);
+begin
+
 end;
 
 procedure TGLForm1.AppDropFiles(Sender: TObject; const FileNames: array of String);

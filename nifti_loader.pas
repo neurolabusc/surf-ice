@@ -248,6 +248,31 @@ begin
   s:=outguy.Long;
 end;
 
+function swapDouble(s : double):double;
+type
+  swaptype = packed record
+    case byte of
+      0:(Word1,Word2,Word3,Word4 : word); //word is 16 bit
+      1:(float:double);
+  end;
+  swaptypep = ^swaptype;
+var
+  inguy:swaptypep;
+  outguy:swaptype;
+begin
+  inguy := @s; //assign address of s to inguy
+  outguy.Word1 := swap(inguy^.Word4);
+  outguy.Word2 := swap(inguy^.Word3);
+  outguy.Word3 := swap(inguy^.Word2);
+  outguy.Word4 := swap(inguy^.Word1);
+  try
+    result:=outguy.float;
+  except
+        result := 0;
+        exit;
+  end;
+end; //func swap8r
+
 constructor  TNIFTI.Create;
 begin
      //
@@ -339,8 +364,6 @@ begin
 end;
 
 function FixDataType (var lHdr: TNIFTIhdr): boolean;
-label
-  191;
 var
   ldatatypebpp,lbitpix: integer;
 begin
@@ -380,12 +403,14 @@ end;
 Type
   WordP = array of Word;
   SingleP = array of Single;
+  DoubleP = array of Double;
 
 function TNIFTI.ImgRawToSingle(imgBytes: TImgRaw; isSwap: boolean): boolean;
 var
   i, nVox: integer;
   l16Buf : WordP;
   l32Buf : singleP;
+  l64Buf : doubleP;
 begin
      result := false;
      nVox:= hdr.dim[1] * hdr.dim[2] * hdr.dim[3];
@@ -417,7 +442,15 @@ begin
              for i := 0 to (nVox -1) do
                img[i] := l32Buf[i];
         end;
-     end;
+     end else if hdr.bitpix = 64 then begin
+         l64Buf := DoubleP(imgBytes );
+         if isSwap then
+           for i := 0 to (nVox -1) do
+               l64Buf[i] := SwapDouble(l64Buf[i]);
+           for i := 0 to (nVox -1) do
+               img[i] := l64Buf[i];
+     end else
+         Showmessage('Unsupported NIfTI datatype '+inttostr(hdr.bitpix)+'bpp');
      for i := 0 to (nVox -1) do //remove NaN
        if SpecialSingle(img[i]) then
           img[i] := 0;

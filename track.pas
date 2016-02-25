@@ -5,14 +5,13 @@ interface
 
 uses
   {$IFDEF DGL} dglOpenGL, {$ELSE} gl, {$IFDEF COREGL}glext,{$ENDIF} {$ENDIF}
-  Classes, SysUtils,  dialogs, matmath, math, define_types;
-//http://www.trackvis.org/docs/?subsect=fileformat
+  Classes, SysUtils,  dialogs, matmath, math, define_types, track_simplify, zstream;
 
 Type
 
 TTrack = class
   //utime: QWord;
-  scale, minFiberLength, ditherColorFrac : single;
+  scale, minFiberLength, ditherColorFrac, maxObservedFiberLength  : single;
   origin : TPoint3f;
   isBusy, isRebuildList, isTubes: boolean;
   TrackTubeSlices, //e.g. if 5 then cross section of fiber is pentagon
@@ -24,15 +23,22 @@ TTrack = class
   {$ENDIF}
   tracks: array of single;
   private
+    function LoadBfloat(const FileName: string): boolean;
+    function LoadPdb(const FileName: string): boolean;
+    function LoadTck(const FileName: string): boolean;
     function LoadTrk(const FileName: string): boolean;
     function LoadVtkASCII(const FileName: string): boolean;
     function LoadVtk(const FileName: string): boolean;
+    //procedure Simplify(Skip: integer);
+
     procedure SetDescriptives;
     procedure BuildListStrip;
     procedure BuildListTubes ;
   public
     constructor Create;
+    function SimplifyMM(Tol: float): boolean;
     function LoadFromFile(const FileName: string): boolean;
+    procedure SaveBfloat(const FileName: string);
     procedure SaveVtk(const FileName: string);
     procedure Close;
     procedure DrawGL ;
@@ -241,6 +247,7 @@ procedure TTrack.BuildListTubes ;
 //const
 //  kSlices = 5; //the cylinder is a pie cut into this many slices: fewer = simpler,  more = less boxy
 var
+  //f: TextFile;
   vRGBA: TVertexRGBA;
   normRGB: TPoint3f;
   normRGBA: TRGBA;
@@ -251,7 +258,7 @@ var
   faces, cylFace: TFaces;
   numFaces, numCylFace,  maxLinks: integer;
   cylVert: TVertices;
-  startPt, endPt: TPoint3f;
+  B, startPt, endPt: TPoint3f;
   trackLinks : array of integer;
 begin
   //tm := gettickcount64();
@@ -316,8 +323,9 @@ begin
        numFaces := 0;
        numVert := 0;
        mprev := 0; //location of previous vertex
+       B := ptf(0,0,0); //need to generate random binormal
        for mi := 0 to (m-2) do begin
-           makeCylinderEnd(radius, pts[mprev], pts[mi], pts[mi+1], cylVert, TrackTubeSlices);
+           makeCylinderEnd(radius, pts[mprev], pts[mi], pts[mi+1], cylVert, B, TrackTubeSlices);
            for j := 0 to (numCylFace - 1) do //add this cylinder
                faces[j+numFaces+n_faces] := vectorAdd(cylFace[j], numVert+n_vertices);
            numFaces := numFaces + numCylFace;
@@ -327,7 +335,7 @@ begin
            mprev := mi;
        end;
        //faces[numFaces+n_faces-1] := vectorAdd(cylFace[j], 0);
-       makeCylinderEnd(radius, pts[m-2], pts[m-1], pts[m-1], cylVert, TrackTubeSlices);
+       makeCylinderEnd(radius, pts[m-2], pts[m-1], pts[m-1], cylVert, B, TrackTubeSlices);
        for j := 0 to (numCylVert - 1) do //add top of last cylinder
            vertices[j+numVert+n_vertices] := cylVert[j];
 
@@ -340,6 +348,18 @@ begin
     end else //len >= minFiberLength
         i := i + 1 + (3 * m);
   end;
+  (*AssignFile(f, '~/Test.txt');
+  ReWrite(f);
+  writeln(f, floattostr(radius),' -> ',inttostr(TrackTubeSlices));
+  i := 0;
+  writeln(f, floattostr(pts[i].X),kTab, floattostr(pts[i].Y),kTab, floattostr(pts[i].Z) );
+    i :=1;
+  writeln(f, floattostr(pts[i].X),kTab, floattostr(pts[i].Y),kTab, floattostr(pts[i].Z) );
+  writeln(f,'xxx');
+
+  for i := 0 to (length(vertices)-1) do
+      writeln(f, floattostr(vertices[i].X),kTab, floattostr(vertices[i].Y),kTab, floattostr(vertices[i].Z) );
+  CloseFile(f); *)
   setlength(trackLinks,0);
   setlength(pts, 0);
 {$ELSE}
@@ -412,6 +432,7 @@ begin
        glDeleteLists(displayList, 1);
     displayList := 0;
     {$ENDIF}
+    randseed := 123; //so that dither colors do not flicker when width is adjusted
     if isTubes then //this is slow, so 'isRebuildList' ensures this is done only if the model has been changed
        BuildListTubes //upload geometry as a cylinder-based display list: http://www.songho.ca/opengl/gl_displaylist.html
     else
@@ -504,6 +525,7 @@ begin
      displayList := 0;
      {$ENDIF}
      scale := 0;
+     maxObservedFiberLength := 0;
      ditherColorFrac := 0.3;
      minFiberLinks := 2;
      minFiberLength := 20;
@@ -535,7 +557,7 @@ begin
   ReadLn(f, str); //comment: 'Comment: created with MRIcroS'
   ReadLn(f, str); //kind: 'BINARY' or 'ASCII'
   if (pos('ASCII', UpperCase(str)) <> 1) then begin  // '# vtk DataFile'
-     showmessage('Only able to read binary VTK file (convert with MRIcroS or another tool): '+str);
+     showmessage('Only able to read ASCII or binary VTK files: '+str);
      goto 666;
   end;
   ReadLn(f, str); // kind, e.g. "DATASET POLYDATA" or "DATASET STRUCTURED_ POINTS"
@@ -675,13 +697,15 @@ var
    f: TFByte;
    strlst: TStringList;
    str: string;
-   nVtx, inPos, outPos, vtx, i, v, num_v, num_f, n_items: integer;
+   nVtx, inPos, outPos, vtx, i, v, num_v, n_items, fsz: integer;
    vert: array of TPoint3f;
    items: array of LongInt;
 begin
   result := false;
   AssignFile(f, FileName);
   Reset(f,1);
+  fsz := filesize(f);
+  if fsz < 64 then goto 666;
   ReadLnBin(f, str); //signature: '# vtk DataFile'
   if pos('VTK', UpperCase(str)) <> 3 then begin
     goto 666;
@@ -711,6 +735,10 @@ begin
     showmessage('Expected at least 1 point of type FLOAT, not '+ str);
     goto 666;
   end;
+  if fsz < (filepos(f)+ (3 * 4 * num_v)) then begin
+     showmessage('File too small to contain this many vertices!');
+     goto 666;
+  end;
   setlength(vert, num_v); //vert = zeros(num_f, 9);
   blockread(f, vert[0], 3 * 4 * num_v);
   ReadLnBin(f, str); // number of vert, e.g. "POLYGONS 1380 5520"
@@ -727,6 +755,10 @@ begin
   n_count := StrToIntDef(strlst[1],0);
   n_items := StrToIntDef(strlst[2],0);
   strlst.free;
+  if fsz < (filepos(f)+ (n_items * 4)) then begin
+     showmessage('File too small to contain this many lines!');
+     goto 666;
+  end;
   setlength(items, n_items);
   blockread(f, items[0], n_items * 4);
   closefile(f);
@@ -751,6 +783,8 @@ begin
           tracks[outPos] := vert[vtx].X; inc(outPos);
           tracks[outPos] := vert[vtx].Y; inc(outPos);
           tracks[outPos] := vert[vtx].Z; inc(outPos);
+          //if v < 4 then
+          //   showmessage(format('%g %g %g',[vert[vtx].X, vert[vtx].Y, vert[vtx].Z]));
       end; //for each vertex in fiber
   end; //for each fiber
  result := true;
@@ -759,7 +793,362 @@ begin
    closefile(f);
 end;
 
+procedure TTrack.SaveBfloat(const FileName: string);
+//{$DEFINE GZ_BFLOAT}
+var
+  flt: array of single;
+  i, o, m, mi, nflt: integer;
+  {$IFDEF GZ_BFLOAT}
+  mStream : TMemoryStream;
+  zStream: TGZFileStream;
+  {$ELSE}
+  f: file;
+  {$ENDIF}
+  FileNameBf: string;
+begin
+  //   flt: array of single;
+  // sz, nflt, i, outPos, nVtx, v : integer;
+  if (n_count < 1) or (length(tracks) < 4) then exit;
+  nflt := length(tracks) + n_count;
+  setlength(flt, nflt);
+  o := 0; //output position
+  i := 0; //input position
+  while i < length(tracks) do begin
+      m :=   asInt( tracks[i]); inc(i);
+      flt[o] := m; inc(o); // "N"
+      flt[o] := m; inc(o); // "SeedIndex"
+
+      for mi := 0 to (m-1) do begin
+            flt[o] := tracks[i]; inc(i);  inc(o);
+            flt[o] := tracks[i]; inc(i);  inc(o);
+            flt[o] := tracks[i]; inc(i);  inc(o);
+      end;
+  end;
+  {$IFDEF ENDIAN_LITTLE} //Camino data ALWAYS bigendian!
+  for i := 0 to (nflt -1) do
+      SwapSingle(flt[i]);
+  {$ENDIF}
+  {$IFDEF GZ_BFLOAT}
+  FileNameBf := FileName + '.Bfloat.gz';
+  mStream := TMemoryStream.Create;
+  mStream.Write(flt[0], nflt * sizeof(single));
+  mStream.Position := 0;
+  zStream := TGZFileStream.Create(FileNameBf, gzopenwrite);
+  zStream.CopyFrom(mStream, mStream.Size);
+  zStream.Free;
+  mStream.Free;
+  {$ELSE}
+  FileNameBf := changeFileExt(FileName, '.Bfloat');
+  AssignFile(f, FileNameBf);
+  ReWrite(f, sizeof(single));
+  BlockWrite(f, flt[0], nflt);
+  CloseFile(f);
+  {$ENDIF}
+end;
+
+function TTrack.LoadBfloat(const FileName: string): boolean;
+// http://www.nitrc.org/pipermail/camino-users/2014-April/000389.html
+// http://camino.cs.ucl.ac.uk/index.php?n=Main.Fileformats
+label
+   666;
+const
+   kChunkSize = 16384;
+var
+  bytes : array of byte;
+  mStream : TMemoryStream;
+  zStream: TGZFileStream;
+  ext: string;
+   f: file;
+   flt: array of single;
+   sz, nflt, i, outPos, nVtx, v : integer;
+begin
+     result := false;
+     ext := ExtractFileExtGzUpper(Filename);
+     if (ext = '.BFLOAT.GZ') then begin
+       mStream := TMemoryStream.Create;
+       zStream := TGZFileStream.create(FileName, gzopenread);
+       setlength(bytes, kChunkSize);
+       repeat
+              i := zStream.read(bytes[0],kChunkSize);
+              mStream.Write(bytes[0],i) ;
+       until i < kChunkSize;
+       zStream.Free;
+
+       sz :=  mStream.Size;
+       if sz < 5 * sizeof(single) then begin//smallest file 3*N+2 floats
+            ShowMessage(format('File too small to be Camino format: %s', [FileName]));
+            mStream.Free;
+            exit;
+       end;
+       nflt := sz div sizeof(single);
+       setlength(flt, nflt);
+       mStream.Position := 0;
+       mStream.Read(flt[0], nflt * SizeOf(single));
+       mStream.Free;
+
+     end else begin
+         AssignFile(f, FileName);
+         FileMode := fmOpenRead;
+         Reset(f,1);
+         sz := FileSize(f);
+         if sz < 5 * sizeof(single) then begin//smallest file 3*N+2 floats
+            ShowMessage(format('File too small to be Camino format: %s', [FileName]));
+            CloseFile(f);
+            exit;
+         end;
+         nflt := sz div sizeof(single);
+         setlength(flt, nflt);
+         blockread(f, flt[0], nflt * SizeOf(single) );
+         CloseFile(f);
+     end;
+     {$IFDEF ENDIAN_LITTLE} //Camino data ALWAYS bigendian!
+     for i := 0 to (nflt -1) do
+         SwapSingle(flt[i]);
+     {$ENDIF}
+     setlength(tracks, nflt);
+     n_count := 0;
+     outPos := 0;
+     i := 0; //in position
+     while i < nflt do begin
+         nVtx := trunc(flt[i]); //"N"
+         if (nVtx < 1) or ((flt[i] - nVtx) > 0.01 ) then
+           goto 666;
+         i := i + 2; //skip "N" and "seedIndex"
+         if (i + (nVtx * 3)) > nflt then begin
+           //showmessage(format('%d %d', [nflt, i + (nVtx * 3)]));
+           goto 666;
+
+         end;
+         n_count := n_count + 1;
+         tracks[outPos] := asSingle(nVtx); inc(outPos);
+         for v := 1 to nVtx do begin
+             tracks[outPos] := flt[i]; inc(outPos); inc(i);
+             tracks[outPos] := flt[i]; inc(outPos); inc(i);
+             tracks[outPos] := flt[i]; inc(outPos); inc(i);
+         end; //for each vertex in fiber
+         //n_vertex := n_vertex + numberOfpoints[i];
+     end;
+     setlength(tracks, outPos);
+     Result := true;
+     exit;
+ 666:
+     showmessage('File is not in the Camino Streamline fiber tract format '+filename);
+     n_count := 0;
+     setlength(tracks,0);
+end;
+
+function TTrack.LoadPdb(const FileName: string): boolean;
+//Version 2 is described here, version 3 reverse engineered.
+// http://graphics.stanford.edu/projects/dti/software/pdb_format.html
+type
+ TPoint3d = packed record
+    X,Y,Z: double;
+  end;
+label
+   666;
+var
+   f: file;
+   mat64: array [1..16] of double;//float32
+   mat: TMat44;
+   n_vertex, hdrsz, tmp, psz, vers, nVtx : LongWord; //uint32
+   numberOfpoints: array of LongWord;
+   vtx: TPoint3f;
+   vert: array of TPoint3d;
+   v, i,sz, outPos, inPos, pos: integer;
+begin
+     result := false;
+     AssignFile(f, FileName);
+     FileMode := fmOpenRead;
+     Reset(f,1);
+     sz := FileSize(f);
+     if sz < 134 then begin//smallest file is 84 byte header + 50 byte triangle
+        ShowMessage(format('File too small to be PDB format: %s', [FileName]));
+        CloseFile(f);
+        exit;
+     end;
+     blockread(f, hdrsz, SizeOf(LongWord) );
+     if (hdrsz+16) > sz then begin
+        ShowMessage(format('Header larger than file: %s', [FileName]));
+        CloseFile(f);
+        exit;
+     end;
+     blockread(f, mat64, SizeOf(double) * 16 );
+     mat[1,1] := mat64[1]; mat[1,2] := mat64[2]; mat[1,3] := mat64[3]; mat[1,4] := mat64[4];
+     mat[2,1] := mat64[5]; mat[2,2] := mat64[6]; mat[2,3] := mat64[7]; mat[2,4] := mat64[8];
+     mat[3,1] := mat64[ 9]; mat[3,2] := mat64[10]; mat[3,3] := mat64[11]; mat[3,4] := mat64[12];
+     mat[4,1] := mat64[13]; mat[4,2] := mat64[14]; mat[4,3] := mat64[15]; mat[4,4] := mat64[16];
+     Seek(f, hdrsz- SizeOf(LongWord));
+     blockread(f, vers, SizeOf(LongWord) );
+     if (vers <> 3) and (vers <> 2) then begin
+       ShowMessage(format('Expected PDB version 2 or 3, not %d', [vers]));
+       CloseFile(f);
+       exit;
+     end;
+     //Seek(f, hdrsz);
+     blockread(f, tmp, SizeOf(LongWord) );
+     n_count := tmp;
+     //showmessage(inttostr(n_count));
+     if vers = 2 then begin
+        outPos := 0;
+        for i := 0 to  (n_count -1) do begin
+            blockread(f, psz, SizeOf(LongWord) );
+            pos := filepos(f);
+            blockread(f, nVtx, SizeOf(LongWord) );
+            //showmessage(inttostr(nVtx)+'xx'+inttostr(psz));
+            seek(f, pos + psz);
+            setlength(vert, nVtx);
+            blockread(f, vert[0], nVtx * SizeOf(TPoint3d) );
+            //showmessage(format('%g %g %g', [vert[0].X, vert[0].Y, vert[0].Z]));
+            setlength(tracks, outPos+ 1 + 3 * nVtx);
+            tracks[outPos] := asSingle(nVtx); inc(outPos);
+            inPos := 0;
+            for v := 1 to nVtx do begin //for each vertex in this fiber
+                vtx.X :=  vert[inPos].X;
+                vtx.Y :=  vert[inPos].Y;
+                vtx.Z :=  vert[inPos].Z;
+                //if (v = 1) and (i = 0) then showmessage(format('%g %g %g', [vtx.X, vtx.Y, vtx.Z]));
+                vectorTransform(vtx, mat);
+                //if (v = 1) and (i = 0) then showmessage(format('%g %g %g', [vtx.X, vtx.Y, vtx.Z]));
+                tracks[outPos] := vtx.X; inc(outPos);
+                tracks[outPos] := vtx.Y; inc(outPos);
+                tracks[outPos] := vtx.Z; inc(outPos);
+                inc(inPos);
+            end; //for each vertex in fiber
+        end; //for each fiber
+        CloseFile(f);
+        result := true;
+        exit;
+     end;
+     setlength(numberOfpoints, n_count);
+     blockread(f, numberOfpoints[0], n_count * SizeOf(LongWord) );
+     n_vertex := 0;
+     for i := 0 to (n_count -1) do
+         n_vertex := n_vertex + numberOfpoints[i];
+     setlength(vert, n_vertex);
+     blockread(f, vert[0], n_vertex * SizeOf(TPoint3d) );
+     setlength(tracks, (n_vertex * 3) + n_count);
+     outPos := 0;
+     inPos := 0;
+     for i := 0 to (n_count -1) do begin
+         nVtx := numberOfpoints[i];
+         tracks[outPos] := asSingle(nVtx); inc(outPos);
+         for v := 1 to nVtx do begin
+             vtx.X :=  vert[inPos].X;
+             vtx.Y :=  vert[inPos].Y;
+             vtx.Z :=  vert[inPos].Z;
+             //if (v = 1) and (i = 0) then showmessage(format('%g %g %g', [vtx.X, vtx.Y, vtx.Z]));
+             vectorTransform(vtx, mat);
+             //if (v = 1) and (i = 0) then showmessage(format('%g %g %g', [vtx.X, vtx.Y, vtx.Z]));
+             tracks[outPos] := vtx.X; inc(outPos);
+             tracks[outPos] := vtx.Y; inc(outPos);
+             tracks[outPos] := vtx.Z; inc(outPos);
+             inc(inPos);
+         end; //for each vertex in fiber
+         //n_vertex := n_vertex + numberOfpoints[i];
+     end;
+  CloseFile(f);
+  Result := true;
+  {$IFNDEF ENDIAN_LITTLE}
+  byteswapping required, PDB always little endian!
+  {$ENDIF}
+  exit;
+ 666:
+
+
+end;
+
+function TTrack.LoadTck(const FileName: string): boolean;
+//Read BINARY TCK fibers
+// https://github.com/MRtrix3/mrtrix3/blob/master/matlab/write_mrtrix_tracks.m
+const
+  kInf : single = 1.0 / 0.0;
+label
+   555,666;
+var
+   f: TFByte;
+   strlst: TStringList;
+   str, strEnd: string;
+   nVtx, inPos, outPos, i, v, n_items, fsz, offset: integer;
+   vert: array of TPoint3f;
+   lOK: boolean;
+begin
+  result := false;
+  AssignFile(f, FileName);
+  Reset(f,1);
+  fsz := filesize(f);
+  if fsz < 64 then goto 666;
+  ReadLnBin(f, str); //signature: 'mrtrix tracks'
+  if pos('MRTRIX', UpperCase(str)) <> 1 then begin
+    goto 666;
+  end;
+  strlst:=TStringList.Create;
+  lOK := true;
+  n_count := 0;
+  offset := 0;
+  while (not EOF(f)) and (pos('END', UpperCase(str)) <> 1) do begin
+        strlst.DelimitedText := str;
+        strEnd := strlst[strlst.Count-1];
+        if (pos('DATATYPE:', str) = 1) and (strEnd <> 'FLOAT32LE') then begin  // "datatype: Float32LE"
+           showmessage('Unknown datatype, expected "Float32LE, not : '+ str);
+           lOK := false;
+        end;
+        if (pos('NUM_TRACKS:', str) = 1) or (pos('COUNT:', UpperCase(str)) = 1) then   //"count: 6"
+           //either 'num_tracks' or 'count', see https://github.com/vistalab/vistasoft/blob/master/fileFilters/mrtrix/dtiImportFibersMrtrix.m
+          n_count := StrToIntDef(strEnd,0);
+        if (pos('FILE:', str) = 1) then   //"count: 6"
+           offset := StrToIntDef(strEnd,0);
+
+        ReadLnBin(f, str); //next line
+        str := UpperCase(str);
+  end;
+  strlst.free;
+  n_items := (fsz - offset) div 12; //each item is 12 bytes long (3*32-bit floats)
+  if (offset < 20) or (n_count < 1) or (not lOK) or (n_items < 1) then begin  // '# vtk DataFile'
+    showmessage('Unable to read TCK format file : '+ FileName);
+    closefile(f);
+    exit;
+  end;
+  setlength(vert, n_items); //vert = zeros(num_f, 9);
+  setlength(tracks, n_items * 3); //each triplet may require up to 3 floats to store
+  seek(f,offset);
+  blockread(f, vert[0], n_items * 12); //each item is 12 bytes long (3*32-bit floats)
+  inPos := 0;
+  outPos := 0;
+  for i := 0 to (n_items -1) do begin
+      if specialsingle(vert[i].X) then begin
+        if ( vert[i].X = kInf) then goto 555;
+        nVtx := i - inPos;
+        //showmessage(inttostr(nVtx)+'  '+inttostr(i)+'  '+inttostr(n_items));
+        if nVtx > 0 then begin
+          tracks[outPos] := asSingle(nVtx); inc(outPos);
+          for v := 1 to nVtx do begin
+                    tracks[outPos] := vert[inPos].X; inc(outPos);
+                    tracks[outPos] := vert[inPos].Y; inc(outPos);
+                    tracks[outPos] := vert[inPos].Z; inc(outPos);
+                    inc(inPos);
+          end; //for each vertex in fiber
+          inc(inPos);
+        end; //at least one value
+      end;
+
+  end;
+555:
+  setlength(tracks, outPos);
+
+  //showmessage(inttostr(outPos)+'  '+inttostr(n_items));
+
+  {$IFNDEF ENDIAN_LITTLE}
+   byteswapping required!
+  {$ENDIF}
+  result := true;
+666:
+   closefile(f);
+end; //LoadTck()
+
+
 function TTrack.LoadTrk(const FileName: string): boolean;
+// http://www.trackvis.org/docs/?subsect=fileformat
+
 var
    f: File;
    fsz, ntracks: int64;
@@ -822,9 +1211,11 @@ end;
 
 procedure TTrack.SetDescriptives;
 var
+  len: single;
    i, m, mi: integer;
-   mn, mx, pt : TPoint3f;
+   mn, mx, pt, pt1 : TPoint3f;
 begin
+  maxObservedFiberLength := 0;
   if (n_count < 1) or (length(tracks) < 4) then exit;
   mn := ptf(Infinity,Infinity,Infinity);
   mx := ptf(-Infinity, -Infinity, -Infinity);
@@ -837,9 +1228,16 @@ begin
             pt.Y := tracks[i]; inc(i);
             pt.Z := tracks[i]; inc(i);
             minmax(pt, mn,mx);
+            if mi = 1 then
+               pt1 := pt;
+            if mi = m then begin
+              vector2RGB(pt1, pt, len);
+              if len > maxObservedFiberLength then
+                 maxObservedFiberLength := len;
+            end;
         end;
   end;
-  //showmessage(format('%d  -> %g..%g %g..%g %g..%g', [nstrip, mn.X, mx.X, mn.Y, mx.Y, mn.Z, mx.Z]));
+  //showmessage(format('%d  -> %g..%g %g..%g %g..%g max : %g', [length(tracks), mn.X, mx.X, mn.Y, mx.Y, mn.Z, mx.Z, maxObservedFiberLength]));
   (*scale := (mx.X - mn.X);
   if  (mx.Y - mn.Y) > scale then
       scale := (mx.Y - mn.Y);
@@ -858,6 +1256,115 @@ begin
     //GLForm1.Caption := format('%g..%g %g..%g %g..%g',[mn.X,mx.X, mn.Y,mx.Y, mn.Z, mx.Z]) ;
 end; // SetDescriptives()
 
+(*function jointAngle(prevPos, pos, nextPos: TPoint3f): single;
+//Compute dot product of line tangents
+var
+   v1, v2, v3 : TPoint3f; //Tangent
+begin
+  //compute Normal and Binormal for each tangent
+  v1 := pos;
+  vectorNormalize(v1);
+  v2 := nextPos;
+  vectorNormalize(v2);
+  vectorSubtract(v2, v1); //next line tangent
+  v3 := prevPos;
+  vectorNormalize(v3);
+  vectorSubtract(v1, v3); //prior line tangent
+
+  result := vectorDot(v1,v2);
+end; //jointAngle()   *)
+
+
+(*procedure TTrack.Simplify(Skip: integer);
+var
+   pos: TPoint3f;
+   i, m, mi, xi, xm, xIndexPos: integer;
+   xTracks: array of single;
+procedure AddJoint(pt: TPoint3f);
+begin
+     xTracks[xi] := pt.X; inc(xi);
+     xTracks[xi] := pt.Y; inc(xi);
+     xTracks[xi] := pt.Z; inc(xi);
+     inc(xm);
+end;
+begin
+  //if (threshold < 0.5) then exit;
+  if Skip < 2 then exit;
+  if (n_count < 1) or (length(tracks) < 4) then exit;
+  setlength(xTracks, length(tracks));
+  i := 0;
+  xi := 0;
+  showmessage(format('--> %g %g %g',[tracks[1], tracks[2], tracks[3]]) );
+  while i < length(tracks) do begin
+        m :=   asInt( tracks[i]);
+        xIndexPos := xi;
+        xm := 0;
+        inc(i);
+        inc(xi);
+        for mi := 1 to m do begin
+            pos.X := tracks[i]; inc(i);
+            pos.Y := tracks[i]; inc(i);
+            pos.Z := tracks[i]; inc(i);
+            if (mi = 1) or (mi = m) then
+               AddJoint(pos)
+            else if (mi mod Skip) = 0 then
+               AddJoint(pos);
+        end;
+        xTracks[xIndexPos] := asSingle(xm);
+  end;
+  showmessage(inttostr(i)+'->'+inttostr(xi));
+  //showmessage(format('%g %g',[tracks[0], xTracks[0]]));
+  setlength(xTracks, xi);
+  tracks := Copy(xTracks, Low(xTracks), Length(xTracks));
+end;*)
+
+//function PolySimplifyFloat3D(Tol: TFloat; const Orig: array of TPoint3f; var Simple: array of TPoint3f): integer;
+function TTrack.SimplifyMM(Tol: float): boolean;
+var
+   pos: TPoint3f;
+   i, m, mi, xi, xm: integer;
+   Orig, Simple: array of TPoint3f;
+   xTracks: array of single;
+procedure AddJoint(pt: TPoint3f);
+begin
+     xTracks[xi] := pt.X; inc(xi);
+     xTracks[xi] := pt.Y; inc(xi);
+     xTracks[xi] := pt.Z; inc(xi);
+end;
+begin
+  //if (threshold < 0.5) then exit;
+  if (n_count < 1) or (length(tracks) < 4) then exit;
+  setlength(xTracks, length(tracks));
+  i := 0;
+  xi := 0;
+  while i < length(tracks) do begin
+        m :=   asInt( tracks[i]);
+        xm := 0;
+        inc(i);
+        setlength(Orig, m);
+        setlength(Simple, m);
+        for mi := 0 to (m-1) do begin
+            pos.X := tracks[i]; inc(i);
+            pos.Y := tracks[i]; inc(i);
+            pos.Z := tracks[i]; inc(i);
+            Orig[mi] := pos;
+        end;
+        xm := PolySimplifyFloat3D(Tol, Orig, Simple);
+        xTracks[xi] := asSingle(xm);
+        inc(xi);
+        for mi := 0 to (xm-1) do
+            AddJoint(Simple[mi]);
+  end;
+  result := xi < i;
+  if result then
+     showmessage('Reduced to '+inttostr(round(100*xi/i))+'% of original size')
+  else
+      showmessage('Unable to further simplify this track with this threshold');
+  //showmessage(format('%g %g',[tracks[0], xTracks[0]]));
+  setlength(xTracks, xi);
+  tracks := Copy(xTracks, Low(xTracks), Length(xTracks));
+end;
+
 function TTrack.LoadFromFile(const FileName: string): boolean;
 var
    ext: string;
@@ -865,13 +1372,22 @@ begin
   isBusy := true;
   Self.Close;
     result := false;
-
+    maxObservedFiberLength := 0; //in case of error
     if not FileExists(FileName) then exit;
-    ext := UpperCase(ExtractFileExt(Filename));
-    if (ext = '.TRK') then begin
+    //ext := UpperCase(ExtractFileExt(Filename));
+    ext := ExtractFileExtGzUpper(Filename);
+    if (ext = '.BFLOAT') or (ext = '.BFLOAT.GZ') then begin
+         if not LoadBfloat(FileName) then exit;
+    end else if (ext = '.PDB') then begin
+         if not LoadPdb(FileName) then exit;
+    end else if (ext = '.TCK') then begin
+         if not LoadTck(FileName) then exit;
+    end else if (ext = '.TRK') then begin
          if not LoadTrk(FileName) then exit;
     end else  //(ext = '.FIB') 0r (ext = '.FIB') then begin
         LoadVtk(Filename);
+    //Simplify(5);
+    //SimplifyMM(3);
     SetDescriptives;
     isRebuildList := true;
     result := true;

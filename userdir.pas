@@ -7,6 +7,7 @@ function IniName: string;
 function DefaultsDir (lSubFolder: string): string;
 function DesktopFolder: string;
 function AppDir: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app
+function AppDir2: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/ for /folder/myapp.app/app
  //function ExeDir: string;
 
 implementation
@@ -229,8 +230,19 @@ begin
  if (upcase(lExt) = '.APP')  then
     result := lPath+lName+lExt+pathdelim;
 end;
+
+function AppDir2: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app
+begin
+ result := ExtractFilePath(ExtractFileDir(AppDir));
+
+end;
 {$ELSE}
 function AppDir: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app
+begin
+ result := extractfilepath(paramstr(0));
+end;
+
+function AppDir2: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app
 begin
  result := extractfilepath(paramstr(0));
 end;
