@@ -1772,7 +1772,7 @@ begin
      gAzimuth := (gAzimuth + 10) mod 360;
      GLbox.Repaint;
   end;
-  str :=  'Surf Ice '+' 2 Feb 2016 '
+  str :=  'Surf Ice '+' 3 March 2016 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
