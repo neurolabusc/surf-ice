@@ -206,13 +206,43 @@ begin
     result.a := alpha;
 end;
 
+(*function scaleLUT(colorFromZero: boolean; mn, mx: single; lut: TLUT): TLUT;
+var
+  i, p: integer;
+  f: single;
+begin
+  result := TLUT;
+  if (not colorFromZero) then exit;
+  if (mn < 0) and (mx > 0) then exit;
+  if  (mn < 0) and (mx < 0) then begin
+
+  end else begin
+      if mx <= 0 then exit;
+      f := mn/mx;
+      for i := 0 to 255 do
+          lut[i] :=
+      //lut[round(255*(intensity-mn)/(mx-mn))];
+  end;
+end; *)
+
+procedure AddPt4f(var v: TPoint4f; c1,c2,c3: TRGBA); //create float vector
+begin
+     v.X := v.X + c1.r+ c2.r+ c3.r;
+     v.Y := v.Y + c1.g+ c2.g+ c3.g;
+     v.Z := v.Z + c1.b+ c2.b+ c3.b;
+     v.W := v.W + c1.a+ c2.a+ c3.a;
+end;
+
 procedure TMesh.BuildList (Clr: TRGBA);
 var
   i,c: integer;
   mn, mx: single;
   rgb: TRGBA;
   vRGBA, vRGBAmx :TVertexRGBA;
-  vZeroNeighbor: array of boolean;
+  vNumNeighbor: array of integer;
+  //vNumColorNeighbor: array of integer;
+  vSumRGBBA: array of TPoint4f;
+
   isOverlayPainting : boolean = false;
 begin
   if (length(faces) < 1) or (length(vertices) < 3) then exit;
@@ -250,6 +280,7 @@ begin
           for i := 0 to (length(vertices)-1) do
               vRGBAmx[i] := rgb;
           for c :=  OpenOverlays downto 1 do begin
+
             if (overlay[c].LUTvisible) and (length(overlay[c].intensity) = length(vertices)) then begin
                if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
                   mn := overlay[c].windowScaledMin;
@@ -283,7 +314,78 @@ begin
               end; //if visible
             end;  //for c
        end;  //if isAdditiveOverlay else
-       if (length(vertexRGBA) < 1) then begin //feather edges if regions without overlay have alpha = 0
+       if  (length(vertexRGBA) < 1) then begin //feather edges if regions without overlay have alpha = 0
+         setlength(vNumNeighbor, length(vertices));
+         //setlength(vNumColorNeighbor, length(vertices));
+         setlength(vSumRGBBA, length(vertices));
+      //for k := 1 to 1 do begin
+         for i := 0 to (length(vertices)-1) do begin
+             vNumNeighbor[i] := 0;
+             //vNumColorNeighbor[i] := 0;
+             vSumRGBBA[i] := pt4f(0,0,0,0);
+         end;
+         for i := 0 to (length(faces)-1) do begin
+             (*if (vRGBA[faces[i].X].A = 0) or (vRGBA[faces[i].Y].A = 0) or (vRGBA[faces[i].Z].A = 0) then begin
+                inc(vNumZeroNeighbor[faces[i].X]);
+                inc(vNumZeroNeighbor[faces[i].Y]);
+                inc(vNumZeroNeighbor[faces[i].Z]);
+             end;*)
+             AddPt4f(vSumRGBBA[faces[i].X], vRGBA[faces[i].X], vRGBA[faces[i].Y], vRGBA[faces[i].Z]);
+             AddPt4f(vSumRGBBA[faces[i].Y], vRGBA[faces[i].X], vRGBA[faces[i].Y], vRGBA[faces[i].Z]);
+             AddPt4f(vSumRGBBA[faces[i].Z], vRGBA[faces[i].X], vRGBA[faces[i].Y], vRGBA[faces[i].Z]);
+             inc(vNumNeighbor[faces[i].X],3);
+             inc(vNumNeighbor[faces[i].Y],3);
+             inc(vNumNeighbor[faces[i].Z],3);
+         end;
+         for i := 0 to (length(vertices)-1) do begin
+             if (vNumNeighbor[i] > 0)  then begin //vertex at edge: neighbors both colored and uncolored vertices
+                 vRGBA[i].a := round(vSumRGBBA[i].W / vNumNeighbor[i]);
+                 if (vRGBA[i].a < 255) and (vRGBA[i].a > 0) then begin
+                    //mx := 255/vRGBA[i].a;
+
+                    vRGBA[i].r := round( vSumRGBBA[i].X / vNumNeighbor[i]);
+                    vRGBA[i].g := round( vSumRGBBA[i].Y / vNumNeighbor[i]);
+                    vRGBA[i].b := round( vSumRGBBA[i].Z / vNumNeighbor[i]);
+                    //vRGBA[i].a := 255;
+                 end;
+             end;
+
+         end;
+      //end; //k
+
+        (*for i := 0 to (length(vertices)-1) do begin
+             vNumColorNeighbor[i] := 0;
+             vNumZeroNeighbor[i] := 0;
+             vSumRGBBA[i] := pt4f(0,0,0,0);
+         end;
+         for i := 0 to (length(faces)-1) do begin
+             vSumRGBBA[faces[i].X] := pt4f(vRGBA[faces[i].X].R, vRGBA[faces[i].X].G, vRGBA[faces[i].X].B, vRGBA[faces[i].X].A);
+             vSumRGBBA[faces[i].Y] := pt4f(vRGBA[faces[i].Y].R, vRGBA[faces[i].Y].G, vRGBA[faces[i].Y].B, vRGBA[faces[i].Y].A);
+             vSumRGBBA[faces[i].Z] := pt4f(vRGBA[faces[i].Z].R, vRGBA[faces[i].Z].G, vRGBA[faces[i].Z].B, vRGBA[faces[i].Z].A);
+
+             if (vRGBA[faces[i].X].A <> 0) or (vRGBA[faces[i].Y].A <> 0) or (vRGBA[faces[i].Z].A <> 0) then begin
+                inc(vNumColorNeighbor[faces[i].X]);
+                inc(vNumColorNeighbor[faces[i].Y]);
+                inc(vNumColorNeighbor[faces[i].Z]);
+             end;
+         end;
+         for i := 0 to (length(vertices)-1) do begin
+             if (vNumColorNeighbor[i] > 0)  then begin //vertex at edge: neighbors both colored and uncolored vertices
+                vRGBA[i].r := round(vSumRGBBA[i].X / vNumColorNeighbor[i]);
+                vRGBA[i].g := round(vSumRGBBA[i].Y / vNumColorNeighbor[i]);
+                vRGBA[i].b := round(vSumRGBBA[i].Z / vNumColorNeighbor[i]);
+                vRGBA[i].a := round(vSumRGBBA[i].W / (vNumColorNeighbor[i]+vNumZeroNeighbor[i] ) );
+             end;
+         end;  *)
+
+
+
+         vNumNeighbor := nil;
+         //vNumColorNeighbor := nil;
+         vSumRGBBA := nil;
+       end; //end feather edges
+
+       (*if (length(vertexRGBA) < 1) then begin //feather edges if regions without overlay have alpha = 0
          setlength(vZeroNeighbor, length(vertices));
          for i := 0 to (length(vertices)-1) do
              vZeroNeighbor[i] := false;
@@ -298,6 +400,7 @@ begin
              if(vZeroNeighbor[i]) then
                  vRGBA[i].a :=   vRGBA[i].a shr 1; //make edges more transparent
        end; //end feather edges
+       *)
        {$IFDEF COREGL} //with new openGL we mix here
        mx := 1.0 - OverlayTransparency/100;
        if mx < 0 then mx := 0;

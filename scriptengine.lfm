@@ -1,32 +1,31 @@
 object ScriptForm: TScriptForm
   Tag = 2
-  Left = 775
-  Height = 375
-  Top = 188
-  Width = 387
+  Left = 550
+  Height = 376
+  Top = 296
+  Width = 356
   ActiveControl = Memo1
   Caption = 'ScriptForm'
-  ClientHeight = 375
-  ClientWidth = 387
+  ClientHeight = 376
+  ClientWidth = 356
   Menu = ScriptMenu1
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
-  Position = poScreenCenter
   LCLVersion = '1.6.0.4'
   object Splitter1: TSplitter
     Cursor = crVSplit
     Left = 0
-    Height = 3
-    Top = 216
-    Width = 387
+    Height = 4
+    Top = 264
+    Width = 356
     Align = alBottom
     ResizeAnchor = akBottom
   end
   object Memo1: TMemo
     Left = 0
-    Height = 216
+    Height = 264
     Top = 0
-    Width = 387
+    Width = 356
     Align = alClient
     OnChange = Memo1Change
     OnClick = Memo1Click
@@ -38,9 +37,9 @@ object ScriptForm: TScriptForm
   end
   object Memo2: TMemo
     Left = 0
-    Height = 156
-    Top = 219
-    Width = 387
+    Height = 108
+    Top = 268
+    Width = 356
     Align = alBottom
     ParentFont = False
     ReadOnly = True
@@ -50,6 +49,9 @@ object ScriptForm: TScriptForm
   object ScriptMenu1: TMainMenu
     left = 104
     top = 32
+    object AppleMenu: TMenuItem
+      Caption = ''
+    end
     object File1: TMenuItem
       Caption = '&File'
       object New1: TMenuItem
@@ -126,27 +128,18 @@ object ScriptForm: TScriptForm
     end
     object Insert1: TMenuItem
       Caption = 'Insert'
-      object Colorbar1: TMenuItem
-        Caption = 'Colorbar'
-        object colorbarvisible1: TMenuItem
-          Tag = 1
-          Caption = 'colorbarvisible'
-          Hint = 'COLORBARVISIBLE (VISIBLE: boolean). Shows a colorbar on the main images.'
+      object MainImage1: TMenuItem
+        Caption = 'Mesh'
+        object meshload1: TMenuItem
+          Tag = 4
+          Caption = 'meshload'
+          Hint = 'meshload (lFilename: string) Opens a mesh to view.'
           OnClick = InsertCommand
         end
-      end
-      object Dialogs1: TMenuItem
-        Caption = 'Dialogs'
-        object modalmessage1: TMenuItem
-          Tag = 4
-          Caption = 'modalmessage'
-          Hint = 'modalmessage(str: string) Shows a modal dialog, script stops until user presses ''OK'' button to dismiss dialog.'
-          OnClick = InsertCommand
-        end
-        object modelessmessage1: TMenuItem
-          Tag = 4
-          Caption = 'modelessmessage'
-          Hint = 'modelessmessage(str: string) Shows text in the rendering window. This text is displayed until the text is changed.'
+        object meshcolor1: TMenuItem
+          Tag = 36
+          Caption = 'meshcolor'
+          Hint = 'MESHCOLOR (R,G,B: byte) set red/green/blue components of main image.'
           OnClick = InsertCommand
         end
       end
@@ -158,15 +151,15 @@ object ScriptForm: TScriptForm
           Hint = 'OVERLAYLOAD (lFilename: string): integer; Will add the overlay named filename and return the number of the overlay.'
           OnClick = InsertCommand
         end
+        object overlayadditive1: TMenuItem
+          Tag = 1
+          Caption = 'overlayadditive'
+          Hint = 'OVERLAYADDITIVE (ADD: boolean); '
+          OnClick = InsertCommand
+        end
         object overlaycloseall1: TMenuItem
           Caption = 'overlaycloseall'
           Hint = 'OVERLAYCLOSEALL. This function has no parameters. All open overlays will be closed.'
-          OnClick = InsertCommand
-        end
-        object overlaycolornumber1: TMenuItem
-          Tag = 22
-          Caption = 'overlaycolornumber'
-          Hint = 'OVERLAYCOLORNUMBER (lOverlay,lLUTIndex: integer) Sets the color scheme for a overlay.'
           OnClick = InsertCommand
         end
         object overlaycolorname1: TMenuItem
@@ -187,22 +180,11 @@ object ScriptForm: TScriptForm
           Hint = 'OVERLAYTRANSPARENCYONBACKGROUND (lPct: integer). Controls the opacity of the overlays on the background.'
           OnClick = InsertCommand
         end
-        object overlaytransparencyonoverlay1: TMenuItem
-          Tag = 2
-          Caption = 'overlaytransparencyonoverlay'
-          Hint = 'OVERLAYTRANSPARENCYONOVERLAY (lPct: integer); Controls the opacity of the overlays on other overlays.'
-          OnClick = InsertCommand
-        end
         object overlaycolorfromzero1: TMenuItem
           Tag = 1
           Caption = 'overlaycolorfromzero'
           Hint = 'OVERLAYCOLORFROMZERO (FROMZERO: Boolean) If set to false, then the full color range is used to show the overlay.'
-          OnClick = InsertCommand
-        end
-        object overlaymaskedbybackground1: TMenuItem
-          Tag = 1
-          Caption = 'overlaymaskedbybackground'
-          Hint = 'OVERLAYMASKEDBYBACKGROUND (MASK: BOOLEAN). If true, than a overlay will be transparent on any voxel where the background image is transparent.'
+          Visible = False
           OnClick = InsertCommand
         end
         object overlayvisible1: TMenuItem
@@ -212,8 +194,113 @@ object ScriptForm: TScriptForm
           OnClick = InsertCommand
         end
       end
+      object Nodes1: TMenuItem
+        Caption = 'Nodes'
+        object edgeload1: TMenuItem
+          Tag = 4
+          Caption = 'edgeload'
+          Hint = 'EDGELOAD(lFilename: string);'
+          OnClick = InsertCommand
+        end
+        object edgecolor1: TMenuItem
+          Tag = 1411
+          Caption = 'edgecolor'
+          Hint = 'EDGECOLOR(name: string; varies: boolean);'
+          OnClick = InsertCommand
+        end
+        object edgesize1: TMenuItem
+          Tag = 1311
+          Caption = 'edgesize'
+          Hint = 'EDGESIZE(size: single; varies: boolean);'
+          OnClick = InsertCommand
+        end
+        object edgethresh1: TMenuItem
+          Tag = 23
+          Caption = 'edgethresh'
+          Hint = 'EDGETHRESH (LO, HI: single);'
+          OnClick = InsertCommand
+        end
+        object nodeload1: TMenuItem
+          Tag = 4
+          Caption = 'nodeload'
+          Hint = 'NODELOAD(lFilename: string);'
+          OnClick = InsertCommand
+        end
+        object nodecolor1: TMenuItem
+          Tag = 1411
+          Caption = 'nodecolor'
+          Hint = 'NODECOLOR(name: string; varies: boolean); '
+          OnClick = InsertCommand
+        end
+        object nodehemisphere1: TMenuItem
+          Tag = 2
+          Caption = 'nodehemisphere'
+          Hint = 'NODEHEMISPHERE(VAL: integer); -1 for left hemipshere, 0 for both, 1 for right'
+          OnClick = InsertCommand
+        end
+        object ndepolarity1: TMenuItem
+          Tag = 2
+          Caption = 'nodepolarity'
+          Hint = 'NODEPOLARITY(VAL: integer); -1 for negative only, 0 for either, 1 for positive only'
+          OnClick = InsertCommand
+        end
+        object nodesize1: TMenuItem
+          Tag = 1311
+          Caption = 'nodesize'
+          Hint = 'NODESIZE(size: single; varies: boolean);'
+          OnClick = InsertCommand
+        end
+        object nodethresh1: TMenuItem
+          Tag = 23
+          Caption = 'nodethresh'
+          Hint = 'NODETHRESH (LO, HI: single); '
+          OnClick = InsertCommand
+        end
+      end
+      object Tracks1: TMenuItem
+        Caption = 'Tracks'
+        object trackload1: TMenuItem
+          Tag = 4
+          Caption = 'trackload'
+          Hint = 'TRACKLOAD(lFilename: string);'
+          OnClick = InsertCommand
+        end
+        object trackprefs1: TMenuItem
+          Tag = 33
+          Caption = 'trackprefs'
+          Hint = 'TRACKPREFS(lLength,lWidth,lDither: single);'
+          OnClick = InsertCommand
+        end
+      end
+      object Dialogs1: TMenuItem
+        Caption = 'Dialogs'
+        object modalmessage1: TMenuItem
+          Tag = 4
+          Caption = 'modalmessage'
+          Hint = 'modalmessage(str: string) Shows a modal dialog, script stops until user presses ''OK'' button to dismiss dialog.'
+          OnClick = InsertCommand
+        end
+        object modelessmessage1: TMenuItem
+          Tag = 4
+          Caption = 'modelessmessage'
+          Hint = 'modelessmessage(str: string) Shows text in the rendering window. This text is displayed until the text is changed.'
+          OnClick = InsertCommand
+        end
+      end
       object Shaders1: TMenuItem
         Caption = 'Shaders'
+        object shaderadjust1: TMenuItem
+          Tag = 1413
+          Caption = 'shaderadjust'
+          Hint = 'SHADERADJUST(PROPERTY: string; VALUE: single). Sets one of the user-adjustable properties.'
+          OnClick = InsertCommand
+        end
+        object shaderambientocclusion1: TMenuItem
+          Tag = 3
+          Caption = 'shaderambientocclusion'
+          Hint = 'SHADERAMBIENTOCCLUSIO N(lVal: single); range 0..1: strength of crevice shadows'
+          OnClick = InsertCommand
+        end
         object shadername1: TMenuItem
           Tag = 4
           Caption = 'shadername'
@@ -226,15 +313,15 @@ object ScriptForm: TScriptForm
           Hint = 'SHADERLIGHTAZIMUTHELEVATION(AZI, ELEV: integer). Changes location of light source.'
           OnClick = InsertCommand
         end
-        object shaderadjust1: TMenuItem
-          Tag = 1413
-          Caption = 'shaderadjust'
-          Hint = 'SHADERADJUST(PROPERTY: string; VALUE: single). Sets one of the user-adjustable properties.'
+        object shaderxray1: TMenuItem
+          Tag = 23
+          Caption = 'shaderxray'
+          Hint = 'SHADERXRAY(lObject, lOverlay: single);  See occluded overlays/tracks/nodes by making either object transparent (0..1) or overlay/tracks/nodes emphasized (0..1)'
           OnClick = InsertCommand
         end
       end
       object Render1: TMenuItem
-        Caption = '3D'
+        Caption = 'View'
         object azimuth1: TMenuItem
           Tag = 2
           Caption = 'azimuth'
@@ -247,10 +334,22 @@ object ScriptForm: TScriptForm
           Hint = 'AZIMUTHELEVATION (AZI, ELEV: integer). Sets the viewer location.'
           OnClick = InsertCommand
         end
+        object backcolor1: TMenuItem
+          Tag = 36
+          Caption = 'backcolor'
+          Hint = 'BACKCOLOR (R,G,B: byte) Changes the background color, for example BACKCOLOR(255, 0, 0) will set a bright red background'
+          OnClick = InsertCommand
+        end
         object cameradistance1: TMenuItem
           Tag = 3
           Caption = 'cameradistance'
           Hint = 'CAMERADISTANCE (Z: single) Sets the viewing distance from the object.'
+          OnClick = InsertCommand
+        end
+        object colorbarvisible1: TMenuItem
+          Tag = 1
+          Caption = 'colorbarvisible'
+          Hint = 'COLORBARVISIBLE (VISIBLE: boolean). Shows a colorbar on the main images.'
           OnClick = InsertCommand
         end
         object clip1: TMenuItem
@@ -269,6 +368,12 @@ object ScriptForm: TScriptForm
           Tag = 2
           Caption = 'elevation'
           Hint = 'ELEVATION (DEG: integer) changes the render camera up or down.'
+          OnClick = InsertCommand
+        end
+        object orientcubevisible1: TMenuItem
+          Tag = 1
+          Caption = 'orientcubevisible'
+          Hint = 'ORIENTCUBEVISIBLE (VISIBLE: boolean); show or hide cube that indicates object rotation'
           OnClick = InsertCommand
         end
         object viewaxial1: TMenuItem
@@ -290,10 +395,14 @@ object ScriptForm: TScriptForm
           OnClick = InsertCommand
         end
       end
-      object loadimage1: TMenuItem
-        Tag = 4
-        Caption = 'loadimage'
-        Hint = 'LOADIMAGE (lFilename: string) Opens a NIfTI format image to view.'
+      object quit1: TMenuItem
+        Caption = 'quit'
+        Hint = 'QUIT; Terminate application. Useful if another program is controlling this software'
+        OnClick = InsertCommand
+      end
+      object resetdefaults1: TMenuItem
+        Caption = 'resetdefaults'
+        Hint = 'RESETDEFAULTS. Sets all of the user adjustable settings to their default values.'
         OnClick = InsertCommand
       end
       object savebmp1: TMenuItem
@@ -306,22 +415,6 @@ object ScriptForm: TScriptForm
         Tag = 2
         Caption = 'wait'
         Hint = 'WAIT (MSEC: integer) The program pauses for the specified duration. For example WAIT(1000) delays the script for one second.'
-        OnClick = InsertCommand
-      end
-      object backcolor1: TMenuItem
-        Tag = 36
-        Caption = 'backcolor'
-        Hint = 'BACKCOLOR (R,G,B: byte) Changes the background color, for example BACKCOLOR(255, 0, 0) will set a bright red background'
-        OnClick = InsertCommand
-      end
-      object MenuItem1: TMenuItem
-        Tag = 36
-        Caption = 'objectcolor'
-        Hint = 'OBJECTCOLOR (R,G,B: byte) Changes the color, for example OBJECTCOLOR(255, 0, 0) will  result in a bright red item'
-      end
-      object resetdefaults1: TMenuItem
-        Caption = 'resetdefaults'
-        Hint = 'RESETDEFAULTS. Sets all of the user adjustable settings to their default values.'
         OnClick = InsertCommand
       end
     end

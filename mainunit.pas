@@ -152,11 +152,11 @@ type
     procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
     procedure GLBoxClick(Sender: TObject);
     procedure MeshColorBoxChange(Sender: TObject);
-    procedure OpenNode(FilenameIn: string);
-    procedure OpenTrack(FilenameIn: string);
-    procedure OpenOverlay(FilenameIn: string);
-    procedure OpenEdge(FilenameIn: string);
-    procedure OpenMesh(FilenameIn: string);
+    function OpenNode(FilenameIn: string): boolean;
+    function OpenTrack(FilenameIn: string): boolean;
+    function OpenOverlay(FilenameIn: string): boolean;
+    function OpenEdge(FilenameIn: string): boolean;
+    function OpenMesh(FilenameIn: string): boolean;
     procedure AboutMenuClick(Sender: TObject);
     procedure AddNodesMenuClick(Sender: TObject);
     procedure AddOverlayMenuClick(Sender: TObject);
@@ -181,6 +181,7 @@ type
     procedure NodePrefChange(Sender: TObject);
     procedure OrientCubeMenuClick(Sender: TObject);
     procedure OverlayTimerStart;
+    procedure AdjustFormPos (var lForm: TForm);
     procedure OverlayBoxCreate;
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
@@ -215,6 +216,8 @@ type
     procedure ShowmessageError(s: string);
     procedure GLboxRequestUpdate(Sender: TObject);
     procedure SimplifyTracks1Click(Sender: TObject);
+    procedure StringGrid1EditingDone(Sender: TObject);
+    procedure StringGrid1Enter(Sender: TObject);
     procedure SurfaceAppearanceChange(Sender: TObject);
     procedure ReadCell (ACol,ARow: integer; Update: boolean);
     procedure StringGrid1DrawCell(Sender: TObject; aCol, aRow: Integer;
@@ -264,10 +267,10 @@ var
   gNode: TMesh;
   gTrack: TTrack;
   isBusy: boolean = true;
-  gTypeInCell: boolean = false;
-  gEnterCell: boolean = false;
+  //gTypeInCell: boolean = false;
+  //gEnterCell: boolean = false;
 
-  gPrevCol, gPrevRow: integer; //last selected overlay
+  //gPrevCol, gPrevRow: integer; //last selected overlay
   gDistance : single = 1;
 
   gMouseX : integer = -1;
@@ -346,13 +349,15 @@ begin
  Memo1.Lines.clear;
 end; //UpdateToolbar()
 
-procedure TGLForm1.OpenNode(FilenameIn: string);
+function TGLForm1.OpenNode(FilenameIn: string): boolean;
  var
      FileName, edgename: string;
 begin
+ result := false;
  Filename := FindFile(FileNameIn);
  if Filename = '' then exit;
   if not gNode.LoadFromFile(FileName) then exit;
+ result := true;
   gPrefs.PrevNodename := FileName;
  NodeMinEdit.value := gNode.nodePrefs.minNodeThresh;
  NodeMaxEdit.value := gNode.nodePrefs.maxNodeThresh;
@@ -394,12 +399,14 @@ begin
    OverlayTimerStart;
 end;
 
-procedure TGLForm1.OpenEdge(FilenameIn: string);
+function TGLForm1.OpenEdge(FilenameIn: string): boolean;
 var
   Filename, ext, nodename: string;
 begin
+   result := false;
    Filename := FindFile(FilenameIn);
    if Filename = '' then exit;
+   result := true;
  ext := UpperCase(ExtractFileExt(Filename));
  if (ext = '.NODE') or (length(gNode.nodes) < 1) then begin
      nodename := ChangeFileExt(FileName, '.node');
@@ -416,31 +423,38 @@ begin
  GLBoxRequestUpdate(nil);
 end;
 
-procedure TGLForm1.OpenOverlay(FilenameIn: string);
+function TGLForm1.OpenOverlay(FilenameIn: string): boolean;
 var
   Filename: string;
 begin
+   //StringGrid1.Col := 3;
+   result := false;
    Filename := FindFile(FilenameIn);
    if Filename = '' then exit;
    if not gMesh.LoadOverlay(FileName) then begin //gPrefs.SmoothVoxelwiseData
-     GLBOxRequestUpdate(nil);
+     GLBoxRequestUpdate(nil);
      UpdateToolbar;
+
      exit;
    end;
+   result := true;
    gPrefs.PrevOverlayname := FileName;
    OpenDialog.InitialDir:= ExtractFileDir(FileName);
    StringGrid1.RowCount := gMesh.OpenOverlays+1;
+        StringGrid1.Col := kMin;
    UpdateToolbar;
    UpdateOverlaySpread;
 end;
 
-procedure TGLForm1.OpenTrack(FilenameIN: string);
+function TGLForm1.OpenTrack(FilenameIN: string): boolean;
 var
   Filename: string;
 begin
+   result := false;
  Filename := FindFile(FilenameIN);
  if Filename = '' then exit;
  if gTrack.LoadFromFile(FileName) then begin
+    result := true;
     OpenDialog.InitialDir:= ExtractFileDir(FileName);
     gPrefs.PrevTrackname := FileName;
     if (gTrack.maxObservedFiberLength * 0.5) < TrackLengthTrack.Position then
@@ -527,12 +541,14 @@ begin
      mStream.Free;
 end; //isMz3Mesh
 
-procedure TGLForm1.OpenMesh(FilenameIN: string);
+function TGLForm1.OpenMesh(FilenameIN: string): boolean;
 var
     Filename, curvname, ext: string;
 begin
+  result := false;
   Filename := FindFile(FilenameIN);
   if Filename = '' then exit;
+  result := true;
   ext := ExtractFileExtGzUpper(Filename);
   //ext := UpperCase(ExtractFileExt(Filename));
   if (ext = '.NII') or (ext = '.HDR')  or (ext = '.NII.GZ') or (ext = '.ANNOT') or (ext = '.W') or (ext = '.CURV')  then begin
@@ -889,6 +905,8 @@ begin
   lTrack.Free;
 end;
 
+
+
 procedure TGLForm1.SaveTracksMenuClick(Sender: TObject);
 begin
      SaveTrack(gTrack);
@@ -935,7 +953,7 @@ end;
 
 procedure TGLForm1.StringGrid1Exit(Sender: TObject);
 begin
-      ReadCell(gPrevCol,gPrevRow, true);
+      //ReadCell(gPrevCol,gPrevRow, true);
 end;
 
 function IsDigit (letter : char) : boolean;
@@ -960,8 +978,35 @@ begin
      end;
 end;
 
+procedure TGLForm1.StringGrid1Enter(Sender: TObject);
+//var
+//   ACol, ARow: integer;
+begin
+     //ACol := abs(GLForm1.StringGrid1.Selection.Right);
+     //ARow := abs(GLForm1.StringGrid1.Selection.Top);
+     //StringGrid1.Cells[ACol,ARow] := '';
+end;
+
+procedure TGLForm1.StringGrid1EditingDone(Sender: TObject);
+var
+    lIndex: integer;
+begin
+ for lIndex := 1 to gMesh.OpenOverlays do begin
+     gMesh.Overlay[lIndex].WindowScaledMin := strtofloatDef(StringGrid1.Cells[kMin,lIndex], gMesh.Overlay[lIndex].WindowScaledMin);
+     gMesh.Overlay[lIndex].WindowScaledMax := strtofloatDef(StringGrid1.Cells[kMax,lIndex], gMesh.Overlay[lIndex].WindowScaledMax);
+
+     //StringGrid1.Cells[kMin,lIndex] := FloatToStrF(gMesh.Overlay[lIndex].WindowScaledMin, ffGeneral, 8, 4);
+    //StringGrid1.Cells[kMax,lIndex] := FloatToStrF(gMesh.Overlay[lIndex].WindowScaledMax, ffGeneral, 8, 4);
+  end;
+ UpdateImageIntensity;
+  OverlayTimerStart;
+end;
+
+
+
 procedure TGLForm1.StringGrid1KeyPress(Sender: TObject; var Key: char);
-const
+begin
+(*const
   EnterKey = #13;
   BackspaceKey = #8;
   ControlC = #3;   //  Copy
@@ -991,6 +1036,8 @@ ACol := abs(GLForm1.StringGrid1.Selection.Right);
     exit;
   end;
   gTypeInCell := true;
+  exit;//
+
   OverlayTimerStart;
   if(( GLForm1.StringGrid1.Selection.Top = GLForm1.StringGrid1.Selection.Bottom ) and
 		( GLForm1.StringGrid1.Selection.Left = GLForm1.StringGrid1.Selection.Right )) then begin
@@ -1008,7 +1055,7 @@ ACol := abs(GLForm1.StringGrid1.Selection.Right);
      {$IFDEF FPC} GLForm1.StringGrid1.Cells[ GLForm1.StringGrid1.Selection.Left,GLForm1.StringGrid1.Selection.Top ] := S;
       {$ENDIF}
   end ;
-  ReadCell(gPrevCol,gPrevRow, false);
+  ReadCell(gPrevCol,gPrevRow, false);  *)
 end;
 
 procedure TGLForm1.UpdateOverlaySpread;// (lIndex: integer);
@@ -1282,20 +1329,29 @@ end;
 procedure TGLForm1.StringGrid1MouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 var
-  Row: integer;
+  Row, Col: integer;
+  CanSelect: boolean;
 begin
   if (gMesh.OpenOverlays < 1) then exit;
-  if (X >  (GLForm1.StringGrid1.ColWidths[kFName])) then
+  if (X >  (GLForm1.StringGrid1.DefaultColWidth *2)) then
     exit; //not one of the first two colums
+  Col := X div GLForm1.StringGrid1.DefaultColWidth;
+
   Row := GLForm1.StringGrid1.DefaultRowHeight div 2;
   Row := round((Y-Row)/GLForm1.StringGrid1.DefaultRowHeight);
+  If (Col = kLUT) then begin //hide overlay
+     //caption := inttostr(row)+'  '+inttostr(random(888));
+     StringGrid1SelectCell(Sender, Col, Row, CanSelect);
+      exit;
+  end;
   GLForm1.LUTdrop.visible := false;
   if (Row < 1) or (Row > gMesh.OpenOverlays) then exit;
-  If  ((ssRight in Shift) or (ssShift in Shift)) then begin //hide overlay
+  If (Col = kFname) or  ((ssRight in Shift) or (ssShift in Shift)) then begin //hide overlay
       OverlayVisible(Row, (not gMesh.Overlay[Row].LUTvisible) );
       OverlayTimerStart;
       exit;
   end;
+
   if (gMesh.OpenOverlays < 2) then
     exit; //can not shuffle order of a single item!
   //DemoteOrder(Row); //TO DO
@@ -1305,7 +1361,7 @@ procedure TGLForm1.UpdateImageIntensity;
 var
   i: integer;
 begin
-     gTypeInCell := false;
+     //gTypeInCell := false;
      if gMesh.OpenOverlays > 0 then begin
        Memo1.Lines.clear;
         for i := 1 to gMesh.OpenOverlays do begin
@@ -1321,10 +1377,10 @@ procedure TGLForm1.StringGrid1SelectCell(Sender: TObject; aCol, aRow: Integer;
   var CanSelect: Boolean);
 var R: TRect;
 begin
-  if (gTypeInCell) then UpdateImageIntensity;
+  //if (gTypeInCell) then UpdateImageIntensity;
   if (ACol < kLUT) or (ACol > kMax) or (ARow < 1) or (ARow > gMesh.OpenOverlays) then
      exit;
-  ReadCell(gPrevCol,gPrevRow, false);
+  //ReadCell(gPrevCol,gPrevRow, false);
   if (ACol = kLUT) and  (ARow <> 0) then begin
     //Size and position the combo box to fit the cell
     R := StringGrid1.CellRect(ACol, ARow);
@@ -1334,20 +1390,27 @@ begin
     R.Bottom := R.Bottom + GLForm1.StringGrid1.Top;
     //Show the combobox
     with GLForm1.LUTdrop do begin
-      Tag := 0;
       Left := R.Left + 1;
       Top := R.Top + 1;
       Width := (R.Right + 1) - R.Left;
       Height := (R.Bottom + 1) - R.Top;
+      {$IFDEF LCLcocoa}
+      Left := R.Left-1;
+      Top := R.Top-1;
+      Width := (R.Right + 3) - R.Left;
+      Height := (R.Bottom + 3) - R.Top;
+      {$ENDIF}
+
       ItemIndex := Items.IndexOf(GLForm1.StringGrid1.Cells[ACol, ARow]);
       Visible := True;
+      SetFocus;
       //SetFocus;
       Tag := ARow;
     end;
   end else begin
       GLForm1.LUTdrop.visible := false;
-      ReadCell(ACol,ARow, false);
-      gEnterCell := true;
+      //ReadCell(ACol,ARow, false);
+      //gEnterCell := true;
   end;
   CanSelect := True;
 end;
@@ -1549,8 +1612,87 @@ begin
   GLboxRequestUpdate(GLForm1);
 end;
 
+procedure ScreenRes(var lVidX,lVidY: integer);
+{$IFDEF FPC}
+begin
+    lVidX := Screen.Width;
+    lVidY := Screen.Height;
+end;
+{$ELSE}
+var
+   DC: HDC;
+begin
+  DC := GetDC(0);
+  try
+   lVidX :=(GetDeviceCaps(DC, HORZRES));
+   lVidY :=(GetDeviceCaps(DC, VERTRES));
+  finally
+       ReleaseDC(0, DC);
+  end; // of try/finally
+end;//screenres
+{$ENDIF}
+
+procedure TGLForm1.AdjustFormPos (var lForm: TForm);
+{$IFDEF FPC}
+const
+     kBorderHt = 30;
+     kBorderWid = 10;
+{$ELSE}
+const
+     kBorderHt = 0;
+     kBorderWid = 0;
+{$ENDIF}
+const
+{$IFDEF FPC}
+kExtra = 8;
+{$ELSE}
+kExtra = 0;
+{$ENDIF}
+var
+  lPos: integer;
+  lVidX,lVidY,lLeft,lTop: integer;
+begin
+  ScreenRes(lVidX,lVidY);
+  lPos := lForm.Tag;
+  if odd(lPos) then begin//form on left
+    lLeft := GLForm1.Left-lForm.Width-kBorderWid;
+    if lLeft < 0 then //try putting the form on the right
+       lLeft := GLForm1.Left+GLForm1.Width+kExtra; //form on right
+  end else begin
+    lLeft := GLForm1.Left+GLForm1.Width+kExtra;//-default: right
+    if ((lLeft+ lForm.Width) > lVidX) then
+       lLeft := GLForm1.Left-lForm.Width-kBorderWid; //try on right
+  end;
+  if lPos < 3 then begin //align with top
+    lTop := GLForm1.Top; //default - align with top
+    if lTop < 0 then //backup - top of screen
+       lTop := 0;
+  end else if lPos > 4 then begin //align with vertical middle
+    lTop := GLForm1.Top+(GLForm1.Height div 2)-(lForm.Height div 2)+kBorderHt; //default - align with bottom
+    if ((lTop+lForm.Height) > lVidY) then
+       lTop := GLForm1.Top; //backup - align with top
+    if lTop < 0 then
+       lTop := 0;
+  end else begin //align with bottom
+    lTop := GLForm1.Top+GLForm1.Height-lForm.Height+kBorderHt; //default - align with bottom
+    if ((lTop+lForm.Height) > lVidY) then
+       lTop := GLForm1.Top; //backup - align with top
+    if lTop < 0 then
+       lTop := 0;
+  end;
+  if (lPos = 0) or ((lLeft+ lForm.Width) > lVidX) or (lLeft < 0)
+    or (lTop < 0) or ((lTop+lForm.Height) > lVidY) then
+    lForm.Position := poScreenCenter
+  else begin
+    lForm.Position := poDesigned;
+    lForm.Left := lLeft;
+    lForm.Top := lTop;
+  end;
+end;
+
 procedure TGLForm1.ScriptMenuClick(Sender: TObject);
 begin
+ AdjustFormPos(TForm(ScriptForm));
  ScriptForm.Show;
  //doScript;
 end;
@@ -1859,10 +2001,10 @@ procedure TGLForm1.LUTdropChange(Sender: TObject);
 var intRow: Integer;
 begin
   inherited;
-  if GLForm1.Lutdrop.Tag < 1 then
+ if GLForm1.Lutdrop.Tag < 1 then
      exit;
-  intRow := GLForm1.StringGrid1.Row;
-  if intRow < 0 then
+  //intRow := GLForm1.StringGrid1.Row;
+  //if intRow < 0 then
     intRow := GLForm1.Lutdrop.Tag;
   if (intRow < 1) or (intRow > kMaxOverlays) then
     exit;
@@ -2007,6 +2149,7 @@ begin
   LUTdropEdge.Items := LUTdrop.Items;
   LUTdropNode.ItemIndex := 3;
   LUTdropEdge.ItemIndex := 1;
+
 end;
 
 procedure TGLForm1.OverlayTimerTimer(Sender: TObject);
@@ -2112,9 +2255,33 @@ end;
 //{$DEFINE RELOADTRACK}
 
 procedure TGLForm1.FormCreate(Sender: TObject);
+var
+  i: integer;
+  s : string;
+  c: char;
+  forceReset: boolean = false;
 begin
+
+  //check if user includes parameters
+  gPrefs.initScript := ''; //e.g. 'c:\dir\script.gls'
+  i := 1;
+  while i <= ParamCount do begin
+     s := ParamStr(i);
+     if (length(s)> 1) and (s[1]='-') then begin
+         c := upcase(s[2]);
+         if c='R' then
+            forceReset := true
+         else if (i < paramcount) and (c='S') then begin
+           inc(i);
+           gPrefs.InitScript := ParamStr(i);
+         end;
+     end; //length > 1 char
+     inc(i);
+   end; //for each parameter
+  //writeln('OK'+inttostr(ParamCount)+ ' *' + gPrefs.initScript+'*' );
+  //launch program
   CreateMRU;
-  if not ResetIniDefaults then
+  if (not ResetIniDefaults) or (forceReset) then
     IniFile(true,IniName,gPrefs)
   else begin
     SetDefaultPrefs(gPrefs,true);//reset everything to defaults!
@@ -2126,6 +2293,7 @@ begin
   DefaultFormatSettings.DecimalSeparator := '.'; //OBJ/GII/Etc write real numbers as 1.23 not 1,23
 
   OverlayBoxCreate;//after we read defaults
+
   {$IFDEF Darwin} Application.OnDropFiles:= AppDropFiles; {$ENDIF}
   {$IFDEF Windows}
   StringGrid1.DefaultRowHeight := 28;
@@ -2168,12 +2336,16 @@ begin
   ColorBarMenu.Checked := gPrefs.Colorbar;
   AdditiveOverlayMenu.Checked := gPrefs.AdditiveOverlay;
   gMesh.isAdditiveOverlay := gPrefs.AdditiveOverlay;
-  if (gPrefs.LoadTrackOnLaunch) and fileexists(gPrefs.PrevTrackname) then
-    OpenTrack(gPrefs.PrevTrackname)
-  else if fileexists(gPrefs.PrevFilename[1]) then
-    OpenMesh(gPrefs.PrevFilename[1])
-  else
-    gMesh.MakePyramid;
+  if gPrefs.InitScript <> '' then
+     gMesh.MakePyramid
+  else begin
+    if (gPrefs.LoadTrackOnLaunch) and fileexists(gPrefs.PrevTrackname) then
+      OpenTrack(gPrefs.PrevTrackname)
+    else if fileexists(gPrefs.PrevFilename[1]) then
+      OpenMesh(gPrefs.PrevFilename[1])
+    else
+      gMesh.MakePyramid;
+  end;
   gMesh.isBusy := false;
   isBusy := false;
   {$IFDEF Darwin}
@@ -2205,6 +2377,7 @@ begin
   //AddOverlayMenuClick(sender);
   //AddTracksMenuClick(sender);
   //VolumeToMeshMenuClick(sender);
+
 end;
 
 procedure TGLForm1.FormDropFiles(Sender: TObject;

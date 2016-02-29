@@ -6,7 +6,7 @@ interface
 uses
   Classes, SysUtils, define_types;
 
-
+ function pt4f(x,y,z,w: single): TPoint4f; //create float vector
  function ptf(x,y,z: single): TPoint3f; //create float vector
  function pti(x,y,z: integer): TPoint3i; //create integer vector
  function getSurfaceNormal(v1, v2, v3: TPoint3f): TPoint3f;
@@ -375,6 +375,14 @@ begin
        end;  //for j
    end; //for i
 end; //multiplymatrices()
+
+function pt4f(x,y,z, w: single): TPoint4f; //create float vector
+begin
+  result.X := x;
+  result.Y := y;
+  result.Z := z;
+  result.W := w;
+end; // pt4f()
 
 function ptf(x,y,z: single): TPoint3f; //create float vector
 begin

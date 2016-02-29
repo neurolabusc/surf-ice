@@ -23,7 +23,29 @@ type
 
   { TScriptForm }
   TScriptForm = class(TForm)
-    MenuItem1: TMenuItem;
+    colorbarvisible1: TMenuItem;
+    backcolor1: TMenuItem;
+    edgeload1: TMenuItem;
+    edgecolor1: TMenuItem;
+    edgesize1: TMenuItem;
+    edgethresh1: TMenuItem;
+    AppleMenu: TMenuItem;
+    Tracks1: TMenuItem;
+    trackprefs1: TMenuItem;
+    trackload1: TMenuItem;
+    shaderxray1: TMenuItem;
+    shaderambientocclusion1: TMenuItem;
+    quit1: TMenuItem;
+    overlayadditive1: TMenuItem;
+    nodethresh1: TMenuItem;
+    nodesize1: TMenuItem;
+    ndepolarity1: TMenuItem;
+    nodehemisphere1: TMenuItem;
+    nodecolor1: TMenuItem;
+    nodeload1: TMenuItem;
+    Nodes1: TMenuItem;
+    orientcubevisible1: TMenuItem;
+    meshcolor1: TMenuItem;
 
     MRU10: TMenuItem;
     MRU9: TMenuItem;
@@ -51,21 +73,18 @@ type
     Copy1: TMenuItem;
     Paste1: TMenuItem;
     Insert1: TMenuItem;
-    Colorbar1: TMenuItem;
-    colorbarvisible1: TMenuItem;
+    MainImage1: TMenuItem;
+    meshload1: TMenuItem;
     Dialogs1: TMenuItem;
     modalmessage1: TMenuItem;
     modelessmessage1: TMenuItem;
     Overlays1: TMenuItem;
     overlayload1: TMenuItem;
     overlaycloseall1: TMenuItem;
-    overlaycolornumber1: TMenuItem;
     overlaycolorname1: TMenuItem;
     overlayminmax1: TMenuItem;
     overlaytransparencyonbackground1: TMenuItem;
-    overlaytransparencyonoverlay1: TMenuItem;
     overlaycolorfromzero1: TMenuItem;
-    overlaymaskedbybackground1: TMenuItem;
     overlayvisible1: TMenuItem;
     Shaders1: TMenuItem;
     shadername1: TMenuItem;
@@ -80,10 +99,8 @@ type
     viewaxial1: TMenuItem;
     viewcoronal1: TMenuItem;
     viewsagittal1: TMenuItem;
-    loadimage1: TMenuItem;
     savebmp1: TMenuItem;
     wait1: TMenuItem;
-    backcolor1: TMenuItem;
     resetdefaults1: TMenuItem;
     Toosl1: TMenuItem;
     Compile1: TMenuItem;
@@ -101,7 +118,7 @@ type
     procedure Save1Click(Sender: TObject);
     procedure SaveAs1Click(Sender: TObject);
     function OpenScript(lFilename: string): boolean;
-    function OpenParamScript: boolean;
+    //function OpenParamScript: boolean;
     function OpenStartupScript: boolean;
     procedure Memo1Change(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
@@ -118,6 +135,7 @@ type
     procedure Cut1Click(Sender: TObject);
     procedure Paste1Click(Sender: TObject);
     procedure DemoProgram;
+    procedure ToPascal(s: string);
   private
     fn: string;
     gchanged: Boolean;
@@ -175,13 +193,14 @@ begin
   if Sender = nil then begin
     if (gPrefs.PrevScriptName[1] <> '') and (Fileexists(gPrefs.PrevScriptName[1])) then
       OpenScript (gPrefs.PrevScriptName[1]);
-  end else
+  end else begin
     OpenScript (gPrefs.PrevScriptName[(Sender as TMenuItem).tag]);
+    Compile1Click(nil);
+  end;
 end;
 
 procedure TScriptForm.UpdateSMRU;
 const
-
      kMenuItems = 6;//with OSX users quit from application menu
 var
   lPos,lN,lM : integer;
@@ -236,17 +255,61 @@ begin
   end;
 end;
 
+function EndsStr( const Needle, Haystack : string ) : Boolean;
+//http://www.delphibasics.co.uk/RTL.asp?Name=AnsiEndsStr
+var
+  szN,szH: integer;
+  s : string;
+begin
+  result := false;
+  szH := length(Haystack);
+  szN := length(Needle);
+  if szN > szH then exit;
+  s := copy ( Haystack,  szH-szN + 1, szN );
+  if comparestr(Needle,s) = 0 then result := true;
+end;
 
+function isNewLine(s: string): boolean;
+var
+  sz: integer;
+begin
+  result := false;
+  sz := length(s);
+  if sz < 1 then exit;
+  result := true;
+  if s[sz] = ';' then exit;
+  if EndsStr('var', s) then exit;
+  if EndsStr('begin', s) then exit;
+  result := false;
+end;
+
+procedure TScriptForm.ToPascal(s: string);
+var
+  i: integer;
+  l: string;
+begin
+  if length(s) < 1 then exit;
+  l := '';
+  for i := 1 to length(s) do begin
+      l := l + s[i];
+      if isNewLine(l) then begin
+        Memo1.lines.Add(l);
+        l := '';
+      end;
+  end;
+  Memo1.lines.Add(l);
+end;
 
 procedure TScriptForm.FormCreate(Sender: TObject);
 begin
+  {$IFNDEF Darwin} AppleMenu.Visible := false; {$ENDIF}
   fn := '';
   gchanged := False;
   DemoProgram;
   //FillMRU (gPrefs.PrevScriptName, ScriptDir+pathdelim,kScriptExt,False);
   FillMRU (gPrefs.PrevScriptName, ScriptDir+pathdelim,kScriptExt,True);
   UpdateSMRU;
-  OpenSMRU(nil);
+
   OpenDialog1.InitialDir := ScriptDir;
   SaveDialog1.InitialDir := ScriptDir;
  {$IFDEF Darwin}
@@ -257,6 +320,18 @@ begin
         Stop1.ShortCut := ShortCut(Word('H'), [ssMeta]);
          Compile1.ShortCut := ShortCut(Word('R'), [ssMeta]);
  {$ENDIF}
+ if gPrefs.initScript = '' then begin
+   OpenSMRU(nil);
+   if gPrefs.StartupScript then Compile1Click(nil);
+ end
+ else begin
+   Memo1.Lines.Clear;
+   if FileExists(gPrefs.initScript) then
+     Memo1.Lines.LoadFromFile(gPrefs.initScript)
+   else
+       ToPascal(gPrefs.initScript);//Memo1.Lines.Add(gPrefs.initScript);
+   Compile1Click(nil);
+ end;
 end;
 
 function TScriptForm.SaveTest: Boolean;
@@ -296,12 +371,12 @@ begin
     gchanged := False;
     Memo2.Lines.Clear;
     fn := lFileName;
-    Add2MRU(gPrefs.PrevScriptName,fn);
-    UpdateSMRU;
+    //Add2MRU(gPrefs.PrevScriptName,fn);
+    //UpdateSMRU;
     result := true;
 end;
 
-function TScriptForm.OpenParamScript: boolean;
+(*function TScriptForm.OpenParamScript: boolean;
 var
   lF: string;
 begin
@@ -310,7 +385,7 @@ begin
      lF := Paramstr(1);
      if fileexists(lF) then
        result := OpenScript(lF);
-end;
+end; *)
 
 function TScriptForm.OpenStartupScript: boolean;
 var
@@ -345,8 +420,8 @@ begin
   else begin
     Memo1.Lines.SaveToFile(fn);
     gchanged := False;
-    Add2MRU(gPrefs.PrevScriptName,fn);
-	  UpdateSMRU;
+    //Add2MRU(gPrefs.PrevScriptName,fn);
+    //UpdateSMRU;
   end;
 end;
 
@@ -358,8 +433,8 @@ begin
   fn := SaveDialog1.FileName;
   Memo1.Lines.SaveToFile(fn);
   gchanged := False;
-  Add2MRU(gPrefs.PrevScriptName,fn);
-  UpdateSMRU;
+  //Add2MRU(gPrefs.PrevScriptName,fn);
+  //UpdateSMRU;
 end;
 
 procedure TScriptForm.Memo1Change(Sender: TObject);
@@ -380,6 +455,7 @@ end;
 
 procedure TScriptForm.Stop1Click(Sender: TObject);
 begin
+
   if PSScript1.Running then
     PSScript1.Stop;
 end;
@@ -387,6 +463,8 @@ end;
 procedure TScriptForm.New1Click(Sender: TObject);
 begin
   //GLForm1.StopTimers;
+
+   // PSScript1.ToString;
   ScriptForm.Stop1Click(nil);
   if not SaveTest then
     exit;

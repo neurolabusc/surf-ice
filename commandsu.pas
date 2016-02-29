@@ -16,7 +16,7 @@ procedure EDGELOAD(lFilename: string);
 procedure EDGESIZE(size: single; varies: boolean);
 procedure EDGETHRESH (LO, HI: single);
 procedure ELEVATION (DEG: integer);
-procedure LOADIMAGE(lFilename: string);
+procedure MESHLOAD(lFilename: string);
 procedure NODELOAD(lFilename: string);
 procedure MODALMESSAGE(STR: string);
 procedure MODELESSMESSAGE(STR: string);
@@ -25,7 +25,7 @@ procedure NODEHEMISPHERE(VAL: integer);
 procedure NODEPOLARITY(VAL: integer);
 procedure NODESIZE(size: single; varies: boolean);
 procedure NODETHRESH (LO, HI: single);
-procedure OBJECTCOLOR (R,G,B: byte);
+procedure MESHCOLOR (R,G,B: byte);
 procedure ORIENTCUBEVISIBLE (VISIBLE: boolean);
 procedure OVERLAYADDITIVE (ADD: boolean);
 procedure OVERLAYCLOSEALL;
@@ -33,6 +33,7 @@ procedure OVERLAYCOLORNAME(lOverlay: integer; lFilename: string);
 procedure OVERLAYLOAD(lFilename: string);
 procedure OVERLAYMINMAX (lOverlay: integer; lMin,lMax: single);
 procedure OVERLAYTRANSPARENCYONBACKGROUND(lPct: integer);
+procedure OVERLAYVISIBLE(lOverlay: integer; VISIBLE: boolean);
 procedure QUIT;
 procedure RESETDEFAULTS;
 procedure SAVEBMP(lFilename: string);
@@ -59,7 +60,7 @@ const
                Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
              );
 
-knProc = 42;
+knProc = 44;
   kProcRA : array [1..knProc] of TScriptRec = (
    (Ptr:@AZIMUTH;Decl:'AZIMUTH';Vars:'(DEG: integer)'),
    (Ptr:@AZIMUTHELEVATION;Decl:'AZIMUTHELEVATION';Vars:'(AZI, ELEV: integer)'),
@@ -73,7 +74,7 @@ knProc = 42;
    (Ptr:@EDGETHRESH;Decl:'EDGETHRESH';Vars:'(LO, HI: single)'),
    (Ptr:@ELEVATION;Decl:'ELEVATION';Vars:'(DEG: integer)'),
    (Ptr:@EDGELOAD;Decl:'EDGELOAD';Vars:'(lFilename: string)'),
-   (Ptr:@LOADIMAGE;Decl:'LOADIMAGE';Vars:'(lFilename: string)'),
+   (Ptr:@MESHLOAD;Decl:'MESHLOAD';Vars:'(lFilename: string)'),
    (Ptr:@NODELOAD;Decl:'NODELOAD';Vars:'(lFilename: string)'),
    (Ptr:@MODALMESSAGE;Decl:'MODALMESSAGE';Vars:'(STR: string)'),
    (Ptr:@MODELESSMESSAGE;Decl:'MODELESSMESSAGE';Vars:'(STR: string)'),
@@ -82,7 +83,7 @@ knProc = 42;
    (Ptr:@NODEPOLARITY;Decl:'NODEPOLARITY';Vars:'(VAL: integer)'),
    (Ptr:@NODESIZE;Decl:'NODESIZE';Vars:'(size: single; varies: boolean)'),
    (Ptr:@NODETHRESH;Decl:'NODETHRESH';Vars:'(LO, HI: single)'),
-   (Ptr:@OBJECTCOLOR;Decl:'OBJECTCOLOR';Vars:'(R, G, B: byte)'),
+   (Ptr:@MESHCOLOR;Decl:'MESHCOLOR';Vars:'(R, G, B: byte)'),
    (Ptr:@ORIENTCUBEVISIBLE;Decl:'ORIENTCUBEVISIBLE';Vars:'(VISIBLE: boolean)'),
    (Ptr:@OVERLAYADDITIVE;Decl:'OVERLAYADDITIVE';Vars:'(ADD: boolean)'),
    (Ptr:@OVERLAYCLOSEALL;Decl:'OVERLAYCLOSEALL';Vars:''),
@@ -90,12 +91,14 @@ knProc = 42;
    (Ptr:@OVERLAYLOAD;Decl:'OVERLAYLOAD';Vars:'(lFilename: string)'),
    (Ptr:@OVERLAYMINMAX;Decl:'OVERLAYMINMAX';Vars:'(lOverlay: integer; lMin,lMax: single)'),
    (Ptr:@OVERLAYTRANSPARENCYONBACKGROUND;Decl:'OVERLAYTRANSPARENCYONBACKGROUND';Vars:'(lPct: integer)'),
+   (Ptr:@OVERLAYVISIBLE;Decl:'OVERLAYVISIBLE';Vars:'(lOverlay: integer; VISIBLE: boolean)'),
    (Ptr:@QUIT;Decl:'QUIT';Vars:''),
    (Ptr:@RESETDEFAULTS;Decl:'RESETDEFAULTS';Vars:''),
    (Ptr:@SAVEBMP;Decl:'SAVEBMP';Vars:'(lFilename: string)'),
    (Ptr:@SHADERADJUST;Decl:'SHADERADJUST';Vars:'(lProperty: string; lVal: single)'),
    (Ptr:@SHADERAMBIENTOCCLUSION;Decl:'SHADERAMBIENTOCCLUSION';Vars:'(lVal: single)'),
    (Ptr:@SHADERNAME;Decl:'SHADERNAME';Vars:'(lFilename: string)'),
+   (Ptr:@SHADERLIGHTAZIMUTHELEVATION;Decl:'SHADERLIGHTAZIMUTHELEVATION';Vars:'(AZI, ELEV: integer)'),
    (Ptr:@SHADERXRAY;Decl:'SHADERXRAY';Vars:'(lObject, lOverlay: single)'),
    (Ptr:@TRACKLOAD;Decl:'TRACKLOAD';Vars:'(lFilename: string)'),
    (Ptr:@TRACKPREFS;Decl:'TRACKPREFS';Vars:'(lLength,lWidth,lDither: single)'),
@@ -176,30 +179,35 @@ begin
     AZIMUTHELEVATION(270,0);
 end;
 
-procedure LOADIMAGE(lFilename: string);
+procedure MESHLOAD(lFilename: string);
 begin
-   GLForm1.OpenMesh(lFilename);
+   if not GLForm1.OpenMesh(lFilename) then
+      ScriptForm.Memo2.Lines.Add('Unable to load mesh named "'+lFilename+'"');
 end;
 
 procedure OVERLAYLOAD(lFilename: string);
 begin
-   GLForm1.OpenOverlay(lFilename);
+   if not GLForm1.OpenOverlay(lFilename)then
+      ScriptForm.Memo2.Lines.Add('Unable to load overlay named "'+lFilename+'"');
 end;
 
 
 procedure TRACKLOAD(lFilename: string);
 begin
-      GLForm1.OpenTrack(lFilename);
+      if not GLForm1.OpenTrack(lFilename) then
+        ScriptForm.Memo2.Lines.Add('Unable to load track named "'+lFilename+'"');
 end;
 
 procedure NODELOAD(lFilename: string);
 begin
-  GLForm1.OpenNode(lFilename);
+  if not GLForm1.OpenNode(lFilename) then
+      ScriptForm.Memo2.Lines.Add('Unable to load node named "'+lFilename+'"');
 end;
 
 procedure EDGELOAD(lFilename: string);
 begin
-  GLForm1.OpenEdge(lFilename);
+  if not GLForm1.OpenEdge(lFilename)then
+      ScriptForm.Memo2.Lines.Add('Unable to load edge named "'+lFilename+'"');
 end;
 
 procedure SHADERNAME(lFilename: string);
@@ -320,7 +328,7 @@ begin
      GLForm1.NodePrefChange(nil);
 end;
 
-procedure OBJECTCOLOR (R,G,B: byte);
+procedure MESHCOLOR (R,G,B: byte);
 begin
   gPrefs.ObjColor := RGBToColor(R,G,B);
   GLForm1.GLBoxRequestUpdate(nil);
@@ -366,6 +374,13 @@ begin
           GLForm1.Transparency50.Click
      else
        GLForm1.Transparency75.Click;
+end;
+
+
+procedure OVERLAYVISIBLE(lOverlay: integer; VISIBLE: boolean);
+begin
+     GLForm1.OverlayVisible(lOverlay, Visible);
+
 end;
 
 procedure OVERLAYCOLORNAME(lOverlay: integer; lFilename: string);

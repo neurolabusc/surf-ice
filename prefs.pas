@@ -18,14 +18,14 @@ const
 type
   TMRU =  array [1..knMRU] of string;
   TPrefs = record
-    SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube,
+    StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube,
      TracksAreTubes,Colorbar, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,
      ZDimIsUp, SmoothVoxelwiseData, ShaderForBackgroundOnly, CoreTrackDisableDepth: boolean;
     TrackTubeSlices, ScreenCaptureZoom,
     window_width, window_height, RenderQuality, SaveAsFormat,SaveAsFormatTrack, OcclusionAmount: integer;
     ObjColor,BackColor: TColor;
     PrevFilename, PrevScriptName: TMRU;
-    PrevTrackname, PrevNodename, PrevOverlayname : string;
+    PrevTrackname, PrevNodename, PrevOverlayname,InitScript : string;
     TextColor,TextBorder,GridAndBorder: TRGBA;
     ColorBarPos: TUnitRect;
   end;
@@ -208,6 +208,7 @@ begin
     OrientCube := true;
     Perspective := false;
     AdditiveOverlay := false;
+    StartupScript := false;
     ScreenCaptureTransparentBackground := true;
     SmoothVoxelwiseData := true;
     PrevTrackname := '';
@@ -437,6 +438,7 @@ begin
   IniBool(lRead,lIniFile, 'OrientCube',lPrefs.OrientCube);
   IniBool(lRead,lIniFile, 'Perspective',lPrefs.Perspective);
   IniBool(lRead,lIniFile, 'AdditiveOverlay',lPrefs.AdditiveOverlay);
+   IniBool(lRead,lIniFile, 'StartupScript',lPrefs.StartupScript);
   //IniBool(lRead,lIniFile, 'MultiPassRendering',lPrefs.MultiPassRendering);
   //IniBool(lRead,lIniFile, 'SaveAsObj',lPrefs.SaveAsObj);
   IniBool(lRead,lIniFile, 'TracksAreTubes',lPrefs.TracksAreTubes);
@@ -453,7 +455,7 @@ begin
   IniStr(lRead, lIniFile, 'PrevNodename', lPrefs.PrevNodename);
   IniStr(lRead, lIniFile, 'PrevOverlayname', lPrefs.PrevOverlayname);
   IniMRU(lRead,lIniFile,'PrevFilename',lPrefs.PrevFilename);
-  IniMRU(lRead,lIniFile,'PrevScriptName',lPrefs.PrevScriptName);
+  //IniMRU(lRead,lIniFile,'PrevScriptName',lPrefs.PrevScriptName);
 
   IniRGBA(lRead,lIniFile, 'TextColor',lPrefs.TextColor);
   IniRGBA(lRead,lIniFile, 'TextBorder',lPrefs.TextBorder);

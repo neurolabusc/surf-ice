@@ -1,5 +1,5 @@
 object GLForm1: TGLForm1
-  Left = 1093
+  Left = 919
   Height = 865
   Top = 23
   Width = 1060
@@ -532,6 +532,12 @@ object GLForm1: TGLForm1
           ''
           ''
           ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
         )
         TabOrder = 3
       end
@@ -689,16 +695,18 @@ object GLForm1: TGLForm1
         Top = 0
         Width = 262
         Align = alClient
-        AutoEdit = False
         BorderStyle = bsNone
         ColCount = 4
         DefaultColWidth = 66
         DefaultRowHeight = 23
-        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goDrawFocusSelected, goTabs, goSmoothScroll]
+        FixedCols = 2
+        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goDrawFocusSelected, goEditing, goTabs, goSmoothScroll]
         RowCount = 2
         ScrollBars = ssNone
         TabOrder = 0
         OnDrawCell = StringGrid1DrawCell
+        OnEditingDone = StringGrid1EditingDone
+        OnEnter = StringGrid1Enter
         OnExit = StringGrid1Exit
         OnKeyPress = StringGrid1KeyPress
         OnMouseDown = StringGrid1MouseDown
