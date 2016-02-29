@@ -6,6 +6,7 @@ uses
   //{$IFDEF SCRIPTING}
   commandsu, scriptengine,
   //{$ENDIF}
+  {$IFNDEF UNIX} shellapi,  {$ENDIF}
   {$IFDEF DGL} dglOpenGL, {$ELSE} gl,  {$ENDIF}
   {$IFDEF COREGL} gl_core_3d, {$ELSE}     gl_legacy_3d, {$ENDIF}
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,math,
@@ -2349,6 +2350,7 @@ begin
   gMesh.isBusy := false;
   isBusy := false;
   {$IFDEF Darwin}
+  ScriptMenu.ShortCut :=  ShortCut(Word('Z'), [ssMeta]);
   OpenMenu.ShortCut :=  ShortCut(Word('O'), [ssMeta]);
   SaveMenu.ShortCut :=  ShortCut(Word('S'), [ssMeta]);
   CopyMenu.ShortCut :=  ShortCut(Word('C'), [ssMeta]);

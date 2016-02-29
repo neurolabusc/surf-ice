@@ -20,7 +20,7 @@ type
   TPrefs = record
     StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube,
      TracksAreTubes,Colorbar, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,
-     ZDimIsUp, SmoothVoxelwiseData, ShaderForBackgroundOnly, CoreTrackDisableDepth: boolean;
+     ZDimIsUp, SmoothVoxelwiseData, ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting : boolean;
     TrackTubeSlices, ScreenCaptureZoom,
     window_width, window_height, RenderQuality, SaveAsFormat,SaveAsFormatTrack, OcclusionAmount: integer;
     ObjColor,BackColor: TColor;
@@ -208,6 +208,7 @@ begin
     OrientCube := true;
     Perspective := false;
     AdditiveOverlay := false;
+    SkipPrefWriting := false;
     StartupScript := false;
     ScreenCaptureTransparentBackground := true;
     SmoothVoxelwiseData := true;
@@ -431,9 +432,9 @@ begin
   result := false;
   if (lRead) then
     SetDefaultPrefs (lPrefs, true);
-  if (lRead) and (not Fileexists(lFilename)) then begin
+  if (not lRead) and (lPrefs.SkipPrefWriting) then exit;
+  if (lRead) and (not Fileexists(lFilename)) then
         exit;
-  end;
   lIniFile := TIniFile.Create(lFilename);
   IniBool(lRead,lIniFile, 'OrientCube',lPrefs.OrientCube);
   IniBool(lRead,lIniFile, 'Perspective',lPrefs.Perspective);
