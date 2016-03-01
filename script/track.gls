@@ -1,0 +1,15 @@
+CONST
+ 	kSteps = 100;
+VAR
+	i: integer;
+BEGIN
+	RESETDEFAULTS;
+	MESHLOAD('stroke.mz3');
+	TRACKLOAD('stroke.trk');
+	TRACKPREFS(15, 3, 0.5);
+	FOR i := 1 TO kSteps DO BEGIN
+		CLIPAZIMUTHELEVATION(( (0.8*i)/kSteps ), 0, 130);
+		WAIT(20);
+	END;
+END.
+

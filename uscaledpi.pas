@@ -9,6 +9,7 @@ uses
 
 procedure HighDPI(FromDPI: integer);
 procedure ScaleDPI(Control: TControl; FromDPI: integer);
+procedure HighDPIfont(fontSize: integer);
 
 implementation
 
@@ -17,8 +18,6 @@ var
   i: integer;
   WinControl: TWinControl;
 begin
-  if Screen.PixelsPerInch = FromDPI then
-    exit;
   with Control do
   begin
     Left := ScaleX(Left, FromDPI);
@@ -35,6 +34,16 @@ begin
     for i := 0 to WinControl.ControlCount - 1 do
       ScaleDPI(WinControl.Controls[i], FromDPI);
   end;
+end;
+
+procedure HighDPIfont(fontSize: integer);
+var
+  i, FromDPI: integer;
+begin
+  if (fontSize <= 13) then exit;
+  FromDPI :=  round(14/fontSize * 96);
+  for i := 0 to Screen.FormCount - 1 do
+    ScaleDPI(Screen.Forms[i], FromDPI);
 end;
 
 procedure HighDPI(FromDPI: integer);
