@@ -39,6 +39,7 @@ procedure RESETDEFAULTS;
 procedure SAVEBMP(lFilename: string);
 procedure SHADERADJUST(lProperty: string; lVal: single);
 procedure SHADERAMBIENTOCCLUSION(lVal: single);
+procedure SHADERFORBACKGROUNDONLY(BGONLY: boolean);
 procedure SHADERLIGHTAZIMUTHELEVATION (AZI, ELEV: integer);
 procedure SHADERNAME(lFilename: string);
 procedure SHADERXRAY(lObject, lOverlay: single);
@@ -60,7 +61,7 @@ const
                Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
              );
 
-knProc = 44;
+knProc = 45;
   kProcRA : array [1..knProc] of TScriptRec = (
    (Ptr:@AZIMUTH;Decl:'AZIMUTH';Vars:'(DEG: integer)'),
    (Ptr:@AZIMUTHELEVATION;Decl:'AZIMUTHELEVATION';Vars:'(AZI, ELEV: integer)'),
@@ -97,6 +98,7 @@ knProc = 44;
    (Ptr:@SAVEBMP;Decl:'SAVEBMP';Vars:'(lFilename: string)'),
    (Ptr:@SHADERADJUST;Decl:'SHADERADJUST';Vars:'(lProperty: string; lVal: single)'),
    (Ptr:@SHADERAMBIENTOCCLUSION;Decl:'SHADERAMBIENTOCCLUSION';Vars:'(lVal: single)'),
+   (Ptr:@SHADERFORBACKGROUNDONLY;Decl:'SHADERFORBACKGROUNDONLY';Vars:'(BGONLY: boolean)'),
    (Ptr:@SHADERNAME;Decl:'SHADERNAME';Vars:'(lFilename: string)'),
    (Ptr:@SHADERLIGHTAZIMUTHELEVATION;Decl:'SHADERLIGHTAZIMUTHELEVATION';Vars:'(AZI, ELEV: integer)'),
    (Ptr:@SHADERXRAY;Decl:'SHADERXRAY';Vars:'(lObject, lOverlay: single)'),
@@ -213,6 +215,12 @@ end;
 procedure SHADERNAME(lFilename: string);
 begin
    SetShaderAndDrop(lFilename);
+end;
+
+procedure SHADERFORBACKGROUNDONLY(BGONLY: boolean);
+begin
+  gPrefs.ShaderForBackgroundOnly:= BGONLY;
+  GLForm1.GLBoxRequestUpdate(nil);
 end;
 
 procedure SHADERAMBIENTOCCLUSION( lVal: single);

@@ -248,6 +248,7 @@ type
     procedure UpdateToolbar;
     procedure MultiPassRenderingToolsUpdate;
     procedure VolumeToMeshMenuClick(Sender: TObject);
+    procedure XRayLabelClick(Sender: TObject);
   private
     { private declarations }
   public
@@ -338,6 +339,12 @@ begin
   OpenDialog.Title := 'Select volume to convert';
   if not OpenDialog.Execute then exit;
   Nii2Mesh(OpenDialog.FileName, gPrefs.SaveAsFormat);
+end;
+
+procedure TGLForm1.XRayLabelClick(Sender: TObject);
+begin
+  gPrefs.ShaderForBackgroundOnly := not gPrefs.ShaderForBackgroundOnly;
+   GLBoxRequestUpdate(nil);
 end;
 
 procedure TGLForm1.UpdateToolbar;
@@ -819,7 +826,7 @@ begin
            exit;
   end;
   gMesh.CloseOverlays;
-  GLForm1.SetFocusedControl(nil);
+  GLForm1.SetFocusedControl(nil); //GLForm1.ActiveControl := nil;
   UpdateToolbar;
   GLboxRequestUpdate(sender);
 end;
@@ -1088,7 +1095,8 @@ var
   PrefForm: TForm;
   OkBtn: TButton;
   BitmapAlphaCheck, SmoothVoxelwiseDataCheck, TracksAreTubesCheck: TCheckBox; //MultiPassRenderingCheck
-  ShaderForBackgroundOnlyCombo, ZDimIsUpCombo, QualityCombo, SaveAsCombo: TComboBox;
+  //ShaderForBackgroundOnlyCombo,
+    ZDimIsUpCombo, QualityCombo, SaveAsCombo: TComboBox;
 
   QualityLabel: TLabel;
 begin
@@ -1118,6 +1126,19 @@ begin
   TracksAreTubesCheck.Left := 8;
   TracksAreTubesCheck.Top := 68;
   TracksAreTubesCheck.Parent:=PrefForm;
+  //ShaderForBackgroundOnly
+  (*ShaderForBackgroundOnlyCombo := TComboBox.create(PrefForm);
+  ShaderForBackgroundOnlyCombo.Items.Add('Tracks, nodes and overlays use fixed shader');
+  ShaderForBackgroundOnlyCombo.Items.Add('Tracks, nodes and overlays use background shader');
+  if (gPrefs.ShaderForBackgroundOnly) then
+     ShaderForBackgroundOnlyCombo.ItemIndex := 0
+  else
+      ShaderForBackgroundOnlyCombo.ItemIndex := 1;
+  ShaderForBackgroundOnlyCombo.Left := 8;
+  ShaderForBackgroundOnlyCombo.Top := 98;
+  ShaderForBackgroundOnlyCombo.Width := PrefForm.Width -16;
+  ShaderForBackgroundOnlyCombo.Style := csDropDownList;
+  ShaderForBackgroundOnlyCombo.Parent:=PrefForm; *)
   //ZDimIsUp
   ZDimIsUpCombo := TComboBox.create(PrefForm);
   ZDimIsUpCombo.Items.Add('Z-dimension is up (Neuroimaging/Talairach)');
@@ -1127,23 +1148,11 @@ begin
   else
       ZDimIsUpCombo.ItemIndex := 1;
   ZDimIsUpCombo.Left := 8;
-  ZDimIsUpCombo.Top := 98;
+  ZDimIsUpCombo.Top := 128;
   ZDimIsUpCombo.Width := PrefForm.Width -16;
   ZDimIsUpCombo.Style := csDropDownList;
   ZDimIsUpCombo.Parent:=PrefForm;
-  //ShaderForBackgroundOnly
-  ShaderForBackgroundOnlyCombo := TComboBox.create(PrefForm);
-  ShaderForBackgroundOnlyCombo.Items.Add('Tracks, nodes and overlays use fixed shader');
-  ShaderForBackgroundOnlyCombo.Items.Add('Tracks, nodes and overlays use background shader');
-  if (gPrefs.ShaderForBackgroundOnly) then
-     ShaderForBackgroundOnlyCombo.ItemIndex := 0
-  else
-      ShaderForBackgroundOnlyCombo.ItemIndex := 1;
-  ShaderForBackgroundOnlyCombo.Left := 8;
-  ShaderForBackgroundOnlyCombo.Top := 128;
-  ShaderForBackgroundOnlyCombo.Width := PrefForm.Width -16;
-  ShaderForBackgroundOnlyCombo.Style := csDropDownList;
-  ShaderForBackgroundOnlyCombo.Parent:=PrefForm;
+
 
   //SaveAsObj     SaveAsFormat
   SaveAsCombo :=TComboBox.create(PrefForm);
@@ -1208,10 +1217,10 @@ begin
   if PrefForm.ModalResult <> mrOK then exit; //if user closes window with out pressing "OK"
   gPrefs.ScreenCaptureTransparentBackground :=  BitmapAlphaCheck.Checked;
   gPrefs.SmoothVoxelwiseData := SmoothVoxelwiseDataCheck.Checked;
-  if ShaderForBackgroundOnlyCombo.ItemIndex = 1 then
+  (*if ShaderForBackgroundOnlyCombo.ItemIndex = 1 then
      gPrefs.ShaderForBackgroundOnly := false
   else
-      gPrefs.ShaderForBackgroundOnly := true;
+      gPrefs.ShaderForBackgroundOnly := true; *)
   if ZDimIsUpCombo.ItemIndex = 1 then
      gPrefs.ZDimIsUp := false
   else
@@ -1262,6 +1271,7 @@ begin
      gElevation := 20;
      gAzimuth := 250;
      Transparency0.Click;
+     gPrefs.ShaderForBackgroundOnly:= false;
      gPrefs.AdditiveOverlay:= false;
      gMesh.isAdditiveOverlay:= gPrefs.AdditiveOverlay;
      AdditiveOverlayMenu.Checked:= gPrefs.AdditiveOverlay;
@@ -1405,7 +1415,6 @@ begin
       ItemIndex := Items.IndexOf(GLForm1.StringGrid1.Cells[ACol, ARow]);
       Visible := True;
       SetFocus;
-      //SetFocus;
       Tag := ARow;
     end;
   end else begin
@@ -2282,19 +2291,16 @@ begin
   //writeln('OK'+inttostr(ParamCount)+ ' *' + gPrefs.initScript+'*' );
   //launch program
   CreateMRU;
-  if (not ResetIniDefaults) or (forceReset) then
+  gPrefs.RenderQuality:= kRenderBetter;// kRenderPoor; ;
+  if (not ResetIniDefaults) and (not forceReset) then
     IniFile(true,IniName,gPrefs)
   else begin
     SetDefaultPrefs(gPrefs,true);//reset everything to defaults!
     if MessageDlg('Use advanced graphics? Press "Yes" for better quality. Press "Cancel" for old hardware.', mtConfirmation, [mbYes, mbCancel], 0) = mrCancel then
       gPrefs.RenderQuality:= kRenderPoor;
   end;
-  gPrefs.RenderQuality:= kRenderBetter;// kRenderPoor; ;
-  //gPrefs.Perspective := false; //optional: enforce perspective settings
   DefaultFormatSettings.DecimalSeparator := '.'; //OBJ/GII/Etc write real numbers as 1.23 not 1,23
-
   OverlayBoxCreate;//after we read defaults
-
   {$IFDEF Darwin} Application.OnDropFiles:= AppDropFiles; {$ENDIF}
   {$IFDEF Windows}
   StringGrid1.DefaultRowHeight := 28;
@@ -2324,6 +2330,7 @@ begin
   GLbox.OpenGLMinorVersion:= 1;
 
   GLbox.AutoResizeViewport:= true;   // http://www.delphigl.com/forum/viewtopic.php?f=10&t=11311
+  if gPrefs.MultiSample then
   GLBox.MultiSampling:= 4;
   GLBox.OnMouseDown := GLboxMouseDown;
   GLBox.OnMouseMove := GLboxMouseMove;

@@ -18,7 +18,7 @@ const
 type
   TMRU =  array [1..knMRU] of string;
   TPrefs = record
-    StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube,
+    StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube, MultiSample,
      TracksAreTubes,Colorbar, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,
      ZDimIsUp, SmoothVoxelwiseData, ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting : boolean;
     TrackTubeSlices, ScreenCaptureZoom,
@@ -205,6 +205,7 @@ begin
     SaveAsFormatTrack := kSaveAsTrackVtk;
     OcclusionAmount := 25;
     //MultiPassRendering := true;
+    MultiSample := true;
     OrientCube := true;
     Perspective := false;
     AdditiveOverlay := false;
@@ -436,6 +437,7 @@ begin
   if (lRead) and (not Fileexists(lFilename)) then
         exit;
   lIniFile := TIniFile.Create(lFilename);
+  IniBool(lRead,lIniFile, 'MultiSample',lPrefs.MultiSample);
   IniBool(lRead,lIniFile, 'OrientCube',lPrefs.OrientCube);
   IniBool(lRead,lIniFile, 'Perspective',lPrefs.Perspective);
   IniBool(lRead,lIniFile, 'AdditiveOverlay',lPrefs.AdditiveOverlay);
@@ -444,7 +446,7 @@ begin
   //IniBool(lRead,lIniFile, 'SaveAsObj',lPrefs.SaveAsObj);
   IniBool(lRead,lIniFile, 'TracksAreTubes',lPrefs.TracksAreTubes);
   IniBool(lRead,lIniFile, 'ZDimIsUp',lPrefs.ZDimIsUp);
-  IniBool(lRead,lIniFile, 'ShaderForBackgroundOnly',lPrefs.ShaderForBackgroundOnly);
+  //IniBool(lRead,lIniFile, 'ShaderForBackgroundOnly',lPrefs.ShaderForBackgroundOnly);
   IniBool(lRead,lIniFile, 'CoreTrackDisableDepth',lPrefs.CoreTrackDisableDepth);
   IniBool(lRead,lIniFile, 'LoadTrackOnLaunch',lPrefs.LoadTrackOnLaunch);
   IniBool(lRead,lIniFile, 'Colorbar',lPrefs.Colorbar);

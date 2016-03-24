@@ -1,13 +1,13 @@
 object ScriptForm: TScriptForm
   Tag = 2
-  Left = 550
-  Height = 376
-  Top = 296
-  Width = 356
+  Left = 585
+  Height = 380
+  Top = 135
+  Width = 420
   ActiveControl = Memo1
   Caption = 'ScriptForm'
-  ClientHeight = 376
-  ClientWidth = 356
+  ClientHeight = 380
+  ClientWidth = 420
   Menu = ScriptMenu1
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
@@ -16,30 +16,31 @@ object ScriptForm: TScriptForm
     Cursor = crVSplit
     Left = 0
     Height = 4
-    Top = 264
-    Width = 356
+    Top = 268
+    Width = 420
     Align = alBottom
     ResizeAnchor = akBottom
   end
   object Memo1: TMemo
     Left = 0
-    Height = 264
+    Height = 268
     Top = 0
-    Width = 356
+    Width = 420
     Align = alClient
     OnChange = Memo1Change
     OnClick = Memo1Click
     OnKeyUp = Memo1KeyUp
     ParentFont = False
-    ScrollBars = ssVertical
+    ScrollBars = ssAutoHorizontal
     TabOrder = 0
     WantTabs = True
+    WordWrap = False
   end
   object Memo2: TMemo
     Left = 0
     Height = 108
-    Top = 268
-    Width = 356
+    Top = 272
+    Width = 420
     Align = alBottom
     ParentFont = False
     ReadOnly = True
@@ -289,6 +290,7 @@ object ScriptForm: TScriptForm
       end
       object Shaders1: TMenuItem
         Caption = 'Shaders'
+        OnClick = Shaders1Click
         object shaderadjust1: TMenuItem
           Tag = 1413
           Caption = 'shaderadjust'
@@ -317,6 +319,12 @@ object ScriptForm: TScriptForm
           Tag = 23
           Caption = 'shaderxray'
           Hint = 'SHADERXRAY(lObject, lOverlay: single);  See occluded overlays/tracks/nodes by making either object transparent (0..1) or overlay/tracks/nodes emphasized (0..1)'
+          OnClick = InsertCommand
+        end
+        object MenuItem1: TMenuItem
+          Tag = 1
+          Caption = 'shaderforbackgroundonly'
+          Hint = 'SHADERFORBACKGROUNDONLY(ONLYBG: boolean). If true selected shader only influeces background image, otherwise shader influences background, overlays, tracks and nodes.'
           OnClick = InsertCommand
         end
       end

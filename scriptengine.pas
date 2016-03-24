@@ -30,6 +30,7 @@ type
     edgesize1: TMenuItem;
     edgethresh1: TMenuItem;
     AppleMenu: TMenuItem;
+    MenuItem1: TMenuItem;
     Tracks1: TMenuItem;
     trackprefs1: TMenuItem;
     trackload1: TMenuItem;
@@ -111,6 +112,7 @@ type
     PSScript1: TPSScript;
     azimuthelevation1: TMenuItem;
     procedure Compile1Click(Sender: TObject);
+    procedure ReportCaretPos;
     procedure FormCreate(Sender: TObject);
     procedure Exit1Click(Sender: TObject);
     procedure New1Click(Sender: TObject);
@@ -122,6 +124,7 @@ type
     function OpenStartupScript: boolean;
     procedure Memo1Change(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure Shaders1Click(Sender: TObject);
     procedure Stop1Click(Sender: TObject);
     procedure Copy1Click(Sender: TObject);
     procedure OpenSMRU(Sender: TObject);//open template or MRU
@@ -448,6 +451,11 @@ begin
   CanClose := SaveTest;
 end;
 
+procedure TScriptForm.Shaders1Click(Sender: TObject);
+begin
+
+end;
+
 procedure TScriptForm.Exit1Click(Sender: TObject);
 begin
   Close;
@@ -564,20 +572,25 @@ begin
   {$ENDIF}
 end;
 
-
-procedure TScriptForm.Memo1Click(Sender: TObject);
+procedure TScriptForm.ReportCaretPos;
 var lPos : TPoint;
 begin
-  inherited;
   lPos := Memo1.CaretPos; //+1 as indexed from zero
   caption := ScriptForm.Hint +'  '+inttostr(lPos.Y+1)+':'+inttostr(lPos.X+1);
+end;
+
+procedure TScriptForm.Memo1Click(Sender: TObject);
+begin
+  inherited;
+  ReportCaretPos;
 end;
 
 procedure TScriptForm.Memo1KeyUp(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
-     Memo1Click(nil);
+    //
     inherited;
+    {$IFNDEF LCLCocoa} ReportCaretPos; {$ENDIF}
 end;
 
 procedure TScriptForm.Copy1Click(Sender: TObject);

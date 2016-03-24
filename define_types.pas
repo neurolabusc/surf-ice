@@ -42,7 +42,7 @@ type
      L,T,R,B: single;
   end;
 
-function FilenameParts (lInName: string; var lPath,lName,lExt: string): boolean;
+procedure FilenameParts (lInName: string; var lPath,lName,lExt: string);
 procedure SensibleUnitRect (var U: TUnitRect);
 procedure SortSingle(var lLo,lHi: single);
 function RealToStr(lR: double; lDec: integer): string;
@@ -235,7 +235,7 @@ begin
      result := FloatToStrF(lR, ffFixed,7,lDec);
 end;
 
-function FilenameParts (lInName: string; var lPath,lName,lExt: string): boolean;
+procedure FilenameParts (lInName: string; var lPath,lName,lExt: string);
 var
    lX: string;
 begin

@@ -59,8 +59,8 @@
         <ResourceBaseClass Value="Form"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="2"/>
-        <TopLine Value="1738"/>
-        <CursorPos X="32" Y="1775"/>
+        <TopLine Value="2301"/>
+        <CursorPos X="27" Y="2302"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -69,8 +69,8 @@
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="421"/>
-        <CursorPos X="38" Y="458"/>
+        <TopLine Value="417"/>
+        <CursorPos X="36" Y="441"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit2>
@@ -106,9 +106,9 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <EditorIndex Value="4"/>
-        <TopLine Value="303"/>
-        <CursorPos X="56" Y="305"/>
-        <UsageCount Value="72"/>
+        <TopLine Value="567"/>
+        <CursorPos X="17" Y="575"/>
+        <UsageCount Value="73"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit6>

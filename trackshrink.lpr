@@ -1,4 +1,4 @@
-program trackshrink;
+program FiberQuant;
 
 {$mode objfpc}{$H+}
 
@@ -11,9 +11,9 @@ uses
 
 type
 
-  { TTrackShrink }
+  { TFiberQuant }
 
-  TTrackShrink = class(TCustomApplication)
+  TFiberQuant = class(TCustomApplication)
   protected
     procedure DoRun; override;
   public
@@ -22,7 +22,6 @@ type
     procedure WriteHelp; virtual;
   end;
 
-{ TTrackShrink }
 type
   TFloat = single;
   TTrack = array of single;
@@ -491,7 +490,7 @@ end;
 const
   kTol = 0.3;
 
-procedure TTrackShrink.DoRun;
+procedure TFiberQuant.DoRun;
 var
   ErrorMsg, inname, outname: String;
   Tol: single;
@@ -530,18 +529,18 @@ begin
   Terminate;
 end;
 
-constructor TTrackShrink.Create(TheOwner: TComponent);
+constructor TFiberQuant.Create(TheOwner: TComponent);
 begin
   inherited Create(TheOwner);
   StopOnException:=True;
 end;
 
-destructor TTrackShrink.Destroy;
+destructor TFiberQuant.Destroy;
 begin
   inherited Destroy;
 end;
 
-procedure TTrackShrink.WriteHelp;
+procedure TFiberQuant.WriteHelp;
 begin
   writeln('Usage: ', ExeName, ' [options] inputName');
   writeln('Options');
@@ -560,10 +559,10 @@ begin
 end;
 
 var
-  Application: TTrackShrink;
+  Application: TFiberQuant;
 begin
-  Application:=TTrackShrink.Create(nil);
-  Application.Title:='TrackShrink';
+  Application:=TFiberQuant.Create(nil);
+  Application.Title:='FiberQuant';
   Application.Run;
   Application.Free;
 end.
