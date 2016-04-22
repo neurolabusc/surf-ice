@@ -771,8 +771,8 @@ begin
   case Orient of
     1: begin
       nglBegin(GL_TRIANGLE_STRIP);
-        nglVertex3f(X-lH2-lW-2*Sz,Y+LH2+Sz, kZ);
-        nglVertex3f(X-lH2-lW-2*Sz,Y-lH2-Sz, kZ);
+        nglVertex3f(X-lH2-lW-3*Sz,Y+LH2+Sz, kZ);
+        nglVertex3f(X-lH2-lW-3*Sz,Y-lH2-Sz, kZ);
         nglVertex3f(X-lH2,Y+lH2+Sz, kZ);
         nglVertex3f(X-lH2,Y-lH2-Sz, kZ);
         nglVertex3f(X,Y, kZ);
@@ -783,16 +783,16 @@ begin
       nglBegin(GL_TRIANGLE_STRIP);
         nglVertex3f(X+lH2+lW+2*Sz,Y+LH2+Sz, kZ);
         nglVertex3f(X+lH2+lW+2*Sz,Y-lH2-Sz, kZ);
-        nglVertex3f(X+lH2,Y+lH2+Sz, kZ);
-        nglVertex3f(X+lH2,Y-lH2-Sz, kZ);
+        nglVertex3f(X+lH2-Sz,Y+lH2+Sz, kZ);
+        nglVertex3f(X+lH2-Sz,Y-lH2-Sz, kZ);
         nglVertex3f(X,Y, kZ);
       nglEnd;
       PrintXY (X+lH2,Y-lH2,Sz, NumStr,FontColor);
     end;
     4: begin //bottom
     nglBegin(GL_TRIANGLE_STRIP);
-      nglVertex3f(X-lW2-Sz,Y-LH-lH2-2*Sz, kZ);//-
-      nglVertex3f(X-lW2-Sz,Y-lH2, kZ);
+      nglVertex3f(X-lW2-2*Sz,Y-LH-lH2-2*Sz, kZ);//-
+      nglVertex3f(X-lW2-2*Sz,Y-lH2, kZ);
       nglVertex3f(X+lW2+Sz,Y-LH-lH2-2*Sz, kZ);//-
       nglVertex3f(X+lW2+Sz,Y-lH2, kZ);
       nglVertex3f(X-lW2-Sz,Y-lH2, kZ);
@@ -806,8 +806,8 @@ begin
       else
         T := Y;
     nglBegin(GL_TRIANGLE_STRIP);
-      nglVertex3f(X-lW2-Sz,T+LH+2*Sz+lH2, kZ);
-      nglVertex3f(X-lW2-Sz,T+lH2, kZ);
+      nglVertex3f(X-lW2-2*Sz,T+LH+2*Sz+lH2, kZ);
+      nglVertex3f(X-lW2-2*Sz,T+lH2, kZ);
       nglVertex3f(X+lW2+Sz,T+LH+2*Sz+lH2, kZ);
       nglVertex3f(X+lW2+Sz,T+lH2, kZ);
       nglVertex3f(X-lW2-Sz,T+lH2, kZ);

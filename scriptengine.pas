@@ -111,7 +111,9 @@ type
     SaveDialog1: TSaveDialog;
     PSScript1: TPSScript;
     azimuthelevation1: TMenuItem;
+    procedure AppleMenuClick(Sender: TObject);
     procedure Compile1Click(Sender: TObject);
+    procedure File1Click(Sender: TObject);
     procedure ReportCaretPos;
     procedure FormCreate(Sender: TObject);
     procedure Exit1Click(Sender: TObject);
@@ -258,6 +260,16 @@ begin
   end;
 end;
 
+procedure TScriptForm.File1Click(Sender: TObject);
+begin
+
+end;
+
+procedure TScriptForm.AppleMenuClick(Sender: TObject);
+begin
+
+end;
+
 function EndsStr( const Needle, Haystack : string ) : Boolean;
 //http://www.delphibasics.co.uk/RTL.asp?Name=AnsiEndsStr
 var
@@ -304,6 +316,8 @@ begin
 end;
 
 procedure TScriptForm.FormCreate(Sender: TObject);
+var
+  lPos: integer;
 begin
   {$IFNDEF Darwin} AppleMenu.Visible := false; {$ENDIF}
   fn := '';
@@ -323,6 +337,14 @@ begin
         Stop1.ShortCut := ShortCut(Word('H'), [ssMeta]);
          Compile1.ShortCut := ShortCut(Word('R'), [ssMeta]);
  {$ENDIF}
+ for lPos := 0 to 8 do begin
+
+       {$IFDEF Darwin}
+      File1.Items[lPos+6].ShortCut := ShortCut(Word('1')+ord(lPos), [ssMeta]);
+      {$ELSE}
+      File1.Items[lPos+6].ShortCut := ShortCut(Word('1')+ord(lPos), [ssCtrl]);
+      {$ENDIF}
+ end;
  if gPrefs.initScript = '' then begin
    OpenSMRU(nil);
    if gPrefs.StartupScript then Compile1Click(nil);

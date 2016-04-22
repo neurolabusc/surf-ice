@@ -41,12 +41,47 @@ TTrack = class
     procedure SaveBfloat(const FileName: string);
     procedure SaveVtk(const FileName: string);
     procedure Close;
-    procedure DrawGL ;
+    procedure DrawGL;
+    procedure CenterX;
   end;
 
 implementation
 
 uses mainunit, shaderu, {$IFDEF COREGL} gl_core_3d {$ELSE} gl_legacy_3d {$ENDIF};
+
+procedure TTrack.CenterX;
+var
+  offset: single;
+   i, m, mi: integer;
+   mn, mx, pt : TPoint3f;
+begin
+  maxObservedFiberLength := 0;
+  if (n_count < 1) or (length(tracks) < 4) then exit;
+  mn := ptf(Infinity,Infinity,Infinity);
+  mx := ptf(-Infinity, -Infinity, -Infinity);
+  i := 0;
+  while i < length(tracks) do begin
+        m :=   asInt( tracks[i]); inc(i);
+        for mi := 1 to m do begin
+            pt.X := tracks[i];
+            i := i + 3;
+            minmax(pt, mn,mx);
+
+        end;
+  end;
+  if (mn.X >= mx.X) then exit;
+  offset := (mn.X + mx.X)/ 2;
+  showmessage(floattostr(mn.X)+'..'+floattostr(mx.X)+' : '+floattostr(offset));
+  i := 0;
+  while i < length(tracks) do begin
+        m :=   asInt( tracks[i]); inc(i);
+        for mi := 1 to m do begin
+            tracks[i] := tracks[i] - offset;
+            i := i + 3;
+        end;
+  end;
+
+end; // SetDescriptives()
 
 procedure TTrack.Close;
 begin

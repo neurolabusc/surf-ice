@@ -620,6 +620,11 @@ begin
         NewItem.Tag := lPos;
         NewItem.onclick :=  OpenMRU; //Lazarus
         NewItem.Visible := false;
+        {$IFDEF Darwin}
+        NewItem.ShortCut := ShortCut(Word('1')+ord(lPos-1), [ssMeta]);
+        {$ELSE}
+        NewItem.ShortCut := ShortCut(Word('1')+ord(lPos-1), [ssCtrl]);
+        {$ENDIF}
         FileMenu.Add(NewItem);
   end;//for each MRU
 end;
@@ -902,9 +907,13 @@ begin
 
 
   if lTrack.LoadFromFile(OpenDialog.FileName) then begin
+
      gPrefs.PrevTrackname := OpenDialog.FileName;
-     if lTrack.SimplifyMM(Tol) then
-       SaveTrack(lTrack);
+     if lTrack.SimplifyMM(Tol) then begin
+      //lTrack.CenterX;
+      SaveTrack(lTrack);
+     end;
+     //lTrack.CenterX;
      //nam := changeFileExt(OpenDialog.FileName, 'd.vtk');
      //lTrack.SaveVtk(nam);
      //lTrack.SaveBfloat(nam);

@@ -1,8 +1,8 @@
 object ScriptForm: TScriptForm
   Tag = 2
-  Left = 585
+  Left = 387
   Height = 380
-  Top = 135
+  Top = 130
   Width = 420
   ActiveControl = Memo1
   Caption = 'ScriptForm'
@@ -52,9 +52,11 @@ object ScriptForm: TScriptForm
     top = 32
     object AppleMenu: TMenuItem
       Caption = ''
+      OnClick = AppleMenuClick
     end
     object File1: TMenuItem
       Caption = '&File'
+      OnClick = File1Click
       object New1: TMenuItem
         Caption = '&New'
         OnClick = New1Click

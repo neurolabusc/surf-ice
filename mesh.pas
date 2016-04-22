@@ -21,8 +21,6 @@ type
      Clr: single;
      Radius: single;
    end;
-  //TVertexArray = array of TPoint3f;
-  //TFaceArray = array of TPoint3i;
 
  TOverlay = record
     LUTvisible: boolean;
@@ -70,6 +68,7 @@ type
     procedure MakeSphere;
     procedure BuildList  (Clr: TRGBA);
     procedure BuildListOverlay (Clr: TRGBA);
+    function Load3ds(const FileName: string): boolean;
     function LoadAnnot(const FileName: string): boolean;
     function LoadGcs(const FileName: string): boolean;
     function LoadGii(const FileName: string; lOverlayIndex, lOverlayItem: integer): integer;
@@ -110,7 +109,7 @@ type
 
 implementation
 
-uses  shaderu, meshify_simplify,{$IFDEF COREGL} gl_core_3d {$ELSE} gl_legacy_3d {$ENDIF};
+uses  shaderu, meshify_simplify,{$IFDEF COREGL} gl_core_3d {$ELSE} gl_legacy_3d {$ENDIF}; //mainunit;
 
 {$IFDEF COREGL}
 function mixRGBA(c1, c2: TRGBA; frac2: single): TRGBA;
@@ -1375,6 +1374,73 @@ begin
   strlst.free;
 end; // LoadNode()
 
+{$DEFINE FASTOBJ}
+{$IFDEF FASTOBJ}
+procedure TMesh.LoadObj(const FileName: string);
+//WaveFront Obj file used by Blender
+// https://en.wikipedia.org/wiki/Wavefront_.obj_file
+const
+  kBlockSize = 8192;
+var
+   f: TextFile;
+   fsz : int64;
+   s : string;
+   strlst : TStringList;
+   i,j, num_v, num_f, new_f: integer;
+   //t: DWord;
+begin
+  //t:= gettickcount;
+     fsz := FSize (FileName);
+     if fsz < 32 then exit;
+     //init values
+     num_v := 0;
+     num_f := 0;
+     strlst:=TStringList.Create;
+     setlength(vertices, (fsz div 70)+kBlockSize); //guess number of faces based on filesize to reduce reallocation frequencey
+     setlength(faces, (fsz div 35)+kBlockSize); //guess number of vertices based on filesize to reduce reallocation frequencey
+     //load faces and vertices
+     AssignFile(f, FileName);
+     Reset(f);
+     DefaultFormatSettings.DecimalSeparator := '.';
+     while not EOF(f) do begin
+        readln(f,s);
+        if length(s) < 7 then continue;
+        if (s[1] <> 'v') and (s[1] <> 'f') then continue; //only read 'f'ace and 'v'ertex lines
+        if (s[2] = 'p') or (s[2] = 'n') or (s[2] = 't') then continue; //ignore vp/vn/vt data: avoid delimiting text yields 20% faster loads
+        strlst.DelimitedText := s;
+        if (strlst.count > 3) and ( (strlst[0]) = 'f') then begin
+           //warning: need to handle "f v1/vt1/vn1 v2/vt2/vn2 v3/vt3/vn3"
+           //warning: face could be triangle, quad, or more vertices!
+           new_f := strlst.count - 3;
+           if ((num_f+new_f) >= length(faces)) then
+              setlength(faces, length(faces)+new_f+kBlockSize);
+           for i := 1 to (strlst.count-1) do
+               if (pos('/', strlst[i]) > 1) then // "f v1/vt1/vn1 v2/vt2/vn2 v3/vt3/vn3" -> f v1 v2 v3
+                  strlst[i] := Copy(strlst[i], 1, pos('/', strlst[i])-1);
+           for j := 1 to (new_f) do begin
+               faces[num_f].X := strtoint(strlst[1]) - 1;
+               faces[num_f].Y := strtoint(strlst[j+1]) - 1;  //-1 since "A valid vertex index starts from 1"
+               faces[num_f].Z := strtoint(strlst[j+2]) - 1;  //-1 since "A valid vertex index starts from 1"
+               inc(num_f);
+           end;
+        end;
+        if (strlst.count > 3) and ( (strlst[0]) = 'v') then begin
+           if ((num_v+1) >= length(vertices)) then
+              setlength(vertices, length(vertices)+kBlockSize);
+           vertices[num_v].X := strtofloat(strlst[1]);
+           vertices[num_v].Y := strtofloat(strlst[2]);
+           vertices[num_v].Z := strtofloat(strlst[3]);
+           inc(num_v);
+        end;
+     end;
+     //showmessage(format('%d %g %g %g',[num_v, vertices[num_v-1].X, vertices[num_v-1].Y, vertices[num_v-1].Z]));
+     CloseFile(f);
+     strlst.free;
+     setlength(faces, num_f);
+     setlength(vertices, num_v);
+  //GLForm1.caption := ('ms '+ inttostr(gettickcount()- t) );
+end; // LoadObj()
+{$ELSE}
 procedure TMesh.LoadObj(const FileName: string);
 //WaveFront Obj file used by Blender
 // https://en.wikipedia.org/wiki/Wavefront_.obj_file
@@ -1384,9 +1450,11 @@ var
    f: TextFile;
    s : string;
    strlst : TStringList;
-   i, num_v, num_f, num_f_quad, num_v_alloc, num_f_alloc: integer;
+   i, j, num_v, num_f, num_f_quad, num_v_alloc, num_f_alloc: integer;
+   t : DWord;
    quadfaces : TFaces;//array of TPoint3i;
 begin
+  t:= gettickcount;
      AssignFile(f, FileName);
      //first pass: count faces and vertices
      Reset(f);
@@ -1433,11 +1501,13 @@ begin
            faces[num_f].Y := strtoint(strlst[2]) - 1;  //-1 since "A valid vertex index starts from 1"
            faces[num_f].Z := strtoint(strlst[3]) - 1;  //-1 since "A valid vertex index starts from 1"
            if strlst.count > 4 then begin //data stored as a quad: create two triangles
-              setlength(quadfaces, num_f_quad+1);
-              quadfaces[num_f_quad].X := strtoint(strlst[1]) - 1;  //-1 since "A valid vertex index starts from 1"
-              quadfaces[num_f_quad].Y := strtoint(strlst[3]) - 1;  //-1 since "A valid vertex index starts from 1"
-              quadfaces[num_f_quad].Z := strtoint(strlst[4]) - 1;  //-1 since "A valid vertex index starts from 1"
-              inc(num_f_quad);
+             for j := 3 to (strlst.count - 2) do begin
+                 setlength(quadfaces, num_f_quad+1);
+                 quadfaces[num_f_quad].X := strtoint(strlst[1]) - 1;  //-1 since "A valid vertex index starts from 1"
+                 quadfaces[num_f_quad].Y := strtoint(strlst[j]) - 1;  //-1 since "A valid vertex index starts from 1"
+                 quadfaces[num_f_quad].Z := strtoint(strlst[j+1]) - 1;  //-1 since "A valid vertex index starts from 1"
+                 inc(num_f_quad);
+             end;
            end;
            //if num_f < 3 then
            //   showmessage(format('%d %d %d',[faces[num_f].X, faces[num_f].Y, faces[num_f].Z]));
@@ -1465,7 +1535,9 @@ begin
         for i := 0 to (num_f_quad-1) do
             faces[i+num_f] := quadfaces[i];
      end;
+  GLForm1.caption := ('ms '+ inttostr(gettickcount()- t) );
 end; // LoadObj()
+{$ENDIF}
 
 procedure TMesh.LoadPly(const FileName: string);
 // https://en.wikipedia.org/wiki/PLY_(file_format)
@@ -2360,6 +2432,92 @@ begin
   end;
 end; //LoadMz3()
 
+function TMesh.Load3ds(const FileName: string): boolean;
+//http://www.spacesimulator.net/tutorials/3ds_loader_tutorial.html
+//https://en.wikipedia.org/wiki/.3ds
+//http://help-site.com/local/3DS.TXT
+type
+ TFaceShort = packed record
+   X,Y,Z,FaceFlag: word;
+ end;
+label
+   666;
+var
+   f: file;
+   sz, nV,nF,nVnew, i: integer;
+   ch: char;
+   verts : array of TPoint3f;
+   facesShort : array of TFaceShort;
+   chunk_id, ushort: word; //uint16
+   chunk_length : LongWord; //uint32
+   nam: string;
+begin
+  result := false;
+  AssignFile(f, FileName);
+  FileMode := fmOpenRead;
+  Reset(f,1);
+  sz := FileSize(f);
+  if sz < 64 then goto 666;
+  //files should start with $4D4D chunk
+  blockread(f, chunk_id, 2);
+  blockread(f, chunk_length, 4);
+  if  chunk_id <> $4D4D then goto 666;
+  //next: read data
+  nVnew := 0;
+  nV := 0;
+  nF := 0;
+  while (not EOF(f)) do begin
+      blockread(f, chunk_id, 2);
+      blockread(f, chunk_length, 4);
+      case chunk_id of
+           $3D3D:; //read 3D EDITOR CHUNK
+           $4000: begin //read OBJECT BLOCK
+             nam := '';
+             blockread(f, ch, 1);
+             while ch <> chr(0) do begin
+               nam := nam + ch;
+               blockread(f, ch, 1);
+             end;
+           end;
+           $4100:; //read TRIANGULAR MESH
+           $4110 : begin //read VERTICES LIST
+                blockread(f, ushort, 2);
+                setlength(verts,ushort);
+                blockread(f, verts[0], ushort * sizeof(TPoint3f) ); //for each vertex, 3 (x,y,z) 4-byte floats
+                setlength(vertices, nV+ushort);
+                for i := 0 to (ushort -1) do begin
+                    vertices[i+nV].X :=  verts[i].X;
+                    vertices[i+nV].Y :=  verts[i].Y;
+                    vertices[i+nV].Z :=  verts[i].Z;
+                 end;
+                verts := nil; //free
+                nVnew := ushort;
+           end;
+           $4120 : begin //read FACES DESCRIPTION
+             blockread(f, ushort, 2);
+             setlength(facesShort, ushort);
+             blockread(f, facesShort[0], ushort * sizeof(TFaceShort)); //for each vertex, 3 (x,y,z,faceflag) 2-byte unsigned short ints
+             setlength(faces, ushort+nF);
+             for i := 0 to (ushort -1) do begin
+                 faces[i+nF].X :=  facesShort[i].X+nV;
+                 faces[i+nF].Y :=  facesShort[i].Y+nV;
+                 faces[i+nF].Z :=  facesShort[i].Z+nV;
+             end;
+             nF := nF + ushort;
+             nV := nV + nVnew;
+             facesShort := nil; //free
+             result := true;
+           end
+           else
+             seek(f,filepos(f)+chunk_length-6);
+      end;
+  end;
+ 666:
+  CloseFile(f);
+  if not result then showmessage('Unable to decode 3DS file '+ FileName);
+  UnifyVertices(faces, vertices);
+end; //Load3ds()
+
 procedure TMesh.LoadStl(const FileName: string);
 //Read STL mesh
 // https://en.wikipedia.org/wiki/STL_(file_format)
@@ -2608,6 +2766,8 @@ begin
      CloseOverlays;
      setlength(faces, 0);
      setlength(vertices, 0);
+     if (ext = '.3DS') then
+        Load3ds(Filename);
      if (ext = '.MZ3') then
         LoadMz3(Filename, 0);
      if (ext = '.CTM') then

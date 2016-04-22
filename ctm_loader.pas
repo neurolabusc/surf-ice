@@ -80,7 +80,8 @@ begin
      F.Position:= 0;
 end;
 
-function LZMAdecompress(var inStream: TFileStream; var outStream: TMemoryStream; count: Int64): Int64;
+
+function LZMAdecompress(var inStream, outStream: TMemoryStream; count: Int64): Int64;
 var
   decoder: TLZMADecoder;
   propArray : array of byte;
@@ -256,7 +257,7 @@ const
   kTexcMagic = $43584554; //"TEXC" UV texture map
   kAttrMagic = $52545441; //"ATTR"
 var
-  F: TFileStream;
+  F: TMemoryStream;
   Bytes : TBytes;
   hdr: TCTMFileHeader;
   hdrMG2 : TMG2Header;
@@ -272,19 +273,21 @@ begin
   {$IFDEF ENDIAN_BIG} adjust code to bytewap values {$ENDIF}
   result := false;
   setlength(vertexRGBA,0);
-  if not FileExists(FileName) then goto 666;
-  F := TFileStream.Create(FileName, fmOpenRead);
+  if not FileExists(FileName) then exit;
+  //initialize values
+  outStream :=TMemoryStream.Create;
+  F := TMemoryStream.Create;
+  F.LoadFromFile(FileName);
   //CTM Header
   F.Read(hdr, sizeof(hdr));
   if hdr.magic <> kFileMagic then goto 666; //signature does not match
+
   if (hdr.compressionMethod <> kRAW) and (hdr.compressionMethod <> kMG1) and (hdr.compressionMethod <> kMG2) then goto 666; //signature does not match
   if hdr.commentBytes > 0 then begin
      setlength(Bytes, hdr.commentBytes);
      F.Read(Bytes[0], hdr.commentBytes);
      //comment:= TEncoding.ASCII.GetString(Bytes);
   end;
-  //initialize values
-  outStream :=TMemoryStream.Create;
   //raw format
   if (hdr.compressionMethod = kRAW)  then begin
      //read INDX
@@ -353,12 +356,15 @@ begin
   if (hdr.compressionMethod = kMG2)  then begin
     //read MG2H
     F.Read(hdrMG2, sizeof(hdrMG2));
+
     if (hdrMG2.magic <> kMG2Magic)then goto 666;
     //read VERT
     F.Read(id, sizeof(int32));
     F.Read(sz, sizeof(int32));
     if (id <> kVertMagic) or (sz < 8) then goto 666;
+
     outSize := hdr.vertexCount * 3 * sizeof(int32);
+    outStream.Clear;
     sz := LZMAdecompress(F,outStream,outSize);
     if sz <> outSize then
        showmessage(inttostr(sz)+'<>'+inttostr(outSize));
@@ -369,6 +375,7 @@ begin
     F.Read(id, sizeof(int32));
     F.Read(sz, sizeof(int32));
     if (id <> kGidxMagic) or (sz < 8) then goto 666;
+
     outSize := hdr.vertexCount  * sizeof(int32); //one element per vertex
     sz := LZMAdecompress(F,outStream,outSize);
     if sz <> outSize then goto 666;
@@ -380,10 +387,12 @@ begin
     F.Read(sz, sizeof(int32));
     if (id <> kIndxMagic) or (sz < 8) then goto 666;
     outSize := hdr.triangleCount * sizeof(TPoint3i);
+    //showmessage(inttostr(F.Position)+' '+inttostr(outSize));
     sz := LZMAdecompress(F,outStream,outSize);
     if sz <> outSize then goto 666;
     restoreIndices(outStream, Faces, hdr.triangleCount);
   end; //MG2
+
   //read color for MG1 and MG2
   if hdr.attrMapCount < 1 then goto 123; //all done - no vertex color map
   attr := 0;

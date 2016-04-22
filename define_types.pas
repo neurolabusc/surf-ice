@@ -60,10 +60,22 @@ function asInt(s : single): longint;
 function specialsingle (var s:single): boolean; //isFinite
 function asRGBA(clr: TColor): TRGBA;
 function ExtractFileExtGzUpper(FileName: string): string;
+function FSize (lFName: String): longint;
 
 implementation
 
 uses sysutils, dialogs;
+
+function FSize (lFName: String): longint;
+var F : File Of byte;
+begin
+  result := 0;
+  if not fileexists(lFName) then exit;
+  Assign (F, lFName);
+  Reset (F);
+  result := FileSize(F);
+  Close (F);
+end;
 
 function ExtractFileExtGzUpper(FileName: string): string;
 //the file 'img.nii.gz' returns '.NII.GZ', not just '.gz'
