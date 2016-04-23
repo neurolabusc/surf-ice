@@ -6,7 +6,7 @@ Surf Ice is an open source surface render. For details and compiled versions vis
 
 Supported mesh formats include 3DS, CTM, DXF, FreeSurfer, GII (GIfTI), GTS, LWO2, MS3D, MZ3, NV (BrainNetViewer), OBJ, OFF, PLY, STL, VTK. Online converters can convert meshes from other formats to one of these. Tractography formats include BFloat, PDB, TCK, TRK, and VTK. The software supports the NIfTI voxelwise format (tools like dcm2niix can help convert other voxel-based formats to NIfTI).
 
-![alt tag](https://raw.githubusercontent.com/neurolabusc/surfice/master/surfice.jpg)
+![alt tag](https://github.com/neurolabusc/surf-ice/blob/master/Surfice.jpg)
 
 ##### Compiling
 
