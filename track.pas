@@ -66,7 +66,6 @@ begin
             pt.X := tracks[i];
             i := i + 3;
             minmax(pt, mn,mx);
-
         end;
   end;
   if (mn.X >= mx.X) then exit;
@@ -80,7 +79,6 @@ begin
             i := i + 3;
         end;
   end;
-
 end; // SetDescriptives()
 
 procedure TTrack.Close;

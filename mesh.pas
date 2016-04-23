@@ -68,6 +68,10 @@ type
     procedure MakeSphere;
     procedure BuildList  (Clr: TRGBA);
     procedure BuildListOverlay (Clr: TRGBA);
+    function LoadGts(const FileName: string): boolean;
+    function LoadDxf(const FileName: string): boolean;
+    function LoadLwo(const FileName: string): boolean;
+    function LoadMs3d(const FileName: string): boolean;
     function Load3ds(const FileName: string): boolean;
     function LoadAnnot(const FileName: string): boolean;
     function LoadGcs(const FileName: string): boolean;
@@ -92,6 +96,7 @@ type
     procedure DrawGL (Clr: TRGBA);
     procedure Node2Mesh;
     procedure ReverseFaces;
+    procedure CenterOrigin;
     procedure SwapYZ;
     procedure SwapZY;
     function LoadFromFile(const FileName: string): boolean;
@@ -560,6 +565,23 @@ begin
      SetDescriptives;
      isRebuildList := true;
 end;
+
+procedure TMesh.CenterOrigin;
+var
+   i: integer;
+begin
+     if length(vertices) < 1 then begin
+       showmessage('No mesh is open: unable to center origin');
+       exit;
+     end;
+     vectorNegate(origin);
+     for i := 0 to (length(vertices) - 1) do
+         vectorAdd(vertices[i], origin);
+     setDescriptives;
+     isRebuildList := true;
+     isBusy := false;
+
+end; // SetDescriptives()
 
 procedure TMesh.ReverseFaces; //reverse face winding to reverse front and back faces
 var
@@ -2407,7 +2429,7 @@ begin
      result := true;
    666 :
      mStream.Free;
-end; //loadMZ3
+end; // LoadMz3Core()
 
 function TMesh.LoadMz3(const FileName: string; lOverlayIndex : integer): boolean;
 var
@@ -2430,7 +2452,297 @@ begin
      setlength(overlay[lOverlayIndex].intensity, 0);
      result := false;
   end;
-end; //LoadMz3()
+end; // LoadMz3()
+
+function TMesh.LoadGts(const FileName: string): boolean;
+//http://gts.sourceforge.net/samples.html
+// edges ignore winding: https://sourceforge.net/p/gts/mailman/message/3574977/
+// each sample has internally consistent face winding, but winding differs between samples!
+// Meshlab 1.3.3 only saves half the triangles specified in first line!
+label
+   666;
+var
+   f: TextFile;
+   nV, nF, nE, i: integer;
+   face: TPoint3i;
+   uedges : array of TPoint3i;
+begin
+     result := false;
+     AssignFile(f, FileName);
+     Reset(f);
+     Readln(f, nV, nE, nF);
+     if (nV < 3) or (nE < 3) or (nF < 1) then goto 666;
+     setlength(vertices, nV);
+     setlength(uedges, nE);
+     setlength(faces, nF);
+     for i := 0 to (nV-1) do begin
+         if EOF(f) then goto 666; //MeshLab 1.3.3 patch
+         Readln(f, vertices[i].X, vertices[i].Y, vertices[i].Z);
+     end;
+     for i := 0 to (nE-1) do begin
+         if EOF(f) then goto 666; //MeshLab 1.3.3 patch
+         Readln(f, uedges[i].X, uedges[i].Y);
+         uedges[i] := vectorAdd(uedges[i],-1); //we index arrays from 0, not 1
+     end;
+     for i := 0 to (nF-1) do begin
+        if EOF(f) then goto 666; //MeshLab 1.3.3 patch
+        Readln(f, face.X, face.Y, face.Z);
+        face := vectorAdd(face,-1); //we index arrays from 0, not 1
+        //a lot of conditionals for CONSISTENT winding, ugly but it works
+        if (uedges[face.X].X = uedges[face.Z].X) or (uedges[face.X].X = uedges[face.Z].Y) then
+           faces[i].X := uedges[face.X].Y
+        else
+            faces[i].X := uedges[face.X].X;
+        if (uedges[face.Y].X = faces[i].X) then
+           faces[i].Y := uedges[face.Y].Y
+        else
+            faces[i].Y := uedges[face.Y].X;
+        if (uedges[face.Z].X = faces[i].X) or (uedges[face.Z].X = faces[i].Y) then
+           faces[i].Z := uedges[face.Z].Y
+        else
+            faces[i].Z := uedges[face.Z].X;
+     end;
+     result := true;
+666:
+     CloseFile(f);
+     if not result then begin
+        setlength(vertices, 0);
+        setlength(faces, 0);
+        showmessage('Unable to import as GTS file '+ FileName);
+     end;
+     UnifyVertices(faces, vertices);
+end; // LoadGts()
+
+function TMesh.LoadDxf(const FileName: string): boolean;
+const kBlockSz = 32768; //must be >2, larger is faster (fewer memory reallocations)
+var
+   f: TextFile;
+   nV, nF, GroupCode: integer;
+   GroupValue: single;
+   GroupCodeStr, GroupValueStr: string;
+   v : array[0..3] of TPoint3f;
+procedure AddTri (var v1, v2, v3: TPoint3f);
+begin
+  if nF >= length(faces) then setlength(faces, length(faces) + kBlockSz);
+  if (nV + 2) >= length(vertices) then setlength(vertices, length(vertices) + kBlockSz);
+  faces[nF].X := nV;
+  faces[nF].Y := nV + 1;
+  faces[nF].Z := nV + 2;
+  vertices[nV] := v1;
+  vertices[nV + 1] := v2;
+  vertices[nV + 2] := v3;
+  nF := nF + 1;
+  nV := nV + 3;
+end;
+begin
+     result := false;
+     AssignFile(f, FileName);
+     Reset(f);
+     nF := 0;
+     nV := 0;
+     setlength(vertices, kBlockSz); //avoid constantly resizing arrays
+     setlength(faces, kBlockSz);
+     while not EOF(f) do begin
+           Readln(f, GroupCodeStr);
+           if EOF(f) then break;
+           Readln(f, GroupValueStr);
+           GroupCode := StrToIntDef (GroupCodeStr, 0);
+           if (GroupCode < 10) or (GroupCode > 33) then continue;
+           if (GroupCode mod 10) > 3 then continue;//last digit should be in range [0,1,2,3]
+           GroupValue := StrToFloatDef(GroupValueStr, 0.0);
+           if GroupCode = 10 then v[0].X := GroupValue;
+           if GroupCode = 20 then v[0].Y := GroupValue;
+           if GroupCode = 30 then v[0].Z := GroupValue;
+           if GroupCode = 11 then v[1].X := GroupValue;
+           if GroupCode = 21 then v[1].Y := GroupValue;
+           if GroupCode = 31 then v[1].Z := GroupValue;
+           if GroupCode = 12 then v[2].X := GroupValue;
+           if GroupCode = 22 then v[2].Y := GroupValue;
+           if GroupCode = 32 then v[2].Z := GroupValue;
+           if GroupCode = 13 then v[3].X := GroupValue;
+           if GroupCode = 23 then v[3].Y := GroupValue;
+           if GroupCode = 33 then begin
+              v[3].Z := GroupValue;
+              AddTri (v[0], v[1], v[2]);
+              if (vectorLength(v[2],v[3]) > 0) then //if 4th point is different from 3rd: generate quad
+                 AddTri (v[0], v[2], v[3]);
+           end;
+     end;
+     CloseFile(f);
+     setlength(vertices, nV); //avoid constantly resizing arrays
+     setlength(faces, nF);
+     if (nF > 0) and (nV > 2) then result := true;
+     if not result then
+        showmessage('Unable to import DXF file (perhaps not a 3D mesh) '+ FileName);
+     UnifyVertices(faces, vertices);
+end; // LoadDxf()
+
+function TMesh.LoadLwo(const FileName: string): boolean;
+//LWO2 http://openctm.sourceforge.net/?page=download
+//http://static.lightwave3d.com/sdk/11-6/html/filefmts/lwo2ex/lwo2ex.html
+// this is NOT LWOB described by http://www.martinreddy.net/gfx/3d/LWOB.txt https://botb.club/~edlinfan/textfiles/faqsys/formats/lwo.txt
+label
+   666;
+type
+  TChunk = packed record
+     ID: array [1 .. 4] of char; //header
+     Size: Longint; // -1 = no bone
+  end;
+var
+   f: file;
+   nV,nF,nVnew, nFnew, i, polyNodes, chunkStart, sz, maxFCount, bytesLeft: integer;
+   chunk: TChunk;
+   id : string;
+   idx: TPoint3i;
+function ReadU2: word;
+begin
+     blockread(f, result, sizeof(word));
+     {$IFDEF ENDIAN_LITTLE} result := Swap(result); {$ENDIF}
+     bytesLeft := bytesLeft - 2;
+end; //nested ReadU2()
+function ReadVX:longint;
+begin
+     result := ReadU2;
+     if (result >= $0000ff00) then
+        result := ((result and 255) shl 16) or ReadU2;
+end; //nested ReadVX()
+begin
+  result := false;
+  AssignFile(f, FileName);
+  FileMode := fmOpenRead;
+  Reset(f,1);
+  sz := FileSize(f);
+  if sz < 64 then goto 666;
+  blockread(f, chunk, SizeOf(chunk) );
+  if (uppercase(chunk.ID) <> 'FORM') then goto 666; //Not a valid LWO file (missing FORM chunk)
+  blockread(f, chunk.ID, SizeOf(chunk.ID) );
+  if (uppercase(chunk.ID) <> 'LWO2') then goto 666; //Not a valid LWO file (not LWO2 format)
+  nV := 0;
+  nVnew := 0;
+  nF := 0;
+  while (not EOF(f)) do begin
+        blockread(f, chunk, SizeOf(chunk) );
+        {$IFDEF ENDIAN_LITTLE} SwapLongInt(chunk.Size); {$ENDIF}
+        id := uppercase(chunk.ID);
+        chunkStart := filepos(f);
+        if (id = 'PNTS') then begin
+           nV := nV + nVnew;
+           nVnew := chunk.Size div 12;
+           if (nVnew * 12) <> chunk.Size then goto 666;
+           setlength(vertices, nVnew + nV);
+           blockread(f, vertices[nV], chunk.Size);
+           {$IFDEF ENDIAN_LITTLE}
+           for i := 0 to (nVnew - 1) do begin
+               SwapSingle(vertices[i + nV].X);
+               SwapSingle(vertices[i + nV].Y);
+               SwapSingle(vertices[i + nV].Z);
+           end;
+           {$ENDIF}
+        end;
+        if (id = 'POLS') then begin
+           blockread(f, chunk.ID, SizeOf(chunk.ID) );
+           id := uppercase(chunk.ID);
+           if (id = 'FACE') or (id = 'PTCH') then begin
+              maxFCount := (chunk.Size - 10) div 2; // Perpare for worst case triangle count (a single poly with only 16-bit indices)
+              setlength(faces, maxFCount + nF);
+              nFnew := 0;
+              bytesLeft := chunk.Size - 4;
+              while (bytesLeft > 0) do begin
+                polyNodes := ReadU2;
+                if (polyNodes >= 3) then begin
+                   idx.X := ReadVX;
+                   idx.Y := ReadVX;
+                   idx.Z := ReadVX;
+                   polyNodes := polyNodes - 3;
+                   while((polyNodes >= 0) and (bytesLeft >= 0)) do begin
+                     faces[nFnew + nF].X := idx.X + nV;
+                     faces[nFnew + nF].Y := idx.Y + nV;
+                     faces[nFnew + nF].Z := idx.Z + nV;
+                     nFnew := nFnew + 1;
+                     if(polyNodes > 0) then begin
+                       idx.Y := idx.Z;
+                       idx.Z := ReadVX;
+                     end;
+                     polyNodes := polyNodes - 1;
+                   end;
+                end else
+                    for i := 1 to polyNodes do
+                        ReadVX;
+              end; //while bytes left
+              nF := nF + nFnew;
+              setlength(faces, nF); //shrink array if nFnew <> maxFCount
+           end;
+        end;
+        seek(f,chunkStart+chunk.Size);
+  end;
+  result := true;
+  666 :
+  CloseFile(f);
+  if not result then begin
+     if (uppercase(chunk.ID) <> 'LWOB') then
+        showmessage('Unable to decode LightWave LWO2 file '+ FileName)
+     else
+         showmessage('Expected LWO2 format, not LWOB format '+ FileName);
+  end;
+  UnifyVertices(faces, vertices);
+end; // LoadLwo()
+
+function TMesh.LoadMs3d(const FileName: string): boolean;
+//http://sappersblog.blogspot.com/2014/08/milkshape-3d-185-ms3d-file-format.html
+//http://paulbourke.net/dataformats/ms3d/ms3dspec.h
+label
+   666;
+type
+  Tms3d_vertex = packed record
+     flags: byte; // SELECTED | SELECTED2 | HIDDEN
+     v: TPoint3f;
+     boneId,referenceCount: byte; // -1 = no bone
+  end;
+  Tms3d_triangle = packed record
+    flags: word; // SELECTED | SELECTED2 | HIDDEN
+    indexX, indexY, indexZ: word;
+    vertexNormals: array [1..3] of TPoint3f;
+    s,t: TPoint3f;
+    smoothingGroup,groupIndex: byte;
+  end;
+var
+   txt10: array [1 .. 10] of char; //header
+   f: file;
+   sz, i: integer;
+   version: LongInt;
+   nNumVertices, nNumTriangles: word;
+   vert: Tms3d_vertex;
+   face: Tms3d_triangle;
+begin
+  result := false;
+  AssignFile(f, FileName);
+  FileMode := fmOpenRead;
+  Reset(f,1);
+  sz := FileSize(f);
+  if sz < 64 then goto 666;
+  blockread(f, txt10, SizeOf(txt10) );
+  if pos('MS3D000000', UpperCase(txt10)) <> 1 then goto 666; //signature
+  blockread(f, version, SizeOf(version) );
+  blockread(f, nNumVertices, SizeOf(nNumVertices) );
+  setlength(vertices, nNumVertices);
+  for i := 0 to (nNumVertices - 1) do begin
+    blockread(f, vert, SizeOf(vert) );
+    vertices[i] := vert.v;
+  end;
+  blockread(f, nNumTriangles, SizeOf(nNumTriangles));
+  setlength(faces, nNumTriangles);
+  for i := 0 to (nNumTriangles - 1) do begin
+    blockread(f, face, SizeOf(face) );
+    faces[i].X := face.indexX;
+    faces[i].Y := face.indexY;
+    faces[i].Z := face.indexZ;
+  end;
+  result := true;
+  666 :
+  CloseFile(f);
+  if not result then showmessage('Unable to decode MilkShape file '+ FileName);
+  UnifyVertices(faces, vertices);
+end; // LoadMs3d()
 
 function TMesh.Load3ds(const FileName: string): boolean;
 //http://www.spacesimulator.net/tutorials/3ds_loader_tutorial.html
@@ -2516,7 +2828,7 @@ begin
   CloseFile(f);
   if not result then showmessage('Unable to decode 3DS file '+ FileName);
   UnifyVertices(faces, vertices);
-end; //Load3ds()
+end; // Load3ds()
 
 procedure TMesh.LoadStl(const FileName: string);
 //Read STL mesh
@@ -2576,7 +2888,7 @@ begin
     CloseFile(f);
     CheckMesh; //Since STL requires vertex unification, make sure vertices and faces are valid
     UnifyVertices(faces, vertices);
-end;
+end; // LoadStl()
 
 procedure TMesh.LoadVtk(const FileName: string);
 //Read VTK mesh
@@ -2696,7 +3008,7 @@ begin
 666:
    closefile(f);
    strlst.free;
-end;
+end; // LoadVtk()
 
 function TMesh.CheckMesh: boolean;
 //faces should be indexed for range 0..[number of triangles -1]
@@ -2736,7 +3048,7 @@ begin
      if not result then
         MakePyramid;
      result := true;
-end;
+end; //CheckMesh()
 
 (*procedure TMesh.NormalizeSize;
 var
@@ -2766,6 +3078,14 @@ begin
      CloseOverlays;
      setlength(faces, 0);
      setlength(vertices, 0);
+     if (ext = '.GTS') then
+        LoadGts(Filename);
+     if (ext = '.DXF') then
+        LoadDxf(Filename);
+     if (ext = '.LWO') then
+        LoadLwo(Filename);
+     if (ext = '.MS3D') then
+        LoadMs3d(Filename);
      if (ext = '.3DS') then
         Load3ds(Filename);
      if (ext = '.MZ3') then
@@ -2806,7 +3126,7 @@ begin
      //showmessage(Filename+'  '+ inttostr(length(faces))+' '+inttostr(length(vertices)) );
      //NormalizeSize;
   isBusy := false;
-end;
+end; // LoadFromFile()
 
 (* works, but Stc files are sparse, so better to use other routines for smoothing
 procedure TMesh.LoadStc(const FileName: string; lOverlayIndex: integer);
@@ -2891,7 +3211,6 @@ begin
             mxt := t;
          end;
      end;
-     //
      num_v := length(vertices);
      setlength(overlay[lOverlayIndex].intensity, num_v);
      for v := 0 to (num_v -1) do
@@ -2928,7 +3247,7 @@ begin
   showmessage('The undocumented FreeSurfer GCS format is not supported. Solution: convert file to annot format using "mris_ca_label -ml-annot '+FileName+' 7 ~/newfile.annot"');
   CloseFile(f);
   result := true;
-end; //LoadGcs()
+end; // LoadGcs()
 
 function asRGBA(i : longint): TRGBA;
 type
@@ -3001,7 +3320,7 @@ begin
  666:
    CloseFile(f);
  setlength(vertexRGBA, 0);
-end; //LoadAnnot()
+end; // LoadAnnot()
 
 procedure TMesh.LoadCurv(const FileName: string; lOverlayIndex: integer);
 //simple format used by Freesurfer  BIG-ENDIAN
@@ -3059,7 +3378,7 @@ begin
    {$ELSE}
    result := b[3] shl 16 + b[2] shl 8 + b[1];
    {$ENDIF}
-end;
+end; // fread3()
 
 procedure TMesh.LoadW(const FileName: string; lOverlayIndex: integer);
 //simple format used by Freesurfer  BIG-ENDIAN

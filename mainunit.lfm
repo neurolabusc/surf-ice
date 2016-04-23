@@ -547,6 +547,7 @@ object GLForm1: TGLForm1
           ''
           ''
           ''
+          ''
         )
         TabOrder = 3
       end
@@ -840,7 +841,7 @@ object GLForm1: TGLForm1
       end
       object NodeMinEdit: TFloatSpinEdit
         Left = 58
-        Height = 15
+        Height = 16
         Top = 40
         Width = 90
         Increment = 1
@@ -860,7 +861,7 @@ object GLForm1: TGLForm1
       end
       object NodeMaxEdit: TFloatSpinEdit
         Left = 162
-        Height = 15
+        Height = 16
         Top = 40
         Width = 90
         Increment = 1
@@ -950,7 +951,7 @@ object GLForm1: TGLForm1
       end
       object EdgeMinEdit: TFloatSpinEdit
         Left = 58
-        Height = 15
+        Height = 16
         Top = 40
         Width = 90
         Increment = 1
@@ -962,7 +963,7 @@ object GLForm1: TGLForm1
       end
       object EdgeMaxEdit: TFloatSpinEdit
         Left = 162
-        Height = 15
+        Height = 16
         Top = 40
         Width = 90
         Increment = 1
@@ -1393,6 +1394,11 @@ object GLForm1: TGLForm1
       object SwapYZMenu: TMenuItem
         Caption = 'Rotate mesh'
         OnClick = SwapYZMenuClick
+      end
+      object CenterMeshMenu: TMenuItem
+        Caption = 'Center mesh'
+        Hint = 'Set origin to center of object'
+        OnClick = CenterMeshMenuClick
       end
       object ReverseFacesMenu: TMenuItem
         Caption = 'Reverse faces'

@@ -24,6 +24,7 @@ type
     AdvancedMenu: TMenuItem;
     AdditiveOverlayMenu: TMenuItem;
     GLBox: TOpenGLControl;
+    CenterMeshMenu: TMenuItem;
     ScriptMenu: TMenuItem;
     SimplifyTracks1: TMenuItem;
     TransparencySepMenu: TMenuItem;
@@ -148,6 +149,7 @@ type
     SaveMenu: TMenuItem;
     ObjectColorMenu: TMenuItem;
     OpenMenu: TMenuItem;
+    procedure CenterMeshMenuClick(Sender: TObject);
     procedure Quit2TextEditor;
     procedure AdditiveOverlayMenuClick(Sender: TObject);
     procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
@@ -1766,6 +1768,13 @@ begin
   AProcess.Free;
   GLForm1.close;
 end;
+
+procedure TGLForm1.CenterMeshMenuClick(Sender: TObject);
+begin
+ gMesh.CenterOrigin;
+ GLBoxRequestUpdate(Sender);
+end;
+
 {$ELSE} //ShellExecute(Handle,'open', 'c:\windows\notepad.exe','c:\SomeText.txt', nil, SW_SHOWNORMAL) ;
 begin
   gPrefs.SkipPrefWriting := true;
@@ -1784,13 +1793,15 @@ var
   str : string;
   s: dword;
   i: integer;
+  scale: single;
+  origin: TPoint3f;
 begin
- //showmessage(inttostr(gTrack.utime)); exit;
  s := gettickcount();
  for i := 1 to kSamp do begin
      gAzimuth := (gAzimuth + 10) mod 360;
      GLbox.Repaint;
   end;
+  origin := GetOrigin(scale);
   str :=  'Surf Ice '+' 3 March 2016 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
@@ -1799,12 +1810,13 @@ begin
    {$IFNDEF COREGL}+' (Legacy OpenGL)'{$ENDIF}
    +LineEnding+' www.mricro.com :: BSD 2-Clause License (opensource.org/licenses/BSD-2-Clause)'
    +LineEnding+' FPS ' +inttostr(round( (kSamp*1000)/(gettickcount-s)))
+   +LineEnding+format(' Scale %.4f',[scale])
+   +LineEnding+format(' Origin %.4fx%.4fx%.4f',[origin.X, origin.Y, origin.Z])
    +LineEnding+' Mesh Vertices '+inttostr(length(gMesh.vertices))+' Faces '+  inttostr(length(gMesh.faces)) +' Colors '+  inttostr(length(gMesh.vertexRGBA))
    +LineEnding+' Track Vertices '+inttostr(gTrack.n_vertices)+' Faces '+  inttostr(gTrack.n_faces) +' Count ' +inttostr(gTrack.n_count)
    +LineEnding+' Node Vertices '+inttostr(length(gNode.vertices))+' Faces '+  inttostr(length(gNode.faces))
    +LineEnding+' GPU '+gShader.Vendor
    +LineEnding+'Press "Abort" to quit and open settings '+ininame;
-
   i := MessageDlg(str,mtInformation,[mbAbort, mbOK],0);
   if i  = mrAbort then Quit2TextEditor;
 end;
