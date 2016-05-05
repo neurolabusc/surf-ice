@@ -68,6 +68,8 @@ type
     procedure MakeSphere;
     procedure BuildList  (Clr: TRGBA);
     procedure BuildListOverlay (Clr: TRGBA);
+    function LoadAc(const FileName: string): boolean;
+    function LoadDae(const FileName: string): boolean; //only subset!
     function LoadGts(const FileName: string): boolean;
     function LoadDxf(const FileName: string): boolean;
     function LoadLwo(const FileName: string): boolean;
@@ -108,13 +110,17 @@ type
     procedure SaveMz3(const FileName: string);
     procedure SaveGii(const FileName: string);
     procedure SaveObj(const FileName: string);
+    procedure SavePly(const FileName: string);
     procedure SaveOverlay(const FileName: string; OverlayIndex: integer);
     destructor  Destroy; override;
   end;
 
 implementation
 
-uses  shaderu, meshify_simplify,{$IFDEF COREGL} gl_core_3d {$ELSE} gl_legacy_3d {$ENDIF}; //mainunit;
+
+uses
+  meshify_simplify,
+  shaderu, {$IFDEF COREGL} gl_core_3d {$ELSE} gl_legacy_3d {$ENDIF}; //mainunit;
 
 {$IFDEF COREGL}
 function mixRGBA(c1, c2: TRGBA; frac2: single): TRGBA;
@@ -530,7 +536,6 @@ begin
      glCallList(displayListOverlay);
   end;
   {$ENDIF}
-
   isBusy := false;
 end; // DrawGL()
 
@@ -987,6 +992,8 @@ begin
      CloseFile(f);
 end; // LoadNV()
 
+//{$DEFINE OFFSIMPLE} //Simple reader is faster, but only handles triangular meshes
+{$IFDEF OFFSIMPLE}
 procedure TMesh.LoadOff(const FileName: string);
 //http://paulbourke.net/dataformats/off/
 var
@@ -1030,6 +1037,67 @@ begin
      end;
      CloseFile(f);
 end; // LoadOff()
+{$ELSE}
+procedure TMesh.LoadOff(const FileName: string);
+//http://paulbourke.net/dataformats/off/
+//For examples where faces have more then 3 vertices see
+// http://www.cs.princeton.edu/courses/archive/spr08/cos426/assn2/formats.html
+// http://people.sc.fsu.edu/~jburkardt/data/off/abstr.off
+var
+   f: TextFile;
+   i, j, k, indxPrev, num_v, num_f, newF: integer;
+   s: string;
+   indx1: integer;
+   s1, s2, s3, s4: single;
+   strlst : TStringList;
+begin
+     AssignFile(f, FileName);
+     Reset(f);
+     Readln(f,s);
+     if (pos('OFF', s) <> 1) then begin
+        showmessage('Corrupt file: OFF files must begin with "OFF"');
+        CloseFile(f);
+        exit;
+     end;
+     ReadlnSafe(f, s1,s2,s3, s4);
+     num_v := round(s1);
+     num_f := round(s2);
+     if (num_v < 3) or (num_f < 1) then begin
+        showmessage('Corrupt file: must have at least 3 vertices and one face');
+        CloseFile(f);
+        exit;
+     end;
+     setlength(vertices, num_v);
+     for i := 0 to (num_v - 1) do
+         ReadlnSafe(f, vertices[i].X, vertices[i].Y, vertices[i].Z, s4);
+     setlength(faces, num_f);
+     i := 0;
+     j := 0;
+     strlst:=TStringList.Create;
+     while (i < (num_f)) and (not EOF(f)) do begin
+         Readln(f, s);
+         if (length(s) < 7) or (s[1] = '#') then continue; //skip comments
+         strlst.DelimitedText := s;
+         newF := StrToIntDef(strlst[0],0);
+         if newF < 3 then continue;
+         indx1 := StrToIntDef(strlst[1],0);
+         indxPrev := StrToIntDef(strlst[2],0);
+         if (j + newF) > length(faces) then
+            setlength(faces, j + 4096); //non-triangular meshes will be composed of more triangles than num_f
+         for k := 3 to newF do begin
+             faces[j].X := indx1;
+             faces[j].Y := indxPrev;
+             faces[j].Z := StrToIntDef(strlst[k],0);
+             indxPrev :=  faces[j].Z;
+             j := j + 1;
+         end;
+         i := i + 1;
+     end;
+     setlength(faces, j);
+     strlst.free;
+     CloseFile(f);
+end;
+{$ENDIF}
 
 // ascii format created by FreeSurfers' mris_convert
 procedure TMesh.LoadASC_SRF(const FileName: string);
@@ -1440,18 +1508,18 @@ begin
                if (pos('/', strlst[i]) > 1) then // "f v1/vt1/vn1 v2/vt2/vn2 v3/vt3/vn3" -> f v1 v2 v3
                   strlst[i] := Copy(strlst[i], 1, pos('/', strlst[i])-1);
            for j := 1 to (new_f) do begin
-               faces[num_f].X := strtoint(strlst[1]) - 1;
-               faces[num_f].Y := strtoint(strlst[j+1]) - 1;  //-1 since "A valid vertex index starts from 1"
-               faces[num_f].Z := strtoint(strlst[j+2]) - 1;  //-1 since "A valid vertex index starts from 1"
+               faces[num_f].X := strtointDef(strlst[1], 0) - 1;
+               faces[num_f].Y := strtointDef(strlst[j+1], 0) - 1;  //-1 since "A valid vertex index starts from 1"
+               faces[num_f].Z := strtointDef(strlst[j+2], 0) - 1;  //-1 since "A valid vertex index starts from 1"
                inc(num_f);
            end;
         end;
         if (strlst.count > 3) and ( (strlst[0]) = 'v') then begin
            if ((num_v+1) >= length(vertices)) then
               setlength(vertices, length(vertices)+kBlockSize);
-           vertices[num_v].X := strtofloat(strlst[1]);
-           vertices[num_v].Y := strtofloat(strlst[2]);
-           vertices[num_v].Z := strtofloat(strlst[3]);
+           vertices[num_v].X := strtofloatDef(strlst[1], 0);
+           vertices[num_v].Y := strtofloatDef(strlst[2], 0);
+           vertices[num_v].Z := strtofloatDef(strlst[3], 0);
            inc(num_v);
         end;
      end;
@@ -1564,7 +1632,6 @@ end; // LoadObj()
 procedure TMesh.LoadPly(const FileName: string);
 // https://en.wikipedia.org/wiki/PLY_(file_format)
 // http://paulbourke.net/dataformats/ply/
-
 var
    fb: file;
    f: TextFile;
@@ -1589,6 +1656,8 @@ begin
   end;
   strlst:=TStringList.Create;
   num_header_lines := 1;
+  num_f := 0;
+  num_v := 0;
   isAscii := false;
   isLittleEndian := false;
   isUint32 := true; //assume uint32 not short int16
@@ -1673,10 +1742,11 @@ begin
 
   end;
   if EOF(f) or (num_v < 3) or (num_f < 1) then begin
-    showmessage('Not a PLY file');
+    showmessage('Not a mesh-based PLY file (perhaps point based, try opening in MeshLab)');
     closefile(f);
     exit;
   end;
+
   setlength(vertices, num_v);
   setlength(faces, num_f);
   if redOffset > 2 then
@@ -1703,8 +1773,13 @@ begin
             readln(f, vertices[i].X, vertices[i].Y, vertices[i].Z);
     for i := 0 to (num_f - 1) do begin
       readln(f, num_vx, faces[i].X, faces[i].Y, faces[i].Z);
-      if num_vx <> 3 then begin
-          showmessage('only able to read triangle-based PLY files. (Hint: open with MeshLab and export as CTM format)');
+      if num_vx < 3 then begin
+            showmessage('File does not have the expected number of triangle-based faces '+ FileName);
+            closefile(f);
+            exit;
+      end;
+      if num_vx > 3 then begin
+          showmessage('Only able to read triangle-based PLY files. (Hint: open with MeshLab and export as CTM format) ');
           closefile(f);
           exit;
       end;
@@ -1769,9 +1844,7 @@ begin
           end;
     end; //swapped
     for i := 0 to (num_f -1) do begin
-
         setlength(binByt, indexSectionExtraBytes);
-
         blockread(fb, byt, 1 );
         if byt <> 3 then begin
                 showmessage('Only able to read triangle-based PLY files. Solution: open and export with MeshLab. Index: '+inttostr(i)+ ' Header Bytes '+inttostr(hdrSz)+' bytesPerVertex: '+inttostr(vertexOffset)+' faces: ' + inttostr(byt));
@@ -1832,6 +1905,60 @@ begin { MemoryStreamAsString }
    SetString(Result, vms.Memory, vms.Size)
 end; { MemoryStreamAsString }
 
+procedure TMesh.SavePly(const FileName: string);
+const
+  kEOLN = chr($0A);
+var
+   i: integer;
+   s: string;
+   f: file;
+   byt: byte;
+   w: array[0..2] of word;
+begin
+  if (length(faces) < 1) or (length(vertices) < 3) then begin
+        showmessage('You need to open a mesh before you can save it');
+        exit;
+  end;
+  if length(faces) < 32767 then
+     s := 'property list uchar short vertex_indices'
+  else
+      s := 'property list uchar uint vertex_indices';
+  s := 'ply'+kEOLN
+       {$IFDEF ENDIAN_LITTLE}
+       +'format binary_little_endian 1.0'+kEOLN
+       {$ELSE}
+       +'format binary_big_endian 1.0'+kEOLN
+       {$ENDIF}
+       +'comment SurfIce'+kEOLN
+       +'element vertex '+inttostr(length(vertices))+kEOLN
+       +'property float x'+kEOLN
+       +'property float y'+kEOLN
+       +'property float z'+kEOLN
+       +'element face '+inttostr(length(faces))+kEOLN
+       +s+kEOLN
+       +'end_header'+kEOLN;
+  AssignFile(f, FileName);
+  ReWrite(f, 1);
+  BlockWrite(f, s[1], length(s));
+  BlockWrite(f, vertices[0], 3 * 4 * length(vertices));
+  byt := 3;
+  if length(faces) < 32767 then begin
+     for i := 0 to (length(faces) -1) do begin
+         BlockWrite(f, byt, 1 );
+         w[0] := faces[i].X;
+         w[1] := faces[i].Y;
+         w[2] := faces[i].Z;
+         BlockWrite(f, w[0], 3 * 2);
+     end;
+  end else begin
+      for i := 0 to (length(faces) -1) do begin
+          BlockWrite(f, byt, 1 );
+          BlockWrite(f, faces[i], 3 * 4 );
+      end;
+  end;
+  CloseFile(f);
+end; //SavePly()
+
 procedure TMesh.SaveObj(const FileName: string);
 //create WaveFront object file
 // https://en.wikipedia.org/wiki/Wavefront_.obj_file
@@ -1857,7 +1984,7 @@ begin
   //fprintf(fid, 'v %.12g %.12g %.12g\n', vertex');
   //fprintf(fid, 'f %d %d %d\n', (face)');
   CloseFile(f);
-end;
+end; // SaveObj()
 
 procedure SaveMz3Core(const FileName: string; Faces: TFaces; Vertices: TVertices; vertexRGBA: TVertexRGBA; intensity: TFloats);
 const
@@ -2454,6 +2581,323 @@ begin
   end;
 end; // LoadMz3()
 
+function item2Int(s: string; item: integer): integer;
+// 2nd item of 'refs 3' is 3
+var
+     sList: TStringList;
+begin
+sList := TStringList.Create;
+sList.DelimitedText := s;
+result := 0;
+if sList.Count >= item then
+   result := StrToIntDef(sList[item-1],0);
+sList.free;
+end; //item2ToInt()
+
+function TMesh.LoadAc(const FileName: string): boolean;
+//http://www.inivis.com/ac3d/man/ac3dfileformat.html
+//https://en.wikipedia.org/wiki/AC3D
+label
+   666;
+const
+  kBlockSz = 4096;
+var
+   f: TextFile;
+   new_f, num_v, num_f, i, indxPrev, indx1: integer;
+   s: string;
+   v4: single;
+begin
+     result := false;
+     AssignFile(f, FileName);
+     Reset(f);
+     Readln(f,s);
+     s := trim(s);
+     if (pos('AC3Db', s) < 1) then begin
+        showmessage('Corrupt file: AC files must begin with AC3Db not "'+s+'"');
+        CloseFile(f);
+        exit;
+     end;
+     while not EOF(f) and (pos('NUMVERT', upcase(s)) <> 1) do   //numvert 4
+           Readln(f, s);
+     if EOF(f) then goto 666;
+     num_v := item2Int(s,2);
+     if (num_v < 1) then exit;
+     setlength(vertices, num_v);
+     for i := 0 to (num_v - 1) do
+         ReadlnSafe(f, vertices[i].X, vertices[i].Y, vertices[i].Z, v4);
+     setlength(vertices, kBlockSz);
+     num_f := 0;
+     while not EOF(f) do begin
+           if (pos('REFS', upcase(s)) > 0) then begin  //refs 3
+              new_f := item2Int(s,2);
+              if new_f < 3 then goto 666;
+              if not EOF(f) then readln(f,s);
+              indx1 := item2Int(s,1);
+              if not EOF(f) then readln(f,s);
+              indxPrev := item2Int(s,1);
+              if (num_f + (new_f - 2)) > length(faces) then
+                 setlength(faces, num_f + kBlockSz); //non-triangular meshes will be composed of more triangles than num_f
+              for i := 3 to new_f do begin
+                  faces[num_f].X := indx1;
+                  faces[num_f].Y := indxPrev;
+                  if not EOF(f) then readln(f,s);
+                  faces[num_f].Z := item2Int(s,1);
+                  indxPrev :=  faces[num_f].Z;
+                  num_f := num_f + 1;
+              end;
+           end;
+           Readln(f, s);
+
+     end;
+     result := true;
+     setlength(faces,num_f);
+     UnifyVertices(Faces, Vertices);
+  666:
+     CloseFile(f);
+     if not result then
+        showmessage('Unable to read AC file '+fileName);
+end;
+
+function TMesh.LoadDae(const FileName: string): boolean;
+//this loader only reads simple collada images
+// http://codeflow.org/entries/2011/nov/18/parsing-3d-file-formats/
+//Collada is a XML format: All of an XML document is case-sensitive
+label
+  123, 666;
+const
+  kBlockSz = 4096;
+var
+  f : TextFile;
+  s, pSource, vCount, currentsource, p, inputSemantic: string;
+  floatListVal,floatListID: TStringList;
+  vertexOffset, maxOffset, offset, nF, nV, i, j, k, newV, newF, indxPrev, indx1, nVstart : integer;
+  indx: array of integer;
+  function GetTag (s: string): string;
+  // semantic="VERTEX" returns VERTEX
+  var
+    i: integer;
+  begin
+       result := '';
+       i := Pos('="', s);
+       if i < 1 then exit;
+       result := s;
+       delete(result, 1, i+1);
+       i := Pos('"', result);
+       if i < 1 then exit;
+       delete(result, i, maxint);
+  end; //nested GetTag()
+  function getID(s: string): string;
+  // <float_array id="Cube-mesh-positions-array" count="24"> returns  Cube-mesh-positions-array
+  var
+     sList: TStringList;
+     j: integer;
+  begin
+      result := '"';//impossible value
+      if length(s) < 1 then exit;
+      sList := TStringList.Create;
+      sList.DelimitedText := s;
+      for j := 0 to (sList.Count-1) do begin
+          if (Pos('id="', sList[j]) = 1) then begin
+             result := GetTag(sList[j]);
+             exit;
+
+          end;
+      end; //for j, each item
+      sList.free;
+  end; //nested getID()
+
+ function isInputVertex(var semantic: string) : integer;
+//returns offset
+//<input semantic="VERTEX" source="#Cube-mesh-vertices" offset="0" />
+ var
+    j: integer;
+    inputSource: string;
+    sList: TStringList;
+  begin
+       result := 0;
+       semantic := '';
+       inputSource := '';//impossible
+       if (Pos('<input', s) <> 1) then exit;
+       sList := TStringList.Create;
+       sList.DelimitedText := s;
+       for j := 0 to (sList.Count-1) do begin
+           if (Pos('semantic="', sList[j]) = 1) then
+              semantic := GetTag(sList[j]);
+           if (Pos('source="', sList[j]) = 1) then
+              inputSource := GetTag(sList[j]);
+           if (Pos('offset="', sList[j]) = 1) then
+              result := StrToIntDef(GetTag(sList[j]),0);
+       end;
+       if (length(inputSource) > 0) and (inputSource[1] = '#') then
+          delete(inputSource, 1,1);
+       if semantic = 'POSITION' then
+          pSource := inputSource;
+       sList.free;
+  end; //nested isInputVertex()
+  function trimXML(s: string): string;
+  // "<vcount>2 3 41</vcount>" -> "2 3 41"
+  begin
+       result := '';
+       i := Pos('>', s);
+       if i < 1 then exit;
+       result := s;
+       delete(result, 1, i);
+       if length(result) < 1 then begin
+         ReadLn(f, s);
+         result := trim(s);
+         exit;
+       end;
+       i := Pos('<', result);
+       if i < 1 then exit;
+       delete(result, i, maxInt);
+  end; //nested trimXML()
+begin
+  result := false;
+  nF := 0;
+  nV := 0;
+  SetLength(Faces,kBlockSz);
+  SetLength(Vertices,kBlockSz);
+  floatListVal := TStringList.Create;
+  floatListID := TStringList.Create;
+  AssignFile(f, FileName);
+  Reset(f);
+  //1: skip all lines before <mesh>
+  s := '';
+123:
+  while (not Eof(f)) and (Pos('<mesh>', s) < 1) do begin
+      ReadLn(f, s);
+      s := trim(s);
+  end;
+  if EOF(f) then goto 666;
+  maxOffset := 0;
+  vertexOffset := 0;
+  p := '';
+  vcount := '';
+  psource := '';
+  currentsource := '';
+  floatListVal.Clear;
+  floatListID.Clear;
+  while (not Eof(f)) and (Pos('</mesh>', s) < 1) do begin
+      ReadLn(f, s);
+      s := trim(s);
+      isInputVertex(inputSemantic);
+      if (Pos('<source', s) = 1) then
+         currentsource := getID(s);
+      if (Pos('<float_array', s) = 1) then begin
+         floatListID.Add(currentsource);
+         floatListVal.Add(trimXML(s));
+      end; //<float_array
+      if (Pos('<polylist', s) = 1) or (Pos('<triangles', s) = 1)  then begin   //<triangles
+        while (not Eof(f)) and (Pos('</polylist>', s) < 1) and (Pos('</triangles>', s) < 1) do begin
+            if (Pos('<input', s) > 0) then begin
+               offset := isInputVertex(inputSemantic);
+               if inputSemantic = 'VERTEX' then
+                  vertexOffset := offset;
+               if offset > maxOffset then
+                  maxOffset := offset;
+            end;
+
+            if (Pos('<vcount>', s) > 0) then
+               vcount := trimXML(s);
+            if (Pos('<p>', s) > 0) then
+               p := trimXML(s);
+            ReadLn(f, s); //read floats
+            s := trim(s);
+        end;
+        //sList.DelimitedText := s;
+        //Memo1.Lines.add(inttostr(sList.count)+' ' + s);
+      end; //<polylist
+
+      //Memo1.Lines.add(inttostr(Pos('</mesh', s)) +' '+s);
+  end;  //not EOF
+  //Memo1.Lines.add('psource ' + psource+' -> ' + inttostr(floatListID.Count));
+  nVstart := nV;
+  if (psource = '') then goto 666; //we need vertex indices and positions!
+  for i := 0 to (floatListID.Count -1) do begin  //decode vertices aka "POSITIONS"
+      if trim(floatListID[i]) = psource then begin
+        floatListID.Clear;
+        floatListID.DelimitedText := floatListVal[i];
+        if (floatListID.Count mod 3) <> 0 then goto 666;
+        newV := floatListID.Count div 3;
+        if length(vertices) < (nV + newV) then
+           setlength(vertices, length(vertices)+newV);
+        k := 0;
+        for j := 0 to (newV - 1) do begin
+            vertices[nV + j].X := StrToFloatDef(floatListID[k], 0.0);
+            k := k + 1;
+            vertices[nV + j].Y := StrToFloatDef(floatListID[k], 0.0);
+            k := k + 1;
+            vertices[nV + j].Z := StrToFloatDef(floatListID[k], 0.0);
+            k := k + 1;
+        end;
+        nV := nV + newV;
+      end; //if float list is POSITIONS
+  end; //for i - number of floatLists
+  //decode faces
+  if (p = '')  then goto 666;
+  floatListID.Clear;
+  floatListID.DelimitedText := p; //p 0 1 2 3 4 7 6 5 0 4 5 1 1 5 6 2 2 6 7 3 4 0 3 7
+  setlength(indx, floatListID.count);
+  for i := 0 to (floatListID.count - 1) do
+      indx[i] := StrToIntDef(floatListID[i], 0);
+  maxOffset := maxOffset + 1; //e.g. if offsets 0 1, then there are 2 offsets!
+  if vcount = '' then begin //triangles, every three indices are one triangle
+     if (length(indx) mod (3* maxOffset)) <> 0 then goto 666;
+     newF := length(indx) div (3*maxOffset);
+     if (nF + newF) > length(faces) then
+           setlength(faces, nF +newF + kBlockSz);
+     k := vertexOffset;
+     for j := 0 to newF do begin
+         faces[nF + j].X := indx[k]+nVstart;
+         k := k + maxOffset;
+         faces[nF + j].Y := indx[k]+nVstart;
+         k := k + maxOffset;
+         faces[nF + j].Z := indx[k]+nVstart;
+         k := k + maxOffset;
+         //showmessage(inttostr(faces[nF + j].X)+' '+inttostr(faces[nF + j].Y)+' '+inttostr(faces[nF + j].Z))
+     end;
+     nF := nF + newF;
+  end else begin
+    floatListID.Clear;
+    floatListID.DelimitedText := vcount; //vcount 4 4 4 4 4 4
+    k := 0;
+    for i := 0 to (floatListID.count - 1) do begin
+        newF := StrToIntDef(floatListID[i], 0) - 2;//e.g. 3 indices = 1 tri, 4 = 2, 5 = 3
+        if newF < 1 then goto 666;
+        if (nF + newF) > length(faces) then
+              setlength(faces, nF +newF + kBlockSz);
+        indx1 := indx[k]+nVstart;
+        k := k + maxOffset;
+        indxPrev :=  indx[k]+nVstart;
+        k := k + maxOffset;
+        for j := 0 to (newF-1) do begin
+               faces[nF + j].X := indx1;
+               faces[nF + j].Y := indxPrev;
+               faces[nF + j].Z := indx[k]+nVstart;
+               k := k + maxOffset;
+               indxPrev :=  faces[nF + j].Z;
+        end;
+        nF := newF + nF;
+    end;
+    setlength(indx, 0);
+  end;
+  result := true;
+goto 123;
+ 666:
+  // Close the file for the last time
+  CloseFile(f);
+  floatListVal.free;
+  floatListID.free;
+  if (not result) or (nF < 1) or (nV < 1) then begin
+     result := false;
+     nF := 0;
+     nV := 0;
+  end;
+  setlength(Faces, nF);
+  setlength(Vertices, nV);
+  UnifyVertices(Faces, Vertices);
+end; // LoadDae()
+
 function TMesh.LoadGts(const FileName: string): boolean;
 //http://gts.sourceforge.net/samples.html
 // edges ignore winding: https://sourceforge.net/p/gts/mailman/message/3574977/
@@ -2514,12 +2958,16 @@ begin
 end; // LoadGts()
 
 function TMesh.LoadDxf(const FileName: string): boolean;
+//http://paulbourke.net/dataformats/dxf/min3d.html
+//Reads DXF files where faces specified with 10,20,30/11,21,31/12,22,32/13,23,33
+//Does not read all files, see wuson.dxf
+//  https://github.com/assimp/assimp/tree/master/test/models/DXF
 const kBlockSz = 32768; //must be >2, larger is faster (fewer memory reallocations)
 var
    f: TextFile;
-   nV, nF, GroupCode: integer;
-   GroupValue: single;
-   GroupCodeStr, GroupValueStr: string;
+   nV, nF, groupCode: integer;
+   groupValue: single;
+   groupCodeStr, groupValueStr: string;
    v : array[0..3] of TPoint3f;
 procedure AddTri (var v1, v2, v3: TPoint3f);
 begin
@@ -2543,29 +2991,30 @@ begin
      setlength(vertices, kBlockSz); //avoid constantly resizing arrays
      setlength(faces, kBlockSz);
      while not EOF(f) do begin
-           Readln(f, GroupCodeStr);
+           Readln(f, groupCodeStr);
            if EOF(f) then break;
-           Readln(f, GroupValueStr);
-           GroupCode := StrToIntDef (GroupCodeStr, 0);
-           if (GroupCode < 10) or (GroupCode > 33) then continue;
-           if (GroupCode mod 10) > 3 then continue;//last digit should be in range [0,1,2,3]
-           GroupValue := StrToFloatDef(GroupValueStr, 0.0);
-           if GroupCode = 10 then v[0].X := GroupValue;
-           if GroupCode = 20 then v[0].Y := GroupValue;
-           if GroupCode = 30 then v[0].Z := GroupValue;
-           if GroupCode = 11 then v[1].X := GroupValue;
-           if GroupCode = 21 then v[1].Y := GroupValue;
-           if GroupCode = 31 then v[1].Z := GroupValue;
-           if GroupCode = 12 then v[2].X := GroupValue;
-           if GroupCode = 22 then v[2].Y := GroupValue;
-           if GroupCode = 32 then v[2].Z := GroupValue;
-           if GroupCode = 13 then v[3].X := GroupValue;
-           if GroupCode = 23 then v[3].Y := GroupValue;
-           if GroupCode = 33 then begin
-              v[3].Z := GroupValue;
+           Readln(f, groupValueStr);
+           groupCode := StrToIntDef (groupCodeStr, 0);
+           if (groupCode < 10) or (groupCode > 33) then continue;
+           if (groupCode mod 10) > 3 then continue;//last digit should be in range [0,1,2,3]
+           groupValue := StrToFloatDef(groupValueStr, 0.0);
+           if groupCode = 10 then v[0].X := groupValue;
+           if groupCode = 20 then v[0].Y := groupValue;
+           if groupCode = 30 then v[0].Z := groupValue;
+           if groupCode = 11 then v[1].X := groupValue;
+           if groupCode = 21 then v[1].Y := groupValue;
+           if groupCode = 31 then v[1].Z := groupValue;
+           if groupCode = 12 then v[2].X := groupValue;
+           if groupCode = 22 then v[2].Y := groupValue;
+           if groupCode = 32 then v[2].Z := groupValue;
+           if groupCode = 13 then v[3].X := groupValue;
+           if groupCode = 23 then v[3].Y := groupValue;
+           if groupCode = 33 then begin
+              v[3].Z := groupValue;
               AddTri (v[0], v[1], v[2]);
-              if (vectorLength(v[2],v[3]) > 0) then //if 4th point is different from 3rd: generate quad
-                 AddTri (v[0], v[2], v[3]);
+              //if (vectorLength(v[2],v[3]) > 0) then //if 4th point is different from 3rd: generate quad
+              if not vectorSame(v[2], v[3]) then //if 4th point is different from 3rd: generate quad
+                   AddTri (v[0], v[2], v[3]);
            end;
      end;
      CloseFile(f);
@@ -2578,8 +3027,7 @@ begin
 end; // LoadDxf()
 
 function TMesh.LoadLwo(const FileName: string): boolean;
-//LWO2 http://openctm.sourceforge.net/?page=download
-//http://static.lightwave3d.com/sdk/11-6/html/filefmts/lwo2ex/lwo2ex.html
+//LWO2 http://static.lightwave3d.com/sdk/11-6/html/filefmts/lwo2ex/lwo2ex.html
 // this is NOT LWOB described by http://www.martinreddy.net/gfx/3d/LWOB.txt https://botb.club/~edlinfan/textfiles/faqsys/formats/lwo.txt
 label
    666;
@@ -2590,6 +3038,7 @@ type
   end;
 var
    f: file;
+   temp: single;
    nV,nF,nVnew, nFnew, i, polyNodes, chunkStart, sz, maxFCount, bytesLeft: integer;
    chunk: TChunk;
    id : string;
@@ -2638,6 +3087,12 @@ begin
                SwapSingle(vertices[i + nV].Z);
            end;
            {$ENDIF}
+           for i := 0 to (nVnew - 1) do begin
+               temp := vertices[i + nV].Z;
+               vertices[i + nV].Z := vertices[i + nV].Y;
+               vertices[i + nV].Y := temp;
+           end;
+
         end;
         if (id = 'POLS') then begin
            blockread(f, chunk.ID, SizeOf(chunk.ID) );
@@ -3078,6 +3533,10 @@ begin
      CloseOverlays;
      setlength(faces, 0);
      setlength(vertices, 0);
+     if (ext = '.AC') then
+        LoadAc(Filename);
+     if (ext = '.DAE') then
+        LoadDae(Filename);
      if (ext = '.GTS') then
         LoadGts(Filename);
      if (ext = '.DXF') then

@@ -4,7 +4,7 @@ unit mainunit;
 interface
 uses
   //{$IFDEF SCRIPTING}
-  commandsu, scriptengine,
+  scriptengine,
   //{$ENDIF}
   {$IFNDEF UNIX} shellapi,  {$ENDIF}
   {$IFDEF DGL} dglOpenGL, {$ELSE} gl,  {$ENDIF}
@@ -12,7 +12,7 @@ uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,math,
   ExtCtrls, OpenGLContext, mesh, LCLintf, ComCtrls, Menus, graphtype,
   ClipBrd, shaderui, shaderu, prefs, userdir, LCLtype, Grids, Spin, matmath,
-  colorTable, Track, types,  define_types, meshify,  gl_2d, zstream, gl_core_matrix, Process;
+  colorTable, Track, types,  define_types, meshify,  gl_2d, zstream, gl_core_matrix, Process, meshify_simplify, meshify_simplify_quadric;
 
 type
   { TGLForm1 }
@@ -25,8 +25,9 @@ type
     AdditiveOverlayMenu: TMenuItem;
     GLBox: TOpenGLControl;
     CenterMeshMenu: TMenuItem;
+    SimplifyMeshMenu: TMenuItem;
     ScriptMenu: TMenuItem;
-    SimplifyTracks1: TMenuItem;
+    SimplifyTracksMenu: TMenuItem;
     TransparencySepMenu: TMenuItem;
     ReverseFacesMenu: TMenuItem;
     SwapYZMenu: TMenuItem;
@@ -207,8 +208,9 @@ type
     procedure ReverseFacesMenuClick(Sender: TObject);
     procedure SaveBitmap(FilenameIn: string);
     procedure SaveMenuClick(Sender: TObject);
-    procedure SaveMz3;
+    procedure SaveMz3(var mesh: TMesh; isSaveOverlays: boolean);
     procedure SaveTrack (var lTrack: TTrack);
+    procedure SaveMesh(var mesh: TMesh; isSaveOverlays: boolean);
     procedure SaveMeshMenuClick(Sender: TObject);
     procedure SaveTracksMenuClick(Sender: TObject);
     function ScreenShot: TBitmap;
@@ -218,7 +220,8 @@ type
     procedure ShaderDropChange(Sender: TObject);
     procedure ShowmessageError(s: string);
     procedure GLboxRequestUpdate(Sender: TObject);
-    procedure SimplifyTracks1Click(Sender: TObject);
+    procedure SimplifyMeshMenuClick(Sender: TObject);
+    procedure SimplifyTracksMenuClick(Sender: TObject);
     procedure StringGrid1EditingDone(Sender: TObject);
     procedure StringGrid1Enter(Sender: TObject);
     procedure SurfaceAppearanceChange(Sender: TObject);
@@ -340,7 +343,7 @@ begin
   OpenDialog.Filter := kVolFilter;
   OpenDialog.Title := 'Select volume to convert';
   if not OpenDialog.Execute then exit;
-  Nii2Mesh(OpenDialog.FileName, gPrefs.SaveAsFormat);
+  Nii2Mesh(OpenDialog.FileName);
 end;
 
 procedure TGLForm1.XRayLabelClick(Sender: TObject);
@@ -714,6 +717,7 @@ begin
   OverlayTimerStart;
 end;
 
+
 procedure TGLForm1.ShaderBoxResize(Sender: TObject);
 const
 kMinMemoSz= 32;
@@ -744,6 +748,7 @@ begin
   ShaderBoxResize(Sender);
   GLBoxRequestUpdate(Sender);
 end;
+
 
 procedure TGLForm1.GLboxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
 begin
@@ -858,6 +863,8 @@ begin
   UpdateTimer.Enabled := true;
 end;
 
+
+
 procedure TGLForm1.SaveTrack (var lTrack: TTrack);
 const
     kTrackFilter  = 'VTK|*.vtk|Camino|*.Bfloat';
@@ -885,7 +892,7 @@ begin
  //lTrack.SaveBfloat(SaveMeshDialog.Filename);
 end;
 
-procedure TGLForm1.SimplifyTracks1Click(Sender: TObject);
+procedure TGLForm1.SimplifyTracksMenuClick(Sender: TObject);
 var
   s: string;
   tol: single;
@@ -1163,8 +1170,6 @@ begin
   ZDimIsUpCombo.Width := PrefForm.Width -16;
   ZDimIsUpCombo.Style := csDropDownList;
   ZDimIsUpCombo.Parent:=PrefForm;
-
-
   //SaveAsObj     SaveAsFormat
   SaveAsCombo :=TComboBox.create(PrefForm);
   SaveAsCombo.Left := 8;
@@ -1173,6 +1178,7 @@ begin
   SaveAsCombo.Items.Add('OBJ Format: Export to other programs');
   SaveAsCombo.Items.Add('GII Format: Neuroimaging');
   SaveAsCombo.Items.Add('MZ3 Format: Fast and small');
+  SaveAsCombo.Items.Add('PLY Format: Export to other programs');
   SaveAsCombo.ItemIndex:= gPrefs.SaveAsFormat;
   SaveAsCombo.Style := csDropDownList;
   SaveAsCombo.Parent:=PrefForm;
@@ -1330,6 +1336,33 @@ begin
     gNode.nodePrefs.isNoLeftNodes:=true;
  if length(gNode.nodes) < 1 then exit;
  gNode.isRebuildList := true;
+ GLBoxRequestUpdate(Sender);
+end;
+
+procedure TGLForm1.SimplifyMeshMenuClick(Sender: TObject);
+
+var
+  nTri: integer;
+  msStart: Dword;
+  s: string;
+  r: single;
+begin
+ msStart := gettickcount();
+ nTri := length(gMesh.Faces);
+ s := '.2';
+ if not inputquery('Track simplify', 'Enter reduction factor (e.g. 0.5 will decimate half of all triangles)', s) then exit;
+ r := StrToFloatDef(s, 0.5);
+ if (r <= 0.0) or (r >= 1.0) then begin
+    showmessage('Error: reduction factor should be BETWEEN 0 and 1');
+    exit;
+ end;
+ (*if not TryStrToFloat(s, tol) then begin
+    showmessage('Unable convert value to a number');
+    exit;
+  end; *)
+ if not ReducePatch(gMesh.faces, gMesh.vertices, r) then exit;
+ caption := format('Faces %d -> %d (%.3f, %d ms)', [ nTri, length(gMesh.Faces), length(gMesh.Faces)/nTri , gettickcount() - msStart]) ;
+ gMesh.isRebuildList:=true;
  GLBoxRequestUpdate(Sender);
 end;
 
@@ -1578,8 +1611,8 @@ begin
   zoom := 1
  end else
      zoom := gPrefs.ScreenCaptureZoom;
-  if (gTrack.n_count > 0) and (not gTrack.isTubes) then begin  //tracks are drawn in pixels, so zoom appropriately!
-     trackLineWidth := gTrack.LineWidth;
+ trackLineWidth := gTrack.LineWidth;
+ if (gTrack.n_count > 0) and (not gTrack.isTubes) then begin  //tracks are drawn in pixels, so zoom appropriately!
      gTrack.LineWidth := 2 * gTrack.LineWidth * zoom;
      gTrack.isRebuildList:= true;
   end;
@@ -1802,7 +1835,7 @@ begin
      GLbox.Repaint;
   end;
   origin := GetOrigin(scale);
-  str :=  'Surf Ice '+' 20 April 2016 '
+  str :=  'Surf Ice '+' 5 May 2016 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
@@ -2222,24 +2255,79 @@ begin
   SaveBitmap(SaveBitmapDialog.Filename);
 end;
 
-procedure TGLForm1.SaveMz3;
+procedure TGLForm1.SaveMz3(var mesh: TMesh; isSaveOverlays: boolean);
 var
    i : integer;
    nam: string;
 begin
-  gMesh.SaveMz3(SaveMeshDialog.Filename);
+  Mesh.SaveMz3(SaveMeshDialog.Filename);
+  if not isSaveOverlays then exit;
   for i :=  1 to gMesh.OpenOverlays do begin
         nam := changefileext(SaveMeshDialog.Filename, '_'+inttostr(i)+extractfileext(SaveMeshDialog.Filename));
         gMesh.SaveOverlay(nam, i);
   end;
 end;
 
-procedure TGLForm1.SaveMeshMenuClick(Sender: TObject);
+procedure TGLForm1.SaveMesh(var mesh: TMesh; isSaveOverlays: boolean);
 const
-      kMeshFilter = 'OBJ (Widely supported)|*.obj|GIfTI (Neuroimaging)|*.gii|MZ3 (Small and fast)|*.mz3';
+      kMeshFilter = 'OBJ (Widely supported)|*.obj|GIfTI (Neuroimaging)|*.gii|MZ3 (Small and fast)|*.mz3|PLY (Widely supported)|*.ply';
 var
+   nam, ext, x: string;
+begin
+  if length(mesh.Faces) < 1 then begin
+     showmessage('Unable to save: no mesh is loaded (use File/Open).');
+     exit;
+  end;
+  SaveMeshDialog.Filter  := kMeshFilter;
+  SaveMeshDialog.FilterIndex := gPrefs.SaveAsFormat + 1;
+  if gPrefs.SaveAsFormat = 4 then
+     ext := '.ply'
+  else if gPrefs.SaveAsFormat = 0 then
+     ext := '.obj'
+  else if gPrefs.SaveAsFormat = 1 then
+    ext := '.gii'
+  else
+    ext := '.mz3';
+  SaveMeshDialog.DefaultExt := ext;
+  if (fileexists(gPrefs.PrevFilename[1])) or (not isSaveOverlays) then begin
 
-   nam, ext: string;
+     if isSaveOverlays then
+      nam := gPrefs.PrevFilename[1]
+    else
+      nam := SaveMeshDialog.Filename;
+    SaveMeshDialog.InitialDir:= ExtractFileDir(nam);
+
+    nam := ChangeFileExtX(nam, ext);
+    SaveMeshDialog.Filename := nam;
+  end else
+      SaveMeshDialog.Filename := '';
+  if not SaveMeshDialog.Execute then exit;
+  if length(SaveMeshDialog.Filename) < 1 then exit;
+  x := UpperCase(ExtractFileExt(SaveMeshDialog.Filename));
+  if (x <> '.MZ3') and (x <> '.PLY') and (x <> '.OBJ')  and (x <> '.GII') then begin
+     x := ext;
+     SaveMeshDialog.Filename := SaveMeshDialog.Filename + x;
+  end;
+  if (x = '.MZ3') then
+     SaveMz3(mesh, isSaveOverlays)
+  else if (x = '.GII') then
+     mesh.SaveGii(SaveMeshDialog.Filename)
+  else if (x = '.PLY') then
+     mesh.SavePly(SaveMeshDialog.Filename)
+  else
+      mesh.SaveObj(SaveMeshDialog.Filename);
+end;
+
+procedure TGLForm1.SaveMeshMenuClick(Sender: TObject);
+begin
+     SaveMesh(gMesh, true);
+end;
+
+(*procedure TGLForm1.SaveMeshMenuClick(Sender: TObject);
+const
+      kMeshFilter = 'OBJ (Widely supported)|*.obj|GIfTI (Neuroimaging)|*.gii|MZ3 (Small and fast)|*.mz3|PLY (Widely supported)|*.ply';
+var
+   nam, ext, x: string;
 begin
   if length(gMesh.Faces) < 1 then begin
      showmessage('Unable to save: no mesh is loaded (use File/Open).');
@@ -2247,7 +2335,9 @@ begin
   end;
   SaveMeshDialog.Filter  := kMeshFilter;
   SaveMeshDialog.FilterIndex := gPrefs.SaveAsFormat + 1;
-  if gPrefs.SaveAsFormat = 0 then
+  if gPrefs.SaveAsFormat = 4 then
+     ext := '.ply'
+  else if gPrefs.SaveAsFormat = 0 then
      ext := '.obj'
   else if gPrefs.SaveAsFormat = 1 then
     ext := '.gii'
@@ -2261,13 +2351,21 @@ begin
   end else
       SaveMeshDialog.Filename := '';
   if not SaveMeshDialog.Execute then exit;
-  if SaveMeshDialog.FilterIndex = 3 then
+  if length(SaveMeshDialog.Filename) < 1 then exit;
+  x := UpperCase(ExtractFileExt(SaveMeshDialog.Filename));
+  if (x <> '.MZ3') and (x <> '.PLY') and (x <> '.OBJ')  and (x <> '.GII') then begin
+     x := ext;
+     SaveMeshDialog.Filename := SaveMeshDialog.Filename + x;
+  end;
+  if (x = '.MZ3') then
      SaveMz3
-  else if SaveMeshDialog.FilterIndex = 2 then
+  else if (x = '.GII') then
      gMesh.SaveGii(SaveMeshDialog.Filename)
+  else if (x = '.PLY') then
+     gMesh.SavePly(SaveMeshDialog.Filename)
   else
       gMesh.SaveObj(SaveMeshDialog.Filename);
-end;
+end;  *)
 
 procedure TGLForm1.UniformChange(Sender: TObject);
 begin
@@ -2378,6 +2476,8 @@ begin
   gMesh.isBusy := false;
   isBusy := false;
   {$IFDEF Darwin}
+  SimplifyMeshMenu.ShortCut :=  ShortCut(Word('W'), [ssMeta]);
+  SwapYZMenu.ShortCut :=  ShortCut(Word('X'), [ssMeta]);
   ScriptMenu.ShortCut :=  ShortCut(Word('Z'), [ssMeta]);
   OpenMenu.ShortCut :=  ShortCut(Word('O'), [ssMeta]);
   SaveMenu.ShortCut :=  ShortCut(Word('S'), [ssMeta]);

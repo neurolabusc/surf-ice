@@ -4,7 +4,7 @@ unit matmath;
 interface
 
 uses
-  Classes, SysUtils, define_types;
+  Classes, SysUtils, define_types, math;
 
  function pt4f(x,y,z,w: single): TPoint4f; //create float vector
  function ptf(x,y,z: single): TPoint3f; //create float vector
@@ -23,6 +23,7 @@ uses
  procedure minMax(var v, mn, mx: TPoint3f); overload;
  procedure minMax(var v: TPoint3i; var mn, mx: integer); overload;
  function vectorLength(pt1, pt2: TPoint3F): single;
+ function vectorSame(pt1, pt2: TPoint3f): boolean;
  function matrixMult(a, b: TMat33): TMat33;
  function matrixSet(a,b,c, d,e,f, g,h,i: single): TMat33;
  function matrixInvert(a: TMat33): TMat33;
@@ -474,6 +475,15 @@ end; // vectorAdd()
 function vectorLength(pt1, pt2: TPoint3F): single;
 begin
   result := sqrt (sqr(pt1.X - pt2.X)  + sqr(pt1.Y - pt2.Y)  + sqr(pt1.Z - pt2.Z)  );
+end; // vectorLength()
+
+function vectorSame(pt1, pt2: TPoint3F): boolean;
+//returns true if pt1 = pt2
+// faster than  "vectorLength(pt1, pt2) <> 0"
+begin
+  result := false;
+  if SameValue(pt1.X, pt2.X) and SameValue(pt1.Y, pt2.Y) and SameValue(pt1.Z, pt2.Z) then
+     result := true;
 end; // vectorLength()
 
 procedure vectorNegate(var v: TPoint3f);  inline;

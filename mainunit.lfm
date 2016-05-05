@@ -1,5 +1,5 @@
 object GLForm1: TGLForm1
-  Left = 919
+  Left = 715
   Height = 865
   Top = 23
   Width = 1060
@@ -161,6 +161,21 @@ object GLForm1: TGLForm1
         Align = alBottom
         Lines.Strings = (
           'Memo1'
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
           ''
           ''
           ''
@@ -1232,9 +1247,9 @@ object GLForm1: TGLForm1
         Caption = 'Save tracks'
         OnClick = SaveTracksMenuClick
       end
-      object SimplifyTracks1: TMenuItem
+      object SimplifyTracksMenu: TMenuItem
         Caption = 'Simplify tracks'
-        OnClick = SimplifyTracks1Click
+        OnClick = SimplifyTracksMenuClick
       end
     end
     object NodeMenu: TMenuItem
@@ -1393,6 +1408,7 @@ object GLForm1: TGLForm1
       end
       object SwapYZMenu: TMenuItem
         Caption = 'Rotate mesh'
+        ShortCut = 16472
         OnClick = SwapYZMenuClick
       end
       object CenterMeshMenu: TMenuItem
@@ -1417,6 +1433,11 @@ object GLForm1: TGLForm1
         Caption = 'Scripting'
         ShortCut = 16474
         OnClick = ScriptMenuClick
+      end
+      object SimplifyMeshMenu: TMenuItem
+        Caption = 'Simplify mesh'
+        ShortCut = 16471
+        OnClick = SimplifyMeshMenuClick
       end
     end
     object HelpMenu: TMenuItem

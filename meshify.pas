@@ -5,10 +5,11 @@ unit meshify;
 interface
 
 uses
+  meshify_simplify,
   LCLintf, Classes, SysUtils, mesh, nifti_loader, meshify_marchingcubes, dialogs,
-  define_types, matmath, meshify_simplify, Forms, StdCtrls, Controls, Spin;
+  define_types, matmath,  Forms, StdCtrls, Controls, Spin;
 
-function Nii2Mesh(const FileName: string; SaveAsFormat: integer): boolean;
+function Nii2Mesh(const FileName: string): boolean;
 
 implementation
 
@@ -19,7 +20,11 @@ var
     PrefForm: TForm;
     OkBtn: TButton;
     NoteLabel, ThreshLabel, DecimateLabel: TLabel;
-    ThreshEdit: TFloatSpinEdit;
+    {$IFDEF USEFLOATSPIN}
+    ThreshEdit: TFloatSpinEdit; //Cocoa TFloatSpinEdit is a bit wonky
+    {$ELSE}
+    ThreshEdit: TEdit;
+    {$ENDIF}
     DecimateEdit: TSpinEdit;
     SmoothCombo: TComboBox;
 begin
@@ -40,17 +45,28 @@ begin
     ThreshLabel.Left := 8;
     ThreshLabel.Top := 42;
     ThreshLabel.Parent:=PrefForm;
+    Thresh := min + ((max - min) * 0.5);
+    if (min < 1) and (max > 3) then
+       Thresh := 2
+    else if (min < -3) and (max > 0) then
+       Thresh := -2;
+    {$IFDEF USEFLOATSPIN}
     ThreshEdit:=TFloatSpinEdit.create(PrefForm);
+    ThreshEdit.MaxValue := max;
+    ThreshEdit.MinValue := min;
+    ThreshEdit.Value:= Thresh;
+    ThreshEdit.DecimalPlaces:= 3;
+    {$ELSE}
+    ThreshEdit:=TEdit.create(PrefForm);
+    ThreshEdit.Caption := FloatToStr(Thresh);
+    {$ENDIF}
     ThreshEdit.Top := 42;
     ThreshEdit.Width := 92;
     ThreshEdit.Left := PrefForm.Width - ThreshEdit.Width - 8;
-    ThreshEdit.MaxValue := max;
-    ThreshEdit.MinValue := min;
-    ThreshEdit.Value:= min + ((max-min)*0.5);
     ThreshEdit.Parent:=PrefForm;
     //Decimate
     DecimateLabel:=TLabel.create(PrefForm);
-    DecimateLabel.Caption:='Decimation (100=large files, 20=degraded/slow) ';
+    DecimateLabel.Caption:='Decimation (100=large files, 10=degraded/small) ';
     DecimateLabel.Left := 8;
     DecimateLabel.Top := 72;
     DecimateLabel.Parent:=PrefForm;
@@ -59,8 +75,8 @@ begin
     DecimateEdit.Width := 92;
     DecimateEdit.Left := PrefForm.Width - DecimateEdit.Width - 8;
     DecimateEdit.MaxValue := 100;
-    DecimateEdit.MinValue := 20;
-    DecimateEdit.Value:= 50;
+    DecimateEdit.MinValue := 1;
+    DecimateEdit.Value:= 25;
     DecimateEdit.Parent:=PrefForm;
     //Smooth
     SmoothCombo:=TComboBox.create(PrefForm);
@@ -82,19 +98,20 @@ begin
     OkBtn.Parent:=PrefForm;
     OkBtn.ModalResult:= mrOK;
     PrefForm.ShowModal;
+    {$IFDEF USEFLOATSPIN}
     Thresh := ThreshEdit.value;
+    {$ELSE}
+    Thresh := StrToFloatDef(ThreshEdit.Caption, Thresh);
+    {$ENDIF}
     Decim := DecimateEdit.value/100.0;
     SmoothStyle := SmoothCombo.ItemIndex;
     result :=  PrefForm.ModalResult = mrOK;
     FreeAndNil(PrefForm);
-    if (Decim < 0.2) then begin
-       Showmessage('Maximum decimation amount is 20');
-       Decim := 0.2;
-    end;
-
+    if (Decim <= 0.0) then
+       Decim := 0.01;
   end;
 
-function Nii2Mesh(const FileName: string; SaveAsFormat: integer): boolean;
+function Nii2Mesh(const FileName: string): boolean;
 //Load NIfTI image as overlay
 var
   //t: Dword;
@@ -104,6 +121,7 @@ var
   lSmoothStyle: integer;
   IsoSurfaceEx: TIsoSurfaceExtractor;
   v1,vx: TPoint3f;
+  lPath,lName,lExt: string;
   i: integer;
 begin
   result := false;
@@ -119,8 +137,15 @@ begin
      nii.SmoothMaskZero
   else if lSmoothStyle = kNiftiSmooth then
      nii.Smooth;
+  FilenameParts (FileName, lPath,lName,lExt);
+  lExt := FloatToStrF(abs(lThresh),ffGeneral,6,0);
+  lExt  := StringReplace(lExt, '.', 'p', [rfReplaceAll, rfIgnoreCase]);
+  lExt  := StringReplace(lExt, ',', 'p', [rfReplaceAll, rfIgnoreCase]);
+  if (lThresh < 0) then
+     lExt := 'NEG_' + lExt;
+  GLForm1.SaveMeshDialog.Filename := lPath+lName+'_'+lExt+'.mz3';
   if (lThresh < 0) then begin //invert intensity
-     for i := 0 to (length(nii.img) - 1)  do
+     for i := 0 to high(nii.img)  do
          nii.img[i] := -nii.img[i];
      lThresh := -lThresh;
      s := nii.maxInten;
@@ -135,7 +160,6 @@ begin
    IsoSurfaceEx := TIsoSurfaceExtractor.Create(nii.hdr.dim[1], nii.hdr.dim[2],nii.hdr.dim[3], nii.img);
    lMesh := TMesh.Create;
   //IsoSurfaceEx.MarchingTetrahedra(Threshold,lMesh.vertices, lMesh.faces);
-  //t := GetTickCount();
   IsoSurfaceEx.MarchingCubes(lThresh,lMesh.vertices, lMesh.faces);
   //showmessage( Format('converted= %d   f= %d', [length(lMesh.vertices), length(lMesh.faces)]));
   UnifyVertices (lMesh.faces, lMesh.vertices);
@@ -151,17 +175,12 @@ begin
       lMesh.vertices[i].Y := vx.X*nii.mat[2,1] + vx.Y*nii.mat[2,2] + vx.Z*nii.mat[2,3] + nii.mat[2,4];
       lMesh.vertices[i].Z := vx.X*nii.mat[3,1] + vx.Y*nii.mat[3,2] + vx.Z*nii.mat[3,3] + nii.mat[3,4];
   end;
-  if SaveAsFormat = kSaveAsGii then
-     lMesh.SaveGii(FileName)
-  else if SaveAsFormat = kSaveAsMz3 then
-     lMesh.SaveMz3(FileName)
-  else
-      lMesh.SaveObj(FileName);
   IsoSurfaceEx.Free();
-  lMesh.Free();
   nii.free;
+
+  GLForm1.SaveMesh(lMesh, false);
+  lMesh.Free();
   result := true;
-  //showmessage('ms '+ inttostr(gettickcount()- t) );
 end; // nii2mesh()
 
 end.

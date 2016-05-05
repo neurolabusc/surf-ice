@@ -51,10 +51,12 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="7">
+    <Units Count="8">
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="34" Y="12"/>
         <UsageCount Value="210"/>
       </Unit0>
       <Unit1>
@@ -64,8 +66,8 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <EditorIndex Value="2"/>
-        <TopLine Value="1772"/>
-        <CursorPos X="20" Y="1774"/>
+        <TopLine Value="2279"/>
+        <CursorPos X="66" Y="2292"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -74,8 +76,8 @@
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="417"/>
-        <CursorPos X="36" Y="441"/>
+        <TopLine Value="419"/>
+        <CursorPos X="33" Y="423"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit2>
@@ -98,8 +100,8 @@
       <Unit5>
         <Filename Value="track.pas"/>
         <IsPartOfProject Value="True"/>
-        <TopLine Value="63"/>
-        <CursorPos X="28" Y="79"/>
+        <TopLine Value="7"/>
+        <CursorPos Y="26"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit5>
@@ -109,13 +111,19 @@
         <ComponentName Value="ScriptForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="3"/>
-        <TopLine Value="376"/>
-        <CursorPos X="22" Y="385"/>
-        <UsageCount Value="107"/>
-        <Loaded Value="True"/>
-        <LoadedDesigner Value="True"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="380"/>
+        <CursorPos X="37" Y="381"/>
+        <UsageCount Value="154"/>
       </Unit6>
+      <Unit7>
+        <Filename Value="meshify_simplify2.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="217"/>
+        <CursorPos X="36" Y="223"/>
+        <UsageCount Value="66"/>
+      </Unit7>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -130,6 +138,9 @@
     </SearchPaths>
     <CodeGeneration>
       <SmartLinkUnit Value="True"/>
+      <Optimizations>
+        <OptimizationLevel Value="3"/>
+      </Optimizations>
     </CodeGeneration>
     <Linking>
       <Debugging>

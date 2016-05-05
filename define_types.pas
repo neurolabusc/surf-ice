@@ -61,10 +61,20 @@ function specialsingle (var s:single): boolean; //isFinite
 function asRGBA(clr: TColor): TRGBA;
 function ExtractFileExtGzUpper(FileName: string): string;
 function FSize (lFName: String): longint;
+function ChangeFileExtX( lFilename: string; lExt: string): string;
 
 implementation
 
 uses sysutils, dialogs;
+
+function ChangeFileExtX( lFilename: string; lExt: string): string;
+//sees .nii.gz as single extension
+var
+   lPath,lName,lOrigExt: string;
+begin
+     FilenameParts (lFilename, lPath,lName,lOrigExt);
+     result := lPath+lName+lExt;
+end;
 
 function FSize (lFName: String): longint;
 var F : File Of byte;

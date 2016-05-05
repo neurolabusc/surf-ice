@@ -94,7 +94,6 @@ begin
   if not decoder.SetDecoderProperties(propArray) then begin
      showmessage('decode error');
      exit;
-
   end;
   decoder.OnProgress:= nil;
   if not decoder.Code(inStream, outStream, count) then exit;
@@ -281,7 +280,6 @@ begin
   //CTM Header
   F.Read(hdr, sizeof(hdr));
   if hdr.magic <> kFileMagic then goto 666; //signature does not match
-
   if (hdr.compressionMethod <> kRAW) and (hdr.compressionMethod <> kMG1) and (hdr.compressionMethod <> kMG2) then goto 666; //signature does not match
   if hdr.commentBytes > 0 then begin
      setlength(Bytes, hdr.commentBytes);
@@ -356,13 +354,11 @@ begin
   if (hdr.compressionMethod = kMG2)  then begin
     //read MG2H
     F.Read(hdrMG2, sizeof(hdrMG2));
-
     if (hdrMG2.magic <> kMG2Magic)then goto 666;
     //read VERT
     F.Read(id, sizeof(int32));
     F.Read(sz, sizeof(int32));
     if (id <> kVertMagic) or (sz < 8) then goto 666;
-
     outSize := hdr.vertexCount * 3 * sizeof(int32);
     outStream.Clear;
     sz := LZMAdecompress(F,outStream,outSize);
@@ -375,7 +371,6 @@ begin
     F.Read(id, sizeof(int32));
     F.Read(sz, sizeof(int32));
     if (id <> kGidxMagic) or (sz < 8) then goto 666;
-
     outSize := hdr.vertexCount  * sizeof(int32); //one element per vertex
     sz := LZMAdecompress(F,outStream,outSize);
     if sz <> outSize then goto 666;
@@ -392,7 +387,6 @@ begin
     if sz <> outSize then goto 666;
     restoreIndices(outStream, Faces, hdr.triangleCount);
   end; //MG2
-
   //read color for MG1 and MG2
   if hdr.attrMapCount < 1 then goto 123; //all done - no vertex color map
   attr := 0;
@@ -454,7 +448,7 @@ begin
      setlength(Faces,0);
      setlength(Verts,0);
   end;
-end;
+end; // readCTM()
 
 end.
 

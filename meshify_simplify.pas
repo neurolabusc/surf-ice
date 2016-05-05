@@ -1,7 +1,8 @@
 unit meshify_simplify;
 
+{$Include opts.inc} //compile for either dglOpenGL or glext
 {$mode objfpc}{$H+}
-//ported from Stan Melax's  progmesh.cpp
+// OLD_SIMPLIFY ported from Stan Melax's progmesh.cpp
 // https://github.com/melax/sandbox/blob/master/bunnylod/progmesh.cpp
 // http://dev.gameres.com/program/visual/3d/PolygonReduction.pdf
 //Roughly equivalent to Matlab's "reducepatch(F, V, R)"
@@ -16,6 +17,10 @@ procedure UnifyVertices(var faces: TFaces;  var vertices: TVertices); //merge id
 procedure ClusterVertex( var faces: TFaces; var vertices: TVertices; Radius: single); //merge nearby vertices
 
 implementation
+
+{$IFNDEF OLD_SIMPLIFY}
+uses  meshify_simplify_quadric;
+{$ENDIF}
 
 (*procedure SmoothVertices (var lMesh: TMesh);
 //adjust each vertex to have the average position of all connected vertices
@@ -276,7 +281,7 @@ begin
      ClusterVertex(faces, vertices, 0);
 end;
 
-
+{$IFDEF OLD_SIMPLIFY}
 type
   TPMTriangle = record
      VertexID: array [0..2] of integer;
@@ -829,6 +834,55 @@ begin
   setlength(gVertices,0);
   setlength(gTriangles, 0);
 end;
+{$ELSE}
+
+function ReducePatch( var faces: TFaces; var vertices: TVertices; R: single): boolean;
+var
+  msh: TSimplify;
+  i, facesTarget: integer;
+begin
+     result := false;
+ if (length(faces) < 1) or (length(vertices) < 3) then begin
+    Showmessage('You need to load a mesh (File/Open) before you can simplify a mesh');
+    exit;
+ end;
+ facesTarget := round(length(faces) * R);
+ if (facesTarget < 4) then begin
+    Showmessage('Error: no mesh will survive such an extreme reduction.');
+    exit;
+ end;
+ msh := TSimplify.Create;
+ setlength(msh.vertices, length(vertices));
+ for i := 0 to (length(vertices)-1) do begin
+        msh.vertices[i].p.X := vertices[i].X;
+        msh.vertices[i].p.Y := vertices[i].Y;
+        msh.vertices[i].p.Z := vertices[i].Z;
+ end;
+ setlength(msh.triangles, length(faces));
+
+ for i := 0 to (length(faces)-1) do begin
+        msh.triangles[i].v[0] := faces[i].X;
+        msh.triangles[i].v[1] := faces[i].Y;
+        msh.triangles[i].v[2] := faces[i].Z;
+ end;
+ msh.simplify_mesh(facesTarget, 7);
+ setlength(vertices, length(msh.vertices));
+ for i := 0 to (length(msh.vertices)-1) do begin
+     vertices[i].X := msh.vertices[i].p.X;
+     vertices[i].Y := msh.vertices[i].p.Y;
+     vertices[i].Z := msh.vertices[i].p.Z;
+ end;
+ setlength(Faces, length(msh.triangles));
+ for i := 0 to (length(msh.triangles)-1) do begin
+        faces[i].X := msh.triangles[i].v[0];
+        faces[i].Y := msh.triangles[i].v[1];
+        faces[i].Z := msh.triangles[i].v[2];
+ end;
+ msh.Free;
+ result := true;
+end;
+
+{$ENDIF}
 
 end.
 
