@@ -5,9 +5,9 @@ unit meshify;
 interface
 
 uses
-  meshify_simplify,
-  LCLintf, Classes, SysUtils, mesh, nifti_loader, meshify_marchingcubes, dialogs,
-  define_types, matmath,  Forms, StdCtrls, Controls, Spin;
+  {$IFDEF Windows}uscaledpi, {$ENDIF}
+  meshify_simplify, LCLintf, Classes, SysUtils, mesh, nifti_loader, meshify_marchingcubes, dialogs,
+  define_types, matmath, Forms, StdCtrls, Controls, Spin;
 
 function Nii2Mesh(const FileName: string): boolean;
 
@@ -97,6 +97,7 @@ begin
     OkBtn.Left := PrefForm.Width - OkBtn.Width - 8;
     OkBtn.Parent:=PrefForm;
     OkBtn.ModalResult:= mrOK;
+    {$IFDEF Windows} ScaleDPI(PrefForm, 96);{$ENDIF}
     PrefForm.ShowModal;
     {$IFDEF USEFLOATSPIN}
     Thresh := ThreshEdit.value;

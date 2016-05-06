@@ -6,7 +6,7 @@ uses
   //{$IFDEF SCRIPTING}
   scriptengine,
   //{$ENDIF}
-  {$IFNDEF UNIX} shellapi,  {$ENDIF}
+  {$IFNDEF UNIX} shellapi, uscaledpi, {$ENDIF}
   {$IFDEF DGL} dglOpenGL, {$ELSE} gl,  {$ENDIF}
   {$IFDEF COREGL} gl_core_3d, {$ELSE}     gl_legacy_3d, {$ENDIF}
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,math,
@@ -150,8 +150,9 @@ type
     SaveMenu: TMenuItem;
     ObjectColorMenu: TMenuItem;
     OpenMenu: TMenuItem;
-    procedure CenterMeshMenuClick(Sender: TObject);
+
     procedure Quit2TextEditor;
+    procedure CenterMeshMenuClick(Sender: TObject);
     procedure AdditiveOverlayMenuClick(Sender: TObject);
     procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
     procedure GLBoxClick(Sender: TObject);
@@ -868,6 +869,8 @@ end;
 procedure TGLForm1.SaveTrack (var lTrack: TTrack);
 const
     kTrackFilter  = 'VTK|*.vtk|Camino|*.Bfloat';
+var
+  nam: string;
 begin
   if (lTrack.n_count < 1) then begin
    showmessage('Unable to save tracks: no tracks open (use Tracks/AddTracks)');
@@ -875,21 +878,24 @@ begin
  end;
  SaveMeshDialog.Filter := kTrackFilter;
  SaveMeshDialog.Title := 'Save track file';
+ nam := gPrefs.PrevTrackname;
+ SaveMeshDialog.InitialDir:= ExtractFileDir(nam);
+ nam := extractfilename (nam);
  if gPrefs.SaveAsFormatTrack = kSaveAsTrackBfloat then begin
    SaveMeshDialog.DefaultExt:= '.BFloat';
-   SaveMeshDialog.FileName := changeFileExt(gPrefs.PrevTrackname, '.BFloat');
+   SaveMeshDialog.FileName := changeFileExt(nam, '.BFloat');
    SaveMeshDialog.FilterIndex := 2;
  end else begin
      SaveMeshDialog.DefaultExt:= '.vtk';
-     SaveMeshDialog.FileName := changeFileExt(gPrefs.PrevTrackname, '.vtk');
+     SaveMeshDialog.FileName := changeFileExt(nam, '.vtk');
      SaveMeshDialog.FilterIndex := 1;
  end;
  if not SaveMeshDialog.Execute then exit;
- if SaveMeshDialog.FilterIndex = 2 then
+ nam := UpperCase(ExtractFileExt(SaveMeshDialog.Filename));
+ if (SaveMeshDialog.FilterIndex = 2) or (nam = '.BFLOAT') then
     lTrack.SaveBfloat(SaveMeshDialog.Filename)
  else
      lTrack.SaveVtk(SaveMeshDialog.Filename);
- //lTrack.SaveBfloat(SaveMeshDialog.Filename);
 end;
 
 procedure TGLForm1.SimplifyTracksMenuClick(Sender: TObject);
@@ -913,25 +919,16 @@ begin
      OpenDialog.InitialDir := ExtractFileDir(gPrefs.PrevTrackname);
   if not OpenDialog.Execute then exit;
   lTrack := TTrack.Create;
-
-
   if lTrack.LoadFromFile(OpenDialog.FileName) then begin
-
      gPrefs.PrevTrackname := OpenDialog.FileName;
      if lTrack.SimplifyMM(Tol) then begin
       //lTrack.CenterX;
       SaveTrack(lTrack);
      end;
-     //lTrack.CenterX;
-     //nam := changeFileExt(OpenDialog.FileName, 'd.vtk');
-     //lTrack.SaveVtk(nam);
-     //lTrack.SaveBfloat(nam);
   end;
   lTrack.Close;
   lTrack.Free;
 end;
-
-
 
 procedure TGLForm1.SaveTracksMenuClick(Sender: TObject);
 begin
@@ -979,7 +976,7 @@ end;
 
 procedure TGLForm1.StringGrid1Exit(Sender: TObject);
 begin
-      //ReadCell(gPrevCol,gPrevRow, true);
+     //ReadCell(gPrevCol,gPrevRow, true);
 end;
 
 function IsDigit (letter : char) : boolean;
@@ -1023,12 +1020,10 @@ begin
 
      //StringGrid1.Cells[kMin,lIndex] := FloatToStrF(gMesh.Overlay[lIndex].WindowScaledMin, ffGeneral, 8, 4);
     //StringGrid1.Cells[kMax,lIndex] := FloatToStrF(gMesh.Overlay[lIndex].WindowScaledMax, ffGeneral, 8, 4);
-  end;
+ end;
  UpdateImageIntensity;
-  OverlayTimerStart;
+ OverlayTimerStart;
 end;
-
-
 
 procedure TGLForm1.StringGrid1KeyPress(Sender: TObject; var Key: char);
 begin
@@ -1115,7 +1110,6 @@ var
   BitmapAlphaCheck, SmoothVoxelwiseDataCheck, TracksAreTubesCheck: TCheckBox; //MultiPassRenderingCheck
   //ShaderForBackgroundOnlyCombo,
     ZDimIsUpCombo, QualityCombo, SaveAsCombo: TComboBox;
-
   QualityLabel: TLabel;
 begin
   PrefForm:=TForm.Create(nil);
@@ -1230,6 +1224,7 @@ begin
   OkBtn.Top := 228;
   OkBtn.Parent:=PrefForm;
   OkBtn.ModalResult:= mrOK;
+  {$IFDEF Windows} ScaleDPI(PrefForm, 96);  {$ENDIF}
   PrefForm.ShowModal;
   if PrefForm.ModalResult <> mrOK then exit; //if user closes window with out pressing "OK"
   gPrefs.ScreenCaptureTransparentBackground :=  BitmapAlphaCheck.Checked;
@@ -1619,6 +1614,7 @@ begin
   Result:=TBitmap.Create;
   Result.Width:=w;
   Result.Height:=h;
+
   if gPrefs.ScreenCaptureTransparentBackground then
     Result.PixelFormat := pf32bit
   else
@@ -1801,13 +1797,6 @@ begin
   AProcess.Free;
   GLForm1.close;
 end;
-
-procedure TGLForm1.CenterMeshMenuClick(Sender: TObject);
-begin
- gMesh.CenterOrigin;
- GLBoxRequestUpdate(Sender);
-end;
-
 {$ELSE} //ShellExecute(Handle,'open', 'c:\windows\notepad.exe','c:\SomeText.txt', nil, SW_SHOWNORMAL) ;
 begin
   gPrefs.SkipPrefWriting := true;
@@ -1818,6 +1807,12 @@ begin
   GLForm1.close;
 end;
 {$ENDIF}
+
+procedure TGLForm1.CenterMeshMenuClick(Sender: TObject);
+begin
+ gMesh.CenterOrigin;
+ GLBoxRequestUpdate(Sender);
+end;
 
 procedure TGLForm1.AboutMenuClick(Sender: TObject);
 const
@@ -2230,14 +2225,12 @@ procedure TGLForm1.SaveBitmap(FilenameIn: string);
     png: TPortableNetworkGraphic;
     p,n,x,filename: string;
  begin
-
   FilenameParts (FilenameIn,p,n,x);
   if (p ='') or (not directoryexists(p)) then
      p := DesktopFolder;
   if (n = '') then n := 'SurfIce';
   if (x = '') then x := '.png';
   Filename := p+n+x;
-  //showmessage(Filename); exit;
   bmp := ScreenShot;
    png := TPortableNetworkGraphic.Create;
    try
@@ -2296,8 +2289,7 @@ begin
     else
       nam := SaveMeshDialog.Filename;
     SaveMeshDialog.InitialDir:= ExtractFileDir(nam);
-
-    nam := ChangeFileExtX(nam, ext);
+    nam := ChangeFileExtX(extractfilename (nam), ext);
     SaveMeshDialog.Filename := nam;
   end else
       SaveMeshDialog.Filename := '';
@@ -2383,6 +2375,7 @@ end;
 
 //{$DEFINE RELOADTRACK}
 
+
 procedure TGLForm1.FormCreate(Sender: TObject);
 var
   i: integer;
@@ -2422,7 +2415,7 @@ begin
   OverlayBoxCreate;//after we read defaults
   {$IFDEF Darwin} Application.OnDropFiles:= AppDropFiles; {$ENDIF}
   {$IFDEF Windows}
-  StringGrid1.DefaultRowHeight := 28;
+          StringGrid1.DefaultRowHeight := ScaleY(28,96);
   {$ENDIF}
   {$IFDEF LCLCarbon}
   GLForm1.OnDropFiles:= nil; //avoid drop for form and application
@@ -2507,7 +2500,7 @@ begin
   //AddOverlayMenuClick(sender);
   //AddTracksMenuClick(sender);
   //VolumeToMeshMenuClick(sender);
-
+  //caption := format('%dx%d %dx%d %d', [screen.Height, screen.width, GLForm1.Height, GLForm1.width, Screen.PixelsPerInch]);
 end;
 
 procedure TGLForm1.FormDropFiles(Sender: TObject;

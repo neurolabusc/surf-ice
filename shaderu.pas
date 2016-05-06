@@ -6,7 +6,7 @@ interface
 uses
   {$IFDEF DGL} dglOpenGL, {$ELSE} gl, glext,  {$ENDIF}
   {$IFDEF COREGL} gl_core_3d, {$ELSE} gl_legacy_3d, {$ENDIF}
-  sysutils,dialogs, define_types, matmath, userdir;
+  sysutils,dialogs, define_types,  userdir; //matmath
 const
 {$IFDEF DGL}
    kGL_FALSE = FALSE;
@@ -340,8 +340,12 @@ begin
   {$ELSE}
   glGetProgramInfoLog(glObjectID, maxLength, @maxLength, @s[1]);
   {$ENDIF}
+  if maxLength < 1 then begin
+     GLForm1.ShowmessageError('Program compile error (unspecified)');
+     exit
+  end;
   s:=trim(s);
-  if length(s) < 2 then exit;
+  if (length(s) < 2) then exit;
   GLForm1.ShowmessageError('Program compile error '+s);
 end;
 

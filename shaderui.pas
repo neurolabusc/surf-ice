@@ -86,7 +86,8 @@ function ShaderPanelHeight: integer;
 begin
 {$IFDEF FPC}
  {$IFDEF WINDOWS}
-   result := 3 + GLForm1.LightElevTrack.top+round((GLForm1.LightElevTrack.height+1)* (gShader.nUniform+1.5));
+   result := 1 + GLForm1.LightElevTrack.top+round((GLForm1.LightElevTrack.height+1)* (gShader.nUniform+2));
+   //result := controlTop(gShader.nUniform+1);
  {$ELSE}
    {$IFDEF LCLCocoa}
       result := controlTop(gShader.nUniform+1);
