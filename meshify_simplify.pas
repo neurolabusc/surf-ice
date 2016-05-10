@@ -838,6 +838,17 @@ end;
 
 function ReducePatch( var faces: TFaces; var vertices: TVertices; R: single): boolean;
 var
+  facesTarget : integer;
+begin
+  result := false;
+  facesTarget := round(length(faces) * R);
+  if (facesTarget < 4) then begin
+     Showmessage('Error: no mesh will survive such an extreme reduction.');
+     exit;
+  end;
+  simplify_mesh(faces, vertices, facesTarget, 7);
+  result := true;
+(*var
   msh: TSimplify;
   i, facesTarget: integer;
 begin
@@ -879,7 +890,7 @@ begin
         faces[i].Z := msh.triangles[i].v[2];
  end;
  msh.Free;
- result := true;
+ result := true;*)
 end;
 
 {$ENDIF}

@@ -51,7 +51,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="8">
+    <Units Count="7">
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -66,8 +66,9 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <EditorIndex Value="2"/>
-        <TopLine Value="2280"/>
-        <CursorPos X="21" Y="2282"/>
+        <TopLine Value="2240"/>
+        <CursorPos X="48" Y="2252"/>
+        <ComponentState Value="1"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -114,16 +115,8 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="380"/>
         <CursorPos X="37" Y="381"/>
-        <UsageCount Value="154"/>
+        <UsageCount Value="166"/>
       </Unit6>
-      <Unit7>
-        <Filename Value="meshify_simplify2.pas"/>
-        <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="217"/>
-        <CursorPos X="36" Y="223"/>
-        <UsageCount Value="66"/>
-      </Unit7>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

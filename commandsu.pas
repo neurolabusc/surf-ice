@@ -436,20 +436,20 @@ end; *)
 
 procedure WAIT (MSEC: integer);
 var
-  lEND : DWord;
+  {$IFDEF FPC} lEND: QWord; {$ELSE}lEND : DWord;{$ENDIF}
  // var MemoryStatus: TMemoryStatus;
 begin
 //MemoryStatus.dwLength := SizeOf(MemoryStatus) ;
 //  GlobalMemoryStatus(MemoryStatus) ;
 //GLForm1.Caption := IntToStr(MemoryStatus.dwMemoryLoad) +' Available bytes in paging file';
   if MSEC < 0 then exit;
-  lEND := GetTickCount+DWord(MSEC);
+  {$IFDEF FPC} lEND := GetTickCount64+DWord(MSEC);{$ELSE}lEND := GetTickCount+DWord(MSEC);{$ENDIF}
   //FinishRender;//June 09
   if MSEC <= 0 then exit;
   repeat
     //Application.HandleMessage;
     Application.ProcessMessages;//HandleMessage
-  until (GetTickCount >= lEnd);
+  {$IFDEF FPC}until (GetTickCount64 >= lEnd); {$ELSE}until (GetTickCount >= lEnd);{$ENDIF}
 end;
 
 

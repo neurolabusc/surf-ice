@@ -71,6 +71,7 @@ type
     function LoadAc(const FileName: string): boolean;
     function LoadDae(const FileName: string): boolean; //only subset!
     function LoadGts(const FileName: string): boolean;
+    function LoadDfs(const FileName: string): boolean;
     function LoadDxf(const FileName: string): boolean;
     function LoadLwo(const FileName: string): boolean;
     function LoadMs3d(const FileName: string): boolean;
@@ -89,6 +90,7 @@ type
     procedure LoadPial(const FileName: string);
     procedure LoadPly(const FileName: string);
     procedure LoadStl(const FileName: string);
+    function LoadSrf(const FileName: string): boolean;
     procedure LoadVtk(const FileName: string);
     procedure LoadW(const FileName: string; lOverlayIndex: integer);
     procedure LoadNii(const FileName: string; lOverlayIndex: integer);
@@ -837,29 +839,6 @@ begin
      isBusy := false;
      isNode := false;
 end; // Create()
-
-(*function TMesh.LoadSrf(const FileName: string): boolean;
-//http://support.brainvoyager.com/automation-aamp-development/23-file-formats/375-users-guide-23-the-format-of-srf-files.html
-//Version 4.0 appears little endian, notes out of data as reserved is not 0 for sample images
-var
-   ver1s, originX, originY,originZ: single;
-   expectedSz, sz, res2i, num_v, num_f: longint;
-
-begin
-  AssignFile(f, FileName);
-  FileMode := fmOpenRead;
-  Reset(f,1);
-  sz := FileSize(f);
-  blockread(f, ver1s, 4); //version, e.g. 4.0
-  blockread(f, res2i, 4); //reserved
-  blockread(f, num_v, 4); //NrOfVertices
-  blockread(f, num_f, 4); //NrOfVertices
-  blockread(f, originX, 4); //MeshCenterX
-  blockread(f, originY, 4); //MeshCenterY
-  blockread(f, originZ, 4); //MeshCenterZ
-  expectedSz := (7 * 4 * num_v)
-  result := false;
-end;*)
 
 procedure TMesh.LoadPial(const FileName: string);
 //simple format used by Freesurfer  BIG-ENDIAN
@@ -3026,6 +3005,189 @@ begin
      UnifyVertices(faces, vertices);
 end; // LoadDxf()
 
+function TMesh.LoadSrf(const FileName: string): boolean;
+//ALWAYS little-endian, n.b. despite docs the 'reserve' may not be zero: NeuroElf refers to this as "ExtendedNeighbors"
+// http://support.brainvoyager.com/automation-aamp-development/23-file-formats/382-developer-guide-26-file-formats-overview.html
+// http://support.brainvoyager.com/automation-aamp-development/23-file-formats/375-users-guide-23-the-format-of-srf-files.html
+type
+  THdr = packed record
+     vers: single;
+     reserve, nVertices, nTriangles: int32;
+     meshCenterX, meshCenterY, meshCenterZ: single;
+  end;
+label
+   666;
+var
+   f: file;
+   hdr : THdr;
+   sz: int64;
+   i, j: integer;
+   nNeighbors,neighbor: int32;
+   floats: array of single;
+   ints: array of int32;
+   rgbaf: array [0..1] of TPoint4f;
+   rgbab: array [0..2] of  TRGBA;
+begin
+  result := false;
+  AssignFile(f, FileName);
+  FileMode := fmOpenRead;
+  Reset(f,1);
+  sz := FileSize(f);
+  if sz < 64 then goto 666;
+  blockread(f, hdr, SizeOf(hdr) );
+  {$IFNDEF ENDIAN_LITTLE} need to byte-swap SRF files {$ENDIF}
+  if (specialsingle(hdr.vers)) or (hdr.vers < 0) or (hdr.vers > 32) or (hdr.nTriangles < 1) or (hdr.nVertices < 3) then begin //exit without error - perhaps this is a FreeSurfer SRF
+     CloseFile(f);
+     exit;
+  end;
+  if (sizeof(hdr) + (int64(hdr.nVertices) * 3 * 4)+ (int64(hdr.nTriangles) * 3 * 4)) > sz then goto 666;
+  setlength(vertices, hdr.nVertices);
+  setlength(floats, hdr.nVertices);
+  blockread(f, floats[0],  int64(hdr.nVertices) * sizeof(single)); //coord X
+  for i := 0 to high(floats) do
+      vertices[i].Y := -(floats[i]-hdr.meshCenterX);
+  blockread(f, floats[0],  int64(hdr.nVertices) * sizeof(single)); //coord Y
+  for i := 0 to high(floats) do
+      vertices[i].Z := -(floats[i]-hdr.meshCenterY);
+  blockread(f, floats[0],  int64(hdr.nVertices) * sizeof(single)); //coord Z
+  for i := 0 to high(floats) do
+      vertices[i].X := -(floats[i]-hdr.meshCenterZ);
+  blockread(f, floats[0],  int64(hdr.nVertices) * sizeof(single)); //normal X
+  blockread(f, floats[0],  int64(hdr.nVertices) * sizeof(single)); //normal Y
+  blockread(f, floats[0],  int64(hdr.nVertices) * sizeof(single)); //normal Z
+  setlength(floats, 0);
+  blockread(f, rgbaf[0],  sizeof(TPoint4f));
+  blockread(f, rgbaf[1],  sizeof(TPoint4f));
+  for i := 0 to 1 do begin
+      rgbab[i].R := round(255 * rgbaf[i].X);
+      rgbab[i].G := round(255 * rgbaf[i].Y);
+      rgbab[i].B := round(255 * rgbaf[i].Z);
+      rgbab[i].A := round(255 * rgbaf[i].W);
+  end;
+  rgbab[2].R := 128;
+  rgbab[2].G := 128;
+  rgbab[2].B := 128;
+  rgbab[2].A := 0; //transparent
+  setlength(ints, hdr.nVertices);
+  blockread(f, ints[0],  int64(hdr.nVertices) * sizeof(int32)); //MeshColor, sequence of color indices, one for each vertex
+  setlength(vertexRGBA, hdr.nVertices);
+  for i := 0 to high(vertices) do begin //BrainSuite triangle winding opposite of convention
+      if ints[i] = 0 then
+         vertexRGBA[i] := rgbab[0]
+      else if ints[i] = 1 then
+           vertexRGBA[i] := rgbab[1]
+      else if ints[i] >= 1056964608 then begin
+           vertexRGBA[i].R := ints[i] and 255;
+           vertexRGBA[i].G := (ints[i] shr 8) and 255;
+           vertexRGBA[i].B := (ints[i] shr 16) and 255;
+           vertexRGBA[i].A := 255; //Assume opaque
+      end else
+          vertexRGBA[i] := rgbab[2];
+  end;
+  //yikes: we have to read the neighbor group: no alternative since no offset to faces and file ends with a variable length string!
+  for i := 1 to hdr.nVertices do begin
+      blockread(f, nNeighbors,  sizeof(int32));
+      if nNeighbors < 1 then goto 666;
+      for j := 1 to nNeighbors do
+          blockread(f, neighbor,  sizeof(int32));
+  end;
+  if (sz - filepos(f)) < (int64(hdr.nTriangles) * 3 * 4) then goto 666;
+  setlength(faces, hdr.nTriangles);
+  blockread(f, faces[0],  int64(hdr.nTriangles) * 3 * 4);
+  result := true;
+  666:
+  CloseFile(f);
+  if not result then
+       showmessage('Unable to decode BrainVoyager SRF file '+ FileName);
+end; //LoadSrf()
+
+function TMesh.LoadDfs(const FileName: string): boolean;
+// http://brainsuite.org/formats/dfs/
+// http://brainsuite.org/processing/additional-tools/
+// see also in_tess_dfs.m
+// Note: implementations disagree if magic is "DUFFSURF" or "DFS_BE v2.0\0 on big-endian machines, DFS_LEv1.0\0"
+//HEADER:
+// char magic[8];		// Magic number (DUFFSURF on little-endian machines or byte-swapped equivalent on other architectures)
+// char version[4];		// A number in the format 1.1.1.1
+// int32 hdrsize;		// Size of complete header (i.e., offset of first data element)
+// int32 mdoffset;		// Start of metadata.
+// int32 pdoffset;		// Start of patient data header.
+// int32 nTriangles;		// Number of triangles
+// int32 nVertices;		// Number of vertices
+// int32 nStrips;		// Number of triangle strips
+// int32 stripSize;		// size of strip data
+// int32 normals;		// 4	Int32	<normals>	Start of vertex normal data (0 if not in file)
+// int32 uvStart;		// Start of surface parameterization data (0 if not in file)
+// int32 vcoffset;		// vertex color:  per vertex color data in (r,g,b) format in 32-bit floating point ([0-1])
+// uint8 precision;		// Vertex Precision -- usually float32 or float64
+// uint8 pad[3];			// padding
+// float64 orientation[4][4]; //4x4 matrix, affine transformation to world coordinates*)
+type
+  THdr = packed record
+     magic: array [1 .. 8] of char; // Magic number (DFS_BE v2.0\0 on big-endian machines, DFS_LE v1.0\0  _OR_ DUFFSURF on little-endian machines or byte-swapped equivalent on other architectures)
+     version: array [1 .. 4] of char; // A number in the format 1.1.1.1
+     hdrsize, mdoffset,pdoffset, nTriangles, nVertices, nStrips, stripSize, normals, uvStart, vcoffset : int32; // -1 = no bone
+     precision: byte;
+     pad: array [1..3] of char;
+     orientation: array[1..16] of double; //4x4 matrix, affine transformation to world coordinates
+  end;
+
+label
+   666;
+var
+   f: file;
+   hdr : THdr;
+   sz: int64;
+   i: integer;
+   swp: longint;
+   err: string;
+begin
+  result := false;
+  AssignFile(f, FileName);
+  FileMode := fmOpenRead;
+  Reset(f,1);
+  sz := FileSize(f);
+  err := 'file too small';
+  if sz < 64 then goto 666;
+  blockread(f, hdr, SizeOf(hdr) );
+  {$IFNDEF ENDIAN_LITTLE} need to byte-swap DFS files {$ENDIF}
+  err := 'unable to read big-endian data, save image with BrainStorm''s out_tess';
+  if (uppercase(hdr.magic) =  'DFS_BE V') then  //in theory could be big-endian, though BrainSuite only currently available for little-endian. out_tess ALWAYS saves data as little-endian
+     goto 666;
+  err := 'incorrect magic signature';
+  if (uppercase(hdr.magic) <> 'DUFFSURF') and (uppercase(hdr.magic) <>  'DFS_LE V') then goto 666; //oops
+  err := 'file too small';
+  if (hdr.nTriangles < 1) or (hdr.nVertices < 3) then goto 666;
+  setlength(faces, hdr.nTriangles);
+  setlength(vertices, hdr.nVertices);
+  if (hdr.vcoffset > 0) then begin //per vertex color data in (r,g,b) format in 32-bit floating point ([0-1])
+     if (hdr.vcoffset + (int64(hdr.nVertices) * 3 * 4)) > sz then goto 666;
+     Seek(f, hdr.vcoffset);
+     blockread(f, vertices[0], int64(hdr.nVertices) * 3 * 4);
+     setlength(vertexRGBA, hdr.nVertices);
+     for i := 0 to high(vertices) do begin //BrainSuite triangle winding opposite of convention
+         vertexRGBA[i].R := round(vertices[i].X * 255);
+         vertexRGBA[i].G := round(vertices[i].Y * 255);
+         vertexRGBA[i].B := round(vertices[i].Z * 255);
+         vertexRGBA[i].A := 255; //Assume opaque
+     end;
+  end;
+  if (hdr.hdrsize + (int64(hdr.nVertices) * 3 * 4)+ (int64(hdr.nTriangles) * 3 * 4)) > sz then goto 666;
+  Seek(f, hdr.hdrsize);
+  blockread(f, faces[0],  int64(hdr.nTriangles) * 3 * 4);
+  blockread(f, vertices[0], int64(hdr.nVertices) * 3 * 4);
+  for i := 0 to (length(faces)-1) do begin //BrainSuite triangle winding opposite of convention
+      swp := faces[i].X;
+      faces[i].X := faces[i].Z;
+      faces[i].Z := swp;
+  end;
+  result := true;
+  666:
+  CloseFile(f);
+  if not result then
+       showmessage('Unable to decode BrainSuite DFS file ('+err+') '+ FileName);
+end; // LoadDfs()
+
 function TMesh.LoadLwo(const FileName: string): boolean;
 //LWO2 http://static.lightwave3d.com/sdk/11-6/html/filefmts/lwo2ex/lwo2ex.html
 // this is NOT LWOB described by http://www.martinreddy.net/gfx/3d/LWOB.txt https://botb.club/~edlinfan/textfiles/faqsys/formats/lwo.txt
@@ -3539,6 +3701,8 @@ begin
         LoadDae(Filename);
      if (ext = '.GTS') then
         LoadGts(Filename);
+     if (ext = '.DFS') then
+        LoadDfs(FileName);
      if (ext = '.DXF') then
         LoadDxf(Filename);
      if (ext = '.LWO') then
@@ -3565,8 +3729,10 @@ begin
          LoadStl(Filename);
      if (ext = '.NODE') then
          LoadNode(Filename);
-     if (ext = '.SRF') or (ext = '.ASC') then
-         LoadAsc_Srf(Filename);
+     if (ext = '.SRF') and (not LoadSrf(Filename)) then
+        LoadAsc_Srf(Filename);
+     if (ext = '.ASC') then
+        LoadAsc_Srf(Filename);
      if (ext = '.OBJ') then
          LoadObj(Filename);
      if length(faces) < 1 then begin//not yet loaded - see if it is freesurfer format (often saved without filename extension)

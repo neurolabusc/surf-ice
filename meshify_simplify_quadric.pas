@@ -1,73 +1,58 @@
 unit meshify_simplify_quadric;
 {$mode objfpc}{$H+}
 interface
-/////////////////////////////////////////////
-//
-// Mesh Simplification Tutorial
-//
+//Mesh Simplification Unit
 // (C) by Sven Forstmann in 2014
-//
-// License : MIT
-// http://opensource.org/licenses/MIT
-//
+//License : MIT (http://opensource.org/licenses/MIT)
 // https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification
 // http://www.gamedev.net/topic/656486-high-speed-quadric-mesh-simplification-without-problems-resolved/
 // http://voxels.blogspot.com/2014/05/quadric-mesh-simplification-with-source.html
 // https://github.com/neurolabusc/Fast-Quadric-Mesh-Simplification-Pascal-
-//
-// 5/2016: Chris Rorden ported from C++ to FreePascal/Delphi
+//5/2016: Chris Rorden ported from C++ to FreePascal/Delphi
 
 uses
-	Classes, SysUtils, Math;
+    Math, define_types;
 
-type
-	TFloat = single; //"TFloat = single" is faster "TFloat = double" more precise
+(*  TPoint3f = packed record
+    X: single;
+    Y: single;
+    Z: single
+  end;
+ TPoint3i = packed record
+    X: longint;
+    Y: longint;
+    Z: longint;
+  end;
+ TFaces = array of TPoint3i; //n.b. Triangle indexed from zero, so face composed of first three vertices is [0,1,2]
+ TVertices = array of TPoint3f; *)
 
-	TSymetricMatrix = array [0..9] of TFloat;
-
-	TRef = record
-		tid,tvertex: integer;
-	end;
-
-	Tvec3f = record
-		X: single;
-		Y: single;
-		Z: single;
-	end;
-
-	TVertex = record
-		p: Tvec3f;
-		border, tstart,tcount: integer;
-		q: TSymetricMatrix;
-	end;
-
-	TTriangle = record
-		v: array[0..2] of integer;
-		err: array[0..3] of TFloat;
-		dirty, deleted: boolean;
-		n: Tvec3f;
-	end;
-
-	TBools = array of boolean;
-
-	TSimplify = class
-		public
-			vertices : array  of TVertex;
-			triangles : array  of TTriangle;
-			procedure simplify_mesh(target_count: integer; agressiveness : double=7);
-		private
-			refs : array of TRef;
-			nrefs: integer;
-			procedure compact_mesh;
-			procedure update_mesh(iteration: integer);
-			function calculate_error(id_v1, id_v2: integer; var p_result: Tvec3f): TFloat;
-			function flipped(p: Tvec3f; i0, i1: integer; var v0,v1: TVertex; var deleted: TBools): boolean;
-			procedure update_triangles(i0: integer; var v: TVertex; var deleted: TBools; var deleted_triangles: integer);
-	end; // TSimplify
+procedure simplify_mesh(var faces : TFaces; var verts: TVertices; target_count: integer; agressiveness : double=7);
 
 implementation
 
-function symMat(c: TFloat): TSymetricMatrix; overload;
+type
+  TFloat = single; //"TFloat = single" is faster "TFloat = double" more precise
+  TSymetricMatrix = array [0..9] of TFloat;
+  TRef = record
+	  tid,tvertex: integer;
+  end;
+  TVertex = record
+	  p: TPoint3f;
+	  border, tstart,tcount: integer;
+	  q: TSymetricMatrix;
+  end;
+  TTriangle = record
+	  v: array[0..2] of integer;
+	  err: array[0..3] of TFloat;
+	  dirty, deleted: boolean;
+	  n: TPoint3f;
+  end;
+  TBools = array of boolean;
+  TVs = array of TVertex;
+  TTs = array of TTriangle;
+  TRs = array of TRef;
+
+function symMat(c: TFloat): TSymetricMatrix;  inline;  overload;
 var
 	i: integer;
 begin
@@ -75,7 +60,7 @@ begin
 		result[i] := c;
 end; // symMat()
 
-function symMat(a,b,c,d: TFloat): TSymetricMatrix; overload;
+function symMat(a,b,c,d: TFloat): TSymetricMatrix;  inline;  overload;
 begin
 	result[0] := a*a;  result[1] := a*b;  result[2] := a*c;  result[3] := a*d;
 	result[4] := b*b;  result[5] := b*c; result[6] := b*d;
@@ -83,7 +68,7 @@ begin
 	result[9] := d*d;
 end; // symMat()
 
-function symMat( m11, m12, m13, m14,  m22, m23, m24,  m33, m34, m44: TFloat): TSymetricMatrix; overload;
+function symMat( m11, m12, m13, m14,  m22, m23, m24,  m33, m34, m44: TFloat): TSymetricMatrix;  inline; overload;
 begin
 	result[0] := m11;  result[1] := m12;  result[2] := m13;  result[3] := m14;
 	result[4] := m22;  result[5] := m23;  result[6] := m24;
@@ -91,46 +76,46 @@ begin
 	result[9] := m44;
 end; // symMat()
 
-function symMatAdd(n,m: TSymetricMatrix): TSymetricMatrix;
+function symMatAdd(n,m: TSymetricMatrix): TSymetricMatrix; inline;
 begin
 	result := symMat(n[0]+m[0], n[1]+m[1], n[2]+m[2], n[3]+m[3], n[4]+m[4],
 		n[5]+m[5], n[6]+m[6], n[7]+m[7], n[8]+m[8], n[9]+m[9]);
 end; // symMatAdd()
 
-function symMatDet(m: TSymetricMatrix; a11, a12, a13, a21, a22, a23, a31, a32, a33: integer): TFloat;
+function symMatDet(m: TSymetricMatrix; a11, a12, a13, a21, a22, a23, a31, a32, a33: integer): TFloat; inline;
 begin
   result := m[a11]*m[a22]*m[a33] + m[a13]*m[a21]*m[a32] + m[a12]*m[a23]*m[a31]
 	     - m[a13]*m[a22]*m[a31] - m[a11]*m[a23]*m[a32]- m[a12]*m[a21]*m[a33];
 end; // symMatDet()
 
-function ptf(x,y,z: single):Tvec3f;
+function ptf(x,y,z: single):TPoint3f;
 begin
      result.x := x;
      result.y := y;
      result.z := z;
 end; // ptf()
 
-function vCross(v1, v2: Tvec3f): Tvec3f;
+function vCross(v1, v2: TPoint3f): TPoint3f; inline;
 begin
      result := ptf(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z,
      	v1.x * v2.y - v1.y * v2.x);
 end; // vCross()
 
-function vSum(a,b: Tvec3f): Tvec3f;
+function vSum(a,b: TPoint3f): TPoint3f; inline;
 begin
      result.X := a.X+b.X;
      result.Y := a.Y+b.Y;
      result.Z := a.Z+b.Z;
 end; // vSum()
 
-function vSubtract (a,b: Tvec3f): Tvec3f;
+function vSubtract (a,b: TPoint3f): TPoint3f; inline;
 begin
      result.X := A.X - B.X;
      result.Y := A.Y - B.Y;
      result.Z := A.Z - B.Z;
 end; // vSubtract()
 
-procedure vNormalize(var v: Tvec3f);
+procedure vNormalize(var v: TPoint3f);  inline;
 var
    len: single;
 begin
@@ -141,12 +126,12 @@ begin
      v.Z := v.Z / len;
 end; // vNormalize()
 
-function vDot (A, B: Tvec3f): single;
+function vDot (A, B: TPoint3f): single; inline;
 begin  //dot product
      result := A.X*B.X + A.Y*B.Y + A.Z*B.Z;
-end;  // vDot()
+end; // vDot()
 
-function vMult(a: Tvec3f; v: TFloat):Tvec3f;
+function vMult(a: TPoint3f; v: TFloat):TPoint3f; inline;
 begin
      result.X := a.X*v;
      result.Y := a.Y*v;
@@ -154,19 +139,19 @@ begin
 end; // vMult()
 
 // Error between vertex and Quadric
-function vertex_error(q: TSymetricMatrix; x,y,z: TFloat): TFloat;
+function vertex_error(q: TSymetricMatrix; x,y,z: TFloat): TFloat; inline;
 begin
       result := q[0]*x*x + 2*q[1]*x*y + 2*q[2]*x*z + 2*q[3]*x + q[4]*y*y
            + 2*q[5]*y*z + 2*q[6]*y + q[7]*z*z + 2*q[8]*z + q[9];
 end; // vertex_error()
 
 // Error for one edge
-function TSimplify.calculate_error(id_v1, id_v2: integer; var p_result: Tvec3f): TFloat;
+function calculate_error(id_v1, id_v2: integer; var p_result: TPoint3f; var vertices: TVs): TFloat; inline;
 var
   q : TSymetricMatrix;
   border: integer;
   error1,error2,error3,error, det: TFloat;
-  p1, p2, p3: Tvec3f;
+  p1, p2, p3: TPoint3f;
 begin
   // compute interpolated vertex
   q := symMatAdd(vertices[id_v1].q, vertices[id_v2].q);
@@ -195,13 +180,13 @@ begin
   result := error;
 end; // calculate_error()
 
-procedure TSimplify.update_mesh(iteration: integer);
+procedure update_mesh(iteration: integer; var triangles: TTs;  var vertices: TVs; var refs :TRs; var nrefs: integer);
 var
   dst, i, j, k, tstart, ofs, id: integer;
   t: ^Ttriangle;
   v: ^TVertex;
-  p,n: Tvec3f;
-  p3 : array[0..2] of Tvec3f;
+  p,n: TPoint3f;
+  p3 : array[0..2] of TPoint3f;
   vcount,vids: array of integer;
 begin
 	if(iteration>0) then begin // compact triangles
@@ -239,14 +224,14 @@ begin
 	 	for i := 0 to high(triangles) do begin
         	// Calc Edge Error
 	     	t := @triangles[i];
-            p := ptf(0,0,0);
+                p := ptf(0,0,0);
         	for j := 0 to 2 do
-        		t^.err[j] := calculate_error(t^.v[j],t^.v[(j+1) mod 3] ,p);
+        		t^.err[j] := calculate_error(t^.v[j],t^.v[(j+1) mod 3] ,p, vertices);
         	t^.err[3] := min(t^.err[0],min(t^.err[1],t^.err[2]));
 	 	end; //for i: triangles
 	end; //if iteration = 0
 	// Init Reference ID list
-    for i := 0 to high(vertices) do begin
+        for i := 0 to high(vertices) do begin
 		vertices[i].tstart := 0;
 		vertices[i].tcount := 0;
 	end;
@@ -305,8 +290,8 @@ begin
 	end; // if iteration = 0
 end; // update_mesh()
 
+procedure compact_mesh(var triangles: TTs;  var vertices: TVs);
 // Finally compact mesh before exiting
-procedure TSimplify.compact_mesh;
 var
   dst, i, j: integer;
 begin
@@ -336,11 +321,11 @@ begin
 	setlength(vertices, dst);
 end; // compact_mesh()
 
-function TSimplify.flipped(p: Tvec3f; i0, i1: integer; var v0,v1: TVertex; var deleted: TBools): boolean;
+function flipped(p: TPoint3f; i1: integer; var v0: TVertex; var deleted: TBools; var triangles: TTs;  var vertices: TVs; var refs :TRs): boolean; inline;
 var
    k, bordercount, s, id1, id2: integer;
    t: ^Ttriangle;
-   n, d1, d2: Tvec3f;
+   n, d1, d2: TPoint3f;
 begin
 	bordercount := 0;
 	result := true;
@@ -370,16 +355,17 @@ begin
 	result := false;
 end; // flipped()
 
-procedure TSimplify.update_triangles(i0: integer; var v: TVertex; var deleted :TBools; var deleted_triangles: integer);
+procedure update_triangles(i0: integer; var v: TVertex; var deleted :TBools; var deleted_triangles: integer; var triangles: TTs;  var vertices: TVs; var refs :TRs; var nrefs: integer); inline;
 const
   kBlockSz = 4096; //re-allocate memory in chunks
 var
-   p: TVec3f;
+   p: TPoint3f;
    k: integer;
    r: ^TRef;
    t: ^TTriangle;
    ref: TRef;
 begin
+  p := ptf(0,0,0); //to hide compiler hint
   for k := 0 to (v.tcount-1) do begin
       r := @refs[v.tstart+k];
       t := @triangles[r^.tid];
@@ -391,9 +377,9 @@ begin
       end;
       t^.v[r^.tvertex] := i0;
       t^.dirty := true;
-      t^.err[0] := calculate_error(t^.v[0],t^.v[1],p);
-      t^.err[1] := calculate_error(t^.v[1],t^.v[2],p);
-      t^.err[2] := calculate_error(t^.v[2],t^.v[0],p);
+      t^.err[0] := calculate_error(t^.v[0],t^.v[1],p, vertices);
+      t^.err[1] := calculate_error(t^.v[1],t^.v[2],p, vertices);
+      t^.err[2] := calculate_error(t^.v[2],t^.v[0],p, vertices);
       t^.err[3] := min(t^.err[0],min(t^.err[1],t^.err[2]));
       // setlength() is costly, so we do resize the array in chunks
       ref := r^; //<- n.b. setlength() can change address of refs, so copy data to ref prior to resize!
@@ -402,38 +388,54 @@ begin
       refs[nrefs] := ref;
       nrefs := nrefs + 1;
   end;
-end;
+end; // update_triangles()
 
-procedure TSimplify.simplify_mesh(target_count: integer; agressiveness : double=7);
+procedure simplify_mesh(var faces : TFaces; var verts: TVertices; target_count: integer; agressiveness : double=7);
 var
+  vertices : TVs;
+  triangles : TTs;
   iteration, i, j, deleted_triangles, triangle_count, i0, i1, tstart, tcount: integer;
   deleted0,deleted1: TBools;
   threshold: TFloat;
   t: ^TTriangle;
   v0, v1: ^TVertex;
-  p: Tvec3f;
+  p: TPoint3f;
+  refs : TRs;
+  nrefs: integer;
 begin
-	for i := 0 to high(triangles) do
-		triangles[i].deleted := false;
-	// main iteration loop
-	deleted_triangles := 0;
-	triangle_count := length(triangles);
-	for iteration := 0 to (100-1) do begin
+  if (length(faces) < 5) or (length(verts) < 5) or (target_count < 4) or (target_count > length(faces)) then exit;
+  //convert simple mesh to verbose structure that allows us to represent quadric properties
+  setlength(triangles, length(Faces));
+  setlength(vertices, length(Verts));
+  for i := 0 to high(triangles) do begin
+      triangles[i].v[0] := Faces[i].X;
+      triangles[i].v[1] := Faces[i].Y;
+      triangles[i].v[2] := Faces[i].Z;
+  end;
+  for i := 0 to high(verts) do
+      vertices[i].p := verts[i];
+  setlength(verts,0);
+  setlength(faces,0);
+  //now build mesh
+  setlength(refs,0); //to hide compiler hint
+  for i := 0 to high(triangles) do
+	  triangles[i].deleted := false;
+  // main iteration loop
+  deleted_triangles := 0;
+  triangle_count := length(triangles);
+  for iteration := 0 to (100-1) do begin
 		// target number of triangles reached ? Then break
 		//printf("iteration %d - triangles %d\n",iteration,triangle_count-deleted_triangles);
 		if(triangle_count-deleted_triangles<=target_count) then break;
 		// update mesh once in a while
 		if(iteration mod 5 =0) then
-		  update_mesh(iteration);
+		  update_mesh(iteration, triangles, vertices, refs, nrefs);
 		// clear dirty flag
 		for i := 0 to high(triangles) do
-		triangles[i].dirty := false;
-		//
+		    triangles[i].dirty := false;
 		// All triangles with edges below the threshold will be removed
-		//
 		// The following numbers works well for most models.
 		// If it does not, try to adjust the 3 parameters
-		//
 		threshold := 0.000000001*power(TFloat(iteration+3),agressiveness);
 		// remove vertices & mark deleted triangles
 		for i := 0 to high(triangles) do begin
@@ -450,18 +452,18 @@ begin
 					// Border check
 					if(v0^.border <> v1^.border) then continue;
 					// Compute vertex to collapse to
-					calculate_error(i0,i1,p);
+					calculate_error(i0,i1,p, vertices);
 					setlength(deleted0, v0^.tcount);
 					setlength(deleted1, v1^.tcount);
 					// dont remove if flipped
-					if( flipped(p,i0,i1,v0^,v1^,deleted0) ) then continue;
-					if( flipped(p,i1,i0,v1^,v0^,deleted1) ) then continue;
+					if( flipped(p,i1,v0^,deleted0, triangles, vertices, refs) ) then continue;
+					if( flipped(p,i0,v1^,deleted1, triangles, vertices, refs) ) then continue;
 					// not flipped, so remove edge
 					v0^.p := p;
 					v0^.q := symMatAdd(v1^.q, v0^.q);
 					tstart := nrefs; //length(refs);
-					update_triangles(i0,v0^,deleted0,deleted_triangles);
-					update_triangles(i0,v1^,deleted1,deleted_triangles);
+					update_triangles(i0,v0^,deleted0,deleted_triangles, triangles, vertices, refs, nrefs);
+					update_triangles(i0,v1^,deleted1,deleted_triangles, triangles, vertices, refs, nrefs);
 					tcount := nrefs - tstart;//length(refs)-tstart;
 					if(tcount<=v0^.tcount) then begin // save ram
 					  if (tcount > 0) then
@@ -477,7 +479,17 @@ begin
 		end;//for i :, each triangle
 	end; //for iteration
     // clean up mesh
-    compact_mesh();
+    compact_mesh(triangles, vertices);
+    //now convert back to simple structure
+    setlength(Faces, length(triangles));
+    setlength(Verts, length(vertices));
+    for i := 0 to high(triangles) do begin
+      Faces[i].X := triangles[i].v[0];
+      Faces[i].Y := triangles[i].v[1];
+      Faces[i].Z := triangles[i].v[2];
+    end;
+    for i := 0 to high(verts) do
+      verts[i] := vertices[i].p;
 end; // simplify_mesh()
 
 end.
