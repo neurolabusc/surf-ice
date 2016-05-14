@@ -26,7 +26,7 @@ uses
  TFaces = array of TPoint3i; //n.b. Triangle indexed from zero, so face composed of first three vertices is [0,1,2]
  TVertices = array of TPoint3f; *)
 
-procedure simplify_mesh(var faces : TFaces; var verts: TVertices; target_count: integer; agressiveness : double=7);
+procedure simplify_mesh(var faces : TFaces; var verts: TVertices; target_count: integer; agressiveness : double=7; resize: boolean=true);
 
 implementation
 
@@ -390,7 +390,40 @@ begin
   end;
 end; // update_triangles()
 
-procedure simplify_mesh(var faces : TFaces; var verts: TVertices; target_count: integer; agressiveness : double=7);
+procedure scale_mesh(var verts: TVertices; scale: TFloat);
+var
+   i: integer;
+begin
+  if scale = 1.0 then exit;
+  for i := 0 to high(verts) do
+      verts[i] := vMult(verts[i], scale);
+end;
+
+function normalize_mesh(var verts: TVertices): TFloat;
+//make largest dimension have size of 1. Provides reasonable threshold
+var
+   i: integer;
+   mn, mx: TPoint3f;
+   invert : TFloat;
+begin
+  mn := verts[0];
+  mx := mn;
+  for i := 0 to high(verts) do begin
+      if (verts[i].X < mn.X) then mn.X := verts[i].X;
+      if (verts[i].Y < mn.X) then mn.Y := verts[i].Y;
+      if (verts[i].Z < mn.X) then mn.Z := verts[i].Z;
+      if (verts[i].X > mx.X) then mx.X := verts[i].X;
+      if (verts[i].Y > mx.X) then mx.Y := verts[i].Y;
+      if (verts[i].Z > mx.X) then mx.Z := verts[i].Z;
+  end;
+  result := max(max(mx.X-mn.X, mx.Y-mn.Y), mx.Z - mn.Z);
+  if (result = 0) or (result = 1.0) then exit;
+  invert := 1/result;
+  for i := 0 to high(verts) do
+      verts[i] := vMult(verts[i], invert);
+end;
+
+procedure simplify_mesh(var faces : TFaces; var verts: TVertices; target_count: integer; agressiveness : double=7; resize: boolean=true);
 var
   vertices : TVs;
   triangles : TTs;
@@ -402,8 +435,11 @@ var
   p: TPoint3f;
   refs : TRs;
   nrefs: integer;
+  scale: TFloat = 1.0;
 begin
   if (length(faces) < 5) or (length(verts) < 5) or (target_count < 4) or (target_count > length(faces)) then exit;
+  if resize then
+     scale := normalize_mesh(verts);
   //convert simple mesh to verbose structure that allows us to represent quadric properties
   setlength(triangles, length(Faces));
   setlength(vertices, length(Verts));
@@ -490,6 +526,8 @@ begin
     end;
     for i := 0 to high(verts) do
       verts[i] := vertices[i].p;
+    if resize then
+       scale_mesh(verts, scale);
 end; // simplify_mesh()
 
 end.

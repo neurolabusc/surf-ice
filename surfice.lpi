@@ -23,8 +23,14 @@
     <VersionInfo>
       <StringTable ProductVersion=""/>
     </VersionInfo>
+    <MacroValues Count="1">
+      <Macro1 Name="LCLWidgetType" Value="cocoa"/>
+    </MacroValues>
     <BuildModes Count="1" Active="Default">
       <Item1 Name="Default" Default="True"/>
+      <SharedMatrixOptions Count="1">
+        <Item1 ID="780351891649" Modes="Default" Type="IDEMacro" MacroName="LCLWidgetType" Value="cocoa"/>
+      </SharedMatrixOptions>
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
@@ -59,11 +65,9 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="2"/>
-        <TopLine Value="2240"/>
-        <CursorPos X="41" Y="2248"/>
-        <ComponentState Value="1"/>
+        <TopLine Value="1340"/>
+        <CursorPos X="43" Y="1342"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -72,8 +76,8 @@
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="419"/>
-        <CursorPos X="33" Y="423"/>
+        <TopLine Value="192"/>
+        <CursorPos X="26" Y="213"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit2>
@@ -110,7 +114,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="380"/>
         <CursorPos X="37" Y="381"/>
-        <UsageCount Value="166"/>
+        <UsageCount Value="182"/>
       </Unit6>
     </Units>
   </ProjectOptions>

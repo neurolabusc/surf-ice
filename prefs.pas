@@ -18,7 +18,7 @@ const
 type
   TMRU =  array [1..knMRU] of string;
   TPrefs = record
-    StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube, MultiSample,
+    OverlayClip, StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube, MultiSample,
      TracksAreTubes,Colorbar, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,
      ZDimIsUp, SmoothVoxelwiseData, ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting : boolean;
     TrackTubeSlices, ScreenCaptureZoom,
@@ -210,6 +210,7 @@ begin
     Perspective := false;
     AdditiveOverlay := false;
     SkipPrefWriting := false;
+    OverlayClip := false;
     StartupScript := false;
     ScreenCaptureTransparentBackground := true;
     SmoothVoxelwiseData := true;

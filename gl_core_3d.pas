@@ -12,7 +12,7 @@ uses
 //function BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA): GLuint;
 procedure BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA; var vao, vbo: gluint; Clr: TRGBA);
 //procedure SetLighting (var lPrefs: TPrefs);
-procedure DrawScene(w,h: integer; isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
+procedure DrawScene(w,h: integer; isOverlayClipped,isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
 procedure SetCoreUniforms(lProg: Gluint);
 procedure SetTrackUniforms (lineWidth, ScreenPixelX, ScreenPixelY: integer);
 //procedure BuildDisplayListStrip(Indices: TInts; Verts, vNorms: TVertices; vRGBA: TVertexRGBA; LineWidth: integer; var vao, vbo: gluint);
@@ -471,7 +471,8 @@ begin
   end;
 end;
 
-procedure DrawScene(w,h: integer; isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
+procedure DrawScene(w,h: integer; isOverlayClipped, isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
+//procedure DrawScene(w,h: integer; isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
 var
    clr: TRGBA;
 begin
@@ -498,7 +499,7 @@ begin
   nglTranslatef(-origin.X, -origin.Y, -origin.Z);
    if lTrack.n_count > 0 then begin
      if lTrack.isTubes then
-         RunMeshGLSL (2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W,  lPrefs.ShaderForBackgroundOnly) //disable clip plane
+         RunMeshGLSL (asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W),  lPrefs.ShaderForBackgroundOnly) //disable clip plane
      else begin
         if lPrefs.CoreTrackDisableDepth then begin
            glEnable(GL_DEPTH_TEST);
@@ -517,13 +518,16 @@ begin
    lTrack.DrawGL;
  end;
  if length(lNode.nodes) > 0 then begin
-     RunMeshGLSL (2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W, lPrefs.ShaderForBackgroundOnly); //disable clip plane
-   lNode.DrawGL(clr);
+     RunMeshGLSL (asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W), lPrefs.ShaderForBackgroundOnly); //disable clip plane
+   lNode.DrawGL(clr, clipPlane);
  end;
  if  (length(lMesh.faces) > 0) then begin
     lMesh.isVisible := isDrawMesh;
-    RunMeshGLSL (ClipPlane.X,ClipPlane.Y,ClipPlane.Z,ClipPlane.W, false);
-    lMesh.DrawGL(clr);
+    RunMeshGLSL (clipPlane, false);
+    if not isOverlayClipped then
+       lMesh.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W) )
+    else
+        lMesh.DrawGL(clr, clipPlane);
     lMesh.isVisible := true;
  end;
 

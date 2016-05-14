@@ -48,8 +48,8 @@ var
   gShader: TShader;
 function LoadShader(lFilename: string; var Shader: TShader): boolean;
 function InitGLSL (isStartUp: boolean): boolean;
-procedure RunOverlayGLSL;
-procedure RunMeshGLSL (cp1,cp2,cp3,cp4: single;  UseDefaultShader: boolean);
+procedure RunOverlayGLSL(clipPlane: TPoint4f);
+procedure RunMeshGLSL (clipPlane: TPoint4f;  UseDefaultShader: boolean);
 procedure RunTrackGLSL (lineWidth, ScreenPixelX, ScreenPixelY: integer);
 procedure RunAoGLSL (var f1, f2 : TFrameBuffer; zoom : integer; alpha1, blend1, fracAO, distance: single);
 function setFrame (wid, ht: integer; var f : TFrameBuffer; isMultiSample: boolean) : boolean; //returns true if multi-sampling
@@ -117,9 +117,9 @@ begin
   glUniform2f(glGetUniformLocation(prog, pAnsiChar(Name)), v1, v2) ;
 end;
 
-procedure uniform4fx(prog: GLint;   name: AnsiString; v1,v2,v3, v4: single);
+procedure uniform4fx(prog: GLint;   name: AnsiString; v: TPoint4f);
 begin
-  glUniform4f(glGetUniformLocation(prog, pAnsiChar(Name)), v1,v2,v3, v4) ;
+  glUniform4f(glGetUniformLocation(prog, pAnsiChar(Name)), v.X,v.Y,v.Z, v.W) ;
 end;
 
 procedure uniform3fx(prog: GLint;   name: AnsiString; v1,v2,v3: single);
@@ -670,7 +670,7 @@ begin
 end;
 
 
-procedure RunMeshGLSL (cp1,cp2,cp3,cp4: single;  UseDefaultShader: boolean);
+procedure RunMeshGLSL (clipPlane: TPoint4f;  UseDefaultShader: boolean);
 var
   lProg: gluint;
 begin
@@ -683,17 +683,18 @@ begin
     glUseProgram(lProg);
     AdjustShaders(gShader);
   end;
-  uniform4fx(lProg, 'ClipPlane',cp1,cp2,cp3,cp4);
+  uniform4fx(lProg, 'ClipPlane', clipPlane);
   {$IFDEF COREGL}
   uniform3fx(lProg, 'LightPos',gShader.lightPos.X, gShader.lightPos.Y, gShader.lightPos.Z);
   SetCoreUniforms(lProg);
   {$ENDIF}
 end;
 
-procedure RunOverlayGLSL;
+procedure RunOverlayGLSL (clipPlane: TPoint4f);//(cp1,cp2,cp3,cp4: single);
 begin
   //if not gPrefs.ShaderForBackgroundOnly then exit;
-  RunMeshGLSL(2.0, 0.0, 0.0, 0.0,  gPrefs.ShaderForBackgroundOnly);
+  //RunMeshGLSL(asPt4f(2.0, 0.0, 0.0, 0.0),  gPrefs.ShaderForBackgroundOnly);
+  RunMeshGLSL(clipPlane,  gPrefs.ShaderForBackgroundOnly);
 end;
 
 {$IFDEF COREGL}

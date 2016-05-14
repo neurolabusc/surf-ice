@@ -12,7 +12,7 @@ uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,math,
   ExtCtrls, OpenGLContext, mesh, LCLintf, ComCtrls, Menus, graphtype,
   ClipBrd, shaderui, shaderu, prefs, userdir, LCLtype, Grids, Spin, matmath,
-  colorTable, Track, types,  define_types, meshify,  gl_2d, zstream, gl_core_matrix, Process, meshify_simplify, meshify_simplify_quadric;
+  colorTable, Track, types,  define_types, meshify,  gl_2d, zstream, gl_core_matrix, Process, meshify_simplify;
 
 type
   { TGLForm1 }
@@ -150,7 +150,7 @@ type
     SaveMenu: TMenuItem;
     ObjectColorMenu: TMenuItem;
     OpenMenu: TMenuItem;
-
+    procedure DepthLabelDblClick(Sender: TObject);
     procedure Quit2TextEditor;
     procedure CenterMeshMenuClick(Sender: TObject);
     procedure AdditiveOverlayMenuClick(Sender: TObject);
@@ -1536,10 +1536,10 @@ begin
 
     //first pass: 3D draw all items: framebuffer f1
     isMultiSample := setFrame (w, h, gShader.f1, true );
-    DrawScene(w,h, true,isMultiSample, gPrefs, origin, ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
+    DrawScene(w,h, gPrefs.OverlayClip, true,isMultiSample, gPrefs, origin, ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
     //second pass: 3D draw overlay items only: framebuffer f2
     isMultiSample := setFrame (w, h, gShader.f2, true );
-    DrawScene(w,h, false,isMultiSample, gPrefs, origin,  ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
+    DrawScene(w,h, gPrefs.OverlayClip, false,isMultiSample, gPrefs, origin,  ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
     if (isToScreen)  then begin
        releaseFrame; //GOOD: multipass, multisampling
        Set2DDraw (w,h, red(gPrefs.BackColor) ,green(gPrefs.BackColor), blue(gPrefs.BackColor));
@@ -1554,7 +1554,7 @@ begin
          releaseFrame;
       //else
       //    setFrame (w, h, gShader.fScreenShot, true ); //SCREENSHOT - supersampled
-      DrawScene(w, h, true, false, gPrefs, origin, ClipPlane, scale, gDistance, gelevation, gazimuth, gMesh,gNode, gTrack);
+      DrawScene(w, h, gPrefs.OverlayClip, true, false, gPrefs, origin, ClipPlane, scale, gDistance, gelevation, gazimuth, gMesh,gNode, gTrack);
   end;
   if gPrefs.OrientCube then
      DrawCube (w, h,  gAzimuth, gElevation);
@@ -1797,6 +1797,13 @@ begin
   AProcess.Free;
   GLForm1.close;
 end;
+
+procedure TGLForm1.DepthLabelDblClick(Sender: TObject);
+begin
+  gPrefs.OverlayClip := not gPrefs.OverlayClip;
+  GLBoxRequestUpdate(Sender);
+end;
+
 {$ELSE} //ShellExecute(Handle,'open', 'c:\windows\notepad.exe','c:\SomeText.txt', nil, SW_SHOWNORMAL) ;
 begin
   gPrefs.SkipPrefWriting := true;

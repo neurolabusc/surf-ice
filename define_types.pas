@@ -54,6 +54,7 @@ procedure ReadLnBin(var f: TFByte; var s: string);
 procedure SwapSingle(var s : single);
 procedure SwapLongInt(var s : LongInt);
 procedure SwapLongWord(var s : LongWord);
+function asPt4f(x,y,z,w: single): TPoint4f;
 function asSingle(i : longint): single; overload;
 function asSingle(b0,b1,b2,b3: byte): single; overload;
 function asInt(s : single): longint;
@@ -66,6 +67,14 @@ function ChangeFileExtX( lFilename: string; lExt: string): string;
 implementation
 
 uses sysutils, dialogs;
+
+function asPt4f(x,y,z,w: single): TPoint4f;
+begin
+     result.x := x;
+     result.y := y;
+     result.z := z;
+     result.w := w;
+end;
 
 function ChangeFileExtX( lFilename: string; lExt: string): string;
 //sees .nii.gz as single extension

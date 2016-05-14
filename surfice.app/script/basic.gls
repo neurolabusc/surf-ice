@@ -1,6 +1,4 @@
 BEGIN
-meshload('/Users/rorden/DICOM/meshes/alfa_romeo.obj');
-exit;
 	RESETDEFAULTS;
 	MESHLOAD('mni152_2009.mz3');
 	OVERLAYLOAD('motor_4t95vol.nii.gz');

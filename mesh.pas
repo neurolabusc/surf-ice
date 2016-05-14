@@ -83,9 +83,11 @@ type
     procedure LoadAsc_Srf(const FileName: string);
     procedure LoadCtm(const FileName: string);
     procedure LoadCurv(const FileName: string; lOverlayIndex: integer);
+    function LoadMesh(const FileName: string): boolean;
     procedure LoadNode(const FileName: string);
     procedure LoadNv(const FileName: string);
     procedure LoadObj(const FileName: string);
+    function LoadObjMni(const FileName: string): boolean;
     procedure LoadOff(const FileName: string);
     procedure LoadPial(const FileName: string);
     procedure LoadPly(const FileName: string);
@@ -97,7 +99,7 @@ type
     procedure LoadMeshAsOverlay(const FileName: string; lOverlayIndex: integer);
   public
     procedure MakePyramid;
-    procedure DrawGL (Clr: TRGBA);
+    procedure DrawGL (Clr: TRGBA; clipPlane: TPoint4f);
     procedure Node2Mesh;
     procedure ReverseFaces;
     procedure CenterOrigin;
@@ -484,7 +486,7 @@ begin
   {$ENDIF}
 end; // BuildListOverlay()
 
-procedure TMesh.DrawGL (Clr: TRGBA);
+procedure TMesh.DrawGL (Clr: TRGBA; clipPlane: TPoint4f);
 begin
   if (length(faces) < 1) or (length(vertices) < 3) then exit;
   isBusy := true;
@@ -522,7 +524,7 @@ begin
     glBindVertexArray(0);
   end;
   if (vaoOverlay <> 0) and (vboOverlay <> 0) and (nFacesOverlay > 0) then begin
-     RunOverlayGLSL;
+     RunOverlayGLSL(clipPlane);
      glBindVertexArray(vaoOverlay);
      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboOverlay);
      glDrawElements(GL_TRIANGLES, nFacesOverlay * 3, GL_UNSIGNED_INT, nil);
@@ -532,10 +534,10 @@ begin
   end;
   {$ELSE}
   if isVisible then
-     glCallList(DisplayList);
+     glCallList(displayList);
   if (displayListOverlay <> 0) then begin
-    RunOverlayGLSL;
-     glCallList(displayListOverlay);
+    RunOverlayGLSL(clipPlane);
+    glCallList(displayListOverlay);
   end;
   {$ENDIF}
   isBusy := false;
@@ -1443,8 +1445,75 @@ begin
   strlst.free;
 end; // LoadNode()
 
-{$DEFINE FASTOBJ}
-{$IFDEF FASTOBJ}
+
+
+function TMesh.LoadObjMni(const FileName: string): boolean;
+//This is for MNI Obj files, not the WaveFront Obj format
+//This code only reads the most popular ASCII polygon mesh that starts with 'P'
+//Like AFNI SurfMesh we only handle the ACII variant of this format
+// http://www.stat.wisc.edu/~mchung/softwares/mesh/mesh.html
+// https://bigbrain.loris.ca/main.php?test_name=brainsurfaces
+// http://www.bic.mni.mcgill.ca/users/mishkin/mni_obj_format.pdf
+label
+   666;
+var
+   f: TextFile;
+   r, g, b, a: single;
+   c: char;
+   i, j, num_v, num_f, num_c, colour_flag: integer;
+   normals: TVertices;
+begin
+  result := false;
+  AssignFile(f, FileName);
+  Reset(f);
+  Read(f,c);
+  if (c <> 'P') then begin
+     CloseFile(f);
+     exit;
+  end;
+  for i := 1 to 5 do Read(f, g);//ignore: 5*surfprop [ambient, diffuse, specular, shininess, transparency)
+  Read(f, num_v); //npoints
+  if (num_v < 3) then goto 666;
+  setlength(vertices, num_v);
+  for i := 0 to high(vertices) do
+      Read(f, vertices[i].X, vertices[i].Y, vertices[i].Z);
+  setlength(normals, num_v);
+  for i := 0 to high(vertices) do
+      Read(f, normals[i].X, normals[i].Y, normals[i].Z);
+  setlength(normals, 0); //ignore
+  Read(f, num_f); //nitems
+  Read(f, colour_flag); //colour_flag
+  if (num_f < 1) or (colour_flag < 0) or (colour_flag > 2) then goto 666;
+  //0 = 1 color for all items, 1 = per line, 2 = per vertex
+  if colour_flag = 0 then
+     num_c := 1
+  else if colour_flag = 1 then
+     num_c := num_f
+  else
+      num_c := num_v; //per vertex
+  if colour_flag = 2 then begin
+     setlength(vertexRGBA, num_v); //per vertex
+     for i := 0 to high(vertexRGBA) do begin
+       Read(f, r, g, b, a);
+       vertexRGBA[i].r := round(255*r);
+       vertexRGBA[i].g := round(255*g);
+       vertexRGBA[i].b := round(255*b);
+       vertexRGBA[i].a := round(255*a);
+     end;
+  end else begin
+    for i := 1 to num_c do
+      Read(f, r, g, b, a); //A colour is defined by four floating-point numbers in the interval 0..1
+  end;
+  for i := 1 to num_f do
+      Read(f, j);
+  setlength(faces, num_f);
+  for i := 0 to high(faces) do
+      Read(f, faces[i].X, faces[i].Y, faces[i].Z);
+  Result := true;
+  666:
+  CloseFile(F);
+end; // LoadObjMni()
+
 procedure TMesh.LoadObj(const FileName: string);
 //WaveFront Obj file used by Blender
 // https://en.wikipedia.org/wiki/Wavefront_.obj_file
@@ -1459,6 +1528,7 @@ var
    //t: DWord;
 begin
   //t:= gettickcount;
+  if LoadObjMni(Filename) then exit; //MNI format, not Wavefront
      fsz := FSize (FileName);
      if fsz < 32 then exit;
      //init values
@@ -1509,104 +1579,6 @@ begin
      setlength(vertices, num_v);
   //GLForm1.caption := ('ms '+ inttostr(gettickcount()- t) );
 end; // LoadObj()
-{$ELSE}
-procedure TMesh.LoadObj(const FileName: string);
-//WaveFront Obj file used by Blender
-// https://en.wikipedia.org/wiki/Wavefront_.obj_file
-label
-   666;
-var
-   f: TextFile;
-   s : string;
-   strlst : TStringList;
-   i, j, num_v, num_f, num_f_quad, num_v_alloc, num_f_alloc: integer;
-   t : DWord;
-   quadfaces : TFaces;//array of TPoint3i;
-begin
-  t:= gettickcount;
-     AssignFile(f, FileName);
-     //first pass: count faces and vertices
-     Reset(f);
-     num_v := 0;
-     num_f := 0;
-     num_f_quad := 0;
-     setlength(quadfaces, num_f_quad);
-     strlst:=TStringList.Create;
-     while not EOF(f) do begin
-        readln(f,s);
-        strlst.DelimitedText := s;
-        if (strlst.count > 3) and ( (strlst[0]) = 'f') then inc(num_f);
-        if (strlst.count > 3) and ( (strlst[0]) = 'v') then inc(num_v);
-     end;
-     //showmessage(inttostr(num_v)+'  '+inttostr(num_f));
-     if (num_v < 3) or (num_f < 1) then begin
-        CloseFile(f);
-        strlst.free;
-        exit;
-     end;
-     //second pass: load faces and vertices
-     Reset(f);
-     setlength(vertices, num_v);
-     setlength(faces, num_f);
-     num_v_alloc := num_v;
-     num_f_alloc := num_f;
-     num_f := 0;
-     num_v := 0;
-     DefaultFormatSettings.DecimalSeparator := '.';
-     while not EOF(f) do begin
-        readln(f,s);
-        strlst.DelimitedText := s;
-        if (strlst.count > 3) and ( (strlst[0]) = 'f') then begin
-           //warning: need to handle "f v1/vt1/vn1 v2/vt2/vn2 v3/vt3/vn3"
-           if (num_f >= num_f_alloc) then begin
-              showmessage('Catastrophic error reading OBJ faces');
-              goto 666;
-           end;
-           //for i := 1 to 3 do
-           for i := 1 to (strlst.count-1) do
-               if (pos('/', strlst[i]) > 1) then
-                  strlst[i] := Copy(strlst[i], 1, pos('/', strlst[i])-1);
-           faces[num_f].X := strtoint(strlst[1]) - 1;  //-1 since "A valid vertex index starts from 1"
-           faces[num_f].Y := strtoint(strlst[2]) - 1;  //-1 since "A valid vertex index starts from 1"
-           faces[num_f].Z := strtoint(strlst[3]) - 1;  //-1 since "A valid vertex index starts from 1"
-           if strlst.count > 4 then begin //data stored as a quad: create two triangles
-             for j := 3 to (strlst.count - 2) do begin
-                 setlength(quadfaces, num_f_quad+1);
-                 quadfaces[num_f_quad].X := strtoint(strlst[1]) - 1;  //-1 since "A valid vertex index starts from 1"
-                 quadfaces[num_f_quad].Y := strtoint(strlst[j]) - 1;  //-1 since "A valid vertex index starts from 1"
-                 quadfaces[num_f_quad].Z := strtoint(strlst[j+1]) - 1;  //-1 since "A valid vertex index starts from 1"
-                 inc(num_f_quad);
-             end;
-           end;
-           //if num_f < 3 then
-           //   showmessage(format('%d %d %d',[faces[num_f].X, faces[num_f].Y, faces[num_f].Z]));
-           inc(num_f);
-        end;
-        if (strlst.count > 3) and ( (strlst[0]) = 'v') then begin
-           if (num_v >= num_v_alloc) then begin
-              showmessage('Catastrophic error reading OBJ vertices');
-              goto 666;
-           end;
-           vertices[num_v].X := strtofloat(strlst[1]);
-           vertices[num_v].Y := strtofloat(strlst[2]);
-           vertices[num_v].Z := strtofloat(strlst[3]);
-           //if num_v < 3 then
-           //   showmessage(format('%g %g %g',[vertices[num_v].X, vertices[num_v].Y, vertices[num_v].Z]));
-           inc(num_v);
-        end;
-     end;
-     //showmessage(format('%d %g %g %g',[num_v, vertices[num_v-1].X, vertices[num_v-1].Y, vertices[num_v-1].Z]));
-666:
-     CloseFile(f);
-     strlst.free;
-     if (num_f_quad > 0) then begin //if any of the faces are quads: add 2nd triangle for each quad
-        setlength(faces, num_f+num_f_quad);
-        for i := 0 to (num_f_quad-1) do
-            faces[i+num_f] := quadfaces[i];
-     end;
-  GLForm1.caption := ('ms '+ inttostr(gettickcount()- t) );
-end; // LoadObj()
-{$ENDIF}
 
 procedure TMesh.LoadPly(const FileName: string);
 // https://en.wikipedia.org/wiki/PLY_(file_format)
@@ -3005,6 +2977,8 @@ begin
      UnifyVertices(faces, vertices);
 end; // LoadDxf()
 
+
+
 function TMesh.LoadSrf(const FileName: string): boolean;
 //ALWAYS little-endian, n.b. despite docs the 'reserve' may not be zero: NeuroElf refers to this as "ExtendedNeighbors"
 // http://support.brainvoyager.com/automation-aamp-development/23-file-formats/382-developer-guide-26-file-formats-overview.html
@@ -3100,6 +3074,107 @@ begin
   if not result then
        showmessage('Unable to decode BrainVoyager SRF file '+ FileName);
 end; //LoadSrf()
+
+procedure SwapPt3f(var p: TPoint3f);
+begin
+     SwapSingle(p.x);
+     SwapSingle(p.y);
+     SwapSingle(p.z);
+end;
+
+procedure SwapXZ(var p: TPoint3i);
+var
+   s: LongInt;
+begin
+  s := p.X;
+  p.X := p.Z;
+  p.Z := s;
+end;
+
+procedure SwapPt3i(var p: TPoint3i);
+begin
+     SwapLongInt(p.x);
+     SwapLongInt(p.y);
+     SwapLongInt(p.z);
+end;
+
+function TMesh.LoadMesh(const FileName: string): boolean;
+// http://brainvisa.info/aimsdata-4.5/user_doc/formats.html
+//
+type
+  THdr = packed record
+     sig: array [1..5] of char; //"binar" or "ascii"
+     endian: uint32; //BCBA or ABCD = 1094861636 or 1145258561
+     texLen: uint32;
+     texTxt: array[1..4] of char; //VOID
+     vertex_per_face,
+     mesh_time,
+     mesh_step,
+     vertex_number: uint32;
+  end;
+const
+  kSwapEnd = 1094861636;
+  kNativeEnd = 1145258561;
+label
+   666;
+var
+   f: file;
+   hdr : THdr;
+   i: integer;
+   normals: array of TPoint3f;
+   faces_number, sz: uint32;
+   swapEnd: boolean;
+begin
+  result := false;
+  AssignFile(f, FileName);
+  FileMode := fmOpenRead;
+  Reset(f,1);
+  if FileSize(f) < 64 then goto 666;
+  blockread(f, hdr, SizeOf(hdr) );
+  if (uppercase(hdr.sig) = 'ASCII') then begin
+     CloseFile(f);
+     showmessage('ASCII format mesh: only able to read binary meshes '+filename);
+     exit;
+  end;
+  if (uppercase(hdr.sig) <> 'BINAR') or (uppercase(hdr.texTxt) <> 'VOID') or (hdr.texLen <> 4) or ( (hdr.endian <> kNativeEnd) and (hdr.endian <> kSwapEnd))  then goto 666;
+  swapEnd := hdr.endian = kNativeEnd;
+  if swapEnd then begin
+     SwapLongWord(hdr.vertex_per_face);
+     SwapLongWord(hdr.vertex_number);
+  end;
+  if (hdr.vertex_per_face <> 3) then begin
+     showmessage('Only able to read triangular BrainVisa meshes');
+     goto 666;
+  end;
+  setlength(vertices, hdr.vertex_number);
+  blockread(f, vertices[0],  int64(hdr.vertex_number) * 3 * 4);
+  blockread(f, sz, sizeof(uint32));
+  setlength(normals, hdr.vertex_number);
+  blockread(f, normals[0],  int64(hdr.vertex_number) * 3 * 4);
+  setlength(normals, 0);
+  blockread(f, sz, sizeof(uint32));
+  blockread(f, faces_number, sizeof(uint32));
+  if swapEnd then begin
+    SwapLongWord(faces_number);
+     for i := 0 to high(vertices) do
+         swapPt3f(vertices[i]);
+  end;
+  setlength(faces, faces_number);
+  blockread(f, faces[0],  int64(faces_number) * 3 * 4);
+  if swapEnd then begin
+     for i := 0 to high(faces) do
+         swapPt3i(faces[i]);
+  end;
+  for i := 0 to high(vertices) do
+      vectorNegate(vertices[i]);
+  for i := 0 to high(faces) do
+      SwapXZ(faces[i]);
+  result := true;
+  666:
+  CloseFile(f);
+  if not result then
+       showmessage('Unable to decode BrainVisa file '+ FileName);
+end; //LoadMesh()
 
 function TMesh.LoadDfs(const FileName: string): boolean;
 // http://brainsuite.org/formats/dfs/
@@ -3713,6 +3788,8 @@ begin
         Load3ds(Filename);
      if (ext = '.MZ3') then
         LoadMz3(Filename, 0);
+     if (ext = '.MESH') then
+        LoadMesh(Filename);
      if (ext = '.CTM') then
          LoadCtm(Filename);
      if (ext = '.NV') then
