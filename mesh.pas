@@ -4257,7 +4257,13 @@ begin
         exit;
      end;
   end;
+  {$IFDEF FOREIGNVOL}
+   //kVolFilter = 'Neuroimaging (*.nii)|*.hdr;*.nii;*.nii.gz;*.voi;*.HEAD;*.mgh;*.mgz;*.mha;*.mhd;*.nhdr;*.nrrd';
+  if (ext = '.NII') or (ext = '.IMG') or (ext = '.HDR')  or (ext = '.GZ')  or (ext = '.VOI') or (ext = '.NHDR')
+    or (ext = '.NRRD') or (ext = '.HEAD') or (ext = '.MGH')  or (ext = '.MGZ')  or (ext = '.MHA') or (ext = '.MHD') then
+  {$ELSE}
   if (ext = '.NII') or (ext = '.IMG') or (ext = '.HDR')  or (ext = '.GZ') then
+  {$ENDIF}
      LoadNii(FileName, OpenOverlays);
   if (length(overlay[OpenOverlays].intensity) < 1 )  then
        LoadW(FileName, OpenOverlays);

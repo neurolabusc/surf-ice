@@ -1,10 +1,10 @@
 unit nifti_loader;
 
 {$mode objfpc}{$H+}
-
+{$Include opts.inc} //FOREIGNVOL
 interface
-
 uses
+  {$IFDEF FOREIGNVOL}nifti_foreign, {$ENDIF}
   Classes, SysUtils, nifti_types, define_types, dialogs, zstream;
 
 const
@@ -25,7 +25,7 @@ TNIFTI = class
     img: TImgScaled;//array of single;
   private
     function ImgRawToSingle(imgBytes: TImgRaw; isSwap: boolean): boolean;
-    function  readImg(const FileName: string; isSwap, isGz: boolean): boolean;
+    function  readImg(const FileName: string; isSwap: boolean; gzFlag: int64): boolean;
     procedure setMatrix;
     procedure SetDescriptives;
   public
@@ -461,7 +461,12 @@ begin
      result := true;
 end;
 
-function TNIFTI.readImg(const FileName: string; isSwap, isGz: boolean): boolean; //read first volume
+//readForeignHeader (var lFilename: string; var lHdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+// K_gzBytes_headerAndImageCompressed = -2;
+// K_gzBytes_onlyImageCompressed= -1;
+// K_gzBytes_headerAndImageUncompressed= 0;
+
+function TNIFTI.readImg(const FileName: string; isSwap: boolean; gzFlag: int64): boolean; //read first volume
 var
    f: File;
    nVox, nByte: integer;
@@ -472,14 +477,14 @@ begin
   nVox:= hdr.dim[1] * hdr.dim[2] * hdr.dim[3];
   if nVox < 1 then exit;
   nByte := nVox * (hdr.bitpix div 8);
-  if isGz then begin
+  if gzFlag = K_gzBytes_headerAndImageCompressed then begin
      decomp := TGZFileStream.create(FileName, gzopenread);
      setlength(imgBytes, round(hdr.vox_offset));
      decomp.Read(imgBytes[0], round(hdr.vox_offset));
      setlength(imgBytes, nByte);
      decomp.Read(imgBytes[0], nByte);
      decomp.free;
-  end else begin
+  end else if gzFlag = K_gzBytes_headerAndImageUncompressed then begin
     setlength(imgBytes, nByte);
     AssignFile(f, FileName);
     FileMode := fmOpenRead;
@@ -487,6 +492,9 @@ begin
     Seek(f,round(hdr.vox_offset));
     BlockRead(f, imgBytes[0],nByte);
     CloseFile(f);
+  end else begin
+       showmessage('Unable to read compressed images with uncompressed headers!');
+       exit;
   end;
   if not ImgRawToSingle(imgBytes, isSwap) then exit;
   result := true;
@@ -589,21 +597,32 @@ end;
 
 function TNIFTI.LoadFromFile(const FileName: string; smoothMethod: integer): boolean; //smoothMethod is one of kNiftiSmooth...  options
 var
-   ext, FileName2: string;
+   ext, hdrName, imgName: string;
+   gzFlag : int64;
    isSwap: boolean;
 begin
     result := false;
     isSwap := false; //assume native endian
+    gzFlag := K_gzBytes_headerAndImageUncompressed;
      if not FileExists(FileName) then exit;
      ext := UpperCase(ExtractFileExt(Filename));
-     if (ext = '.GZ') then
-        hdr := ReadHdrGz(FileName)
-     else begin
+     imgName := Filename;
+     hdrName := Filename;
+     if (ext = '.GZ') then begin
+        hdr := ReadHdrGz(FileName);
+        gzFlag := K_gzBytes_headerAndImageCompressed;
+     end else if ((ext = '.NII') or (ext = '.HDR') or (ext = '.IMG')) then begin
           if (ext = '.IMG') then
-             FileName2 := ChangeFileExt(FileName, '.hdr')
-          else
-              FileName2 := FileName;
-          hdr := ReadHdr(FileName2);
+             hdrName := ChangeFileExt(FileName, '.hdr')
+          else if ext = '.HDR' then
+              imgName := ChangeFileExt(FileName, '.img');
+          hdr := ReadHdr(hdrName);
+     end else begin
+       {$IFDEF FOREIGNVOL}
+         if not readForeignHeader (imgName, hdr, gzFlag, isSwap) then exit;
+       {$ELSE}
+         exit;
+       {$ENDIF}
      end;
      if sizeof(TNIfTIhdr) <> hdr.HdrSz then begin
         NIFTIhdr_SwapBytes(hdr);
@@ -612,12 +631,8 @@ begin
      if sizeof(TNIfTIhdr) <> hdr.HdrSz then
         exit; //not a valid nifti header
      if not FixDataType (hdr) then exit;
-     if (ext = '.HDR') then
-        FileName2 := ChangeFileExt(FileName, '.img')
-     else
-         FileName2 := FileName;
 
-     if not ReadImg(FileName2, isSwap, (ext = '.GZ') ) then exit;
+     if not ReadImg(imgName, isSwap, gzFlag) then exit;
      setMatrix;
      if smoothMethod = kNiftiSmoothMaskZero  then
         SmoothFWHM2VoxIgnoreZeros (img,  hdr.dim[1],hdr.dim[2],hdr.dim[3])

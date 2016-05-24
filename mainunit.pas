@@ -339,7 +339,12 @@ end;
 
 procedure TGLForm1.VolumeToMeshMenuClick(Sender: TObject);
 const
-     kVolFilter = 'NIfTI volume|*.hdr;*.nii;*nii.gz';
+{$IFDEF FOREIGNVOL}
+ //kVolFilter = 'NIfTI volume|*.hdr;*.nii;*nii.gz';
+ kVolFilter = 'Neuroimaging (*.nii)|*.hdr;*.nii;*.nii.gz;*.voi;*.HEAD;*.mgh;*.mgz;*.mha;*.mhd;*.nhdr;*.nrrd';
+{$ELSE}
+ kVolFilter = 'NIfTI volume|*.hdr;*.nii;*nii.gz';
+{$ENDIF}
 begin
   OpenDialog.Filter := kVolFilter;
   OpenDialog.Title := 'Select volume to convert';
@@ -448,7 +453,6 @@ begin
    if not gMesh.LoadOverlay(FileName) then begin //gPrefs.SmoothVoxelwiseData
      GLBoxRequestUpdate(nil);
      UpdateToolbar;
-
      exit;
    end;
    result := true;
@@ -1887,7 +1891,12 @@ end;
 
 procedure TGLForm1.AddOverlayMenuClick(Sender: TObject);
 const
-     kOverlayFilter = 'Mesh or NIfTI|*.*';
+{$IFDEF FOREIGNVOL}
+ //kVolFilter = 'Neuroimaging (*.nii)|*.hdr;*.nii;*.nii.gz;*.voi;*.HEAD;*.mgh;*.mgz;*.mha;*.mhd;*.nhdr;*.nrrd';
+ kOverlayFilter = 'Mesh (e.g. GIfTI) or Volume (e.g. NIfTI) |*.*';
+{$ELSE}
+kOverlayFilter = 'Mesh or NIfTI|*.*';
+{$ENDIF}
 begin
   OpenDialog.Filter := kOverlayFilter;
   OpenDialog.Title := 'Select overlay file';

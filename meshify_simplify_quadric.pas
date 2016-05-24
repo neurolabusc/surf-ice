@@ -13,19 +13,6 @@ interface
 uses
     Math, define_types;
 
-(*  TPoint3f = packed record
-    X: single;
-    Y: single;
-    Z: single
-  end;
- TPoint3i = packed record
-    X: longint;
-    Y: longint;
-    Z: longint;
-  end;
- TFaces = array of TPoint3i; //n.b. Triangle indexed from zero, so face composed of first three vertices is [0,1,2]
- TVertices = array of TPoint3f; *)
-
 procedure simplify_mesh(var faces : TFaces; var verts: TVertices; target_count: integer; agressiveness : double=7; resize: boolean=true);
 
 implementation
@@ -245,7 +232,8 @@ begin
 		vertices[i].tcount := 0;
 	end;
 	// Write References
-	setlength(refs, length(triangles) * 3);
+	// setlength(refs, length(triangles) * 3); //initial size, replicates C code
+	setlength(refs, length(triangles) * 6); //Pascal setlength() is expensive, so set larger than initially required to reduce re-allocation
 	nrefs := length(refs);
 	for i := 0 to high(triangles) do begin
 		t := @triangles[i];
@@ -357,7 +345,7 @@ end; // flipped()
 
 procedure update_triangles(i0: integer; var v: TVertex; var deleted :TBools; var deleted_triangles: integer; var triangles: TTs;  var vertices: TVs; var refs :TRs; var nrefs: integer); inline;
 const
-  kBlockSz = 4096; //re-allocate memory in chunks
+  kBlockSz = 64000; //re-allocate memory in chunks
 var
    p: TPoint3f;
    k: integer;
@@ -410,15 +398,15 @@ begin
   mx := mn;
   for i := 0 to high(verts) do begin
       if (verts[i].X < mn.X) then mn.X := verts[i].X;
-      if (verts[i].Y < mn.X) then mn.Y := verts[i].Y;
-      if (verts[i].Z < mn.X) then mn.Z := verts[i].Z;
+      if (verts[i].Y < mn.Y) then mn.Y := verts[i].Y;
+      if (verts[i].Z < mn.Z) then mn.Z := verts[i].Z;
       if (verts[i].X > mx.X) then mx.X := verts[i].X;
-      if (verts[i].Y > mx.X) then mx.Y := verts[i].Y;
-      if (verts[i].Z > mx.X) then mx.Z := verts[i].Z;
+      if (verts[i].Y > mx.Y) then mx.Y := verts[i].Y;
+      if (verts[i].Z > mx.Z) then mx.Z := verts[i].Z;
   end;
   result := max(max(mx.X-mn.X, mx.Y-mn.Y), mx.Z - mn.Z);
   if (result = 0) or (result = 1.0) then exit;
-  invert := 1/result;
+  invert := 1.0/result;
   for i := 0 to high(verts) do
       verts[i] := vMult(verts[i], invert);
 end;
