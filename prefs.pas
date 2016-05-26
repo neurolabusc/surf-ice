@@ -155,19 +155,32 @@ begin
 		lValue := StrToInt(lStr);
 end; //IniFloat
 
-function DefaultMeshName: string;
+const
+  kNumDefaultMesh = 6;
+function DefaultMeshName (indx: integer): string;
 var
   lPath,lName {$IFDEF Darwin}, lExt {$ENDIF}: string;
 begin
  lPath := ExtractFileDir(AppDir());
  {$IFDEF Darwin}
  FilenameParts (lPath, lPath,lName,lExt) ;
+ {$ELSE}
+ lPath := lPath + PathDelim;
  {$ENDIF}
- lName := lPath + PathDelim + 'sample'+ PathDelim + 'mni152_2009.mz3';
+ case indx of
+      2: lName := lPath  +  'BrainNet'+ PathDelim + 'BrainMesh_ICBM152_smoothed.mz3';
+      3: lName := lPath  + 'BrainNet'+ PathDelim + 'BrainMesh_ICBM152Left_smoothed.mz3';
+      4: lName := lPath  +  'BrainNet'+ PathDelim + 'BrainMesh_ICBM152Right_smoothed.mz3';
+      5:  lName := lPath  +  'fs'+ PathDelim + 'lh.inflated';
+      6:  lName := lPath  +  'fs'+ PathDelim + 'lh.pial';
+
+      else
+        lName := lPath  + 'sample'+ PathDelim + 'mni152_2009.mz3';
+ end;
  if fileexists(lName) then
    result := lName
  else
-     lName := '';
+     result := '';
 end;
 
 procedure SetDefaultPrefs (var lPrefs: TPrefs; lEverything: boolean);
@@ -187,7 +200,8 @@ begin
               PrevFilename[i] := '';
               PrevScriptName[i] := '';
             end;
-            PrevFilename[1] := DefaultMeshName;
+            for i := 1 to kNumDefaultMesh do
+                PrevFilename[i] := DefaultMeshName(i);
        end;
   end;
   with lPrefs do begin
@@ -321,17 +335,16 @@ end; //IniRGBA
 procedure IniMRU(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lMRU: TMRU);
 var
 	lI,lOK: integer;
+        lStr: string;
 function Novel: boolean;
 var
   lX: integer;
 begin
-  if lI < 2 then begin
-    result := true;
-    exit;
-  end;
+   result  := true;
+   if (lOK < 1) or (lOK > knMRU) then exit;
    result := false;
-   for lX := 1 to (lI-1) do
-    if lMRU[lX] = lMRU[lI] then
+   for lX := 1 to lOK do
+    if lMRU[lX] = lStr then
       exit;
    result := true;
 end;
@@ -339,15 +352,25 @@ begin
   if lRead then begin //compress files so lowest values are OK
     lOK := 0;
     for lI := 1 to knMRU do begin
-      IniStr(lRead,lIniFile,lIdent+inttostr(lI),lMRU[lI]);
-	    if (length(lMRU[lI]) > 0) and (fileexists(lMRU[lI])) and (Novel) then begin
+      IniStr(lRead,lIniFile,lIdent+inttostr(lI),lStr);
+      if (length(lStr) > 0) and (fileexists(lStr)) and (Novel) then begin
 		    inc(lOK);
-		    lMRU[lOK] := lMRU[lI];
+		    lMRU[lOK] := lStr;
       end else
         lMRU[lI] := '';
-	  end; //for each MRU
+      end; //for each MRU
+      //file empty slots
+      lI := 0;
+      while (lOK < knMRU) and (lI < kNumDefaultMesh) do begin
+        lI := lI + 1;
+        lStr := DefaultMeshName(lI);
+        if (length(lStr) > 0) and (fileexists(lStr)) and (Novel) then begin
+		    inc(lOK);
+		    lMRU[lOK] := lStr;
+        end;
+      end;
   end else
-	  for lI := 1 to knMRU do
+      for lI := 1 to knMRU do
       IniStr(lRead,lIniFile,lIdent+inttostr(lI),lMRU[lI]); //write values
 end;
 
@@ -430,6 +453,7 @@ function IniFile(lRead: boolean; lFilename: string; var lPrefs: TPrefs): boolean
 //Read or write initialization variables to disk
 var
   lIniFile: TIniFile;
+  i: integer;
 begin
   result := false;
   if (lRead) then
@@ -459,8 +483,8 @@ begin
   IniStr(lRead, lIniFile, 'PrevNodename', lPrefs.PrevNodename);
   IniStr(lRead, lIniFile, 'PrevOverlayname', lPrefs.PrevOverlayname);
   IniMRU(lRead,lIniFile,'PrevFilename',lPrefs.PrevFilename);
-  //IniMRU(lRead,lIniFile,'PrevScriptName',lPrefs.PrevScriptName);
 
+  //IniMRU(lRead,lIniFile,'PrevScriptName',lPrefs.PrevScriptName);
   IniRGBA(lRead,lIniFile, 'TextColor',lPrefs.TextColor);
   IniRGBA(lRead,lIniFile, 'TextBorder',lPrefs.TextBorder);
   IniRGBA(lRead,lIniFile, 'GridAndBorder',lPrefs.GridAndBorder);

@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
-  Left = 652
+  Left = 651
   Height = 865
-  Top = 65
+  Top = 66
   Width = 1060
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -162,6 +162,7 @@ object GLForm1: TGLForm1
         Align = alBottom
         Lines.Strings = (
           'Memo1'
+          ''
           ''
           ''
           ''

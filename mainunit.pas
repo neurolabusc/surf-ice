@@ -1841,10 +1841,14 @@ begin
      GLbox.Repaint;
   end;
   origin := GetOrigin(scale);
-  str :=  'Surf Ice '+' 5 May 2016 '
+  str :=  'Surf Ice '+' 15 May 2016 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
+   {$IFDEF LCLCarbon} + ' Carbon'{$ENDIF}
+   {$IFDEF LCLCocoa} + ' Cocoa'{$ENDIF}
+   {$IFDEF Linux} + ' Linux'{$ENDIF}
+   {$IFDEF Windows} + ' Windows'{$ENDIF}
    {$IFDEF DGL} + ' DGL'{$ENDIF}
    {$IFNDEF COREGL}+' (Legacy OpenGL)'{$ENDIF}
    +LineEnding+' www.mricro.com :: BSD 2-Clause License (opensource.org/licenses/BSD-2-Clause)'

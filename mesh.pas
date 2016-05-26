@@ -83,12 +83,13 @@ type
     procedure LoadAsc_Srf(const FileName: string);
     procedure LoadCtm(const FileName: string);
     procedure LoadCurv(const FileName: string; lOverlayIndex: integer);
+    //function LoadMeshAscii(const FileName: string): boolean;
     function LoadMesh(const FileName: string): boolean;
     procedure LoadNode(const FileName: string);
     procedure LoadNv(const FileName: string);
     procedure LoadObj(const FileName: string);
     function LoadObjMni(const FileName: string): boolean;
-    procedure LoadOff(const FileName: string);
+    function LoadOff(const FileName: string): boolean;
     procedure LoadPial(const FileName: string);
     procedure LoadPly(const FileName: string);
     procedure LoadStl(const FileName: string);
@@ -921,22 +922,25 @@ var
    str: string;
 begin
   v1 := 0; v2 := 0; v3 := 0; v4 := 0;
+  strlst:=TStringList.Create;
   while not EOF(f) do begin
         ReadLn(f, str); //make sure to run CheckMesh after this, as these are indexed from 1!
         if (length(str) > 0) and (str[1] <> '#') then begin
-           strlst:=TStringList.Create;
+
            strlst.DelimitedText := str;
-           v1 := strtofloat(strlst[0]);
+           if strlst.Count < 1 then continue;
+           v1 := strtofloatdef(strlst[0],0);
            if (strlst.count > 1) then
-              v2 := strtofloat(strlst[1]);
+              v2 := strtofloatdef(strlst[1],0);
            if (strlst.count > 2) then
-              v3 := strtofloat(strlst[2]);
+              v3 := strtofloatdef(strlst[2],0);
            if (strlst.count > 3) then
-              v4 := strtofloat(strlst[3]);
+              v4 := strtofloatdef(strlst[3],0);
            strlst.free;
            exit;
         end;
-  end
+  end;
+  strlst.free;
 end;
 
 procedure TMesh.LoadNV(const FileName: string);
@@ -975,7 +979,7 @@ end; // LoadNV()
 
 //{$DEFINE OFFSIMPLE} //Simple reader is faster, but only handles triangular meshes
 {$IFDEF OFFSIMPLE}
-procedure TMesh.LoadOff(const FileName: string);
+function TMesh.LoadOff(const FileName: string): boolean;
 //http://paulbourke.net/dataformats/off/
 var
    f: TextFile;
@@ -983,6 +987,7 @@ var
    s: string;
    v1,v2,v3, v4: single;
 begin
+  result := true;
      AssignFile(f, FileName);
      Reset(f);
      Readln(f,s);
@@ -1019,11 +1024,13 @@ begin
      CloseFile(f);
 end; // LoadOff()
 {$ELSE}
-procedure TMesh.LoadOff(const FileName: string);
+function TMesh.LoadOff(const FileName: string): boolean;
 //http://paulbourke.net/dataformats/off/
 //For examples where faces have more then 3 vertices see
 // http://www.cs.princeton.edu/courses/archive/spr08/cos426/assn2/formats.html
 // http://people.sc.fsu.edu/~jburkardt/data/off/abstr.off
+label
+   666;
 var
    f: TextFile;
    i, j, k, indxPrev, num_v, num_f, newF: integer;
@@ -1032,6 +1039,7 @@ var
    s1, s2, s3, s4: single;
    strlst : TStringList;
 begin
+     result := false;
      AssignFile(f, FileName);
      Reset(f);
      Readln(f,s);
@@ -1043,7 +1051,7 @@ begin
      ReadlnSafe(f, s1,s2,s3, s4);
      num_v := round(s1);
      num_f := round(s2);
-     if (num_v < 3) or (num_f < 1) then begin
+     if (num_v < 3) or (num_f < 1) then begin  //e.g. faces on multiple lines, see https://github.com/libigl/libigl
         showmessage('Corrupt file: must have at least 3 vertices and one face');
         CloseFile(f);
         exit;
@@ -1061,6 +1069,10 @@ begin
          strlst.DelimitedText := s;
          newF := StrToIntDef(strlst[0],0);
          if newF < 3 then continue;
+         if (newF+1) > (strlst.Count) then begin
+            showmessage('Unable to read OFF file (perhaps you can open with MeshLab and export as another format');
+            goto 666;
+         end;
          indx1 := StrToIntDef(strlst[1],0);
          indxPrev := StrToIntDef(strlst[2],0);
          if (j + newF) > length(faces) then
@@ -1075,6 +1087,12 @@ begin
          i := i + 1;
      end;
      setlength(faces, j);
+     result := true;
+     666:
+     if not result then begin
+        setlength(faces,0);
+        setlength(vertices,0);
+     end;
      strlst.free;
      CloseFile(f);
 end;
@@ -3098,6 +3116,74 @@ begin
      SwapLongInt(p.z);
 end;
 
+(*function TMesh.LoadMeshAscii(const FileName: string): boolean;
+//https://www.rocq.inria.fr/gamma/gamma/ghs3d/file.mesh.pdf
+// https://people.sc.fsu.edu/~jburkardt/examples/medit/medit.html
+// see 7.2.1 of http://www.ann.jussieu.fr/~frey/publications/RT-0253.pdf
+label
+   666;
+var
+   f: Textfile;
+   str: string;
+   num_v, num_f, i: integer;
+   f1,f2,f3,f4: single;
+function ReadVal: integer;
+//read value on current line or next
+var
+   strlst : TStringList;
+begin
+     strlst:=TStringList.Create;
+     strlst.DelimitedText := str;
+     if (strlst.count > 1) then
+        result := strtointdef(strlst[1],0)
+     else
+         read(f,result);
+     strlst.free;
+end; //ReadVal
+begin
+     result := false;
+     AssignFile(f, FileName);
+     Reset(f);
+     num_v := 0;
+
+     while (not EOF(f)) and (num_v < 1) do begin
+           readln(f,str);
+           if (length(str) < 1) or (str[1] = '#') then continue;
+           str := uppercase(str);
+           if pos('MESHVERSIONFORMATTED', str) = 1 then
+              ReadVal()//read(f, str)
+           else if pos('DIMENSION', str) = 1 then
+              ReadVal()//read(f, str)
+           else if pos('VERTICES', str) = 1 then
+              num_v := ReadVal();//read(f, num_v);
+     end;
+     if (num_v < 3) then goto 666;
+     setlength(vertices, num_v);
+     for i := 0 to (num_v - 1) do
+         ReadlnSafe(f, vertices[i].X, vertices[i].Y,  vertices[i].Z, f4);
+     i := num_v - 1;
+     num_f := 0;
+     while (not EOF(f)) and (num_f < 1) do begin
+           readln(f,str);
+           if (length(str) < 1) or (str[1] = '#') then continue;
+           str := uppercase(str);
+           if pos('TRIANGLES', str) = 1 then
+              num_f := ReadVal();//read(f, num_v);
+     end;
+     if (num_f < 3) then goto 666;
+     setlength(faces, num_f);
+     for i := 0 to (num_f -1) do begin
+         ReadlnSafe(f, f1, f2, f3, f4);
+         faces[i].X := round(f1);
+         faces[i].Y := round(f2);
+         faces[i].Z := round(f3);
+     end;
+     //i :=  num_f -1; showmessage(format('%d %d %d',[faces[i].X, faces[i].Y, faces[i].Z]));
+     result := true;
+     666:
+     CloseFile(f);
+end;  *)
+
 function TMesh.LoadMesh(const FileName: string): boolean;
 // http://brainvisa.info/aimsdata-4.5/user_doc/formats.html
 //
@@ -3133,10 +3219,19 @@ begin
   blockread(f, hdr, SizeOf(hdr) );
   if (uppercase(hdr.sig) = 'ASCII') then begin
      CloseFile(f);
-     showmessage('ASCII format mesh: only able to read binary meshes '+filename);
+     showmessage('This is a ASCII format mesh: only able to read binary meshes '+filename);
      exit;
   end;
-  if (uppercase(hdr.sig) <> 'BINAR') or (uppercase(hdr.texTxt) <> 'VOID') or (hdr.texLen <> 4) or ( (hdr.endian <> kNativeEnd) and (hdr.endian <> kSwapEnd))  then goto 666;
+  (*if (uppercase(hdr.sig) <> 'BINAR') then begin
+     CloseFile(f);
+     result := LoadMeshAscii(FileName);
+     exit;
+  end;*)
+  if (uppercase(hdr.sig) <> 'BINAR') or (uppercase(hdr.texTxt) <> 'VOID') or (hdr.texLen <> 4) or ( (hdr.endian <> kNativeEnd) and (hdr.endian <> kSwapEnd))  then begin
+     showmessage(format('sig=%s tex=%s endian=%d',[uppercase(hdr.sig), uppercase(hdr.texTxt), hdr.endian]));
+     goto 666;
+
+  end;
   swapEnd := hdr.endian = kNativeEnd;
   if swapEnd then begin
      SwapLongWord(hdr.vertex_per_face);
