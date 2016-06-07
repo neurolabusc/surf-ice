@@ -1535,6 +1535,9 @@ end; // LoadObjMni()
 procedure TMesh.LoadObj(const FileName: string);
 //WaveFront Obj file used by Blender
 // https://en.wikipedia.org/wiki/Wavefront_.obj_file
+//6/2016: Add support Obj files with negative indices
+//  https://people.cs.clemson.edu/~dhouse/courses/405/docs/brief-obj-file-format.html
+//  https://github.com/vistalab/vistasoft/blob/master/fileFilters/OBJ/examples/texturedknot.obj
 const
   kBlockSize = 8192;
 var
@@ -1575,9 +1578,16 @@ begin
                if (pos('/', strlst[i]) > 1) then // "f v1/vt1/vn1 v2/vt2/vn2 v3/vt3/vn3" -> f v1 v2 v3
                   strlst[i] := Copy(strlst[i], 1, pos('/', strlst[i])-1);
            for j := 1 to (new_f) do begin
-               faces[num_f].X := strtointDef(strlst[1], 0) - 1;
-               faces[num_f].Y := strtointDef(strlst[j+1], 0) - 1;  //-1 since "A valid vertex index starts from 1"
-               faces[num_f].Z := strtointDef(strlst[j+2], 0) - 1;  //-1 since "A valid vertex index starts from 1"
+               faces[num_f].X := strtointDef(strlst[1], 1);
+               faces[num_f].Y := strtointDef(strlst[j+1], 1);
+               faces[num_f].Z := strtointDef(strlst[j+2], 1);
+               if faces[num_f].X < 0 then
+                  faces[num_f].X := 1 + num_v - faces[num_f].X;
+               if faces[num_f].Y < 0 then
+                  faces[num_f].Y := 1 + num_v - faces[num_f].Y;
+               if faces[num_f].Z < 0 then
+                  faces[num_f].Z := 1 + num_v - faces[num_f].Z;
+               faces[num_f] := vectorAdd(faces[num_f],-1);//-1 since "A valid vertex index starts from 1"
                inc(num_f);
            end;
         end;

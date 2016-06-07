@@ -14,6 +14,13 @@ uses
     Math, define_types;
 
 procedure simplify_mesh(var faces : TFaces; var verts: TVertices; target_count: integer; agressiveness : double=7; resize: boolean=true);
+// target_count  : target nr. of triangles
+// agressiveness : sharpness to increase the threashold.
+//                 5..8 are good numbers
+//                 more iterations yield higher quality
+// resize        : scale to unit size before decimation, rescale to original size after (helps threshold)
+
+procedure simplify_mesh_lossless(var faces : TFaces; var verts: TVertices);
 
 implementation
 
@@ -518,5 +525,100 @@ begin
        scale_mesh(verts, scale);
 end; // simplify_mesh()
 
-end.
+procedure simplify_mesh_lossless(var faces : TFaces; var verts: TVertices);
+var
+  vertices : TVs;
+  triangles : TTs;
+  iteration, i, j, deleted_triangles,  i0, i1, tstart, tcount: integer;
+  deleted0,deleted1: TBools;
+  t: ^TTriangle;
+  v0, v1: ^TVertex;
+  p: TPoint3f;
+  refs : TRs;
+  nrefs: integer;
+begin
+  if (length(faces) < 5) or (length(verts) < 5) then exit;
+  //convert simple mesh to verbose structure that allows us to represent quadric properties
+  setlength(triangles, length(Faces));
+  setlength(vertices, length(Verts));
+  for i := 0 to high(triangles) do begin
+      triangles[i].v[0] := Faces[i].X;
+      triangles[i].v[1] := Faces[i].Y;
+      triangles[i].v[2] := Faces[i].Z;
+  end;
+  for i := 0 to high(verts) do
+      vertices[i].p := verts[i];
+  setlength(verts,0);
+  setlength(faces,0);
+  //now build mesh
+  setlength(refs,0); //to hide compiler hint
+  for i := 0 to high(triangles) do
+	  triangles[i].deleted := false;
+  // main iteration loop
+  deleted_triangles := 1; //just to start first loop
+  iteration := 0;
+  while deleted_triangles > 0 do begin
+      deleted_triangles := 0;
+		// update mesh continuously
+		update_mesh(iteration, triangles, vertices, refs, nrefs);
+                iteration := iteration + 1;
+                // clear dirty flag
+		for i := 0 to high(triangles) do
+		    triangles[i].dirty := false;
+		// All triangles with edges of zero will be removed
+		// remove vertices & mark deleted triangles
+		for i := 0 to high(triangles) do begin
+			t := @triangles[i];
+			if not IsZero(t^.err[3]) then continue;
+			if (t^.deleted) then continue;
+			if (t^.dirty) then continue;
 
+			for j := 0 to 2 do begin
+				if IsZero(t^.err[j]) then begin
+					i0 := t^.v[ j];
+					v0 := @vertices[i0];
+					i1 := t^.v[(j+1) mod 3];
+					v1 := @vertices[i1];
+					// Border check
+					if(v0^.border <> v1^.border) then continue;
+					// Compute vertex to collapse to
+					calculate_error(i0,i1,p, vertices);
+					setlength(deleted0, v0^.tcount);
+					setlength(deleted1, v1^.tcount);
+					// dont remove if flipped
+					if( flipped(p,i1,v0^,deleted0, triangles, vertices, refs) ) then continue;
+					if( flipped(p,i0,v1^,deleted1, triangles, vertices, refs) ) then continue;
+					// not flipped, so remove edge
+					v0^.p := p;
+					v0^.q := symMatAdd(v1^.q, v0^.q);
+					tstart := nrefs; //length(refs);
+					update_triangles(i0,v0^,deleted0,deleted_triangles, triangles, vertices, refs, nrefs);
+					update_triangles(i0,v1^,deleted1,deleted_triangles, triangles, vertices, refs, nrefs);
+					tcount := nrefs - tstart;//length(refs)-tstart;
+					if(tcount<=v0^.tcount) then begin // save ram
+					  if (tcount > 0) then
+						move(refs[tstart], refs[v0^.tstart], tcount * sizeof(TRef));  //Move(src,dest,count);
+					end else // append
+					   v0^.tstart := tstart;
+					v0^.tcount := tcount;
+					break;
+				end; //if <theshold
+			end; //loop j
+			// done?
+		end;//for i :, each triangle
+	end; //while we are still deleting triangles
+    // clean up mesh
+    compact_mesh(triangles, vertices);
+    //now convert back to simple structure
+    setlength(Faces, length(triangles));
+    setlength(Verts, length(vertices));
+    for i := 0 to high(triangles) do begin
+      Faces[i].X := triangles[i].v[0];
+      Faces[i].Y := triangles[i].v[1];
+      Faces[i].Z := triangles[i].v[2];
+    end;
+    for i := 0 to high(verts) do
+      verts[i] := vertices[i].p;
+end; // simplify_mesh_lossless()
+
+end.

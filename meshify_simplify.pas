@@ -846,7 +846,9 @@ begin
      Showmessage('Error: no mesh will survive such an extreme reduction.');
      exit;
   end;
-  simplify_mesh(faces, vertices, facesTarget, 7);
+  //UnifyVertices(faces, vertices);  // not sure if this is required
+  simplify_mesh(faces, vertices, facesTarget, 3, true);
+  simplify_mesh_lossless(faces, vertices);
   result := true;
 (*var
   msh: TSimplify;

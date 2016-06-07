@@ -1348,17 +1348,13 @@ var
 begin
  msStart := gettickcount();
  nTri := length(gMesh.Faces);
- s := '.2';
- if not inputquery('Track simplify', 'Enter reduction factor (e.g. 0.5 will decimate half of all triangles)', s) then exit;
+ s := '.3';
+ if not inputquery('Track simplify', 'Enter reduction factor (e.g. 0.2 will decimate 80% of all triangles)', s) then exit;
  r := StrToFloatDef(s, 0.5);
- if (r <= 0.0) or (r >= 1.0) then begin
+ if (r <= 0.0) or (r > 1.0) then begin
     showmessage('Error: reduction factor should be BETWEEN 0 and 1');
     exit;
  end;
- (*if not TryStrToFloat(s, tol) then begin
-    showmessage('Unable convert value to a number');
-    exit;
-  end; *)
  if not ReducePatch(gMesh.faces, gMesh.vertices, r) then exit;
  caption := format('Faces %d -> %d (%.3f, %d ms)', [ nTri, length(gMesh.Faces), length(gMesh.Faces)/nTri , gettickcount() - msStart]) ;
  gMesh.isRebuildList:=true;
