@@ -63,10 +63,29 @@ function asRGBA(clr: TColor): TRGBA;
 function ExtractFileExtGzUpper(FileName: string): string;
 function FSize (lFName: String): longint;
 function ChangeFileExtX( lFilename: string; lExt: string): string;
+function ReadNumBin(var f: TFByte): string; //read next ASCII number in binary file
 
 implementation
 
 uses sysutils, dialogs;
+
+function ReadNumBin(var f: TFByte): string; //read next ASCII number in binary file
+const
+  kEOLN = $0A;
+var
+   bt : Byte;
+   ch : Char;
+begin
+     result := '';
+     while (not  EOF(f)) do begin
+           Read(f,bt);
+           ch := Chr(bt);
+           if ch in ['-','.','E','e','0'..'9'] then
+              result := result + ch
+           else if length(result) > 0 then
+              exit;
+     end;
+end;
 
 function asPt4f(x,y,z,w: single): TPoint4f;
 begin

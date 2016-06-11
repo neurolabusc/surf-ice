@@ -66,8 +66,9 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <EditorIndex Value="2"/>
-        <TopLine Value="1345"/>
-        <CursorPos X="20" Y="1358"/>
+        <TopLine Value="1346"/>
+        <CursorPos X="102" Y="1359"/>
+        <ComponentState Value="1"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -84,8 +85,8 @@
       <Unit3>
         <Filename Value="nifti_loader.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="3"/>
-        <CursorPos X="64" Y="5"/>
+        <EditorIndex Value="5"/>
+        <CursorPos X="44" Y="8"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit3>
@@ -114,7 +115,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="380"/>
         <CursorPos X="37" Y="381"/>
-        <UsageCount Value="198"/>
+        <UsageCount Value="200"/>
       </Unit6>
     </Units>
   </ProjectOptions>

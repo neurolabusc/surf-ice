@@ -83,7 +83,7 @@ type
     procedure LoadAsc_Srf(const FileName: string);
     procedure LoadCtm(const FileName: string);
     procedure LoadCurv(const FileName: string; lOverlayIndex: integer);
-    //function LoadMeshAscii(const FileName: string): boolean;
+    function LoadMeshAscii(const FileName: string): boolean;
     function LoadMesh(const FileName: string): boolean;
     procedure LoadNode(const FileName: string);
     procedure LoadNv(const FileName: string);
@@ -92,7 +92,9 @@ type
     function LoadOff(const FileName: string): boolean;
     procedure LoadPial(const FileName: string);
     procedure LoadPly(const FileName: string);
+    procedure LoadStlAscii(const FileName: string);
     procedure LoadStl(const FileName: string);
+    function LoadSurf(const FileName: string): boolean;
     function LoadSrf(const FileName: string): boolean;
     procedure LoadVtk(const FileName: string);
     procedure LoadW(const FileName: string; lOverlayIndex: integer);
@@ -252,7 +254,7 @@ procedure TMesh.BuildList (Clr: TRGBA);
 var
   i,c: integer;
   mn, mx: single;
-  rgb: TRGBA;
+  rgb, rgb0: TRGBA;
   vRGBA, vRGBAmx :TVertexRGBA;
   vNumNeighbor: array of integer;
   //vNumColorNeighbor: array of integer;
@@ -292,8 +294,9 @@ begin
      if  (OpenOverlays > 0) then begin
         if isAdditiveOverlay then begin
           setlength(vRGBAmx, length(vertices));
+          rgb0 := RGBA(0,0,0,0);
           for i := 0 to (length(vertices)-1) do
-              vRGBAmx[i] := rgb;
+              vRGBAmx[i] := rgb0;
           for c :=  OpenOverlays downto 1 do begin
 
             if (overlay[c].LUTvisible) and (length(overlay[c].intensity) = length(vertices)) then begin
@@ -1605,6 +1608,8 @@ begin
      strlst.free;
      setlength(faces, num_f);
      setlength(vertices, num_v);
+     if (num_f < 1) and (num_v > 1) then
+        showmessage('Not a face-based OBJ file (perhaps lines, try opening in MeshLab)');
   //GLForm1.caption := ('ms '+ inttostr(gettickcount()- t) );
 end; // LoadObj()
 
@@ -2246,6 +2251,7 @@ begin
   CloseFile(f);
   labelTable := readLabelTable(Str);
   daStart := pos('<DataArray', Str); //read first data array
+  isLEndian := true;
   while daStart > 0 do begin //read each dataArray
     dhEnd := posEx('>', Str, daStart); // header end
     daEnd := posEx('</DataArray>', Str, daStart); // data array end
@@ -2253,7 +2259,8 @@ begin
     ddEnd := posEx('</Data>', Str, daStart); // data end
     if (dhEnd < 1) or (daEnd < 1) then goto 666;
     Hdr := Copy(Str, daStart, dhEnd-daStart+1);
-    isLEndian :=  pos('Endian="LittleEndian"', Hdr) > 0;
+    //fix for surf_gifti bug https://github.com/nno/surfing/blob/master/python/surf_gifti.py#L222
+    isLEndian :=  (pos('Endian="LittleEndian"', Hdr) > 0) or (pos('Endian="GIFTI_ENDIAN_LITTLE"', Hdr) > 0);
     isAscii :=  pos('Encoding="ASCII"', Hdr) > 0;
     isBase64Gz :=  pos('Encoding="GZipBase64Binary"', Hdr) > 0;
     isBase64 :=  pos('Encoding="Base64Binary"', Hdr) > 0;
@@ -2280,7 +2287,6 @@ begin
     isTransposed := pos('ColumnMajorOrder"', Hdr) > 0;
     if (Dim1 = 0) then Dim1 := 1;
     if (isOverlay) and (lOverlayIndex = 0) and ((length(vertices) > 0) or (length(faces) > 0)) then begin
-       //
        isOverlay := false;
     end;
     if (isOverlay) and (lOverlayIndex = 0) then begin
@@ -3194,6 +3200,83 @@ begin
      CloseFile(f);
 end;  *)
 
+function ReadNum(var f: TextFile): string; //read next ASCII number in ascii file
+var
+   ch : Char;
+begin
+     result := '';
+     while (not  EOF(f)) do begin
+           Read(f,ch);
+           if ch in ['-','.','E','e','0'..'9'] then
+              result := result + ch
+           else if length(result) > 0 then
+              exit;
+     end;
+end; //ReadNum()
+
+
+
+function TMesh.LoadMeshAscii(const FileName: string): boolean;
+label 666;
+var
+   strlst: TStringList;
+   s: string;
+   f: TextFile;
+   i, num_v, num_f, num_n: integer;
+
+begin
+  result := false;
+  AssignFile(f, FileName);
+  Reset(f);
+  Readln(f,s);  //ascii
+  if pos('ASCII', UpperCase(s)) < 1 then begin
+    showmessage('Not an ASCII BrainVisa file');
+    goto 666;
+  end;
+  Readln(f,s);  //VOID  textureType
+  i :=strtointdef(ReadNum(f),0); //3
+  if i <> 3 then begin
+     showmessage('Only able to read triangulated BrainVisa files');
+     goto 666;
+  end;
+  Readln(f,s);  //1 numberOfTimeSteps
+  Readln(f,s);  //0 timestep
+  //next vertices 30176 (80.35473,...
+  num_v := strtointdef(ReadNum(f),0); //number of vertices
+  if num_v < 3 then goto 666;
+  setlength(vertices, num_v);
+  for i := 0 to (num_v -1) do begin
+      vertices[i].X := strtofloatdef(ReadNum(f),0);
+      vertices[i].Y := strtofloatdef(ReadNum(f),0);
+      vertices[i].Z := strtofloatdef(ReadNum(f),0);
+  end;
+  //next normals 30176  (0.10198036,-0.089818045,
+  num_n := strtointdef(ReadNum(f),0); //number of vertices
+  if num_n > 0 then begin
+     for i := 0 to (num_n -1) do begin
+         ReadNum(f);
+         ReadNum(f);
+         ReadNum(f);
+     end;
+  end; //num_n
+  ReadNum(f); //u32
+  num_f := strtointdef(ReadNum(f),0); //number of vertices
+  if num_f < 1 then goto 666;
+  setlength(faces, num_f);
+  for i := 0 to (num_f -1) do begin
+      faces[i].X := strtointdef(ReadNum(f),0);
+      faces[i].Y := strtointdef(ReadNum(f),0);
+      faces[i].Z := strtointdef(ReadNum(f),0);
+  end;
+  for i := 0 to high(vertices) do
+      vectorNegate(vertices[i]);
+  for i := 0 to high(faces) do
+      SwapXZ(faces[i]);
+  result := true;
+  666:
+  closefile(f);
+end;
+
 function TMesh.LoadMesh(const FileName: string): boolean;
 // http://brainvisa.info/aimsdata-4.5/user_doc/formats.html
 //
@@ -3229,14 +3312,10 @@ begin
   blockread(f, hdr, SizeOf(hdr) );
   if (uppercase(hdr.sig) = 'ASCII') then begin
      CloseFile(f);
-     showmessage('This is a ASCII format mesh: only able to read binary meshes '+filename);
+     result := LoadMeshAscii(FileName);
+     //showmessage('This is a ASCII format mesh: only able to read binary meshes '+filename);
      exit;
   end;
-  (*if (uppercase(hdr.sig) <> 'BINAR') then begin
-     CloseFile(f);
-     result := LoadMeshAscii(FileName);
-     exit;
-  end;*)
   if (uppercase(hdr.sig) <> 'BINAR') or (uppercase(hdr.texTxt) <> 'VOID') or (hdr.texLen <> 4) or ( (hdr.endian <> kNativeEnd) and (hdr.endian <> kSwapEnd))  then begin
      showmessage(format('sig=%s tex=%s endian=%d',[uppercase(hdr.sig), uppercase(hdr.texTxt), hdr.endian]));
      goto 666;
@@ -3627,6 +3706,153 @@ begin
   UnifyVertices(faces, vertices);
 end; // Load3ds()
 
+function TMesh.LoadSurf(const FileName: string): boolean;
+// Mango SURF format http://ric.uthscsa.edu/mango/mango_surface_spec.html
+type
+  THdr = packed record
+     magic: array [1 .. 5] of char; // Magic  "mango"
+     endian, versMajor, versMinor: char; //"l" or "b" for little or big endian
+     previewSz, nSurf : uint32;
+     mat: array[1..16] of double;
+     imgDim: array [1..3] of uint32;
+     voxDim, origin: array [1..3] of single;
+     thresh: single
+  end;
+
+  TSurf = packed record
+     nam: array [1 .. 64] of char;
+     r,g,b: single;
+     nParts, nPoint : uint32;
+  end;
+label
+   666;
+var
+   f: file;
+   hdr : THdr;
+   surf: TSurf;
+   sz: int64;
+   num_v,  i: integer;
+   err: string;
+   b: array of byte;
+   num_parts,num_norm, num_f: uint32;
+   //swp: int32;
+begin
+  result := false;
+  AssignFile(f, FileName);
+  FileMode := fmOpenRead;
+  Reset(f,1);
+  sz := FileSize(f);
+  err := 'file too small';
+  if sz < 64 then goto 666;
+  blockread(f, hdr, SizeOf(hdr) );
+  {$IFNDEF ENDIAN_LITTLE} need to byte-swap SURF files {$ENDIF}
+  err := 'unable to read big-endian data, save image with BrainStorm''s out_tess';
+  if (uppercase(hdr.endian) =  'B') then
+     goto 666;
+  err := 'incorrect magic signature';
+  if (uppercase(hdr.magic) <> 'MANGO') then goto 666; //oops
+  err := 'no surfaces in file';
+  if (hdr.nSurf < 1) then goto 666;
+  if hdr.previewSz > 0 then begin //skip preview
+     setlength(b, hdr.previewSz);
+     blockread(f, b[0], hdr.previewSz);
+     setlength(b,0);
+  end;
+  blockread(f, surf, SizeOf(surf) );
+  err := inttostr(surf.nPoint)+' points not divisible by 3';
+  if (surf.nPoint mod 3) <> 0 then goto 666;
+  num_v := surf.nPoint div 3;
+  setlength(vertices, num_v);
+  blockread(f, vertices[0], num_v * sizeof(TPoint3f));
+  blockread(f, num_parts, 4 );
+  blockread(f, num_norm, 4 );
+  if num_norm > 0 then begin
+     setlength(b, num_norm * 4);
+     blockread(f, b[0], num_norm * 4);
+     setlength(b,0);
+  end;
+  blockread(f, num_parts, 4 );
+  blockread(f, num_f, 4 );
+  err := inttostr(num_f)+' faces not divisible by 3';
+  if (num_f mod 3) <> 0 then goto 666;
+  num_f := num_f div 3;
+  setlength(faces, num_f);
+  blockread(f, faces[0], num_f * sizeof(TPoint3i));
+  result := true;
+  //showmessage(format('%g %g %g %g',[hdr.mat[1], hdr.mat[ 2], hdr.mat[ 3], hdr.mat[ 4]] ));
+  //showmessage(format('%g %g %g %g',[hdr.mat[5], hdr.mat[ 6], hdr.mat[ 7], hdr.mat[ 8]] ));
+  //showmessage(format('%g %g %g %g',[hdr.mat[9], hdr.mat[10], hdr.mat[11], hdr.mat[12]] ));
+  for i := 0 to (num_v - 1) do begin
+    vertices[i].X := -vertices[i].X;
+    vertices[i].Y := -vertices[i].Y;
+  end;
+  (*for i := 0 to (length(faces)-1) do begin //Mango triangle winding opposite of convention
+      swp := faces[i].X;
+      faces[i].X := faces[i].Z;
+      faces[i].Z := swp;
+  end;*)
+  666:
+  CloseFile(f);
+  if not result then
+       showmessage('Unable to decode Mango SURF file ('+err+') '+ FileName);
+end; // LoadSurf()
+
+procedure TMesh.LoadStlAscii(const FileName: string);
+//Read ASCII STL
+// https://en.wikipedia.org/wiki/STL_(file_format)
+label
+   666;
+const
+  kBlockSize = 8192;
+var
+   strlst: TStringList;
+   s: string;
+   f: TextFile;
+   i, num_v, num_f: integer;
+
+begin
+  AssignFile(f, FileName);
+  Reset(f);
+  Readln(f,s);
+  if pos('SOLID', UpperCase(s)) < 1 then begin
+    showmessage('Not an ASCII STL file');
+    closefile(f);
+    exit;
+  end;
+  strlst:=TStringList.Create;
+  num_v := 0;
+  while not EOF(f) do begin
+        Readln(f,s);
+        s := trim(s);
+        if pos('VERTEX', UpperCase(s)) <> 1 then continue; //e.g. "vertex   7.708280e-01 -2.937950e+00  7.751060e-01"
+        strlst.DelimitedText := s;
+        if strlst.Count < 4 then continue;
+        if (num_v+1) > length(vertices) then
+           setlength(vertices, length(vertices)+kBlockSize);
+        vertices[num_v].X := StrToFloatDef(strlst[1],0);
+        vertices[num_v].Y := StrToFloatDef(strlst[2],0);
+        vertices[num_v].Z := StrToFloatDef(strlst[3],0);
+        num_v := num_v + 1;
+  end;
+  setlength(vertices, num_v);
+  if num_v < 3 then goto 666;
+  setlength(faces, num_v div 3);
+  i := 0;
+  for num_f := 0 to ((num_v div 3) -1) do begin
+      faces[num_f].X := i;
+      i := i + 1;
+      faces[num_f].Y := i;
+      i := i + 1;
+      faces[num_f].Z := i;
+      i := i + 1;
+  end;
+666:
+   closefile(f);
+   strlst.free;
+   CheckMesh; //Since STL requires vertex unification, make sure vertices and faces are valid
+   UnifyVertices(faces, vertices);
+end; // LoadStlAscii()
+
 procedure TMesh.LoadStl(const FileName: string);
 //Read STL mesh
 // https://en.wikipedia.org/wiki/STL_(file_format)
@@ -3651,8 +3877,9 @@ begin
      end;
      blockread(f, txt80, SizeOf(txt80) );
      if pos('SOLID', UpperCase(txt80)) = 1 then begin //this is a TEXT stl file
-        Showmessage(format('Error: only able to read binary STL files (not ASCII text). Please convert your image: %s', [FileName]));
+        //Showmessage(format('Error: only able to read binary STL files (not ASCII text). Please convert your image: %s', [FileName]));
         CloseFile(f);
+        LoadStlAscii(FileName);
         exit;
     end;
     blockread(f, num_f, 4 ); //uint32
@@ -3686,6 +3913,8 @@ begin
     CheckMesh; //Since STL requires vertex unification, make sure vertices and faces are valid
     UnifyVertices(faces, vertices);
 end; // LoadStl()
+
+
 
 procedure TMesh.LoadVtk(const FileName: string);
 //Read VTK mesh
@@ -3744,15 +3973,14 @@ begin
      blockread(f, vertices[0], 3 * 4 * num_v)
   else begin //if binary else ASCII
        for i := 0 to (num_v-1) do begin
-           ReadLnBin(f, str);
-           strlst.DelimitedText := str;
-           vertices[i].X := StrToFloatDef(strlst[0],0);
-           vertices[i].Y := StrToFloatDef(strlst[1],0);
-           vertices[i].Z := StrToFloatDef(strlst[2],0);
+         //n.b. ParaView and Mango pack multiple vertices per line, so we can not use ReadLnBin(f, str);
+           vertices[i].X := StrToFloatDef(ReadNumBin(f),0);
+           vertices[i].Y := StrToFloatDef(ReadNumBin(f),0);
+           vertices[i].Z := StrToFloatDef(ReadNumBin(f),0);
        end;
   end;
   ReadLnBin(f, str); // number of vertices, e.g. "POLYGONS 1380 5520"
-  if str = '' then ReadLnBin(f, str);
+  while (str = '') and (not EOF(f)) do ReadLnBin(f, str);
   if pos('LINES', UpperCase(str)) > 0 then begin
     showmessage('This is a fiber file: rename with a ".fib" extension and use Tracks/Open to view: '+ str);
     goto 666;
@@ -3909,6 +4137,8 @@ begin
          LoadVtk(Filename);
      if (ext = '.STL') then
          LoadStl(Filename);
+     if (ext = '.SURF') then
+        LoadSurf(Filename);
      if (ext = '.NODE') then
          LoadNode(Filename);
      if (ext = '.SRF') and (not LoadSrf(Filename)) then
