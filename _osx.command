@@ -10,8 +10,10 @@ rm -rf lib
 cp ./optsCore.inc ./opts.inc
 # /Developer/lazarus/lazbuild ./surfice.lpr --cpu=x86_64 --ws=cocoa --compiler="/usr/local/bin/ppcx64"
 #Current FPC 3.0.0 can not compile on OSX 10.11 El Capitan, so use 3.1.1
-/Developer/lazarus/lazbuild ./surfice.lpr --cpu=x86_64 --ws=cocoa --compiler="/usr/local/lib/fpc/3.1.1/ppcx64"
+#/Developer/lazarus/lazbuild ./surfice.lpr --cpu=x86_64 --ws=cocoa --compiler="/usr/local/lib/fpc/3.1.1/ppcx64"
+#/Users/rorden/lazarus/lazbuild ./surfice.lpr --cpu=x86_64 --ws=cocoa --compiler="/usr/local/bin/ppcx64"
 
+/Users/rorden/lazarus/lazbuild ./surfice.lpr --cpu=x86_64 --ws=cocoa --compiler="/usr/local/lib/fpc/3.1.1/ppcx64"
 #/Developer/lazarus/lazbuild ./surfice.lpr --ws=cocoa
 strip ./surfice
 cp surfice /Users/rorden/Desktop/Surf_Ice/surfice.app/Contents/MacOS/surfice

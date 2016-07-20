@@ -29,7 +29,7 @@
     <BuildModes Count="1" Active="Default">
       <Item1 Name="Default" Default="True"/>
       <SharedMatrixOptions Count="1">
-        <Item1 ID="948636613468" Modes="Default" Type="IDEMacro" MacroName="LCLWidgetType" Value="cocoa"/>
+        <Item1 ID="432737904078" Modes="Default" Type="IDEMacro" MacroName="LCLWidgetType" Value="cocoa"/>
       </SharedMatrixOptions>
     </BuildModes>
     <PublishOptions>
@@ -65,10 +65,9 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="2"/>
-        <TopLine Value="1346"/>
-        <CursorPos X="102" Y="1359"/>
-        <ComponentState Value="1"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="1294"/>
+        <CursorPos X="49" Y="1320"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -76,17 +75,17 @@
       <Unit2>
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="1"/>
-        <TopLine Value="324"/>
-        <CursorPos X="69" Y="342"/>
+        <EditorIndex Value="3"/>
+        <TopLine Value="471"/>
+        <CursorPos X="75" Y="488"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit2>
       <Unit3>
         <Filename Value="nifti_loader.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="5"/>
-        <CursorPos X="44" Y="8"/>
+        <EditorIndex Value="4"/>
+        <CursorPos X="33" Y="4"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit3>
@@ -112,10 +111,13 @@
         <ComponentName Value="ScriptForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="380"/>
-        <CursorPos X="37" Y="381"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="271"/>
+        <CursorPos X="50" Y="279"/>
         <UsageCount Value="200"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
       </Unit6>
     </Units>
   </ProjectOptions>

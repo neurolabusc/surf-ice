@@ -36,10 +36,10 @@ type
   end;
   TShader = record
     vao_point2d, vbo_face2d, program2d, program3dx, programDefault, programTrackID, programAoID: GLuint;
-    OverlayVolume: integer;
-    nUniform: integer;
+    OverlayVolume,nUniform: integer;
     f1, f2,  fScreenShot: TFrameBuffer;
     lightPos : TPoint3f;
+    {$IFDEF COREGL} TrackAmbient, TrackDiffuse, TrackSpecular : single; {$ENDIF}
     FragmentProgram,VertexProgram, GeometryProgram, Note, Vendor: AnsiString;
     Uniform: array [1..kMaxUniform] of TUniform;
   end;
@@ -75,33 +75,6 @@ begin
   glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT or GL_STENCIL_BUFFER_BIT);
   glViewport( 0, 0, w, h); //required when bitmap zoom <> 1
 end;
-
- (*
-{$IFDEF xDGL}
-procedure uniform1ix(prog: GLHandleARB; name: AnsiString; value: integer);
-begin
-    glUniform1i(glGetUniformLocation(prog, pAnsiChar(Name)), value) ;
-end;
-
-procedure uniform1fx(prog: GLHandleARB;  name: AnsiString; value: single );
-begin
-  glUniform1f(glGetUniformLocation(prog, pAnsiChar(Name)), value) ;
-end;
-procedure uniform2fx(prog: GLHandleARB;  name: AnsiString; v1, v2: single );
-begin
-  glUniform2f(glGetUniformLocation(prog, pAnsiChar(Name)), v1, v2) ;
-end;
-
-procedure uniform4fx(prog: GLHandleARB;   name: AnsiString; v1,v2,v3, v4: single);
-begin
-  glUniform4f(glGetUniformLocation(prog, pAnsiChar(Name)), v1,v2,v3, v4) ;
-end;
-
-procedure uniform3fx(prog: GLHandleARB;   name: AnsiString; v1,v2,v3: single);
-begin
-  glUniform3f(glGetUniformLocation(prog, pAnsiChar(Name)), v1,v2,v3) ;
-end;
-{$ELSE}  *)
 
 procedure uniform1ix(prog: GLint; name: AnsiString; value: integer);
 begin
@@ -246,7 +219,6 @@ begin
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, f.w, f.h, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nil);
     {$IFDEF COREGL}
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, f.depthBuf, 0);
-
     {$ELSE}
     glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, f.depthBuf, 0);
     {$ENDIF}
@@ -411,6 +383,7 @@ var
 begin
   if (lShader.nUniform < 1) or (lShader.nUniform > kMaxUniform) then
     exit;
+
   for i := 1 to lShader.nUniform do begin
     case lShader.Uniform[i].Widget of
       kFloat: uniform1f(lShader.Uniform[i].name,lShader.Uniform[i].defaultV);
@@ -425,18 +398,24 @@ begin
   end; //for each uniform
 end; //AdjustShaders()
 
+
 function InitGLSL (isStartUp: boolean): boolean;
 var
   lShader: TShader;
 begin
    result := true;
-   if isStartUp then begin
+
+
+  if isStartUp then begin
       {$IFDEF DGL}
               InitOpenGL;
               ReadExtensions;
       {$ELSE}
              //If your compiler does not find Load_GL_version_3_3_CORE you will need to update glext.pp
              {$IFDEF COREGL}
+             gShader.TrackAmbient := 0.5;
+             gShader.TrackDiffuse := 0.7;
+             gShader.TrackSpecular := 0.2;
              if not  Load_GL_version_3_3_CORE then begin
              {$ELSE}
              if not  Load_GL_VERSION_2_1 then begin
@@ -486,8 +465,10 @@ begin
       initFrame(gShader.f1);
       initFrame(gShader.f2);
       initFrame(gShader.fScreenShot);
-
   end;
+
+
+
   //glGetError(); //clear errors
   if (length(gShader.VertexProgram) > 0) then begin
      glUseProgram(0);
@@ -501,7 +482,26 @@ begin
      gShader.GeometryProgram := '';
      gShader.FragmentProgram := '';
      glUseProgram(0);
+     {$IFDEF COREGL} {$IFNDEF TUBES}  //666Demo
+      if not isStartUp then begin
+        glUseProgram(0);
+        if LoadShader(AppDir+'tracks3.glsl', lShader)  then begin
+          glDeleteProgram(gShader.programTrackID);
+          gShader.programTrackID :=  initVertFrag(lShader.VertexProgram, lShader.GeometryProgram,  lShader.FragmentProgram);
+         end;
+               //else
+          //    gShader.programTrackID :=  initVertFrag(kTrackShaderVert, kTrackShaderGeom, kTrackShaderFrag);
+         //glUseProgram(0);
+         glUseProgram(gShader.programTrackID);
+         glUseProgram(0);
+
+     end;
+     {$ENDIF}{$ENDIF}
+
   end;
+
+
+
 end;
 
 function strtofloat0 (lS:string): single;
@@ -665,6 +665,7 @@ procedure RunTrackGLSL (lineWidth, ScreenPixelX, ScreenPixelY: integer);
 begin
      glUseProgram(gShader.programTrackID);
      {$IFDEF COREGL}
+     //AdjustShaders(gShader);
      SetTrackUniforms (lineWidth, ScreenPixelX, ScreenPixelY);
      {$ENDIF}
 end;

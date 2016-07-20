@@ -9,7 +9,7 @@ interface
  uses
    {$IFDEF DGL} dglOpenGL, {$ELSE} gl, glext, {$ENDIF}
    {$IFDEF FPC}FileUtil, GraphType, LCLProc,  LCLIntf,LResources,OpenGLContext,{$ELSE}Windows,glpanel, {$ENDIF}
-  Graphics,Classes, SysUtils, Forms,  Buttons,userdir,
+  Graphics,Classes, SysUtils, Forms,  Buttons,userdir, define_types,
 
   Dialogs, ComCtrls, Menus, Controls,
   ExtCtrls, StdCtrls, shaderu;
@@ -359,6 +359,12 @@ begin
           if aTrack[i].visible then
             gShader.Uniform[i].DefaultV := Track2S(aTrack[i].Position, gShader.Uniform[i].Min,gShader.Uniform[i].Max) ;
           GLForm1.memo1.lines.add('Float '+ gShader.Uniform[i].name+' '+ floattostrf(gShader.Uniform[i].defaultV,ffGeneral,4,4) );
+          {$IFDEF COREGL}
+              if AnsiCompareText(gShader.Uniform[i].name, 'Ambient') = 0 then gShader.TrackAmbient:= UnitBound(gShader.Uniform[i].defaultV);
+              if AnsiCompareText(gShader.Uniform[i].name, 'Diffuse') = 0 then gShader.TrackDiffuse:= UnitBound(gShader.Uniform[i].defaultV);
+              if AnsiCompareText(gShader.Uniform[i].name, 'Specular') = 0 then gShader.TrackSpecular:= UnitBound(gShader.Uniform[i].defaultV);
+              {$ENDIF}
+
           end;
       end;//case
     end;//cor each item

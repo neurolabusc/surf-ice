@@ -120,11 +120,12 @@ begin
      result.B := round(UnitBound(v.Z) * 255);
      result.A := 255;
 end;
-   procedure TTrack.BuildListStrip;
+
+procedure TTrack.BuildListStrip;
 // create displaylist where tracks are drawn as connected line segments
 var
   vRGBA: TVertexRGBA;
-  Indices,vType: TInts;
+  Indices: TInts;
   Verts, vNorms: TVertices;
   normRGB: TPoint3f;
   normRGBA : TRGBA;
@@ -137,7 +138,6 @@ begin
   maxLinks := 0;
   n_faces := 0;
   n_vertices := 0;
-  n_indices := 0;
   TrackTubeSlices := 5;
   if (length(tracks) < 4) then exit;
   if minFiberLinks < 3 then minFiberLinks := 3; //minimum to compute normal;
@@ -162,10 +162,9 @@ begin
        normRGB := vector2RGB(startPt, endPt, len);
        if len >= minFiberLength then begin
           trackLinks[i] := m;
-          n_vertices := n_vertices + 2*m+8; //Duplicate vertices + 8 for the Begin and End Imposter
-          n_indices := n_indices + 2*m+11; //Same as Above + 3 Primitive Restart
+          n_vertices := n_vertices + m;
           {$IFDEF COREGL}
-          n_faces := n_faces + 2*m + 3;//adjacent start + adjacent end + primitive restart!
+          n_faces := n_faces + m + 3;//adjacent start + adjacent end + primitive restart!
           {$ELSE}
           n_faces := n_faces + m + 1;//primitive restart!
           {$ENDIF}
@@ -180,15 +179,13 @@ begin
   setlength(pts, maxLinks);
   setlength(norms, maxLinks);
   setlength(vRGBA, n_vertices);
-  setlength(vType, n_vertices);
   setlength(Verts, n_vertices);
   setlength(vNorms, n_vertices);
-  setlength(Indices, n_indices);
+  setlength(Indices, n_faces);
   //second pass: fill arrays
   i := 0;
   n_vertices := 0;
   n_faces := 0;
-  n_indices := 0;
   while i < ntracks do begin
         m :=   asInt( tracks[i]);
         if trackLinks[i] >= minFiberLinks then begin
@@ -200,68 +197,31 @@ begin
           end;
           normRGB := vector2RGB(pts[0], pts[m-1], len);
           normRGBA := mixRandRGBA(normRGB, ditherColorFrac);
-
-          for mi := 0 to (m-2) do begin
-              norms[mi] := normalDirection(pts[mi], pts[mi+1]); //line does not have a surface normal, but a direction
+          for mi := 1 to (m-2) do
+              norms[mi] := normalDirection(pts[mi-1], pts[mi+1]); //line does not have a surface normal, but a direction
+          //create as line strip - repeat start/end to end primitive
+          for mi := 0 to (m-1) do begin
+              vRGBA[mi+n_vertices] := normRGBA;
+              Verts[mi+n_vertices] := pts[mi];
+              vNorms[mi+n_vertices] := norms[mi];
+              {$IFDEF COREGL}
+               Indices[mi+1+n_faces] := mi+n_vertices;
+              {$ELSE}
+              Indices[mi+n_faces] := mi+n_vertices;
+              {$ENDIF}
           end;
-
-          //Add the first end imposter
-          for mi:=0 to 3 do begin
-              Verts[n_vertices] := pts[0];
-              vNorms[n_vertices] := norms[0];
-              if mi>1 then begin vType[n_vertices] := 1;
-                      end else vType[n_vertices] := 2;
-              vRGBA[n_vertices] := normRGBA;
-              Indices[n_indices] := n_vertices;inc(n_indices);
-              inc(n_vertices);
-          end;
-
-          Indices[n_indices] := kPrimitiveRestart;inc(n_indices);
-
-          //Duplicate every vertice
-          for mi := 0 to (m-2) do begin
-              Verts[n_vertices] := pts[mi];
-              vNorms[n_vertices] := norms[mi];
-              vType[n_vertices] := 0;
-              vRGBA[n_vertices] := normRGBA;
-              Indices[n_indices] := n_vertices;inc(n_indices);
-              inc(n_vertices);
-              Verts[n_vertices] := pts[mi];
-              vNorms[n_vertices] := norms[mi];
-              vType[n_vertices] := 0;
-              vRGBA[n_vertices] := normRGBA;
-              Indices[n_indices] := n_vertices;inc(n_indices);
-              inc(n_vertices);
-          end;
-
-          //The normal for the last vestice is different
-          Verts[n_vertices] := pts[m-1];
-          vNorms[n_vertices] := norms[m-2];
-          vType[n_vertices] := 0;
-          vRGBA[n_vertices] := normRGBA;
-          Indices[n_indices] := n_vertices;inc(n_indices);
-          inc(n_vertices);
-          Verts[n_vertices] := pts[m-1];
-          vNorms[n_vertices] := norms[m-2];
-          vType[n_vertices] := 0;
-          vRGBA[n_vertices] := normRGBA;
-          Indices[n_indices] := n_vertices;inc(n_indices);
-          inc(n_vertices);
-
-          Indices[n_indices] := kPrimitiveRestart;inc(n_indices);
-
-	  //Add the Last end imposter
-          for mi:=0 to 3 do begin
-              Verts[n_vertices] := pts[m-1];
-              vNorms[n_vertices] := norms[m-2];
-              if mi>1 then begin vType[n_vertices] := 1;
-                      end else vType[n_vertices] := 2;
-              vRGBA[n_vertices] := normRGBA;
-              Indices[n_indices] := n_vertices;inc(n_indices);
-              inc(n_vertices);
-          end;
-
-          Indices[n_indices] := kPrimitiveRestart;inc(n_indices);
+          {$IFDEF COREGL} // COREGL : glDrawElements(GL_LINE_STRIP_ADJACENCY... ; LEGACY : glBegin(GL_LINE_STRIP);
+          Verts[n_vertices] := Verts[n_vertices+1];
+          Verts[n_vertices+m-1] := Verts[n_vertices+m-2];
+          Indices[n_faces] := n_vertices;
+          Indices[m+n_faces+1] := Indices[m+n_faces];
+          Indices[m+n_faces+2] := kPrimitiveRestart;
+          n_faces := n_faces + m + 3;
+          {$ELSE}
+          Indices[m+n_faces] := kPrimitiveRestart;
+          n_faces := n_faces + m + 1;
+          {$ENDIF}
+          n_vertices := n_vertices + m ;
 
         end else
             i := i + 1 + (3 * m);
@@ -306,7 +266,7 @@ begin
   //uTime := GetTickCount64() - uTime;
 
   {$IFDEF COREGL}
-  BuildDisplayListStrip(Indices, Verts, vNorms, vRGBA, vType, LineWidth, vao, vbo);
+  BuildDisplayListStrip(Indices, Verts, vNorms, vRGBA, LineWidth, vao, vbo);
   {$ELSE}
   displayList := BuildDisplayListStrip(Indices, Verts, vNorms, vRGBA, LineWidth);
   {$ENDIF}
@@ -490,11 +450,9 @@ end;
 
 procedure TTrack.DrawGL;
 begin
-
   if (length(tracks) < 4) then exit;
   if isBusy then exit;
   isBusy := true;
-
   if isRebuildList then begin
     {$IFDEF COREGL}
     if vao <> 0 then
@@ -515,7 +473,6 @@ begin
     isRebuildList := false;
 
   end;
-
     {$IFDEF COREGL}
   //RunMeshGLSL (2,0,0,0); //disable clip plane
   glBindVertexArray(vao);
@@ -527,16 +484,13 @@ begin
      //RunTrackGLSL(lineWidth, lPrefs);
      //GLForm1.Caption := inttostr(n_indices);
      glPrimitiveRestartIndex(kPrimitiveRestart);
-     glDrawElements(GL_TRIANGLE_STRIP, n_indices, GL_UNSIGNED_INT, nil)  ;
+     glDrawElements(GL_LINE_STRIP_ADJACENCY, n_indices, GL_UNSIGNED_INT, nil)  ;
   end;
   glBindVertexArray(0);
   {$ELSE}
   glCallList(DisplayList);
   {$ENDIF}
-
-
   isBusy := false;
-
 end; // DrawGL()
 
 (*procedure TTrack.DrawGL;

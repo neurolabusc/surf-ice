@@ -31,6 +31,7 @@ type
     edgethresh1: TMenuItem;
     AppleMenu: TMenuItem;
     MenuItem1: TMenuItem;
+    Close1: TMenuItem;
     Tracks1: TMenuItem;
     trackprefs1: TMenuItem;
     trackload1: TMenuItem;
@@ -114,6 +115,8 @@ type
     procedure AppleMenuClick(Sender: TObject);
     procedure Compile1Click(Sender: TObject);
     procedure File1Click(Sender: TObject);
+    procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
+    procedure Memo1DragDrop(Sender, Source: TObject; X, Y: Integer);
     procedure ReportCaretPos;
     procedure FormCreate(Sender: TObject);
     procedure Exit1Click(Sender: TObject);
@@ -265,6 +268,17 @@ begin
 
 end;
 
+procedure TScriptForm.FormDropFiles(Sender: TObject;
+  const FileNames: array of String);
+begin
+  //caption := Filenames[1];
+end;
+
+procedure TScriptForm.Memo1DragDrop(Sender, Source: TObject; X, Y: Integer);
+begin
+  //
+end;
+
 procedure TScriptForm.AppleMenuClick(Sender: TObject);
 begin
 
@@ -323,8 +337,8 @@ begin
   fn := '';
   gchanged := False;
   DemoProgram;
-  //FillMRU (gPrefs.PrevScriptName, ScriptDir+pathdelim,kScriptExt,False);
   FillMRU (gPrefs.PrevScriptName, ScriptDir+pathdelim,kScriptExt,True);
+  //FillMRU (gPrefs.PrevScriptName, ScriptDir+pathdelim,kScriptExt,False);
   UpdateSMRU;
 
   OpenDialog1.InitialDir := ScriptDir;
@@ -338,7 +352,6 @@ begin
          Compile1.ShortCut := ShortCut(Word('R'), [ssMeta]);
  {$ENDIF}
  for lPos := 0 to 8 do begin
-
        {$IFDEF Darwin}
       File1.Items[lPos+6].ShortCut := ShortCut(Word('1')+ord(lPos), [ssMeta]);
       {$ELSE}
@@ -350,6 +363,7 @@ begin
    if gPrefs.StartupScript then Compile1Click(nil);
  end
  else begin
+     gPrefs.PrevScript := gPrefs.InitScript;
    Memo1.Lines.Clear;
    if FileExists(gPrefs.initScript) then
      Memo1.Lines.LoadFromFile(gPrefs.initScript)
@@ -390,6 +404,7 @@ begin
     Showmessage('Can not find '+lFilename);
     exit;
   end;
+  gPrefs.PrevScript:=lFilename;
   ScriptForm.Hint := extractfilename(lFilename);
   ScriptForm.Caption := 'Script loaded: '+ScriptForm.Hint;
   Memo1.Lines.LoadFromFile(lFileName);
@@ -424,6 +439,7 @@ begin
   //  Compile1Click(nil);
 end;
 
+
 procedure TScriptForm.Open1Click(Sender: TObject);
 var
    lS: string;
@@ -435,6 +451,7 @@ begin
     exit;
    SetCurrentDir(lS);
   OpenScript(OpenDialog1.FileName);
+  Compile1Click(nil);
 end;
 
 
@@ -580,7 +597,6 @@ begin
   lStr := (Sender as TMenuItem).Hint;
   if lStr <> '' then begin
           Memo2.Lines.Clear;
-
           Memo2.Lines.Add(lStr);
   end;
   lStr := (Sender as TMenuItem).Caption;

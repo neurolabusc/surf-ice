@@ -1,5 +1,8 @@
 BEGIN
 	RESETDEFAULTS;
+	TRACKLOAD('Helix.vtk');	
+//TRACKLOAD('Stroke.trk');
+exit;
 	AZIMUTHELEVATION(70, 15);
 	MESHLOAD('BrainMesh_ICBM152Right.mz3');
 	OVERLAYLOAD('motor_4t95vol.nii.gz');

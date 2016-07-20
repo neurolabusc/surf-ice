@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
-  Left = 651
+  Left = 442
   Height = 865
-  Top = 66
+  Top = 220
   Width = 1060
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -162,6 +162,16 @@ object GLForm1: TGLForm1
         Align = alBottom
         Lines.Strings = (
           'Memo1'
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
+          ''
           ''
           ''
           ''
@@ -735,9 +745,11 @@ object GLForm1: TGLForm1
         DefaultColWidth = 66
         DefaultRowHeight = 23
         FixedCols = 2
-        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goDrawFocusSelected, goEditing, goTabs, goSmoothScroll]
+        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goDrawFocusSelected, goEditing, goTabs, goAlwaysShowEditor, goSmoothScroll]
+        ParentShowHint = False
         RowCount = 2
         ScrollBars = ssNone
+        ShowHint = True
         TabOrder = 0
         OnDrawCell = StringGrid1DrawCell
         OnEditingDone = StringGrid1EditingDone
@@ -1330,37 +1342,37 @@ object GLForm1: TGLForm1
       Caption = 'Display'
       object LeftMenu: TMenuItem
         Caption = 'Left'
-        ShortCut = 16460
+        ShortCut = 76
         OnClick = DisplayMenuClick
       end
       object RightMenu: TMenuItem
         Tag = 1
         Caption = 'Right'
-        ShortCut = 16466
+        ShortCut = 82
         OnClick = DisplayMenuClick
       end
       object PosteriorMenu: TMenuItem
         Tag = 2
         Caption = 'Posterior'
-        ShortCut = 16464
+        ShortCut = 80
         OnClick = DisplayMenuClick
       end
       object AnteriorMenu: TMenuItem
         Tag = 3
         Caption = 'Anterior'
-        ShortCut = 16449
+        ShortCut = 65
         OnClick = DisplayMenuClick
       end
       object InferiorMenu: TMenuItem
         Tag = 4
         Caption = 'Inferior'
-        ShortCut = 16452
+        ShortCut = 73
         OnClick = DisplayMenuClick
       end
       object SuperiorMenu: TMenuItem
         Tag = 5
         Caption = 'Superior'
-        ShortCut = 16469
+        ShortCut = 83
         OnClick = DisplayMenuClick
       end
       object DisplaySepMenu: TMenuItem

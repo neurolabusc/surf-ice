@@ -116,6 +116,7 @@ uses
 
 procedure RESETDEFAULTS;
 begin
+  GLForm1.CloseMenuClick(nil);
   GLForm1.ResetMenuClick(nil);
 end;
 function EXISTS(lFilename: string): boolean;

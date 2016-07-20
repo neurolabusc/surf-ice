@@ -25,7 +25,7 @@ type
     window_width, window_height, RenderQuality, SaveAsFormat,SaveAsFormatTrack, OcclusionAmount: integer;
     ObjColor,BackColor: TColor;
     PrevFilename, PrevScriptName: TMRU;
-    PrevTrackname, PrevNodename, PrevOverlayname,InitScript : string;
+    PrevTrackname, PrevNodename, PrevOverlayname,PrevScript, InitScript : string;
     TextColor,TextBorder,GridAndBorder: TRGBA;
     ColorBarPos: TUnitRect;
   end;
@@ -230,6 +230,7 @@ begin
     SmoothVoxelwiseData := true;
     PrevTrackname := '';
     PrevOverlayname := '';
+    PrevScript := '';
     PrevNodename := '';
   end;//with lPrefs
 end; //Proc SetDefaultPrefs
@@ -482,8 +483,8 @@ begin
   IniStr(lRead, lIniFile, 'PrevTrackname', lPrefs.PrevTrackname);
   IniStr(lRead, lIniFile, 'PrevNodename', lPrefs.PrevNodename);
   IniStr(lRead, lIniFile, 'PrevOverlayname', lPrefs.PrevOverlayname);
+  IniStr(lRead,lIniFile,'PrevScript',lPrefs.PrevScript);
   IniMRU(lRead,lIniFile,'PrevFilename',lPrefs.PrevFilename);
-
   //IniMRU(lRead,lIniFile,'PrevScriptName',lPrefs.PrevScriptName);
   IniRGBA(lRead,lIniFile, 'TextColor',lPrefs.TextColor);
   IniRGBA(lRead,lIniFile, 'TextBorder',lPrefs.TextBorder);

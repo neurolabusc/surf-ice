@@ -275,17 +275,11 @@ var
   gNode: TMesh;
   gTrack: TTrack;
   isBusy: boolean = true;
-  //gTypeInCell: boolean = false;
-  //gEnterCell: boolean = false;
-
-  //gPrevCol, gPrevRow: integer; //last selected overlay
   gDistance : single = 1;
-
   gMouseX : integer = -1;
   gMouseY : integer = -1;
   GLerror : string = '';
   clipPlane : TPoint4f; //clipping bottom
-  //lightPos : TPoint3f;//array [1..3] of single = (0.0, 0.0, 0.0); //light RGB
 const
 
   kFname=0;
@@ -302,6 +296,28 @@ begin
    result := Filename;
    if FileExists(result) then exit;
    FilenameParts (Filename, p,n,x);
+   //try location of last mesh
+   p := ExtractFilePath(gPrefs.PrevFilename[1]);
+   result := p+n+x;
+   if FileExists(result) then exit;
+   //try location of last overlay
+   p := ExtractFilePath(gPrefs.PrevOverlayname);
+   result := p+n+x;
+   if FileExists(result) then exit;
+   //try location of last track
+   p := ExtractFilePath(gPrefs.PrevTrackname);
+   result := p+n+x;
+   if FileExists(result) then exit;
+   //try location of last node
+   p := ExtractFilePath(gPrefs.PrevNodename);
+   result := p+n+x;
+   if FileExists(result) then exit;
+   //try location of last script
+   p := ExtractFilePath(gPrefs.PrevScript);
+   result := p+n+x;
+   if FileExists(result) then exit;
+
+   //try application directory
    p := AppDir2;
    result := p+n+x;
    if FileExists(result) then exit;
@@ -568,6 +584,13 @@ begin
   if Filename = '' then exit;
   result := true;
   ext := ExtractFileExtGzUpper(Filename);
+  if (ext = '.GLS') then begin
+     ScriptForm.Show;
+     if ScriptForm.OpenScript(Filename) then
+       ScriptForm.Compile1Click(nil);
+     exit;
+  end;
+
   //ext := UpperCase(ExtractFileExt(Filename));
   if (ext = '.NII') or (ext = '.HDR')  or (ext = '.NII.GZ') or (ext = '.ANNOT') or (ext = '.W') or (ext = '.CURV')  then begin
     OpenOverlay(Filename);
@@ -816,7 +839,7 @@ begin
  Memo1.Lines.Add(format('Clipping Amount %d',[ClipTrack.Position]));
  Memo1.Lines.Add(format('Clipping Azimuth %d',[ClipAziTrack.Position]));
  Memo1.Lines.Add(format('Clipping Elevation %d',[ClipElevTrack.Position]));
- GLBoxRequestUpdate(Sender);
+ GLBox.invalidate;  //show change immediately!, for delay: GLBoxRequestUpdate(Sender);
 end;
 
 procedure TGLForm1.CloseMenuClick(Sender: TObject);
@@ -1294,7 +1317,7 @@ begin
      gPrefs.ObjColor:= RGBToColor(192,192,192);
      //set tracks
      TrackLengthTrack.Position:= 20;
-     TrackWidthTrack.Position := 2;
+     TrackWidthTrack.Position := 2; ;  //12 for 666Demo
      TrackDitherTrack.Position := 3;
      //mesh colors
      MeshSaturationTrack.Position := 100;
@@ -1383,12 +1406,15 @@ var
   CanSelect: boolean;
 begin
   if (gMesh.OpenOverlays < 1) then exit;
+  Row := GLForm1.StringGrid1.DefaultRowHeight div 2;
+  Row := round((Y-Row)/GLForm1.StringGrid1.DefaultRowHeight);
+  if (Row > 0) or (Row <= gMesh.OpenOverlays) then
+     StringGrid1.Hint := GLForm1.StringGrid1.Cells[0, Row];
   if (X >  (GLForm1.StringGrid1.DefaultColWidth *2)) then
     exit; //not one of the first two colums
   Col := X div GLForm1.StringGrid1.DefaultColWidth;
 
-  Row := GLForm1.StringGrid1.DefaultRowHeight div 2;
-  Row := round((Y-Row)/GLForm1.StringGrid1.DefaultRowHeight);
+
   If (Col = kLUT) then begin //hide overlay
      //caption := inttostr(row)+'  '+inttostr(random(888));
      StringGrid1SelectCell(Sender, Col, Row, CanSelect);
@@ -1522,6 +1548,7 @@ begin
      UpdateTimer.enabled := true;
      exit;
   end;
+  if (length(gShader.VertexProgram) > 0) then gTrack.isRebuildList:= true; //666Demo
   InitGLSL(false);
   origin := GetOrigin(scale);
   //glUseProgram(gShader.program3d);
@@ -2140,7 +2167,6 @@ end;
 
 procedure TGLForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
-  //showmessage(IniName);
   IniFile(false,IniName,gPrefs);
 end;
 
@@ -2491,12 +2517,13 @@ begin
   OpenMenu.ShortCut :=  ShortCut(Word('O'), [ssMeta]);
   SaveMenu.ShortCut :=  ShortCut(Word('S'), [ssMeta]);
   CopyMenu.ShortCut :=  ShortCut(Word('C'), [ssMeta]);
+  (* //these are now done by pressing single key (e.g. "L" instead of "Ctrl+L")
   LeftMenu.ShortCut :=  ShortCut(Word('L'), [ssMeta]);
   RightMenu.ShortCut :=  ShortCut(Word('R'), [ssMeta]);
   AnteriorMenu.ShortCut :=  ShortCut(Word('A'), [ssMeta]);
   PosteriorMenu.ShortCut :=  ShortCut(Word('P'), [ssMeta]);
   InferiorMenu.ShortCut :=  ShortCut(Word('D'), [ssMeta]);
-  SuperiorMenu.ShortCut :=  ShortCut(Word('U'), [ssMeta]);
+  SuperiorMenu.ShortCut :=  ShortCut(Word('U'), [ssMeta]);  *)
   ExitMenu.Visible:= false;
   HelpMenu.Visible := false;
   {$ELSE}

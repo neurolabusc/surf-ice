@@ -1,8 +1,8 @@
 object ScriptForm: TScriptForm
   Tag = 2
-  Left = 387
+  Left = 648
   Height = 380
-  Top = 130
+  Top = 207
   Width = 420
   ActiveControl = Memo1
   Caption = 'ScriptForm'
@@ -11,7 +11,8 @@ object ScriptForm: TScriptForm
   Menu = ScriptMenu1
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
-  LCLVersion = '1.6.0.4'
+  OnDropFiles = FormDropFiles
+  LCLVersion = '1.7'
   object Splitter1: TSplitter
     Cursor = crVSplit
     Left = 0
@@ -29,6 +30,7 @@ object ScriptForm: TScriptForm
     Align = alClient
     OnChange = Memo1Change
     OnClick = Memo1Click
+    OnDragDrop = Memo1DragDrop
     OnKeyUp = Memo1KeyUp
     ParentFont = False
     ScrollBars = ssAutoHorizontal
@@ -405,14 +407,20 @@ object ScriptForm: TScriptForm
           OnClick = InsertCommand
         end
       end
+      object Close1: TMenuItem
+        Caption = 'closeall'
+        Hint = 'CLOSEALL Closes all open meshes, overlays, nodes and tracks'
+        Visible = False
+        OnClick = InsertCommand
+      end
       object quit1: TMenuItem
         Caption = 'quit'
-        Hint = 'QUIT; Terminate application. Useful if another program is controlling this software'
+        Hint = 'QUIT Terminate application. Useful if another program is controlling this software'
         OnClick = InsertCommand
       end
       object resetdefaults1: TMenuItem
         Caption = 'resetdefaults'
-        Hint = 'RESETDEFAULTS. Sets all of the user adjustable settings to their default values.'
+        Hint = 'RESETDEFAULTS Sets all of the user adjustable settings to their default values.'
         OnClick = InsertCommand
       end
       object savebmp1: TMenuItem

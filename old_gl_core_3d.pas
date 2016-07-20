@@ -448,7 +448,7 @@ begin
      tx := Cos(rad);
      tz := Sin(rad);
      DataCilinder[i][0] := tx;
-     DataCilinder[i][1] := 0;
+     DataCilinder[i][1] := tz;
      DataCilinder[i][2] := tz;
   end;
 
