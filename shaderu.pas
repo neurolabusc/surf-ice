@@ -11,6 +11,8 @@ const
 {$IFDEF DGL}
    kGL_FALSE = FALSE;
    kGL_TRUE = TRUE;
+   //kGL_TRUE = 1;
+   //kGL_FALSE = 0;
 {$ELSE}
    kGL_FALSE = GL_FALSE;
    kGL_TRUE = GL_TRUE;
@@ -259,6 +261,7 @@ var
   Error: GLenum;
   s: string;
 begin
+     exit;
  Error := glGetError();
  if Error = GL_NO_ERROR then exit;
   {$IFDEF DGL}
@@ -283,7 +286,7 @@ begin
     glGetShaderiv(glObjectID, GL_INFO_LOG_LENGTH, @maxLength);
     if (maxLength < 1) then exit; //no info
      setlength(s, maxLength);
-     {$IFDEF DGL}
+     {$IFDEF DGL} //older DGL
      glGetShaderInfoLog(glObjectID, maxLength, maxLength, @s[1]);
      {$ELSE}
      glGetShaderInfoLog(glObjectID, maxLength, @maxLength, @s[1]);
@@ -304,7 +307,9 @@ var
   maxLength : GLint;
 begin
   glGetProgramiv(glObjectID, GL_LINK_STATUS, @maxLength);
-  if (maxLength = GL_TRUE) then exit;
+  //if (maxLength = GL_TRUE) then exit;
+  if (maxLength = 1) then exit; //DGL  GL_TRUE
+
   maxLength := 4096;
   setlength(s, maxLength);
   {$IFDEF DGL}
@@ -483,7 +488,7 @@ begin
      gShader.FragmentProgram := '';
      glUseProgram(0);
      {$IFDEF COREGL} {$IFNDEF TUBES}  //666Demo
-      if not isStartUp then begin
+     (* if not isStartUp then begin
         glUseProgram(0);
         if LoadShader(AppDir+'tracks3.glsl', lShader)  then begin
           glDeleteProgram(gShader.programTrackID);
@@ -495,7 +500,7 @@ begin
          glUseProgram(gShader.programTrackID);
          glUseProgram(0);
 
-     end;
+     end; *)
      {$ENDIF}{$ENDIF}
 
   end;

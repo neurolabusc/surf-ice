@@ -176,7 +176,9 @@ begin
     kdRGB[i] := objColor[i] * kMaterial[2];
     ksRGB[i] := (((1-kMaterial[5]) * objColor[i]) +(kMaterial[5] * wcolor[i])) * kMaterial[3];
   end;
-  glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
+  //glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
+  glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GLint(GL_FALSE));
+
   glEnable(GL_LIGHTING);
   glEnable(GL_LIGHT0);
   glLightfv(GL_LIGHT0, GL_AMBIENT, @KaRGB);

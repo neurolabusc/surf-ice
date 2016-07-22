@@ -23,14 +23,8 @@
     <VersionInfo>
       <StringTable ProductVersion=""/>
     </VersionInfo>
-    <MacroValues Count="1">
-      <Macro1 Name="LCLWidgetType" Value="cocoa"/>
-    </MacroValues>
     <BuildModes Count="1" Active="Default">
       <Item1 Name="Default" Default="True"/>
-      <SharedMatrixOptions Count="1">
-        <Item1 ID="432737904078" Modes="Default" Type="IDEMacro" MacroName="LCLWidgetType" Value="cocoa"/>
-      </SharedMatrixOptions>
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
@@ -65,9 +59,10 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="1294"/>
-        <CursorPos X="49" Y="1320"/>
+        <TopLine Value="773"/>
+        <CursorPos X="57" Y="777"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -85,7 +80,7 @@
         <Filename Value="nifti_loader.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="4"/>
-        <CursorPos X="33" Y="4"/>
+        <CursorPos X="39" Y="4"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit3>
@@ -111,7 +106,6 @@
         <ComponentName Value="ScriptForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="2"/>
         <TopLine Value="271"/>
         <CursorPos X="50" Y="279"/>
