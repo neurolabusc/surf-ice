@@ -669,6 +669,7 @@ end;
 procedure RunTrackGLSL (lineWidth, ScreenPixelX, ScreenPixelY: integer);
 begin
      glUseProgram(gShader.programTrackID);
+     //GLForm1.caption := inttostr(random(888));
      {$IFDEF COREGL}
      //AdjustShaders(gShader);
      SetTrackUniforms (lineWidth, ScreenPixelX, ScreenPixelY);

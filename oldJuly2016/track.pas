@@ -208,9 +208,7 @@ begin
           //Add the first end imposter
           for mi:=0 to 3 do begin
               Verts[n_vertices] := pts[0];
-              vNorms[n_vertices].x := -norms[0].x;
-              vNorms[n_vertices].y := -norms[0].y;
-              vNorms[n_vertices].z := -norms[0].z;
+              vNorms[n_vertices] := norms[0];
               if mi>1 then begin vType[n_vertices] := 1;
                       end else vType[n_vertices] := 2;
               vRGBA[n_vertices] := normRGBA;

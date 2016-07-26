@@ -223,6 +223,22 @@ begin
   {$ENDIF}
 end;
 
+
+{$IFDEF COREGL}
+procedure UpdateTrackUniforms;
+var
+   i: integer;
+begin
+  for i := 1 to gShader.nUniform do begin
+    if gShader.Uniform[i].Widget = kFloat then begin
+          if AnsiCompareText(gShader.Uniform[i].name, 'Ambient') = 0 then gShader.TrackAmbient:= UnitBound(gShader.Uniform[i].defaultV);
+          if AnsiCompareText(gShader.Uniform[i].name, 'Diffuse') = 0 then gShader.TrackDiffuse:= UnitBound(gShader.Uniform[i].defaultV);
+          if AnsiCompareText(gShader.Uniform[i].name, 'Specular') = 0 then gShader.TrackSpecular:= UnitBound(gShader.Uniform[i].defaultV);
+    end; //if kFloat
+  end; //for i: each uniform
+end; //UpdateTrackUniforms()
+{$ENDIF}
+
 procedure SetShader(lFilename: string);
 var
   i : integer;
@@ -245,6 +261,7 @@ begin
   GLForm1.ShaderBoxResize(nil);
   GLForm1.Memo1.Lines.Clear;
   GLForm1.Memo1.Lines.Add(gShader.note);
+  {$IFDEF COREGL} UpdateTrackUniforms; {$ENDIF}
   gUpdateGLSL := false;
   //GLForm1.UpdateTimer.enabled := true;
 end;
@@ -359,15 +376,16 @@ begin
           if aTrack[i].visible then
             gShader.Uniform[i].DefaultV := Track2S(aTrack[i].Position, gShader.Uniform[i].Min,gShader.Uniform[i].Max) ;
           GLForm1.memo1.lines.add('Float '+ gShader.Uniform[i].name+' '+ floattostrf(gShader.Uniform[i].defaultV,ffGeneral,4,4) );
-          {$IFDEF COREGL}
+          (*{$IFDEF COREGL}
               if AnsiCompareText(gShader.Uniform[i].name, 'Ambient') = 0 then gShader.TrackAmbient:= UnitBound(gShader.Uniform[i].defaultV);
               if AnsiCompareText(gShader.Uniform[i].name, 'Diffuse') = 0 then gShader.TrackDiffuse:= UnitBound(gShader.Uniform[i].defaultV);
               if AnsiCompareText(gShader.Uniform[i].name, 'Specular') = 0 then gShader.TrackSpecular:= UnitBound(gShader.Uniform[i].defaultV);
-              {$ENDIF}
-
+              {$ENDIF}  *)
           end;
       end;//case
     end;//cor each item
+  {$IFDEF COREGL} UpdateTrackUniforms; {$ENDIF}
+
 end;
 
 
