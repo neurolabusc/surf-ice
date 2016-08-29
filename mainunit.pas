@@ -1133,11 +1133,12 @@ end;
 procedure TGLForm1.PrefMenuClick(Sender: TObject);
 var
   PrefForm: TForm;
-  OkBtn: TButton;
+  OkBtn, AdvancedBtn: TButton;
   BitmapAlphaCheck, SmoothVoxelwiseDataCheck, TracksAreTubesCheck: TCheckBox; //MultiPassRenderingCheck
   //ShaderForBackgroundOnlyCombo,
     ZDimIsUpCombo, QualityCombo, SaveAsCombo: TComboBox;
   QualityLabel: TLabel;
+  isAdvancedPrefs: boolean;
 begin
   PrefForm:=TForm.Create(nil);
   PrefForm.SetBounds(100, 100, 520, 262);
@@ -1248,12 +1249,21 @@ begin
   OkBtn:=TButton.create(PrefForm);
   OkBtn.Caption:='OK';
   OkBtn.Left := PrefForm.Width - 128;
+  OkBtn.Width:= 100;
   OkBtn.Top := 228;
   OkBtn.Parent:=PrefForm;
   OkBtn.ModalResult:= mrOK;
+
+  AdvancedBtn:=TButton.create(PrefForm);
+  AdvancedBtn.Caption:='Advanced';
+  AdvancedBtn.Left := PrefForm.Width - 256;
+  AdvancedBtn.Width:= 100;
+  AdvancedBtn.Top := 228;
+  AdvancedBtn.Parent:=PrefForm;
+  AdvancedBtn.ModalResult:= mrYesToAll;
   {$IFDEF Windows} ScaleDPI(PrefForm, 96);  {$ENDIF}
   PrefForm.ShowModal;
-  if PrefForm.ModalResult <> mrOK then exit; //if user closes window with out pressing "OK"
+  if (PrefForm.ModalResult <> mrOK) and (PrefForm.ModalResult <> mrYesToAll) then exit; //if user closes window with out pressing "OK"
   gPrefs.ScreenCaptureTransparentBackground :=  BitmapAlphaCheck.Checked;
   gPrefs.SmoothVoxelwiseData := SmoothVoxelwiseDataCheck.Checked;
   (*if ShaderForBackgroundOnlyCombo.ItemIndex = 1 then
@@ -1269,10 +1279,6 @@ begin
 
   //gPrefs.SaveAsObj := SaveAsObjCheck.Checked;
   gPrefs.SaveAsFormat := SaveAsCombo.ItemIndex;
-  (*if MultiPassRenderingCheck.Checked <> gPrefs.MultiPassRendering then begin
-     gPrefs.MultiPassRendering := MultiPassRenderingCheck.Checked;
-     MultiPassRenderingToolsUpdate;
-  end;*)
   if QualityCombo.ItemIndex <> gPrefs.RenderQuality then begin
      gPrefs.RenderQuality := QualityCombo.ItemIndex;
      MultiPassRenderingToolsUpdate;
@@ -1284,8 +1290,11 @@ begin
     gTrack.isRebuildList:= true;
 
   end;
+  isAdvancedPrefs := (PrefForm.ModalResult = mrYesToAll);
   FreeAndNil(PrefForm);
       GLBoxRequestUpdate(Sender);
+  if  isAdvancedPrefs then
+     Quit2TextEditor;
 end; // PrefMenuClick()
 
 procedure TGLForm1.QuickColorClick(Sender: TObject);
@@ -1852,12 +1861,19 @@ procedure TGLForm1.AboutMenuClick(Sender: TObject);
 const
   kSamp = 36;
 var
-  str : string;
+  TrackStr, str : string;
   s: dword;
   i: integer;
   scale: single;
   origin: TPoint3f;
 begin
+ if (gTrack.n_count < 1) then
+   TrackStr := ''
+ else
+     TrackStr := LineEnding + format('   %.4f..%.4f  %.4f..%.4f %.4f..%.4f',[gTrack.mnV.X, gTrack.mxV.X, gTrack.mnV.Y, gTrack.mxV.Y, gTrack.mnV.Z, gTrack.mxV.Z]);
+
+
+
  s := gettickcount();
  for i := 1 to kSamp do begin
      gAzimuth := (gAzimuth + 10) mod 360;
@@ -1880,6 +1896,7 @@ begin
    +LineEnding+format(' Origin %.4fx%.4fx%.4f',[origin.X, origin.Y, origin.Z])
    +LineEnding+' Mesh Vertices '+inttostr(length(gMesh.vertices))+' Faces '+  inttostr(length(gMesh.faces)) +' Colors '+  inttostr(length(gMesh.vertexRGBA))
    +LineEnding+' Track Vertices '+inttostr(gTrack.n_vertices)+' Faces '+  inttostr(gTrack.n_faces) +' Count ' +inttostr(gTrack.n_count)
+   +TrackStr
    +LineEnding+' Node Vertices '+inttostr(length(gNode.vertices))+' Faces '+  inttostr(length(gNode.faces))
    +LineEnding+' GPU '+gShader.Vendor
    +LineEnding+'Press "Abort" to quit and open settings '+ininame;

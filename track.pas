@@ -12,7 +12,7 @@ Type
 TTrack = class
   //utime: QWord;
   scale, minFiberLength, ditherColorFrac, maxObservedFiberLength  : single;
-  origin : TPoint3f;
+  origin, mxV, mnV : TPoint3f;
   isBusy, isRebuildList, isTubes: boolean;
   TrackTubeSlices, //e.g. if 5 then cross section of fiber is pentagon
   n_count, n_faces, n_vertices, n_indices, minFiberLinks, LineWidth: integer;
@@ -79,7 +79,8 @@ begin
             i := i + 3;
         end;
   end;
-end; // SetDescriptives()
+  mxV := mx;
+end; // CenterX()
 
 procedure TTrack.Close;
 begin
@@ -1178,7 +1179,6 @@ begin
           n_count := StrToIntDef(strEnd,0);
         if (pos('FILE:', str) = 1) then   //"count: 6"
            offset := StrToIntDef(strEnd,0);
-
         ReadLnBin(f, str); //next line
         str := UpperCase(str);
   end;
@@ -1215,9 +1215,6 @@ begin
   end;
 555:
   setlength(tracks, outPos);
-
-  //showmessage(inttostr(outPos)+'  '+inttostr(n_items));
-
   {$IFNDEF ENDIAN_LITTLE}
    byteswapping required!
   {$ENDIF}
@@ -1232,6 +1229,7 @@ function TTrack.LoadTrk(const FileName: string): boolean;
 
 var
    f: File;
+   str: string;
    fsz, ntracks: int64;
    hdr:  TTrackhdr;
    i,m,mi: integer;
@@ -1252,6 +1250,9 @@ begin
      CloseFile(f);
      exit;
   end;
+  str := UpperCase(hdr.voxel_order[1]+hdr.voxel_order[2]+hdr.voxel_order[3]);
+  if ((str[1] <> 'L') and (str[1] <> 'R')) or ((str[2] <> 'A') and (str[2] <> 'P')) or ((str[3] <> 'S') and (str[3] <> 'I')) then
+     Showmessage('Unsupported TRK voxel order "'+str+'"');
   if (hdr.n_scalars <> 0) or (hdr.n_properties <> 0) then begin
      showmessage('This software does not support tracks with scalars or properties');
      CloseFile(f);
@@ -1270,9 +1271,22 @@ begin
         hdr.vox_to_ras[2,1] := 0; hdr.vox_to_ras[2,2] := 1; hdr.vox_to_ras[2,3] := 0; hdr.vox_to_ras[2,4] := 0;
         hdr.vox_to_ras[3,1] := 0; hdr.vox_to_ras[3,2] := 0; hdr.vox_to_ras[3,3] := 1; hdr.vox_to_ras[3,4] := 0;
   end;
+  for i := 1 to 3 do
+      if hdr.voxel_size[i] <> 0 then
+         for m := 1 to 3 do
+             hdr.vox_to_ras[m,i] := hdr.vox_to_ras[m,i]/hdr.voxel_size[i];
+             //hdr.vox_to_ras[i,m] := hdr.vox_to_ras[i,m]/hdr.voxel_size[i];
+
   ntracks := length(tracks);
   i := 0;
   n_count := 0; // note hdr.n_count may not be set: determine it explicitly
+ (* str := format('%f %f %f %f; %f %f %f %f; %f %f %f %f;',[
+         hdr.vox_to_ras[1,1], hdr.vox_to_ras[1,2], hdr.vox_to_ras[1,3], hdr.vox_to_ras[1,4],
+         hdr.vox_to_ras[2,1], hdr.vox_to_ras[2,2], hdr.vox_to_ras[2,3], hdr.vox_to_ras[2,4],
+         hdr.vox_to_ras[3,1], hdr.vox_to_ras[3,2], hdr.vox_to_ras[3,3], hdr.vox_to_ras[3,4]
+
+         ]);
+ showmessage(str); *)
   while i < ntracks do begin
         m :=   asInt( tracks[i]); inc(i);
         n_count := n_count + 1;
@@ -1292,6 +1306,7 @@ end;
 
 procedure TTrack.SetDescriptives;
 var
+  {$IFDEF MNVEC} numV: integer; sumV : TPoint3f; {$ENDIF}
   len: single;
    i, m, mi: integer;
    mn, mx, pt, pt1 : TPoint3f;
@@ -1300,6 +1315,10 @@ begin
   if (n_count < 1) or (length(tracks) < 4) then exit;
   mn := ptf(Infinity,Infinity,Infinity);
   mx := ptf(-Infinity, -Infinity, -Infinity);
+  {$IFDEF MNVEC}
+  numV := 0;
+  sumV := ptf(0,0,0);
+  {$ENDIF}
   i := 0;
   //showmessage(format('--> %g %g %g',[tracks[1], tracks[2], tracks[3]]) );
   while i < length(tracks) do begin
@@ -1308,6 +1327,10 @@ begin
             pt.X := tracks[i]; inc(i);
             pt.Y := tracks[i]; inc(i);
             pt.Z := tracks[i]; inc(i);
+            {$IFDEF MNVEC}
+            vectorAdd (sumV, pt);
+            numV := numV + 1;
+            {$ENDIF}
             minmax(pt, mn,mx);
             if mi = 1 then
                pt1 := pt;
@@ -1318,6 +1341,12 @@ begin
             end;
         end;
   end;
+  {$IFDEF MNVEC}
+  if numV > 0 then
+     showmessage(format('%g %g %g', [sumV.X/numV, sumV.Y/numV, sumV.Z/numV]));
+  {$ENDIF}
+    mnV := mn;
+    mxV := mx;
   //showmessage(format('%d  -> %g..%g %g..%g %g..%g max : %g', [length(tracks), mn.X, mx.X, mn.Y, mx.Y, mn.Z, mx.Z, maxObservedFiberLength]));
   (*scale := (mx.X - mn.X);
   if  (mx.Y - mn.Y) > scale then
