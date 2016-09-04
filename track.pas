@@ -5,13 +5,14 @@ interface
 
 uses
   {$IFDEF DGL} dglOpenGL, {$ELSE} gl, {$IFDEF COREGL}glext,{$ENDIF} {$ENDIF}
-  ClipBrd,Classes, SysUtils,  dialogs, matmath, math, define_types, track_simplify, zstream;
+  colorTable, ClipBrd,Classes, SysUtils,  dialogs, matmath, math, define_types, track_simplify, zstream;
 
 Type
 
 // const
 //   kMaxScalars = 3; //maximum number of properties/scalars from TRK file, e.g. FA, pval, pval_corr
 TScalar = record
+  mn, mx: single;
   scalar: array of float;
   name: string;
 end;
@@ -28,7 +29,8 @@ TTrack = class
   displayList : GLuint;
   {$ENDIF}
   tracks: array of single;
-  scalarLUT, scalarSelected: integer;
+  scalarLUT: TLUT;
+  scalarSelected: integer;
   scalars: array of TScalar;
   private
     function LoadBfloat(const FileName: string): boolean;
@@ -39,6 +41,7 @@ TTrack = class
     function LoadVtkASCII(const FileName: string): boolean;
     function LoadVtk(const FileName: string): boolean;
     procedure SetDescriptives;
+    procedure SetScalarDescriptives;
     procedure BuildListStrip;
     procedure BuildListTubes ;
   public
@@ -92,8 +95,9 @@ end; // CenterX()
 procedure TTrack.Close;
 var i: integer;
 begin
-  scalarLUT := 1; //red-yellow
-  scalarSelected := 0; //none: color based on direction
+  i := 1;
+  scalarLUT := UpdateTransferFunction(i); //red-yellow
+  scalarSelected := -1; //none: color based on direction
      n_count := 0;
      n_vertices := 0;
      n_faces := 0;
@@ -118,6 +122,13 @@ begin
   result.X := (abs(pt1.X - pt2.X)/len);
   result.Y := (abs(pt1.Y - pt2.Y)/len);
   result.Z := (abs(pt1.Z - pt2.Z)/len);
+end;
+
+function RGBA2pt3f(RGBA: TRGBA): TPoint3f;
+begin
+     result.X := RGBA.R/255;
+     result.Y := RGBA.G/255;
+     result.Z := RGBA.B/255;
 end;
 
 function mixRandRGBA(RGBin: TPoint3f; randAmount: single): TRGBA;
@@ -340,14 +351,23 @@ var
   normRGBA: TRGBA;
   pts: array of TPoint3f;
   len, radius: single;
-  numCylVert, numVert,  mprev, m, mi, i, j, ntracks: integer;
+  numCylVert, numVert,  mprev, m, mi, i, j, ntracks, nfiber, nvtx: integer;
   vertices: TVertices;
   faces, cylFace: TFaces;
   numFaces, numCylFace,  maxLinks: integer;
   cylVert: TVertices;
   B, startPt, endPt: TPoint3f;
   trackLinks : array of integer;
+  perVertexScalars: array of single;
+  isScalarPerFiberColor : boolean = false;
+  isScalarPerVertexColor: boolean = false;
 begin
+  if (ScalarSelected >= 0) and (length(Scalars) > ScalarSelected) then begin
+    if  length(Scalars[ScalarSelected].scalar) = n_count then
+        isScalarPerFiberColor := true //one color per fiber
+    else
+        isScalarPerVertexColor := true;
+  end;
   //tm := gettickcount64();
   n_indices := 0;
   n_faces := 0;
@@ -376,7 +396,7 @@ begin
        endPt.X := tracks[j+i+1];
        endPt.Y := tracks[j+i+2];
        endPt.Z := tracks[j+i+3];
-       normRGB := vector2RGB(startPt, endPt, len);
+       normRGB := vector2RGB(startPt, endPt, len);  //here only used for length
        if len >= minFiberLength then begin
           trackLinks[i] := m;
           n_vertices := n_vertices + (m * numCylVert);
@@ -394,9 +414,12 @@ begin
   setlength(vRGBA, n_vertices); //each node as 1 disk (bottom of cylinder)
   setlength(faces, n_faces);
   setlength(pts, maxLinks);
+  setlength(perVertexScalars, maxLinks);
   //second pass - load geometry for links that are long enough
   n_vertices := 0;
   n_faces := 0;
+  nfiber := 0;
+  nvtx := 0;
   i := 0;
   while i < ntracks do begin
     m := asInt( tracks[i]);
@@ -406,6 +429,8 @@ begin
               pts[mi].X := tracks[i]; inc(i);
               pts[mi].Y := tracks[i]; inc(i);
               pts[mi].Z := tracks[i]; inc(i);
+              if isScalarPerVertexColor then
+                 perVertexScalars[mi] := Scalars[ScalarSelected].scalar[nvtx+mi];
        end;
        normRGB := vector2RGB(pts[0], pts[m-1], len);
        numFaces := 0;
@@ -419,6 +444,11 @@ begin
            numFaces := numFaces + numCylFace;
            for j := 0 to (numCylVert - 1) do //add bottom of this cylinder
                vertices[j+numVert+n_vertices] := cylVert[j];
+           if isScalarPerVertexColor then begin
+              normRGBA := inten2rgb(perVertexScalars[mi], Scalars[ScalarSelected].mn, Scalars[ScalarSelected].mx,  scalarLUT );
+              for j := 0 to (numCylVert - 1) do
+                  vRGBA[j+numVert+n_vertices] := normRGBA;
+           end;
            numVert := numVert + numCylVert;
            mprev := mi;
        end;
@@ -426,15 +456,27 @@ begin
        makeCylinderEnd(radius, pts[m-2], pts[m-1], pts[m-1], cylVert, B, TrackTubeSlices);
        for j := 0 to (numCylVert - 1) do //add top of last cylinder
            vertices[j+numVert+n_vertices] := cylVert[j];
-
+       if isScalarPerVertexColor then begin
+          normRGBA := inten2rgb(perVertexScalars[m-1], Scalars[ScalarSelected].mn, Scalars[ScalarSelected].mx,  scalarLUT );
+          for j := 0 to (numCylVert - 1) do
+              vRGBA[j+numVert+n_vertices] := normRGBA;
+       end;
        numVert := numVert + numCylVert;
-       normRGBA := mixRandRGBA(normRGB, ditherColorFrac);
-       for j := 0 to ((m * numCylVert) -1) do
-           vRGBA[j+n_vertices] := normRGBA;
+       if not isScalarPerVertexColor then begin
+         if isScalarPerFiberColor then begin
+            normRGBA := inten2rgb(Scalars[ScalarSelected].scalar[nfiber], Scalars[ScalarSelected].mn, Scalars[ScalarSelected].mx,  scalarLUT );
+            normRGB := RGBA2pt3f(normRGBA);
+         end;
+         normRGBA := mixRandRGBA(normRGB, ditherColorFrac);
+         for j := 0 to ((m * numCylVert) -1) do
+             vRGBA[j+n_vertices] := normRGBA;
+       end;
        n_vertices := n_vertices + (m * numCylVert); //each node as 1 disk (bottom of cylinder)
        n_faces := n_faces + (m - 1) * numCylFace; //-1: fencepost error
     end else //len >= minFiberLength
         i := i + 1 + (3 * m);
+    nfiber := nfiber + 1;
+    nvtx := nvtx + m;
   end;
   (*AssignFile(f, '~/Test.txt');
   ReWrite(f);
@@ -548,9 +590,12 @@ begin
 end; // DrawGL()
 
 constructor  TTrack.Create;
+var
+  i : integer;
 begin
-  scalarLUT := 1; //red-yellow
-  scalarSelected := 0; //none: color based on direction
+  i := 1;
+  scalarLUT := UpdateTransferFunction(i); ; //red-yellow
+  scalarSelected := -1; //none: color based on direction
      SetLength(tracks, 0);
      n_count := 0;
      n_faces := 0;
@@ -1313,6 +1358,25 @@ begin
    closefile(f);
 end; //LoadTck()
 
+procedure TTrack.SetScalarDescriptives;
+//set range of scalars
+var
+  i, m: integer;
+begin
+     if length(Scalars) < 1 then exit;
+     for i := low(Scalars) to high(Scalars) do begin
+         if length(Scalars[i].scalar) < 1 then continue;
+         Scalars[i].mn := Scalars[i].scalar[0];
+         Scalars[i].mx := Scalars[i].scalar[0];
+         for m := low(Scalars[i].scalar) to high(Scalars[i].scalar) do
+             if Scalars[i].scalar[m] < Scalars[i].mn then
+                Scalars[i].mn := Scalars[i].scalar[m];
+         for m := low(Scalars[i].scalar) to high(Scalars[i].scalar) do
+             if Scalars[i].scalar[m] > Scalars[i].mx then
+                Scalars[i].mx := Scalars[i].scalar[m];
+     end; //for each scalar
+end; //SetScalarDescriptives()
+
 function TTrack.LoadTrk(const FileName: string): boolean;
 // http://www.trackvis.org/docs/?subsect=fileformat
 // for test of vox2ras https://github.com/neurolabusc/spmScripts/blob/master/nii_makeDTI.m
@@ -1349,10 +1413,10 @@ var
   str: string;
    f: File;
    fsz, ntracks: int64;
-   nVtx: int32;
+   nVtx32: int32;
    hdr:  TTrackhdr;
-   outPos, i,j,m,mi, v: integer;
-   scalar: single;
+   outPos, i,j,m,mi, v, nVtx: integer;
+   scalarS32: single;
    pt: TPoint3f;
    vox2mmMat, zoomMat: TMat44;
 begin
@@ -1382,22 +1446,6 @@ begin
      Showmessage('Unsupported TRK voxel order "'+str+'"');
      goto 666;
   end;*)
-  setlength(scalars,hdr.n_scalars + hdr.n_properties);
-  if (hdr.n_scalars > 0) then begin
-    for i := 0 to (hdr.n_scalars-1) do begin
-      SetString(str, PChar(@hdr.scalar_name[i*20]), 20);
-      str := UpperCase(trim(str));
-      scalars[i].name := str;
-    end;
-  end;
-  if (hdr.n_properties > 0) then begin
-    for i := 0 to (hdr.n_properties-1) do begin
-      SetString(str, PChar(@hdr.property_name[i*20]), 20);
-      str := UpperCase(trim(str));
-      scalars[hdr.n_scalars+i].name := str;
-      setlength(scalars[hdr.n_scalars+i].scalar, hdr.n_count); //unlike scalars, we can pre-allocate
-    end;
-  end;
   seek(f, hdr.hdr_size);
   if (hdr.n_scalars <> 0) or (hdr.n_properties <> 0) then begin //slow to load if we have scalars...
     //unable to preallocate memory unless we know how many vertices!
@@ -1406,55 +1454,51 @@ begin
     nVtx := nVtx - (hdr.n_count * (hdr.n_properties + 1)); //once per fiber: fiber length plus properties
     nVtx := nVtx div (3 + hdr.n_scalars); //for each vertex: X,Y,Z plus scalars
     ntracks := (nVtx * 3) + hdr.n_count; //we will store vertex X,Y,Z plus fiber length
-    //now read data
+    //allocate memory
     setlength(tracks, ntracks);
-    outPos := 0;
-    for i := 1 to hdr.n_count do begin
-             blockread(f, nVtx, SizeOf(nVtx)  );
-             if nVtx < 2 then goto 666;
-             tracks[outPos] := asSingle(nVtx); inc(outPos);
-             for v := 1 to nVtx do begin
-                 blockread(f, pt, SizeOf(pt)  );
-                 tracks[outPos] := pt.X; inc(outPos);
-                 tracks[outPos] := pt.Y; inc(outPos);
-                 tracks[outPos] := pt.Z; inc(outPos);
-                 if hdr.n_scalars > 0  then
-                    for m := 1 to hdr.n_scalars do
-                        blockread(f, scalar, SizeOf(single)  );
-             end; //for each vertex in fiber
-             if hdr.n_properties > 0  then
-                for m := 0 to (hdr.n_properties-1) do
-                    blockread(f, scalars[hdr.n_scalars+m].scalar[i], SizeOf(single)  );
+    setlength(scalars,hdr.n_scalars + hdr.n_properties);
+    if (hdr.n_scalars > 0) then begin
+      for i := 0 to (hdr.n_scalars-1) do begin
+        SetString(str, PChar(@hdr.scalar_name[i*20]), 20);
+        str := UpperCase(trim(str));
+        scalars[i].name := str;
+        setlength(scalars[i].scalar, nVtx); //one per vertex
+      end;
     end;
-
-
-    (*outPos := 0;
-     setlength(tracks, outPos + kBlockSz); //unable to pre-allocate memory, so allocate in chunks
-     for i := 1 to hdr.n_count do begin
-         blockread(f, nVtx, SizeOf(nVtx)  );
-         if nVtx < 2 then goto 666;
-         if (outPos + 1 + (nVtx * 3)) > length(tracks) then
-            setlength(tracks, outPos + (nVtx * 3) + kBlockSz); //reduce how often memory gets re-allocated
-         tracks[outPos] := asSingle(nVtx); inc(outPos);
-         for v := 1 to nVtx do begin
-             blockread(f, pt, SizeOf(pt)  );
-             tracks[outPos] := pt.X; inc(outPos);
-             tracks[outPos] := pt.Y; inc(outPos);
-             tracks[outPos] := pt.Z; inc(outPos);
-             if hdr.n_scalars > 0  then
-                for m := 1 to hdr.n_scalars do
-                    blockread(f, scalar, SizeOf(single)  );
-         end; //for each vertex in fiber
-         if hdr.n_properties > 0  then
-            for m := 0 to (hdr.n_properties-1) do begin
-                blockread(f, prop, SizeOf(single)  );
-                scalars[hdr.n_scalars+m].scalar[i] :=prop;
-            end;
-     end; *)
-     //showmessage(floattostr(prop));
-
-
-
+    if (hdr.n_properties > 0) then begin
+      for i := 0 to (hdr.n_properties-1) do begin
+        SetString(str, PChar(@hdr.property_name[i*20]), 20);
+        str := UpperCase(trim(str));
+        scalars[hdr.n_scalars+i].name := str;
+        setlength(scalars[hdr.n_scalars+i].scalar, hdr.n_count); //one per fiber
+      end;
+    end;
+    //now read data
+    outPos := 0;
+    nVtx := 0;
+    for i := 1 to hdr.n_count do begin
+       blockread(f, nVtx32, SizeOf(nVtx32)  );
+       if nVtx32 < 2 then goto 666;
+       tracks[outPos] := asSingle(nVtx32); inc(outPos);
+       for v := 1 to nVtx32 do begin
+           blockread(f, pt, SizeOf(pt)  );
+           tracks[outPos] := pt.X; inc(outPos);
+           tracks[outPos] := pt.Y; inc(outPos);
+           tracks[outPos] := pt.Z; inc(outPos);
+           if hdr.n_scalars > 0  then
+              for m := 0 to (hdr.n_scalars-1) do begin
+                  blockread(f, scalarS32, SizeOf(single)  );
+                  scalars[m].scalar[nVtx] := scalarS32;
+              end;
+           nVtx := nVtx + 1;
+       end; //for each vertex in fiber
+       if hdr.n_properties > 0  then //properties: one per fiber
+          for m := 0 to (hdr.n_properties-1) do begin
+              blockread(f, scalarS32, SizeOf(single)  );
+              scalars[hdr.n_scalars+m].scalar[i] := scalarS32;
+          end;
+    end;
+    SetScalarDescriptives;
   end else begin //we can read much faster if there are no properties or scalars
       ntracks := (fsz - sizeof(TTrackhdr)) div sizeof(single);
       if ntracks < 4 then exit;

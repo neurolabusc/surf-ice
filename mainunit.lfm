@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
-  Left = 458
+  Left = 570
   Height = 865
-  Top = 41
+  Top = 37
   Width = 1060
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -590,6 +590,8 @@ object GLForm1: TGLForm1
           ''
           ''
           ''
+          ''
+          ''
         )
         TabOrder = 3
       end
@@ -745,7 +747,7 @@ object GLForm1: TGLForm1
           'f'
           'g'
         )
-        OnChange = LUTdropChange
+        OnChange = ScalarDropChange
         ParentFont = False
         Style = csDropDownList
         TabOrder = 3
@@ -761,7 +763,7 @@ object GLForm1: TGLForm1
         Items.Strings = (
           'Direction'
         )
-        OnChange = LUTdropChange
+        OnChange = ScalarDropChange
         ParentFont = False
         Style = csDropDownList
         TabOrder = 4

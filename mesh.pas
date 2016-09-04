@@ -159,69 +159,7 @@ begin
 end;  *)
 {$ENDIF}
 
-function blendRGBA(c1, c2: TRGBA ): TRGBA;
-var
-  frac1, frac2: single;
-begin
-  result := c1;
-  if c2.A = 0 then exit;
-  result := c2;
-  if c1.A = 0 then exit;
-  frac1 := c1.A / (c1.A+c2.A);
-  frac2 := 1 - frac1;
-  result.R := round(c1.R*frac1 + c2.R*frac2) ;
-  result.G := round(c1.G*frac1 + c2.G*frac2);
-  result.B := round(c1.B*frac1 + c2.B*frac2);
-  if frac1 >= 0.5 then //result.a = max(c1.a, c2.a)
-     result.A := c1.A
-  else
-      result.A := c2.A;
-end;
 
-function maxRGBA(c1, c2: TRGBA ): TRGBA;
-begin
-  result := c1;
-  if c2.A = 0 then exit;
-  if (c2.R > result.R) then
-     result.R := c2.R;
-  if (c2.G > result.G) then
-     result.G := c2.G;
-  if (c2.B > result.B) then
-     result.B := c2.B;
-  if (c2.A > result.A) then
-     result.A := c2.A;
-end;
-
-function inten2rgb(intensity, mn, mx: single; lut: TLUT): TRGBA;
-begin
-  if  (mn < 0) and (mx < 0) then begin
-    if intensity >= mx then begin
-       result := lut[0];
-    end else if intensity <= mn then
-       result := lut[255]
-    else
-         result := lut[round(255* (1.0-   (intensity-mn)/(mx-mn)))];
-  end else begin
-     if intensity <= mn then begin
-        result := lut[0];
-     end else if intensity >= mx then
-        result := lut[255]
-     else
-          result := lut[round(255*(intensity-mn)/(mx-mn))];
-  end;
-end;
-
-function desaturateRGBA ( rgba: TRGBA; frac: single; alpha: byte): TRGBA;
-var
-  y: single;
-begin
-  //convert RGB->YUV http://en.wikipedia.org/wiki/YUV
-    y := 0.299 * rgba.r + 0.587 * rgba.g + 0.114 * rgba.b;
-    result.r := round(y * (1-frac) + rgba.r * frac);
-    result.g := round(y * (1-frac) + rgba.g * frac);
-    result.b := round(y * (1-frac) + rgba.b * frac);
-    result.a := alpha;
-end;
 
 (*function scaleLUT(colorFromZero: boolean; mn, mx: single; lut: TLUT): TLUT;
 var

@@ -216,6 +216,7 @@ type
     procedure SaveMesh(var mesh: TMesh; isSaveOverlays: boolean);
     procedure SaveMeshMenuClick(Sender: TObject);
     procedure SaveTracksMenuClick(Sender: TObject);
+    procedure ScalarDropChange(Sender: TObject);
     function ScreenShot: TBitmap;
     procedure ScriptMenuClick(Sender: TObject);
     procedure SetOverlayTransparency(Sender: TObject);
@@ -505,6 +506,7 @@ begin
         TrackScalarNameDrop.Items.Add(gTrack.scalars[i].name);
     TrackScalarNameDrop.ItemIndex := 0;
     TrackScalarLUTdrop.ItemIndex := 1;
+    TrackScalarLUTdrop.Enabled := false;
  end else
     TrackBox.ClientHeight := TrackDitherTrack.Top + TrackDitherTrack.Height;
  UpdateToolbar;
@@ -1032,6 +1034,18 @@ end;
 procedure TGLForm1.SaveTracksMenuClick(Sender: TObject);
 begin
      SaveTrack(gTrack);
+end;
+
+procedure TGLForm1.ScalarDropChange(Sender: TObject);
+var
+  i: integer;
+begin
+  gTrack.scalarSelected := TrackScalarNameDrop.ItemIndex -1;//-1 for direction color, 0 for first scalar, etc.
+  TrackScalarLUTdrop.Enabled := (gTrack.scalarSelected >= 0); //disable if color based on direction not scalar
+  i := TrackScalarLUTdrop.ItemIndex;
+  gTrack.scalarLUT := UpdateTransferFunction(i);
+  gTrack.isRebuildList:= true;
+  GLBoxRequestUpdate(Sender);
 end;
 
 (*const
