@@ -168,10 +168,10 @@ begin
   //showmessage( Format('v= %d   f= %d', [length(lMesh.Vertices), length(lMesh.faces)]));
   if lDecimate < 1.0 then
      if not ReducePatch(lMesh.faces, lMesh.vertices, lDecimate) then exit;
-  v1 := ptf(-0.5, -0.5, -0.5);
+  //v1 := ptf(-0.5, -0.5, -0.5); //1Sept2016: not required: middle voxel 0 based: see https://github.com/neurolabusc/spmScripts/blob/master/nii_makeDTI.m
   for i := 0 to (length(lMesh.vertices) -1) do begin //apply matrix to convert from voxels to mm (voxelspace -> worldspace)
       vx := lMesh.vertices[i];
-      vectorAdd(vx, v1);
+      //vectorAdd(vx, v1);
       lMesh.vertices[i].X := vx.X*nii.mat[1,1] + vx.Y*nii.mat[1,2] + vx.Z*nii.mat[1,3] + nii.mat[1,4];
       lMesh.vertices[i].Y := vx.X*nii.mat[2,1] + vx.Y*nii.mat[2,2] + vx.Z*nii.mat[2,3] + nii.mat[2,4];
       lMesh.vertices[i].Z := vx.X*nii.mat[3,1] + vx.Y*nii.mat[3,2] + vx.Z*nii.mat[3,3] + nii.mat[3,4];

@@ -44,7 +44,7 @@ type
 type
   TMesh = class
     scale, vertexRgbaSaturation, vertexRgbaAlpha : single;
-    origin : TPoint3f;
+    origin, mxV, mnV : TPoint3f;
     {$IFDEF COREGL}
     vao, vbo, vaoOverlay, vboOverlay: GLuint;
     nFacesOverlay: integer;
@@ -593,8 +593,7 @@ begin
      setDescriptives;
      isRebuildList := true;
      isBusy := false;
-
-end; // SetDescriptives()
+end; // CenterOrigin()
 
 procedure TMesh.ReverseFaces; //reverse face winding to reverse front and back faces
 var
@@ -639,6 +638,8 @@ begin
         Scale := abs(mx.Y - origin.Y);
      if abs(mx.Z - origin.Z) > Scale then
         Scale := abs(mx.Z - origin.Z);
+    mnV := mn;
+    mxV := mx;
 end; // SetDescriptives()
 
 {$DEFINE SPHERE_BY_SUBDIVIDE} //we can make a sphere via Polyhedra Subdivision or Parametric Surfaces  http://prideout.net/blog/?p=44
@@ -3952,6 +3953,7 @@ begin
      goto 666;
   end;
   ReadLnBin(f, str); // kind, e.g. "DATASET POLYDATA" or "DATASET STRUCTURED_ POINTS"
+  while (str='') and (not eof(f)) do ReadLnBin(f, str);
   if pos('POLYDATA', UpperCase(str)) = 0 then begin
     showmessage('Only able to read VTK images saved as POLYDATA, not '+ str);
     goto 666;

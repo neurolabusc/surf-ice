@@ -494,7 +494,6 @@ begin
   IntBound(lPrefs.TrackTubeSlices, 3,13);
   IniInt(lRead,lIniFile,'ScreenCaptureZoom',lPrefs.ScreenCaptureZoom);
   IntBound(lPrefs.ScreenCaptureZoom, 1,7);
-
   IniInt(lRead,lIniFile,'RenderQuality',lPrefs.RenderQuality);
   IniInt(lRead,lIniFile,'SaveAsFormat',lPrefs.SaveAsFormat);
   IniInt(lRead,lIniFile,'SaveAsFormatTrack',lPrefs.SaveAsFormatTrack);

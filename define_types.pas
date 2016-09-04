@@ -7,7 +7,12 @@ const
   kCR = chr (13);
   kDel = #127 ; // Delete
   kBS = #8 ; // Backspace
-  UNIXeoln = chr(10);
+  kUNIXeoln = chr(10);
+  {$IFDEF UNIX} //end of line
+  kEOLN = kUNIXeoln; //Windows CRLF   ;
+  {$ELSE}
+   kEOLN = #13#10; //Windows CRLF
+  {$ENDIF}
 
 type
    TRGBA = packed record //Next: analyze Format Header structure

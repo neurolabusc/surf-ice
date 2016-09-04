@@ -59,9 +59,9 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="2"/>
-        <TopLine Value="1863"/>
-        <CursorPos Y="1874"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="493"/>
+        <CursorPos X="38" Y="507"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -69,16 +69,15 @@
       <Unit2>
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="4"/>
-        <TopLine Value="471"/>
-        <CursorPos X="75" Y="488"/>
+        <EditorIndex Value="3"/>
+        <CursorPos Y="32"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit2>
       <Unit3>
         <Filename Value="nifti_loader.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="4"/>
         <CursorPos X="39" Y="4"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
@@ -95,8 +94,8 @@
         <Filename Value="track.pas"/>
         <IsPartOfProject Value="True"/>
         <IsVisibleTab Value="True"/>
-        <TopLine Value="1310"/>
-        <CursorPos X="11" Y="1328"/>
+        <TopLine Value="1370"/>
+        <CursorPos X="10" Y="1389"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit5>
@@ -106,12 +105,11 @@
         <ComponentName Value="ScriptForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="3"/>
-        <TopLine Value="271"/>
-        <CursorPos X="50" Y="279"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="589"/>
+        <CursorPos X="43" Y="599"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
-        <LoadedDesigner Value="True"/>
       </Unit6>
     </Units>
   </ProjectOptions>

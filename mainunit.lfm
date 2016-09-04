@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
-  Left = 442
+  Left = 458
   Height = 865
-  Top = 220
+  Top = 41
   Width = 1060
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -25,7 +25,7 @@ object GLForm1: TGLForm1
     object ClipBox: TGroupBox
       Left = 1
       Height = 110
-      Top = 542
+      Top = 559
       Width = 270
       Align = alTop
       Caption = 'Clipping'
@@ -98,12 +98,12 @@ object GLForm1: TGLForm1
     end
     object ShaderBox: TGroupBox
       Left = 1
-      Height = 212
-      Top = 652
+      Height = 195
+      Top = 669
       Width = 270
       Align = alClient
       Caption = 'Shader'
-      ClientHeight = 190
+      ClientHeight = 173
       ClientWidth = 262
       ParentFont = False
       TabOrder = 1
@@ -157,11 +157,16 @@ object GLForm1: TGLForm1
       object Memo1: TMemo
         Left = 0
         Height = 58
-        Top = 132
+        Top = 115
         Width = 262
         Align = alBottom
         Lines.Strings = (
           'Memo1'
+          ''
+          ''
+          ''
+          ''
+          ''
           ''
           ''
           ''
@@ -657,12 +662,12 @@ object GLForm1: TGLForm1
     object TrackBox: TGroupBox
       Tag = 270
       Left = 1
-      Height = 118
+      Height = 135
       Top = 1
       Width = 270
       Align = alTop
       Caption = 'Tracks'
-      ClientHeight = 96
+      ClientHeight = 113
       ClientWidth = 262
       ParentFont = False
       TabOrder = 2
@@ -677,11 +682,10 @@ object GLForm1: TGLForm1
       end
       object TrackLengthTrack: TTrackBar
         Left = 70
-        Height = 30
+        Height = 28
         Top = 0
         Width = 190
         Max = 100
-        Min = 1
         OnChange = TrackBoxChange
         Position = 20
         TickStyle = tsNone
@@ -689,7 +693,7 @@ object GLForm1: TGLForm1
       end
       object TrackWidthTrack: TTrackBar
         Left = 70
-        Height = 30
+        Height = 28
         Top = 30
         Width = 190
         Max = 12
@@ -709,7 +713,7 @@ object GLForm1: TGLForm1
       end
       object TrackDitherTrack: TTrackBar
         Left = 72
-        Height = 30
+        Height = 28
         Top = 60
         Width = 190
         OnChange = TrackBoxChange
@@ -725,11 +729,49 @@ object GLForm1: TGLForm1
         Caption = 'Dither'
         ParentColor = False
       end
+      object TrackScalarLUTdrop: TComboBox
+        Left = 138
+        Height = 20
+        Top = 90
+        Width = 122
+        DropDownCount = 22
+        ItemHeight = 0
+        Items.Strings = (
+          'a'
+          'b'
+          'c'
+          'd'
+          'e'
+          'f'
+          'g'
+        )
+        OnChange = LUTdropChange
+        ParentFont = False
+        Style = csDropDownList
+        TabOrder = 3
+      end
+      object TrackScalarNameDrop: TComboBox
+        Left = 8
+        Height = 20
+        Top = 90
+        Width = 122
+        DropDownCount = 22
+        ItemHeight = 0
+        ItemIndex = 0
+        Items.Strings = (
+          'Direction'
+        )
+        OnChange = LUTdropChange
+        ParentFont = False
+        Style = csDropDownList
+        TabOrder = 4
+        Text = 'Direction'
+      end
     end
     object OverlayBox: TGroupBox
       Left = 1
       Height = 82
-      Top = 374
+      Top = 391
       Width = 270
       Align = alTop
       Caption = 'Overlays'
@@ -789,7 +831,7 @@ object GLForm1: TGLForm1
       Tag = 270
       Left = 1
       Height = 140
-      Top = 119
+      Top = 136
       Width = 270
       Align = alTop
       Caption = 'Nodes'
@@ -929,7 +971,7 @@ object GLForm1: TGLForm1
       Tag = 270
       Left = 1
       Height = 115
-      Top = 259
+      Top = 276
       Width = 270
       Align = alTop
       Caption = 'Edges'
@@ -1049,7 +1091,7 @@ object GLForm1: TGLForm1
       Tag = 270
       Left = 1
       Height = 86
-      Top = 456
+      Top = 473
       Width = 270
       Align = alTop
       Caption = 'Mesh Color'

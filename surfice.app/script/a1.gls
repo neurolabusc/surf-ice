@@ -1,8 +1,8 @@
 BEGIN
 	RESETDEFAULTS;
-	//TRACKLOAD('Helix.vtk');
-	//TRACKLOAD('Stroke.trk');
-	TRACKLOAD('LAS.trk');
+	TRACKLOAD('/Users/rorden/Downloads/trk/dti.trk');
+	//TRACKLOAD('/Users/rorden/Downloads/studio/stroke.trk');
+	//TRACKLOAD('stroke.trk');
 exit;
 	AZIMUTHELEVATION(70, 15);
 	MESHLOAD('BrainMesh_ICBM152Right.mz3');

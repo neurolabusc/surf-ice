@@ -604,7 +604,7 @@ begin
   lStr := lStr+TypeStr((Sender as TMenuItem).Tag)+ ';';
   Clipboard.AsText := lStr;
   {$IFDEF UNIX}
-  Memo1.SelText := (lStr)+ UNIXeoln;
+  Memo1.SelText := (lStr)+ kUNIXeoln;
   {$ELSE}
   Memo1.SelText := (lStr)+ #13#10;
   {$ENDIF}

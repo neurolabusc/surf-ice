@@ -25,6 +25,8 @@ type
     AdditiveOverlayMenu: TMenuItem;
     GLBox: TOpenGLControl;
     CenterMeshMenu: TMenuItem;
+    TrackScalarLUTdrop: TComboBox;
+    TrackScalarNameDrop: TComboBox;
     SimplifyMeshMenu: TMenuItem;
     ScriptMenu: TMenuItem;
     SimplifyTracksMenu: TMenuItem;
@@ -286,7 +288,7 @@ const
   kLUT=1;
   kMin=2;
   kMax=3;
-     kTrackFilter = 'Camino, VTK, MRTrix, Quench/Cinch/Query, TrakVis|*.Bfloat;*.Bfloat.gz;*.trk;*.tck;*.pdb;*.fib;*.vtk|Any file|*.*';
+     kTrackFilter = 'Camino, VTK, MRTrix, Quench, TrakVis, DTIstudio|*.Bfloat;*.Bfloat.gz;*.trk;*.tck;*.pdb;*.fib;*.vtk;*.dat|Any file|*.*';
 
 function FindFile(Filename: string): string;
 var
@@ -483,17 +485,28 @@ end;
 function TGLForm1.OpenTrack(FilenameIN: string): boolean;
 var
   Filename: string;
+  i: integer;
 begin
    result := false;
  Filename := FindFile(FilenameIN);
  if Filename = '' then exit;
- if gTrack.LoadFromFile(FileName) then begin
+ if (gTrack.LoadFromFile(FileName)) and (gTrack.n_count > 0) then begin
     result := true;
     OpenDialog.InitialDir:= ExtractFileDir(FileName);
     gPrefs.PrevTrackname := FileName;
     if (gTrack.maxObservedFiberLength * 0.5) < TrackLengthTrack.Position then
        TrackLengthTrack.Position := round(gTrack.maxObservedFiberLength * 0.5);
  end;
+ if (length(gTrack.scalars) > 0) then begin
+    TrackBox.ClientHeight := TrackScalarNameDrop.Top + TrackScalarNameDrop.Height + 2;
+    TrackScalarNameDrop.Items.Clear;
+    TrackScalarNameDrop.Items.Add('Direction');
+    for i := 0 to (length(gTrack.scalars) -1) do
+        TrackScalarNameDrop.Items.Add(gTrack.scalars[i].name);
+    TrackScalarNameDrop.ItemIndex := 0;
+    TrackScalarLUTdrop.ItemIndex := 1;
+ end else
+    TrackBox.ClientHeight := TrackDitherTrack.Top + TrackDitherTrack.Height;
  UpdateToolbar;
  GLBoxRequestUpdate(nil);
 end;
@@ -604,7 +617,7 @@ begin
   end else if (length(gMesh.Faces) > 0) and (ext = '.GII') and (not isGiiMesh (Filename)) then begin
     OpenOverlay(Filename);  //GIfTI files can be meshes or overlays - autodetect
     exit;
-  end else if (ext = '.TRK') or (ext = '.FIB') or (ext = '.PDB') or (ext = '.TCK') or (ext = '.BFLOAT') or (ext = '.BFLOAT.GZ')  then begin
+  end else if (ext = '.DAT') or  (ext = '.TRK') or (ext = '.FIB') or (ext = '.PDB') or (ext = '.TCK') or (ext = '.BFLOAT') or (ext = '.BFLOAT.GZ')  then begin
     OpenTrack(Filename);
     exit;
   end else if (ext = '.EDGE') then begin
@@ -895,7 +908,7 @@ end;
 
 procedure TGLForm1.SaveTrack (var lTrack: TTrack);
 const
-    kTrackFilter  = 'VTK|*.vtk|Camino|*.Bfloat';
+    kTrackFilter  = 'VTK (.vtk)|*.vtk|Camino (.Bfloat)|*.Bfloat';
 var
   nam: string;
 begin
@@ -907,6 +920,8 @@ begin
  SaveMeshDialog.Title := 'Save track file';
  nam := gPrefs.PrevTrackname;
  SaveMeshDialog.InitialDir:= ExtractFileDir(nam);
+ if not fileexists(nam) then
+   nam := 'Track.vtk';
  nam := extractfilename (nam);
  if gPrefs.SaveAsFormatTrack = kSaveAsTrackBfloat then begin
    SaveMeshDialog.DefaultExt:= '.BFloat';
@@ -925,13 +940,68 @@ begin
      lTrack.SaveVtk(SaveMeshDialog.Filename);
 end;
 
+function  SimplifyPref(out Tol, minLength: single): boolean;
+var
+    PrefForm: TForm;
+    OkBtn: TButton;
+    TolLabel, minLengthLabel: TLabel;
+    TolEdit, minLengthEdit: TEdit;
+begin
+     Tol := 0.5;
+     minLength := 10;
+    PrefForm:=TForm.Create(nil);
+    PrefForm.SetBounds(100, 100, 520, 112);
+    PrefForm.Caption:='Track simplification preferences';
+    PrefForm.Position := poScreenCenter;
+    PrefForm.BorderStyle := bsDialog;
+    //Tolerance
+    TolLabel:=TLabel.create(PrefForm);
+    TolLabel.Caption:= 'Tolerance ("1" will allow track to deviate 1mm from original)';
+    TolLabel.Left := 8;
+    TolLabel.Top := 12;
+    TolLabel.Parent:=PrefForm;
+    TolEdit:=TEdit.create(PrefForm);
+    TolEdit.Caption := FloatToStrF(Tol, ffGeneral, 8, 4);
+    TolEdit.Top := 12;
+    TolEdit.Width := 92;
+    TolEdit.Left := PrefForm.Width - TolEdit.Width - 8;
+    TolEdit.Parent:=PrefForm;
+    //minLength
+    minLengthLabel:=TLabel.create(PrefForm);
+    minLengthLabel.Caption:= 'Enter minimum fiber length';
+    minLengthLabel.Left := 8;
+    minLengthLabel.Top := 42;
+    minLengthLabel.Parent:=PrefForm;
+    minLengthEdit:=TEdit.create(PrefForm);
+    minLengthEdit.Caption := FloatToStr(minLength);
+    minLengthEdit.Top := 42;
+    minLengthEdit.Width := 92;
+    minLengthEdit.Left := PrefForm.Width - minLengthEdit.Width - 8;
+    minLengthEdit.Parent:=PrefForm;
+    //OK button
+    OkBtn:=TButton.create(PrefForm);
+    OkBtn.Caption:='OK';
+    OkBtn.Top := 72;
+    OkBtn.Width := 128;
+    OkBtn.Left := PrefForm.Width - OkBtn.Width - 8;
+    OkBtn.Parent:=PrefForm;
+    OkBtn.ModalResult:= mrOK;
+    {$IFDEF Windows} ScaleDPI(PrefForm, 96);{$ENDIF}
+    PrefForm.ShowModal;
+    Tol := StrToFloatDef(TolEdit.Caption, Tol);
+    minLength := StrToFloatDef(minLengthEdit.Caption, minLength);
+    result :=  PrefForm.ModalResult = mrOK;
+    FreeAndNil(PrefForm);
+  end;
+
+
 procedure TGLForm1.SimplifyTracksMenuClick(Sender: TObject);
 var
-  s: string;
-  tol: single;
+  tol, minLength: single;
   lTrack: TTrack;
 begin
-  if DefaultFormatSettings.DecimalSeparator = '.' then
+     //showmessage(gPrefs.PrevTrackname);
+ (*if DefaultFormatSettings.DecimalSeparator = '.' then
     s := '0.1'
   else
       s := '0,1';
@@ -939,17 +1009,19 @@ begin
   if not TryStrToFloat(s, tol) then begin
     showmessage('Unable convert value to a number');
     exit;
-  end;
+  end; *)
+  if not SimplifyPref(Tol, minLength) then exit;
   OpenDialog.Filter := kTrackFilter;
   OpenDialog.Title := 'Select track file';
-  if Fileexists(gPrefs.PrevTrackname) then
+  if Fileexists(gPrefs.PrevTrackname) then begin
      OpenDialog.InitialDir := ExtractFileDir(gPrefs.PrevTrackname);
+     OpenDialog.FileName:= gPrefs.PrevTrackname;
+  end;
   if not OpenDialog.Execute then exit;
   lTrack := TTrack.Create;
   if lTrack.LoadFromFile(OpenDialog.FileName) then begin
      gPrefs.PrevTrackname := OpenDialog.FileName;
-     if lTrack.SimplifyMM(Tol) then begin
-      //lTrack.CenterX;
+     if lTrack.SimplifyMM(Tol, minLength) then begin
       SaveTrack(lTrack);
      end;
   end;
@@ -1861,26 +1933,29 @@ procedure TGLForm1.AboutMenuClick(Sender: TObject);
 const
   kSamp = 36;
 var
-  TrackStr, str : string;
+  TrackStr, MeshStr, str : string;
   s: dword;
   i: integer;
   scale: single;
   origin: TPoint3f;
 begin
- if (gTrack.n_count < 1) then
-   TrackStr := ''
- else
-     TrackStr := LineEnding + format('   %.4f..%.4f  %.4f..%.4f %.4f..%.4f',[gTrack.mnV.X, gTrack.mxV.X, gTrack.mnV.Y, gTrack.mxV.Y, gTrack.mnV.Z, gTrack.mxV.Z]);
-
-
-
+    MeshStr := '';
+    if length(gMesh.vertices) > 0 then begin
+       MeshStr := LineEnding + format('    %.4f..%.4f  %.4f..%.4f %.4f..%.4f',[gMesh.mnV.X, gMesh.mxV.X, gMesh.mnV.Y, gMesh.mxV.Y, gMesh.mnV.Z, gMesh.mxV.Z]);
+    end;
+    TrackStr := '';
+    if (gTrack.n_count > 0) then begin
+     if not gTrack.isWorldSpaceMM then
+       TrackStr := 'Spatial Properties Underspecified';
+     TrackStr := LineEnding + format('   %s %.4f..%.4f  %.4f..%.4f %.4f..%.4f',[TrackStr, gTrack.mnV.X, gTrack.mxV.X, gTrack.mnV.Y, gTrack.mxV.Y, gTrack.mnV.Z, gTrack.mxV.Z]);
+ end;
  s := gettickcount();
  for i := 1 to kSamp do begin
      gAzimuth := (gAzimuth + 10) mod 360;
      GLbox.Repaint;
   end;
   origin := GetOrigin(scale);
-  str :=  'Surf Ice '+' 15 May 2016 '
+  str :=  'Surf Ice '+' 28 August 2016 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
@@ -1895,11 +1970,13 @@ begin
    +LineEnding+format(' Scale %.4f',[scale])
    +LineEnding+format(' Origin %.4fx%.4fx%.4f',[origin.X, origin.Y, origin.Z])
    +LineEnding+' Mesh Vertices '+inttostr(length(gMesh.vertices))+' Faces '+  inttostr(length(gMesh.faces)) +' Colors '+  inttostr(length(gMesh.vertexRGBA))
+   +MeshStr
    +LineEnding+' Track Vertices '+inttostr(gTrack.n_vertices)+' Faces '+  inttostr(gTrack.n_faces) +' Count ' +inttostr(gTrack.n_count)
    +TrackStr
    +LineEnding+' Node Vertices '+inttostr(length(gNode.vertices))+' Faces '+  inttostr(length(gNode.faces))
    +LineEnding+' GPU '+gShader.Vendor
    +LineEnding+'Press "Abort" to quit and open settings '+ininame;
+  ClipBoard.AsText:= str;
   i := MessageDlg(str,mtInformation,[mbAbort, mbOK],0);
   if i  = mrAbort then Quit2TextEditor;
 end;
@@ -1956,8 +2033,10 @@ procedure TGLForm1.AddTracksMenuClick(Sender: TObject);
 begin
  OpenDialog.Filter := kTrackFilter;
  OpenDialog.Title := 'Select track file';
- if Fileexists(gPrefs.PrevTrackname) then
+ if Fileexists(gPrefs.PrevTrackname) then begin
     OpenDialog.InitialDir := ExtractFileDir(gPrefs.PrevTrackname);
+    OpenDialog.Filename := gPrefs.PrevTrackname;
+ end;
  if not OpenDialog.Execute then exit;
  //OpenDialog.Filename := '/Users/rorden/Desktop/Surf_Ice/sample/stroke.trk';
  OpenTrack(OpenDialog.FileName);
@@ -2267,7 +2346,11 @@ begin
   LUTdropEdge.Items := LUTdrop.Items;
   LUTdropNode.ItemIndex := 3;
   LUTdropEdge.ItemIndex := 1;
-
+  //Copy names for tracks
+  TrackScalarLUTdrop.Items.Clear;
+  TrackScalarLUTdrop.Items := LUTdrop.Items;
+  TrackScalarLUTdrop.ItemIndex := 1;
+  //TrackScalarLUTdrop.Items.AddStrings := LUTdrop.Items;
 end;
 
 procedure TGLForm1.OverlayTimerTimer(Sender: TObject);

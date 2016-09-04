@@ -24,11 +24,15 @@ uses
  procedure minMax(var v: TPoint3i; var mn, mx: integer); overload;
  function vectorLength(pt1, pt2: TPoint3F): single;
  function vectorSame(pt1, pt2: TPoint3f): boolean;
- function matrixMult(a, b: TMat33): TMat33;
- function matrixSet(a,b,c, d,e,f, g,h,i: single): TMat33;
+ function matrixMult(a, b: TMat33): TMat33; overload;
+ function matrixMult(a, b: TMat44): TMat44; overload;
+ function matrixSet(a,b,c, d,e,f, g,h,i: single): TMat33; overload;
+ function matrixSet(r1c1, r1c2, r1c3, r1c4, r2c1, r2c2, r2c3, r2c4, r3c1, r3c2, r3c3, r3c4: single): TMat44; overload;
  function matrixInvert(a: TMat33): TMat33;
  procedure matrixNegate(var a: TMat33);
- procedure matrixTranspose(var a: TMat33);
+ procedure matrixTranspose(var a: TMat33); overload;
+ procedure matrixTranspose(var a: TMat44); overload;
+
  procedure vectorNegate(var v: TPoint3f);  inline;
  function AlignVector(alignmentVector: TPoint3f): TMat33;
 
@@ -304,7 +308,18 @@ begin
      a[3,3] := 1.0;
 end; // matrixEve()
 
-procedure matrixTranspose(var a: TMat33);
+procedure matrixTranspose(var a: TMat44); overload;
+var
+   b: TMat44;
+   i,j: integer;
+begin
+ b := a;
+ for i := 1 to 4 do
+         for j := 1 to 4 do
+             a[i,j] := b[j,i];
+end; // matrixTranspose()
+
+procedure matrixTranspose(var a: TMat33); overload;
 var
    b: TMat33;
    i,j: integer;
@@ -358,14 +373,36 @@ begin  //dot product
      result := A.X*B.X + A.Y*B.Y + A.Z*B.Z;
 end;  // vectorDot()
 
-function matrixSet(a,b,c, d,e,f, g,h,i: single): TMat33;
+function matrixSet(r1c1, r1c2, r1c3, r1c4, r2c1, r2c2, r2c3, r2c4, r3c1, r3c2, r3c3, r3c4: single): TMat44; overload;
+begin
+ result[1,1]:=r1c1; result[1,2]:=r1c2; result[1,3]:=r1c3; result[1,4]:=r1c4;
+ result[2,1]:=r2c1; result[2,2]:=r2c2; result[2,3]:=r2c3; result[2,4]:=r2c4;
+ result[3,1]:=r3c1; result[3,2]:=r3c2; result[3,3]:=r3c3; result[3,4]:=r3c4;
+ result[4,1]:=0; result[4,2]:=0; result[4,3]:=0; result[4,4]:=1;
+
+end;
+
+function matrixSet(a,b,c, d,e,f, g,h,i: single): TMat33; overload;
 begin
      result[1,1]:=a; result[1,2]:=b; result[1,3]:=c;
      result[2,1]:=d; result[2,2]:=e; result[2,3]:=f;
      result[3,1]:=g; result[3,2]:=h; result[3,3]:=i;
 end; // matrixSet()
 
-function matrixMult(a, b: TMat33): TMat33;
+function matrixMult(a, b: TMat44): TMat44; overload;
+var i,j: integer;
+begin
+   for i := 1 to 4 do begin
+       for j := 1 to 4 do begin
+           result[i, j] := A[i, 1] * B[1,j]
+           + A[i, 2] * B[2, j]
+           + A[i, 3] * B[3, j]
+           + A[i, 4] * B[4, j];
+       end;  //for j
+   end; //for i
+end; //multiplymatrices()
+
+function matrixMult(a, b: TMat33): TMat33; overload;
 var i,j: integer;
 begin
    for i := 1 to 3 do begin
