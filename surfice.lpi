@@ -59,10 +59,9 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="2"/>
-        <TopLine Value="1014"/>
-        <CursorPos X="76" Y="1044"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="498"/>
+        <CursorPos X="19" Y="520"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -70,7 +69,7 @@
       <Unit2>
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="5"/>
         <CursorPos Y="32"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
@@ -78,7 +77,7 @@
       <Unit3>
         <Filename Value="nifti_loader.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="7"/>
+        <EditorIndex Value="6"/>
         <CursorPos X="39" Y="4"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
@@ -86,17 +85,17 @@
       <Unit4>
         <Filename Value="colorTable.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="4"/>
-        <TopLine Value="61"/>
-        <CursorPos Y="83"/>
+        <EditorIndex Value="3"/>
+        <TopLine Value="73"/>
+        <CursorPos X="15" Y="97"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit4>
       <Unit5>
         <Filename Value="track.pas"/>
         <IsPartOfProject Value="True"/>
-        <TopLine Value="348"/>
-        <CursorPos X="35" Y="358"/>
+        <TopLine Value="1492"/>
+        <CursorPos X="72" Y="1492"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit5>
@@ -106,7 +105,7 @@
         <ComponentName Value="ScriptForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="4"/>
         <TopLine Value="589"/>
         <CursorPos X="43" Y="599"/>
         <UsageCount Value="200"/>

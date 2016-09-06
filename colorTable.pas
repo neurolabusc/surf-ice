@@ -23,6 +23,7 @@ function CLUTDir: string;
 function blendRGBA(c1, c2: TRGBA ): TRGBA;
 function maxRGBA(c1, c2: TRGBA ): TRGBA;
 function inten2rgb(intensity, mn, mx: single; lut: TLUT): TRGBA;
+function inten2rgb1(intensity, mn, mx: single; lut: TLUT): TRGBA; //use 1st not 0th LUT color (0 is transparent)
 function desaturateRGBA ( rgba: TRGBA; frac: single; alpha: byte): TRGBA;
 
 implementation
@@ -79,6 +80,28 @@ begin
      else
           result := lut[round(255*(intensity-mn)/(mx-mn))];
   end;
+end;
+
+function inten2rgb1(intensity, mn, mx: single; lut: TLUT): TRGBA; //use 1st not 0th LUT color (0 is transparent)
+var i :integer;
+begin
+  if  (mn < 0) and (mx < 0) then begin
+    if intensity >= mx then
+       i := 0
+    else if intensity <= mn then
+       i := 255
+    else
+         i := round(255* (1.0-   (intensity-mn)/(mx-mn)));
+  end else begin
+     if intensity <= mn then
+        i := 0
+     else if intensity >= mx then
+        i := 255
+     else
+          i := round(255*(intensity-mn)/(mx-mn));
+  end;
+  if (i < 1) then i := 1;
+  result := lut[i];
 end;
 
 function desaturateRGBA ( rgba: TRGBA; frac: single; alpha: byte): TRGBA;

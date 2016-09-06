@@ -321,6 +321,7 @@ const kAoShaderVert = '#version 330'
 {$ENDIF}
 
 procedure Set2DDraw (w,h: integer; r,g,b: byte);
+procedure DrawCLUTtrk ( lU: TUnitRect; lBorder, lMin, lMax: single; var lPrefs: TPrefs; LUT: TLUT;window_width, window_height: integer );
 
 procedure DrawCube (lScrnWid, lScrnHt, lAzimuth, lElevation: integer);
 procedure DrawCLUT ( lU: TUnitRect; lBorder: single; var lPrefs: TPrefs; lMesh: TMesh; window_width, window_height: integer );
@@ -1184,6 +1185,49 @@ end; //if overlays else edges
             UOffset(lU2,lX,lY);
           end;
   end; //if overlay else edges
+glDisable (GL_BLEND);
+{$IFDEF COREGL}
+DrawStrips (window_width, window_height);
+{$ENDIF}
+end;
+
+procedure DrawCLUTtrk ( lU: TUnitRect; lBorder, lMin, lMax: single; var lPrefs: TPrefs; LUT: TLUT;window_width, window_height: integer );
+var
+     lU2:TUnitRect;
+     lX,lY: single;
+begin
+lPrefs.window_height := window_height;
+lPrefs.window_width := window_width;
+Enter2D(window_width, window_height);
+glEnable (GL_BLEND);//allow border to be translucent
+glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+if abs(lU.R-lU.L) > abs(lU.B-lU.T) then begin //wide bars
+  lX := 0;
+  lY := abs(lU.B-lU.T)+lBorder;
+  if (lU.B+lU.T) >1 then
+    lY := -lY;
+end else begin //high bars
+  lX := abs(lU.R-lU.L)+lBorder;
+  lY := 0;
+  if (lU.L+lU.R) >1 then
+    lX := -lX;
+end;
+//next - draw a border - do this once for all overlays, so
+//semi-transparent regions do not display regions of overlay
+SensibleUnitRect(lU);
+lU2 := lU;
+{$IFDEF COREGL}
+setlength(g2Dvnc, 0);
+DrawTextCore(window_width, window_height);
+{$ENDIF}
+DrawBorder(lU2,lBorder,lPrefs);
+lU2 := lU;
+DrawCLUTx(LUT,lU2,lPrefs);
+UOffset(lU2,lX,lY);
+lU2 := lU;
+SortSingle(lMin,lMax);
+DrawColorBarText(lMin,lMax, lU2,lBorder,lPrefs);
+UOffset(lU2,lX,lY);
 glDisable (GL_BLEND);
 {$IFDEF COREGL}
 DrawStrips (window_width, window_height);

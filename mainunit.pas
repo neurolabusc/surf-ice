@@ -18,6 +18,7 @@ type
   { TGLForm1 }
   TGLForm1 = class(TForm)
     AOLabel: TLabel;
+    TrackScalarRangeBtn: TButton;
     ColorbarMenu: TMenuItem;
     HelpMenu: TMenuItem;
     DisplaySepMenu: TMenuItem;
@@ -240,6 +241,7 @@ type
       var CanSelect: Boolean);
     procedure SwapYZMenuClick(Sender: TObject);
     procedure TrackBoxChange(Sender: TObject);
+    procedure TrackScalarRangeBtnClick(Sender: TObject);
    procedure UniformChange(Sender: TObject);
     procedure UpdateTimerTimer(Sender: TObject);
     procedure UpdateImageIntensity;
@@ -499,7 +501,12 @@ begin
        TrackLengthTrack.Position := round(gTrack.maxObservedFiberLength * 0.5);
  end;
  if (length(gTrack.scalars) > 0) then begin
+    {$IFDEF LCLcocoa}
+    TrackBox.Height := 135;
+    {$ELSE}
     TrackBox.ClientHeight := TrackScalarNameDrop.Top + TrackScalarNameDrop.Height + 2;
+    {$ENDIF}
+
     TrackScalarNameDrop.Items.Clear;
     TrackScalarNameDrop.Items.Add('Direction');
     for i := 0 to (length(gTrack.scalars) -1) do
@@ -507,8 +514,13 @@ begin
     TrackScalarNameDrop.ItemIndex := 0;
     TrackScalarLUTdrop.ItemIndex := 1;
     TrackScalarLUTdrop.Enabled := false;
+    TrackScalarRangeBtn.Enabled := false;
  end else
-    TrackBox.ClientHeight := TrackDitherTrack.Top + TrackDitherTrack.Height;
+ {$IFDEF LCLcocoa}
+ TrackBox.Height := 105;
+ {$ELSE}
+ TrackBox.ClientHeight := TrackDitherTrack.Top + TrackDitherTrack.Height;
+ {$ENDIF}
  UpdateToolbar;
  GLBoxRequestUpdate(nil);
 end;
@@ -1042,10 +1054,71 @@ var
 begin
   gTrack.scalarSelected := TrackScalarNameDrop.ItemIndex -1;//-1 for direction color, 0 for first scalar, etc.
   TrackScalarLUTdrop.Enabled := (gTrack.scalarSelected >= 0); //disable if color based on direction not scalar
+  TrackScalarRangeBtn.Enabled := TrackScalarLUTdrop.Enabled;
   i := TrackScalarLUTdrop.ItemIndex;
   gTrack.scalarLUT := UpdateTransferFunction(i);
   gTrack.isRebuildList:= true;
   GLBoxRequestUpdate(Sender);
+end;
+
+function  ScalarPref(var min, max: single): boolean;
+var
+    PrefForm: TForm;
+    OkBtn: TButton;
+    minLabel, maxLabel: TLabel;
+    minEdit, maxEdit: TEdit;
+begin
+    PrefForm:=TForm.Create(nil);
+    PrefForm.SetBounds(100, 100, 520, 112);
+    PrefForm.Caption:='Track simplification preferences';
+    PrefForm.Position := poScreenCenter;
+    PrefForm.BorderStyle := bsDialog;
+    //Tolerance
+    minLabel:=TLabel.create(PrefForm);
+    minLabel.Caption:= 'Minimum intensity';
+    minLabel.Left := 8;
+    minLabel.Top := 12;
+    minLabel.Parent:=PrefForm;
+    minEdit:=TEdit.create(PrefForm);
+    minEdit.Caption := FloatToStrF(min, ffGeneral, 8, 4);
+    minEdit.Top := 12;
+    minEdit.Width := 92;
+    minEdit.Left := PrefForm.Width - minEdit.Width - 8;
+    minEdit.Parent:=PrefForm;
+    //minLength
+    maxLabel:=TLabel.create(PrefForm);
+    maxLabel.Caption:= 'Maximum intensity';
+    maxLabel.Left := 8;
+    maxLabel.Top := 42;
+    maxLabel.Parent:=PrefForm;
+    maxEdit:=TEdit.create(PrefForm);
+    maxEdit.Caption := FloatToStr(max);
+    maxEdit.Top := 42;
+    maxEdit.Width := 92;
+    maxEdit.Left := PrefForm.Width - maxEdit.Width - 8;
+    maxEdit.Parent:=PrefForm;
+    //OK button
+    OkBtn:=TButton.create(PrefForm);
+    OkBtn.Caption:='OK';
+    OkBtn.Top := 72;
+    OkBtn.Width := 128;
+    OkBtn.Left := PrefForm.Width - OkBtn.Width - 8;
+    OkBtn.Parent:=PrefForm;
+    OkBtn.ModalResult:= mrOK;
+    {$IFDEF Windows} ScaleDPI(PrefForm, 96);{$ENDIF}
+    PrefForm.ShowModal;
+    min := StrToFloatDef(minEdit.Caption, min);
+    max := StrToFloatDef(maxEdit.Caption, max);
+    result :=  PrefForm.ModalResult = mrOK;
+    FreeAndNil(PrefForm);
+  end;
+
+procedure TGLForm1.TrackScalarRangeBtnClick(Sender: TObject);
+begin
+ if (gTrack.scalarSelected < 0) or (gTrack.scalarSelected >= length(gTrack.scalars)) then exit;
+ ScalarPref(gTrack.scalars[gTrack.scalarSelected].mnView, gTrack.scalars[gTrack.scalarSelected].mxView);
+ gTrack.isRebuildList:= true;
+ GLBoxRequestUpdate(Sender);
 end;
 
 (*const
@@ -1598,6 +1671,8 @@ begin
   GLBoxRequestUpdate(Sender);
 end;
 
+
+
 procedure TGLForm1.ReadCell (ACol,ARow: integer; Update: boolean);
 var
   lF: single;
@@ -1680,18 +1755,20 @@ begin
   end;
   if gPrefs.OrientCube then
      DrawCube (w, h,  gAzimuth, gElevation);
-
-
 //glViewport( 0, 0, w, h); //required when bitmap zoom <> 1
-
-
   if (gPrefs.Colorbar)  then begin
     //RunOffGLSL; //turn off shading
     if gMesh.OpenOverlays > 0 then
        DrawCLUT( gPrefs.ColorBarPos, 0.01, gPrefs, gMesh, w, h) //color bar based on overlays
+    else if (gTrack.n_count > 0) and (gTrack.scalarSelected >= 0) and (gTrack.scalarSelected < length(gTrack.scalars))  then
+          DrawCLUTtrk(gPrefs.ColorBarPos, 0.01, gTrack.scalars[gTrack.scalarSelected].mnView, gTrack.scalars[gTrack.scalarSelected].mxView, gPrefs, gTrack.scalarLUT, w, h) //color bar based on overlays
+          //DrawCLUTtrk ( lU: TUnitRect; lBorder, lMin, lMax: single; var lPrefs: TPrefs; LUT: TLUT;window_width, window_height: integer );
     else
        DrawCLUT( gPrefs.ColorBarPos, 0.01, gPrefs, gNode, w, h); //color bar based on nodes
   end;
+
+  //if (gTrack.scalarSelected < 0) or (gTrack.scalarSelected >= length(gTrack.scalars)) then exit;
+ //ScalarPref(gTrack.scalars[gTrack.scalarSelected].mnView, gTrack.scalars[gTrack.scalarSelected].mxView);
   //TestColorBar(gPrefs, w, h);
   //DrawText (gPrefs, w, h);
   if isToScreen then

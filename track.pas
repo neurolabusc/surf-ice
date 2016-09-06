@@ -12,7 +12,8 @@ Type
 // const
 //   kMaxScalars = 3; //maximum number of properties/scalars from TRK file, e.g. FA, pval, pval_corr
 TScalar = record
-  mn, mx: single;
+  mn, mx: single; //full range of scalar
+  mnView, mxView: single; //selected window for displaying scalar, e.g. if 0..1 with a grayscale color table than values <0 will be black and >1 will be white
   scalar: array of float;
   name: string;
 end;
@@ -159,10 +160,23 @@ var
   normRGBA : TRGBA;
   pts, norms: array of TPoint3f;
   len: single;
-  maxLinks, m, mi, i,j, ntracks: integer;
+  maxLinks, m, mi, i,j, ntracks, nfiber, nvertex: integer;
   trackLinks : array of integer;
   startPt, endPt:TPoint3f;
+  isScalarPerFiberColor : boolean = false;
+  isScalarPerVertexColor: boolean = false;
 begin
+  randomize;
+  //GLForm1.Caption := inttostr(random(666));
+ if (ScalarSelected >= 0) and (length(Scalars) > ScalarSelected) then begin
+   // GLForm1.Caption := format('%d %d %d %d %d',[ScalarSelected, length(Scalars), length(Scalars[ScalarSelected].scalar), n_count, random(666)]);
+   if  length(Scalars[ScalarSelected].scalar) = n_count then
+       isScalarPerFiberColor := true //one color per fiber
+   else
+       isScalarPerVertexColor := true;
+ end;
+ //if isScalarPerVertexColor then
+ //   GLForm1.Caption := format('%d %d %d %d %d',[ScalarSelected, length(Scalars), length(Scalars[ScalarSelected].scalar), n_count, random(666)]);
   maxLinks := 0;
   n_faces := 0;
   n_vertices := 0;
@@ -218,6 +232,8 @@ begin
   n_vertices := 0;
   n_faces := 0;
   n_indices := 0;
+  nfiber := 0;
+  nvertex := 0;
   while i < ntracks do begin
         m :=   asInt( tracks[i]);
         if trackLinks[i] >= minFiberLinks then begin
@@ -227,9 +243,14 @@ begin
               pts[mi].Y := tracks[i]; inc(i);
               pts[mi].Z := tracks[i]; inc(i);
           end;
-          normRGB := vector2RGB(pts[0], pts[m-1], len);
+          if isScalarPerFiberColor then begin
+            normRGBA := inten2rgb1(Scalars[ScalarSelected].scalar[nfiber], Scalars[ScalarSelected].mnView, Scalars[ScalarSelected].mxView,  scalarLUT );
+            normRGB := RGBA2pt3f(normRGBA);
+          end else
+              normRGB := vector2RGB(pts[0], pts[m-1], len);
           normRGBA := mixRandRGBA(normRGB, ditherColorFrac);
-
+          if isScalarPerVertexColor then
+                 normRGBA :=  inten2rgb1(Scalars[ScalarSelected].scalar[nvertex], Scalars[ScalarSelected].mnView, Scalars[ScalarSelected].mxView,  scalarLUT );
           for mi := 0 to (m-2) do begin
               norms[mi] := normalDirection(pts[mi], pts[mi+1]); //line does not have a surface normal, but a direction
           end;
@@ -239,8 +260,10 @@ begin
               vNorms[n_vertices].x := -norms[0].x;
               vNorms[n_vertices].y := -norms[0].y;
               vNorms[n_vertices].z := -norms[0].z;
-              if mi>1 then begin vType[n_vertices] := 1;
-                      end else vType[n_vertices] := 2;
+              if mi>1 then
+                 vType[n_vertices] := 1
+              else
+                  vType[n_vertices] := 2;
               vRGBA[n_vertices] := normRGBA;
               Indices[n_indices] := n_vertices;inc(n_indices);
               inc(n_vertices);
@@ -248,6 +271,9 @@ begin
           Indices[n_indices] := kPrimitiveRestart;inc(n_indices);
           //Duplicate every vertice
           for mi := 0 to (m-2) do begin
+              if isScalarPerVertexColor then
+                 normRGBA :=  inten2rgb1(Scalars[ScalarSelected].scalar[nvertex+mi], Scalars[ScalarSelected].mnView, Scalars[ScalarSelected].mxView,  scalarLUT );
+
               Verts[n_vertices] := pts[mi];
               vNorms[n_vertices] := norms[mi];
               vType[n_vertices] := 0;
@@ -261,6 +287,8 @@ begin
               Indices[n_indices] := n_vertices;inc(n_indices);
               inc(n_vertices);
           end;
+          if isScalarPerVertexColor then
+             normRGBA :=  inten2rgb1(Scalars[ScalarSelected].scalar[nvertex+m-1], Scalars[ScalarSelected].mnView, Scalars[ScalarSelected].mxView,  scalarLUT );
 
           //The normal for the last vestice is different
           Verts[n_vertices] := pts[m-1];
@@ -293,6 +321,8 @@ begin
 
         end else
             i := i + 1 + (3 * m);
+        nfiber := nfiber + 1;
+        nvertex := nvertex + m;
   end;
   {$ELSE}
    {$IFDEF COREGL} Use two pass or change code below for GL_LINE_STRIP_ADJACENCY {$ENDIF}
@@ -445,7 +475,7 @@ begin
            for j := 0 to (numCylVert - 1) do //add bottom of this cylinder
                vertices[j+numVert+n_vertices] := cylVert[j];
            if isScalarPerVertexColor then begin
-              normRGBA := inten2rgb(perVertexScalars[mi], Scalars[ScalarSelected].mn, Scalars[ScalarSelected].mx,  scalarLUT );
+              normRGBA := inten2rgb1(perVertexScalars[mi], Scalars[ScalarSelected].mnView, Scalars[ScalarSelected].mxView,  scalarLUT );
               for j := 0 to (numCylVert - 1) do
                   vRGBA[j+numVert+n_vertices] := normRGBA;
            end;
@@ -457,14 +487,14 @@ begin
        for j := 0 to (numCylVert - 1) do //add top of last cylinder
            vertices[j+numVert+n_vertices] := cylVert[j];
        if isScalarPerVertexColor then begin
-          normRGBA := inten2rgb(perVertexScalars[m-1], Scalars[ScalarSelected].mn, Scalars[ScalarSelected].mx,  scalarLUT );
+          normRGBA := inten2rgb1(perVertexScalars[m-1], Scalars[ScalarSelected].mnView, Scalars[ScalarSelected].mxView,  scalarLUT );
           for j := 0 to (numCylVert - 1) do
               vRGBA[j+numVert+n_vertices] := normRGBA;
        end;
        numVert := numVert + numCylVert;
        if not isScalarPerVertexColor then begin
          if isScalarPerFiberColor then begin
-            normRGBA := inten2rgb(Scalars[ScalarSelected].scalar[nfiber], Scalars[ScalarSelected].mn, Scalars[ScalarSelected].mx,  scalarLUT );
+            normRGBA := inten2rgb1(Scalars[ScalarSelected].scalar[nfiber], Scalars[ScalarSelected].mnView, Scalars[ScalarSelected].mxView,  scalarLUT );
             normRGB := RGBA2pt3f(normRGBA);
          end;
          normRGBA := mixRandRGBA(normRGB, ditherColorFrac);
@@ -548,6 +578,7 @@ end;
 procedure TTrack.DrawGL;
 begin
   if (length(tracks) < 4) then exit;
+
   if isBusy then exit;
   isBusy := true;
   if isRebuildList then begin
@@ -1374,6 +1405,8 @@ begin
          for m := low(Scalars[i].scalar) to high(Scalars[i].scalar) do
              if Scalars[i].scalar[m] > Scalars[i].mx then
                 Scalars[i].mx := Scalars[i].scalar[m];
+         Scalars[i].mnView := Scalars[i].mn; //show full range of values by default
+         Scalars[i].mxView := Scalars[i].mx;
      end; //for each scalar
 end; //SetScalarDescriptives()
 
@@ -1505,10 +1538,7 @@ begin
       setlength(tracks, ntracks);
       blockread(f, tracks[0], ntracks * sizeof(single) );
   end;
-  GLForm1.Caption := format('props %d scalars %d count %d sz %d', [hdr.n_properties, hdr.n_scalars, hdr.n_count, ntracks]);
-
-  //zzz
-  //ntracks := length(tracks);
+  //GLForm1.Caption := format('props %d scalars %d count %d sz %d', [hdr.n_properties, hdr.n_scalars, hdr.n_count, ntracks]);
   //{$DEFINE TRK_VOXEL_SPACE}  //either voxel or world space http://nipy.org/nibabel/reference/nibabel.trackvis.html
   {$IFDEF TRK_VOXEL_SPACE}
   isWorldSpaceMM := false;
