@@ -1,6 +1,7 @@
 BEGIN
 	RESETDEFAULTS;
-	TRACKLOAD('/Users/rorden/Downloads/trk/trk/results.trk');
+	NODELOAD('/Users/rorden/XL.node');
+	//TRACKLOAD('/Users/rorden/Downloads/trk/trk/results.trk');
 	//TRACKLOAD('/Users/rorden/Downloads/trk/trk/Merge.trk');
 	//TRACKLOAD('/Users/rorden/Downloads/studio/stroke.trk');
 	//TRACKLOAD('stroke.trk');

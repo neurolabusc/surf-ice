@@ -59,9 +59,9 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="1"/>
-        <TopLine Value="498"/>
-        <CursorPos X="19" Y="520"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="2072"/>
+        <CursorPos X="52" Y="2072"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -94,8 +94,8 @@
       <Unit5>
         <Filename Value="track.pas"/>
         <IsPartOfProject Value="True"/>
-        <TopLine Value="1492"/>
-        <CursorPos X="72" Y="1492"/>
+        <TopLine Value="430"/>
+        <CursorPos X="78" Y="437"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit5>

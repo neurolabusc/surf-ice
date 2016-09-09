@@ -448,6 +448,7 @@ begin
    if Filename = '' then exit;
    result := true;
  ext := UpperCase(ExtractFileExt(Filename));
+ setlength(gNode.edges,0); //clear edges array
  if (ext = '.NODE') or (length(gNode.nodes) < 1) then begin
      nodename := ChangeFileExt(FileName, '.node');
      if fileexists(nodename) then begin
@@ -455,7 +456,8 @@ begin
         exit;
      end;
  end;
- if not gNode.LoadEdge(Filename) then exit;
+ if length(gNode.edges) < 1 then //only if edges not loaded by openNode
+    if not gNode.LoadEdge(Filename, false) then exit;
  UpdateToolbar;
  edgeMinEdit.Value := 0;
  edgeMaxEdit.Value := gNode.nodePrefs.maxEdgeAbs;
@@ -2074,12 +2076,14 @@ end;
 
 procedure TGLForm1.AddNodesMenuClick(Sender: TObject);
 const
-  kNodeFilter = 'BrainNet Node/Edge|*.node;*.edge|Any file|*.*';
+  kNodeFilter = 'BrainNet Node/Edge|*.node;*.nodz;*.edge|Any file|*.*';
 var
   ext, f2: string;
 begin
-     if Fileexists(gPrefs.PrevNodename) then
+     if Fileexists(gPrefs.PrevNodename) then begin
         OpenDialog.InitialDir := ExtractFileDir(gPrefs.PrevNodename);
+        OpenDialog.Filename := gPrefs.PrevNodename;
+     end;
      OpenDialog.Filter := kNodeFilter;
      OpenDialog.Title := 'Select Node/Edge file';
      if not OpenDialog.Execute then exit;
@@ -2112,8 +2116,10 @@ kOverlayFilter = 'Mesh or NIfTI|*.*';
 begin
   OpenDialog.Filter := kOverlayFilter;
   OpenDialog.Title := 'Select overlay file';
-  if Fileexists(gPrefs.PrevOverlayname) then
+  if Fileexists(gPrefs.PrevOverlayname) then begin
         OpenDialog.InitialDir := ExtractFileDir(gPrefs.PrevOverlayname);
+        OpenDialog.FileName := gPrefs.PrevOverlayname;
+  end;
   if not OpenDialog.Execute then exit;
   //OpenDialog.FileName := ('/Users/rorden/Desktop/Surf_Ice/other/motor_4t95vol.nii.gz');
   //OpenDialog.FileName := ('/Users/rorden/Desktop/Surf_Ice/other/motor_4t95mesh.gii');
@@ -2381,8 +2387,10 @@ const
 begin
  OpenDialog.Filter := kMeshFilter;
  OpenDialog.Title := 'Select mesh file';
- if Fileexists(gPrefs.PrevFilename[1]) then
+ if Fileexists(gPrefs.PrevFilename[1]) then begin
     OpenDialog.InitialDir := ExtractFileDir(gPrefs.PrevFilename[1]);
+    OpenDialog.Filename := gPrefs.PrevFilename[1];
+  end;
   if not OpenDialog.Execute then exit;
   OpenMesh(OpenDialog.Filename);
 end;

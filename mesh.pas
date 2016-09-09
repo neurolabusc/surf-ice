@@ -85,7 +85,7 @@ type
     procedure LoadCurv(const FileName: string; lOverlayIndex: integer);
     function LoadMeshAscii(const FileName: string): boolean;
     function LoadMesh(const FileName: string): boolean;
-    procedure LoadNode(const FileName: string);
+    procedure LoadNode(const FileName: string; out isEmbeddedEdge: boolean);
     procedure LoadNv(const FileName: string);
     procedure LoadObj(const FileName: string);
     function LoadObjMni(const FileName: string): boolean;
@@ -109,7 +109,7 @@ type
     procedure SwapYZ;
     procedure SwapZY;
     function LoadFromFile(const FileName: string): boolean;
-    function LoadEdge(const FileName: string): boolean;
+    function LoadEdge(const FileName: string; isEmbeddedEdge: boolean): boolean;
     function LoadOverlay(const FileName: string): boolean;
     procedure CloseOverlays;
     procedure Close;
@@ -1246,7 +1246,9 @@ begin
      lSphere.Free;
 end;
 
-procedure TMesh.LoadNode(const FileName: string);
+const
+  kEmbeddedEdge = '#ENDNODE'; //signature for node file that contains edge values
+procedure TMesh.LoadNode(const FileName: string; out isEmbeddedEdge: boolean);
 //BrainNet Node And Edge Connectome Files
 //http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0068910
 label 666;
@@ -1256,6 +1258,7 @@ var
    num_node,i: integer;
    strlst : TStringList;
 begin
+   isEmbeddedEdge := false;
   strlst:=TStringList.Create;
   AssignFile(f, FileName);
      Reset(f);
@@ -1269,7 +1272,7 @@ begin
      setlength(self.nodes, num_node);
      Reset(f);
      num_node := 0;
-     while not EOF(f) do begin
+     while (not EOF(f)) and (not isEmbeddedEdge)  do begin
            ReadLn(f, str); //make sure to run CheckMesh after this, as these are indexed from 1!
            if (length(str) > 0) and (str[1] <> '#') then begin
               strlst.DelimitedText := str;
@@ -1281,8 +1284,10 @@ begin
                  self.nodes[num_node].radius := strtofloat(strlst[4]);
                  inc(num_node);
               end;
-           end;
+           end else if (pos(kEmbeddedEdge, uppercase(str)) > 0)then
+                isEmbeddedEdge := true;
      end;
+
      CloseFile(f);
      strlst.free;
      self.isNode := true;
@@ -1319,7 +1324,7 @@ begin
   strlst.free;
 end; // LoadNode()
 
-function TMesh.LoadEdge(const FileName: string): boolean;
+function TMesh.LoadEdge(const FileName: string; isEmbeddedEdge: boolean): boolean;
 //BrainNet Node And Edge Connectome Files
 //http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0068910
 label 666;
@@ -1339,6 +1344,15 @@ begin
   strlst:=TStringList.Create;
   AssignFile(f, FileName);
   Reset(f);
+  if isEmbeddedEdge then begin
+     str := '';
+     while (not EOF(f)) and (pos(kEmbeddedEdge, uppercase(str)) = 0) do
+        ReadLn(f, str);
+     if (EOF(f)) then begin
+        showmessage('Unable to find tag "'+kEmbeddedEdge+'" in '+ FileName);
+        goto 666;
+     end;
+  end;
   num_edge := 0;
   min_edge := maxint;
   max_edge := 0;
@@ -1365,7 +1379,17 @@ begin
        showmessage('Edge and node files do not match: '+inttostr(length(nodes))+' nodes loaded, but edge file describes '+inttostr(num_edge)+' nodes.');
        goto 666;
   end;
+  //2nd pass
   Reset(f);
+  if isEmbeddedEdge then begin
+     str := '';
+     while (not EOF(f)) and (pos(kEmbeddedEdge, uppercase(str)) = 0) do
+        ReadLn(f, str);
+     if (EOF(f)) then begin
+        showmessage('Unable to find tag "'+kEmbeddedEdge+'" in '+ FileName);
+        goto 666;
+     end;
+  end;
   setlength(edges, length(nodes), length(nodes));
   for r := 0 to (length(nodes) -1) do
       for c := 0 to (length(nodes) -1) do
@@ -4032,8 +4056,10 @@ end; *)
 function TMesh.LoadFromFile(const FileName: string): boolean;
 var
    ext: string;
+   isEmbeddedEdge: boolean;
 begin
   result := false;
+  isEmbeddedEdge := false;
      if not FileExists(FileName) then exit;
      isBusy := true;
      isNode := false;
@@ -4079,8 +4105,11 @@ begin
          LoadStl(Filename);
      if (ext = '.SURF') then
         LoadSurf(Filename);
-     if (ext = '.NODE') then
-         LoadNode(Filename);
+     if (ext = '.NODE') or (ext = '.NODZ')then begin
+         LoadNode(Filename, isEmbeddedEdge);
+         if isEmbeddedEdge then
+            LoadEdge(Filename, isEmbeddedEdge);
+     end;
      if (ext = '.SRF') and (not LoadSrf(Filename)) then
         LoadAsc_Srf(Filename);
      if (ext = '.ASC') then

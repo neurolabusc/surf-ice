@@ -597,6 +597,11 @@ object GLForm1: TGLForm1
           ''
           ''
           ''
+          ''
+          ''
+          ''
+          ''
+          ''
         )
         TabOrder = 3
       end
