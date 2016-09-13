@@ -1,7 +1,9 @@
 BEGIN
 	RESETDEFAULTS;
-	NODELOAD('/Users/rorden/XL.node');
-	//TRACKLOAD('/Users/rorden/Downloads/trk/trk/results.trk');
+	//	MESHLOAD('BrainMesh_ICBM152Right.mz3');
+	//OVERLAYLOAD('motor_4t95vol.nii.gz');
+	NODELOAD('/Users/rorden/abc.nodz');
+	TRACKLOAD('/Users/rorden/Downloads/trk/trk/results.trk');
 	//TRACKLOAD('/Users/rorden/Downloads/trk/trk/Merge.trk');
 	//TRACKLOAD('/Users/rorden/Downloads/studio/stroke.trk');
 	//TRACKLOAD('stroke.trk');

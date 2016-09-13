@@ -19,7 +19,7 @@ type
   TMRU =  array [1..knMRU] of string;
   TPrefs = record
     OverlayClip, StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube, MultiSample,
-     TracksAreTubes,Colorbar, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,
+     TracksAreTubes,Colorbar, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,ColorBarPrecedenceTracksNotOverlays,
      ZDimIsUp, SmoothVoxelwiseData, ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting : boolean;
     TrackTubeSlices, ScreenCaptureZoom,
     window_width, window_height, RenderQuality, SaveAsFormat,SaveAsFormatTrack, OcclusionAmount: integer;
@@ -206,6 +206,7 @@ begin
   end;
   with lPrefs do begin
     RenderQuality := kRenderBetter;
+    ColorBarPrecedenceTracksNotOverlays := false;
     SupportBetterRenderQuality := false;
     Colorbar := false;
     ZDimIsUp := true;

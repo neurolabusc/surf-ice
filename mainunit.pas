@@ -18,6 +18,7 @@ type
   { TGLForm1 }
   TGLForm1 = class(TForm)
     AOLabel: TLabel;
+    RestrictHideNodesWithoutEdges: TMenuItem;
     TrackScalarRangeBtn: TButton;
     ColorbarMenu: TMenuItem;
     HelpMenu: TMenuItem;
@@ -208,6 +209,7 @@ type
     procedure ExitMenuClick(Sender: TObject);
     procedure ResetMenuClick(Sender: TObject);
     procedure RestrictEdgeMenuClick(Sender: TObject);
+    procedure RestrictHideNodesWithoutEdgesClick(Sender: TObject);
     procedure RestrictMenuClick(Sender: TObject);
     procedure ReverseFacesMenuClick(Sender: TObject);
     procedure SaveBitmap(FilenameIn: string);
@@ -795,6 +797,10 @@ end;
 
 function ResetIniDefaults : boolean;
 begin
+     if ParamCount > 0 then begin //e.g. Matlab users often launch system commands using keyboard shortcuts. These uses should use -R to force reset
+        result := false;
+        exit;
+     end;
      //result := ( GetKeyState(VK_MENU)<> 0) or (GetKeyState(VK_LWIN) <> 0) or (GetKeyState(VK_CONTROL) <> 0)  or (ssShift in KeyDataToShiftState(VK_SHIFT)) ;
      result := ( GetKeyState(VK_MENU)<> 0) or (GetKeyState(VK_LWIN) <> 0)  or (ssShift in KeyDataToShiftState(VK_SHIFT)) ;
 end;
@@ -1063,15 +1069,28 @@ begin
   GLBoxRequestUpdate(Sender);
 end;
 
-function  ScalarPref(var min, max: single): boolean;
+// 'Defuzz' is used for comparisons and to avoid propagation of 'fuzzy',
+//  nearly-zero values.  DOUBLE calculations often result in 'fuzzy' values.
+//  The term 'fuzz' was adapted from the APL language.
+(*FUNCTION  Defuzz(CONST x:  DOUBLE):  DOUBLE;
+const
+ fuzz = 1.0E-6;
+BEGIN
+  IF  ABS(x) < fuzz
+  THEN RESULT := 0.0
+  ELSE RESULT := x
+END {Defuzz};
+  *)
+function  ScalarPref(var min, max: single; var ColorBarPrecedenceTracksNotOverlays: boolean): boolean;
 var
     PrefForm: TForm;
     OkBtn: TButton;
     minLabel, maxLabel: TLabel;
     minEdit, maxEdit: TEdit;
+    ColorBarCheck: TCheckBox;
 begin
     PrefForm:=TForm.Create(nil);
-    PrefForm.SetBounds(100, 100, 520, 112);
+    PrefForm.SetBounds(100, 100, 520, 142);
     PrefForm.Caption:='Track simplification preferences';
     PrefForm.Position := poScreenCenter;
     PrefForm.BorderStyle := bsDialog;
@@ -1094,15 +1113,22 @@ begin
     maxLabel.Top := 42;
     maxLabel.Parent:=PrefForm;
     maxEdit:=TEdit.create(PrefForm);
-    maxEdit.Caption := FloatToStr(max);
+    maxEdit.Caption := FloatToStrF(max, ffGeneral, 8, 4);
     maxEdit.Top := 42;
     maxEdit.Width := 92;
     maxEdit.Left := PrefForm.Width - maxEdit.Width - 8;
     maxEdit.Parent:=PrefForm;
+    //Precedence   ColorBarPrecedenceTracksNotOverlays
+    ColorBarCheck:=TCheckBox.create(PrefForm);
+    ColorBarCheck.Checked := ColorBarPrecedenceTracksNotOverlays;
+    ColorBarCheck.Caption:='Colorbar for tracks, even if overlay loaded';
+    ColorBarCheck.Left := 8;
+    ColorBarCheck.Top := 72;
+    ColorBarCheck.Parent:=PrefForm;
     //OK button
     OkBtn:=TButton.create(PrefForm);
     OkBtn.Caption:='OK';
-    OkBtn.Top := 72;
+    OkBtn.Top := 102;
     OkBtn.Width := 128;
     OkBtn.Left := PrefForm.Width - OkBtn.Width - 8;
     OkBtn.Parent:=PrefForm;
@@ -1111,6 +1137,7 @@ begin
     PrefForm.ShowModal;
     min := StrToFloatDef(minEdit.Caption, min);
     max := StrToFloatDef(maxEdit.Caption, max);
+    ColorBarPrecedenceTracksNotOverlays := ColorBarCheck.Checked;
     result :=  PrefForm.ModalResult = mrOK;
     FreeAndNil(PrefForm);
   end;
@@ -1118,7 +1145,7 @@ begin
 procedure TGLForm1.TrackScalarRangeBtnClick(Sender: TObject);
 begin
  if (gTrack.scalarSelected < 0) or (gTrack.scalarSelected >= length(gTrack.scalars)) then exit;
- ScalarPref(gTrack.scalars[gTrack.scalarSelected].mnView, gTrack.scalars[gTrack.scalarSelected].mxView);
+ ScalarPref(gTrack.scalars[gTrack.scalarSelected].mnView, gTrack.scalars[gTrack.scalarSelected].mxView, gPrefs.ColorBarPrecedenceTracksNotOverlays);
  gTrack.isRebuildList:= true;
  GLBoxRequestUpdate(Sender);
 end;
@@ -1424,7 +1451,10 @@ begin
   AdvancedBtn.ModalResult:= mrYesToAll;
   {$IFDEF Windows} ScaleDPI(PrefForm, 96);  {$ENDIF}
   PrefForm.ShowModal;
-  if (PrefForm.ModalResult <> mrOK) and (PrefForm.ModalResult <> mrYesToAll) then exit; //if user closes window with out pressing "OK"
+  if (PrefForm.ModalResult <> mrOK) and (PrefForm.ModalResult <> mrYesToAll) then begin
+    FreeAndNil(PrefForm);
+  	exit; //if user closes window with out pressing "OK"
+  end;
   gPrefs.ScreenCaptureTransparentBackground :=  BitmapAlphaCheck.Checked;
   gPrefs.SmoothVoxelwiseData := SmoothVoxelwiseDataCheck.Checked;
   (*if ShaderForBackgroundOnlyCombo.ItemIndex = 1 then
@@ -1514,6 +1544,14 @@ begin
     gNode.nodePrefs.isNoNegEdge:=true;
  if (sender as TMenuItem).tag = 2 then
     gNode.nodePrefs.isNoPosEdge:=true;
+ gNode.isRebuildList := true;
+ GLBoxRequestUpdate(Sender);
+end;
+
+procedure TGLForm1.RestrictHideNodesWithoutEdgesClick(Sender: TObject);
+begin
+ gNode.nodePrefs.isNoNodeWithoutEdge := RestrictHideNodesWithoutEdges.checked;
+ if length(gNode.nodes) < 1 then exit;
  gNode.isRebuildList := true;
  GLBoxRequestUpdate(Sender);
 end;
@@ -1760,7 +1798,7 @@ begin
 //glViewport( 0, 0, w, h); //required when bitmap zoom <> 1
   if (gPrefs.Colorbar)  then begin
     //RunOffGLSL; //turn off shading
-    if gMesh.OpenOverlays > 0 then
+    if (gMesh.OpenOverlays > 0) and ((gTrack.n_count < 1) or (not gPrefs.ColorBarPrecedenceTracksNotOverlays)) then
        DrawCLUT( gPrefs.ColorBarPos, 0.01, gPrefs, gMesh, w, h) //color bar based on overlays
     else if (gTrack.n_count > 0) and (gTrack.scalarSelected >= 0) and (gTrack.scalarSelected < length(gTrack.scalars))  then
           DrawCLUTtrk(gPrefs.ColorBarPos, 0.01, gTrack.scalars[gTrack.scalarSelected].mnView, gTrack.scalars[gTrack.scalarSelected].mxView, gPrefs, gTrack.scalarLUT, w, h) //color bar based on overlays
@@ -2103,6 +2141,7 @@ begin
      else
          OpenNode(OpenDialog.FileName);
      //OpenEdge('/Users/rorden/Desktop/obj/Edge_Brodmann82.edge');
+     UpdateToolbar;
 end;
 
 procedure TGLForm1.AddOverlayMenuClick(Sender: TObject);

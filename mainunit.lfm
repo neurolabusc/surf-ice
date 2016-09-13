@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
-  Left = 689
+  Left = 591
   Height = 865
-  Top = 85
+  Top = 91
   Width = 1060
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -162,6 +162,8 @@ object GLForm1: TGLForm1
         Align = alBottom
         Lines.Strings = (
           'Memo1'
+          ''
+          ''
           ''
           ''
           ''
@@ -1354,7 +1356,6 @@ object GLForm1: TGLForm1
         object RestrictNoMenu: TMenuItem
           AutoCheck = True
           Caption = 'Either hemisphere'
-          Checked = True
           GroupIndex = 123
           RadioItem = True
           OnClick = RestrictMenuClick
@@ -1371,6 +1372,7 @@ object GLForm1: TGLForm1
           Tag = 2
           AutoCheck = True
           Caption = 'Right  hemisphere only'
+          Checked = True
           GroupIndex = 123
           RadioItem = True
           OnClick = RestrictMenuClick
@@ -1381,7 +1383,6 @@ object GLForm1: TGLForm1
         object RestrictAnyEdgeMenu: TMenuItem
           AutoCheck = True
           Caption = 'Any edges'
-          Checked = True
           GroupIndex = 124
           RadioItem = True
           OnClick = RestrictEdgeMenuClick
@@ -1401,6 +1402,11 @@ object GLForm1: TGLForm1
           GroupIndex = 124
           RadioItem = True
           OnClick = RestrictEdgeMenuClick
+        end
+        object RestrictHideNodesWithoutEdges: TMenuItem
+          AutoCheck = True
+          Caption = 'Hide nodes without edges'
+          OnClick = RestrictHideNodesWithoutEdgesClick
         end
       end
     end

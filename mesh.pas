@@ -38,7 +38,7 @@ type
     minEdge, maxEdge, maxEdgeAbs, minEdgeThresh, maxEdgeThresh, minNodeColor, maxNodeColor,  minNodeSize, maxNodeSize,
     minNodeThresh, maxNodeThresh, scaleNodeSize, scaleEdgeSize, thresholdNodeFrac: single;
     nodeLUTindex , edgeLUTindex: integer;
-     isNodeThresholdBySize, isNoNegEdge, isNoPosEdge, isNoLeftNodes,isNoRightNodes, isNodeColorVaries, isEdgeColorVaries, isEdgeSizeVaries, isEdgeShowNeg, isEdgeShowPos : boolean;
+     isNodeThresholdBySize, isNoNegEdge, isNoPosEdge, isNoLeftNodes,isNoRightNodes,isNoNodeWithoutEdge, isNodeColorVaries, isEdgeColorVaries, isEdgeSizeVaries, isEdgeShowNeg, isEdgeShowPos : boolean;
  end;
 
 type
@@ -768,7 +768,7 @@ begin
      nodePrefs.edgeLUTindex := 1;
      nodePrefs.isNoLeftNodes:= false;
      nodePrefs.isNoRightNodes:= false;
-
+     nodePrefs.isNoNodeWithoutEdge := false;
      nodePrefs.isNoNegEdge:= false;
      nodePrefs.isNoPosEdge:= false;
 
@@ -1104,6 +1104,7 @@ var
    lSphere: TMesh;
    cylFace: TFaces;
    cylVert: TVertices;
+   isNodeHasEdge: array of boolean;
    nodeColorVaries, edgeColorVaries: boolean;
    cLUT, cLUTneg : TLUT;
    clr : TRGBA;
@@ -1117,6 +1118,7 @@ begin
         end;
         if (nodePrefs.isNoRightNodes) and (nodes[ii].X > 0)  then exit;
         if (nodePrefs.isNoLeftNodes) and (nodes[ii].X < 0)  then exit;
+        if (nodePrefs.isNoNodeWithoutEdge) and (not isNodeHasEdge[ii]) then exit;
         result := true;
 end; //isNodeSurvives()
 function isEdgeSurvives(ii,jj: integer): boolean;
@@ -1134,6 +1136,26 @@ begin
 
      nNode := length(nodes);
      if nNode < 1 then exit;
+     //find out which edges survive
+     nEdgeThresh := 0;
+     edgeColorVaries := false;
+     if (nodePrefs.isEdgeColorVaries) and (nodePrefs.maxEdge <> nodePrefs.minEdge) then
+        edgeColorVaries := true;
+     setlength(isNodeHasEdge, nNode);
+     for i := 0 to (nNode - 1) do
+         isNodeHasEdge[i] := false;
+     //thresholdEdgeSize := nodePrefs.threshEdge * nodePrefs.maxEdge;
+     if (nodePrefs.scaleEdgeSize > 0) and (length(Edges) > 0) then begin
+        for i := 0 to (nNode - 2) do
+           for j := (i+1) to (nNode -1) do
+               if isEdgeSurvives(i,j) then begin
+                  inc(nEdgeThresh);
+                  isNodeHasEdge[i] := true;
+                  isNodeHasEdge[j] := true;
+               end;
+     end;
+     //find out which nodes survive
+
      nNodeThresh := 0;
      if nodePrefs.scaleNodeSize > 0 then begin
        for n := 0 to (nNode -1) do
@@ -1143,17 +1165,6 @@ begin
      nodeColorVaries := false;
      if (nodePrefs.isNodeColorVaries) and (nodePrefs.minNodeColor <> nodePrefs.maxNodeColor) then
         nodeColorVaries := true;
-     nEdgeThresh := 0;
-     edgeColorVaries := false;
-     if (nodePrefs.isEdgeColorVaries) and (nodePrefs.maxEdge <> nodePrefs.minEdge) then
-        edgeColorVaries := true;
-     //thresholdEdgeSize := nodePrefs.threshEdge * nodePrefs.maxEdge;
-     if (nodePrefs.scaleEdgeSize > 0) and (length(Edges) > 0) then begin
-        for i := 0 to (nNode - 2) do
-           for j := (i+1) to (nNode -1) do
-               if isEdgeSurvives(i,j) then
-                  inc(nEdgeThresh);
-     end;
      if (nEdgeThresh = 0) and (nNodeThresh = 0) then exit;
      lSphere := TMesh.Create;
      lSphere.MakeSphere;
@@ -1169,6 +1180,7 @@ begin
      face := 0;
      vert := 0;
      cLUT := UpdateTransferFunction (nodePrefs.NodeLUTindex);
+     //draw balls/spheres
       if nNodeThresh > 0 then begin
        for n := 0 to (nNode-1) do begin
            if isNodeSurvives(n) then begin //if (nodes[n].Radius >= thresholdNodeSize) then begin
@@ -1196,7 +1208,7 @@ begin
            end; //node larger than threshold
        end; //for each node
       end; //at least on node
-     // draw cyl
+     // draw sticks/cylinders
      if nEdgeThresh > 0 then begin
        cLUT := UpdateTransferFunction (nodePrefs.edgeLUTindex);
        i := nodePrefs.edgeLUTindex + 1;
@@ -1244,6 +1256,7 @@ begin
        end; //for i: rows
      end; //at least one node
      lSphere.Free;
+     setlength(isNodeHasEdge,0);
 end;
 
 const
