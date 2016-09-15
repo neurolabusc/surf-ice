@@ -4634,6 +4634,7 @@ end; // Close()
 
 destructor TMesh.Destroy;
 begin
+  self.Close;
   // Release memory, if glcontext obtained
   //would be nice to call
   // glDeleteLists(displayList, 1);

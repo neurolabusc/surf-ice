@@ -17,7 +17,7 @@ uses
  function vectorAbs(var v: TPoint3f): TPoint3f;
  function vectorDot (A: TPoint3f; B: TPoint3f): single;
  procedure vectorAdd (var A: TPoint3f; B: TPoint3f);  inline; overload;
- function vectorAdd (var A: TPoint3i; B: integer): TPoint3i;  inline; overload;
+ function vectorAdd (A: TPoint3i; B: integer): TPoint3i;  inline; overload;
  procedure matrixEye(var a: TMat33);
  procedure vectorSubtract (var A: TPoint3f; B: TPoint3f);  inline;
  procedure minMax(var v, mn, mx: TPoint3f); overload;
@@ -32,7 +32,7 @@ uses
  procedure matrixNegate(var a: TMat33);
  procedure matrixTranspose(var a: TMat33); overload;
  procedure matrixTranspose(var a: TMat44); overload;
-
+ function vectorMult (var A: TPoint3f; B: single): TPoint3f;  inline;
  procedure vectorNegate(var v: TPoint3f);  inline;
  function AlignVector(alignmentVector: TPoint3f): TMat33;
 
@@ -44,6 +44,13 @@ uses
 
 
 implementation
+
+function vectorMult (var A: TPoint3f; B: single): TPoint3f;  inline;
+begin
+  result.X := A.X * B;
+  result.Y := A.Y * B;
+  result.Z := A.Z * B;
+end;
 
 procedure vectorTransform(var v: TPoint3f; mat : TMat44);
 var
@@ -62,7 +69,7 @@ begin
      result.Z := A.Z * Scale;
 end;
 
-function vectorAdd (var A: TPoint3i; B: integer): TPoint3i;  inline; overload;
+function vectorAdd (A: TPoint3i; B: integer): TPoint3i;  inline; overload;
 begin
   result.X := A.X + B;
   result.Y := A.Y + B;

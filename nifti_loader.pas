@@ -4,8 +4,8 @@ unit nifti_loader;
 {$Include opts.inc} //FOREIGNVOL
 interface
 uses
-  {$IFDEF FOREIGNVOL}nifti_foreign, {$ENDIF}
-  Classes, SysUtils, nifti_types, define_types, dialogs, zstream;
+  {$IFDEF FOREIGNVOL}nifti_foreign, {$ENDIF} {$ifndef isTerminalApp}  dialogs, {$endif}
+  Classes, SysUtils, nifti_types, define_types,  zstream;
 
 const
   kNiftiSmoothNone = 0; //no smoothing: raw values
@@ -21,7 +21,7 @@ TNIFTI = class
     hdr : TNIFTIhdr;
     mat, invMat: TMatrix;
     maxInten, minInten: single;
-    isZeroMasked: boolean;
+    isZeroMasked, isLoad4D: boolean;
     img: TImgScaled;//array of single;
   private
     function ImgRawToSingle(imgBytes: TImgRaw; isSwap: boolean): boolean;
@@ -34,6 +34,8 @@ TNIFTI = class
     function LoadFromFile(const FileName: string; smoothMethod: integer): boolean; //smoothMethod is one of kNiftiSmooth...  options
     procedure SmoothMaskZero;
     procedure Smooth;
+    procedure Close;
+    Destructor  Destroy; override;
 end;
 
 implementation
@@ -147,6 +149,7 @@ var
    Xfrac1, Yfrac1, Zfrac1, Xfrac0, Yfrac0, Zfrac0, Weight : single;
    vx, sliceVx: integer;
 begin
+   if length(img) < 1 then exit;
    result := 0;
    Xvox := Xmm*invMat[1,1] + Xmm*invMat[1,2] + Xmm*invMat[1,3] + invMat[1,4];
    Yvox := Ymm*invMat[2,1] + Ymm*invMat[2,2] + Ymm*invMat[2,3] + invMat[2,4];
@@ -275,6 +278,9 @@ end; //func swap8r
 
 constructor  TNIFTI.Create;
 begin
+  isZeroMasked := false;
+  isLoad4D := false;
+  setlength(img,0);
      //
 end; // Create()
 
@@ -413,7 +419,7 @@ var
   l64Buf : doubleP;
 begin
      result := false;
-     nVox:= hdr.dim[1] * hdr.dim[2] * hdr.dim[3];
+     nVox:= hdr.dim[1] * hdr.dim[2] * hdr.dim[3] * hdr.dim[4];
      setlength(img, nVox);
      if hdr.bitpix = 8 then begin
         for i := 0 to (nVox -1) do
@@ -450,7 +456,7 @@ begin
            for i := 0 to (nVox -1) do
                img[i] := l64Buf[i];
      end else
-         Showmessage('Unsupported NIfTI datatype '+inttostr(hdr.bitpix)+'bpp');
+         exit;//Showmessage('Unsupported NIfTI datatype '+inttostr(hdr.bitpix)+'bpp');
      for i := 0 to (nVox -1) do //remove NaN
        if SpecialSingle(img[i]) then
           img[i] := 0;
@@ -469,12 +475,19 @@ end;
 function TNIFTI.readImg(const FileName: string; isSwap: boolean; gzFlag: int64): boolean; //read first volume
 var
    f: File;
-   nVox, nByte: integer;
+   i,nVol, nVox, nByte: integer;
    decomp: TGZFileStream;
    imgBytes: array of byte;
 begin
   result := false;
-  nVox:= hdr.dim[1] * hdr.dim[2] * hdr.dim[3];
+  nVol := 1;
+  if isLoad4D then begin
+     for i := 4 to 7 do
+       if hdr.dim[i] > 1 then
+         nVol := nVol * hdr.dim[i];
+  end;
+  hdr.dim[4] := nVol;
+  nVox := hdr.dim[1] * hdr.dim[2] * hdr.dim[3] * hdr.dim[4];
   if nVox < 1 then exit;
   nByte := nVox * (hdr.bitpix div 8);
   if gzFlag = K_gzBytes_headerAndImageCompressed then begin
@@ -653,6 +666,17 @@ procedure TNIFTI.Smooth;
 begin
   if (length(img) < 9) or (hdr.dim[1] < 3) or (hdr.dim[2] < 3) or (hdr.dim[3] < 3) then exit;
   SmoothFWHM2Vox (img,  hdr.dim[1],hdr.dim[2],hdr.dim[3]);
+end;
+
+procedure TNIFTI.Close;
+begin
+  setlength(img,0);
+end;
+
+destructor TNIFTI.Destroy;
+begin
+  Close;
+  inherited;
 end;
 
 end.

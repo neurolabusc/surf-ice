@@ -1,6 +1,8 @@
 unit define_types;
 interface
+{$ifndef isTerminalApp}
 uses graphics;
+{$endif}
 const
   NaN : double = 1/0;
   kTab = chr(9);
@@ -64,15 +66,34 @@ function asSingle(i : longint): single; overload;
 function asSingle(b0,b1,b2,b3: byte): single; overload;
 function asInt(s : single): longint;
 function specialsingle (var s:single): boolean; //isFinite
-function asRGBA(clr: TColor): TRGBA;
 function ExtractFileExtGzUpper(FileName: string): string;
 function FSize (lFName: String): longint;
 function ChangeFileExtX( lFilename: string; lExt: string): string;
 function ReadNumBin(var f: TFByte): string; //read next ASCII number in binary file
+{$ifdef isTerminalApp}
+procedure ShowMessage(msg: string);
+{$else}
+function asRGBA(clr: TColor): TRGBA;
+{$endif}
 
 implementation
 
-uses sysutils, dialogs;
+uses sysutils;//, dialogs;
+
+{$ifdef isTerminalApp}
+procedure ShowMessage(msg: string);
+begin
+  writeln(msg);
+end;
+{$else}
+function asRGBA(clr: TColor): TRGBA;
+begin
+  result.R := red(clr);
+  result.G := green(clr);
+  result.B := blue(clr);
+  result.A := 255;
+end;
+{$endif}
 
 function ReadNumBin(var f: TFByte): string; //read next ASCII number in binary file
 const
@@ -135,14 +156,6 @@ procedure IntBound (var lVal: integer; lMin, lMax: integer);
 begin
     if lVal < lMin then lVal := lMin;
     if lVal > lMax then lVal := lMax;
-end;
-
-function asRGBA(clr: TColor): TRGBA;
-begin
-  result.R := red(clr);
-  result.G := green(clr);
-  result.B := blue(clr);
-  result.A := 255;
 end;
 
 function specialsingle (var s:single): boolean;

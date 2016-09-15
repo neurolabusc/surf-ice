@@ -54,6 +54,7 @@ TTrack = class
     procedure Close;
     procedure DrawGL;
     procedure CenterX;
+    destructor Destroy; override;
   end;
 
 implementation
@@ -1442,9 +1443,11 @@ type
    version  : LongInt;
    hdr_size  : LongInt;
 end;
+const
+   kChunkSize = 16384;
 var
+  bytes : array of byte;
   str: string;
-   f: File;
    fsz, ntracks: int64;
    nVtx32: int32;
    hdr:  TTrackhdr;
@@ -1452,14 +1455,31 @@ var
    scalarS32: single;
    pt: TPoint3f;
    vox2mmMat, zoomMat: TMat44;
+   mStream: TMemoryStream;
+   zStream : TGZFileStream;
 begin
   isRebuildList := true;
   result := false;
-  AssignFile(f, FileName);
-  FileMode := fmOpenRead;
-  Reset(f,1);
-  fsz := filesize(f);
-  blockread(f, hdr, sizeof(TTrackhdr) );
+  mStream := TMemoryStream.Create;
+  if UpperCase(ExtractFileExt(FileName)) = '.GZ' then begin
+    zStream := TGZFileStream.create(FileName, gzopenread);
+    setlength(bytes, kChunkSize);
+    repeat
+         i := zStream.read(bytes[0],kChunkSize);
+         mStream.Write(bytes[0],i) ;
+    until i < kChunkSize;
+    zStream.Free;
+  end else
+      mStream.LoadFromFile(FileName);
+  fsz :=  mStream.Size;
+  if fsz < (sizeof(TTrackhdr) + 5 * sizeof(single)) then begin//smallest file
+     ShowMessage(format('File too small to be TRK format: %s', [FileName]));
+     mStream.Free;
+     exit;
+  end;
+  mStream.Position := 0;
+  //mStream.Read(flt[0], nflt * SizeOf(single));
+  mStream.Read(hdr, sizeof(TTrackhdr) );
   if (hdr.id_string[1] <> 'T') or (hdr.id_string[2] <> 'R')
   or (hdr.id_string[3] <> 'A') or (hdr.id_string[4] <> 'C')
   or (hdr.id_string[5] <> 'K') then begin
@@ -1479,7 +1499,7 @@ begin
      Showmessage('Unsupported TRK voxel order "'+str+'"');
      goto 666;
   end;*)
-  seek(f, hdr.hdr_size);
+  mStream.Position := hdr.hdr_size;
   if (hdr.n_scalars <> 0) or (hdr.n_properties <> 0) then begin //slow to load if we have scalars...
     //unable to preallocate memory unless we know how many vertices!
     //first: determine number of vertices, allows us to compute memory requirements
@@ -1510,24 +1530,28 @@ begin
     outPos := 0;
     nVtx := 0;
     for i := 1 to hdr.n_count do begin
-       blockread(f, nVtx32, SizeOf(nVtx32)  );
+       //blockread(f, nVtx32, SizeOf(nVtx32)  );
+       mStream.Read(nVtx32, SizeOf(nVtx32) );
        if nVtx32 < 2 then goto 666;
        tracks[outPos] := asSingle(nVtx32); inc(outPos);
        for v := 1 to nVtx32 do begin
-           blockread(f, pt, SizeOf(pt)  );
+           //blockread(f, pt, SizeOf(pt)  );
+           mStream.Read(pt, SizeOf(pt) );
            tracks[outPos] := pt.X; inc(outPos);
            tracks[outPos] := pt.Y; inc(outPos);
            tracks[outPos] := pt.Z; inc(outPos);
            if hdr.n_scalars > 0  then
               for m := 0 to (hdr.n_scalars-1) do begin
-                  blockread(f, scalarS32, SizeOf(single)  );
+                  //blockread(f, scalarS32, SizeOf(single)  );
+                  mStream.Read(scalarS32, SizeOf(single) );
                   scalars[m].scalar[nVtx] := scalarS32;
               end;
            nVtx := nVtx + 1;
        end; //for each vertex in fiber
        if hdr.n_properties > 0  then //properties: one per fiber
           for m := 0 to (hdr.n_properties-1) do begin
-              blockread(f, scalarS32, SizeOf(single)  );
+              //blockread(f, scalarS32, SizeOf(single)  );
+              mStream.Read(scalarS32, SizeOf(single) );
               scalars[hdr.n_scalars+m].scalar[i] := scalarS32;
           end;
     end;
@@ -1536,7 +1560,8 @@ begin
       ntracks := (fsz - sizeof(TTrackhdr)) div sizeof(single);
       if ntracks < 4 then exit;
       setlength(tracks, ntracks);
-      blockread(f, tracks[0], ntracks * sizeof(single) );
+      //blockread(f, tracks[0], ntracks * sizeof(single) );
+      mStream.Read(tracks[0], ntracks * sizeof(single) );
   end;
   //GLForm1.Caption := format('props %d scalars %d count %d sz %d', [hdr.n_properties, hdr.n_scalars, hdr.n_count, ntracks]);
   //{$DEFINE TRK_VOXEL_SPACE}  //either voxel or world space http://nipy.org/nibabel/reference/nibabel.trackvis.html
@@ -1608,8 +1633,8 @@ begin
     end;
   {$ENDIF}
   result := true;
- 666:
-  CloseFile(f);
+666:
+    mStream.Free;
 end; // LoadTrk()
 
 procedure TTrack.SetDescriptives;
@@ -1760,7 +1785,7 @@ begin
          if not LoadPdb(FileName) then exit;
     end else if (ext = '.TCK') then begin
          if not LoadTck(FileName) then exit;
-    end else if (ext = '.TRK') then begin
+    end else if (ext = '.TRK') or (ext = '.TRK.GZ') then begin
          if not LoadTrk(FileName) then exit;
     end else  //(ext = '.FIB') 0r (ext = '.FIB') then begin
         LoadVtk(Filename);
@@ -1771,6 +1796,12 @@ begin
     result := true;
     isBusy := false;
 end; // LoadFromFile()
+
+destructor TTrack.Destroy;
+begin
+  self.Close;
+  inherited;
+end; // Destroy()
 
 
 end.
