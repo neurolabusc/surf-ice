@@ -51,6 +51,8 @@ TTrack = class
     function LoadFromFile(const FileName: string): boolean;
     procedure SaveBfloat(const FileName: string);
     procedure SaveVtk(const FileName: string);
+    procedure SaveTrk(const FileName: string);
+    procedure Save(FileName: string);
     procedure Close;
     procedure DrawGL;
     procedure CenterX;
@@ -956,20 +958,13 @@ begin
 end; //LoadVtk()
 
 procedure TTrack.SaveBfloat(const FileName: string);
-//{$DEFINE GZ_BFLOAT}
 var
   flt: array of single;
   i, o, m, mi, nflt: integer;
-  {$IFDEF GZ_BFLOAT}
   mStream : TMemoryStream;
   zStream: TGZFileStream;
-  {$ELSE}
-  f: file;
-  {$ENDIF}
   FileNameBf: string;
 begin
-  //   flt: array of single;
-  // sz, nflt, i, outPos, nVtx, v : integer;
   if (n_count < 1) or (length(tracks) < 4) then exit;
   nflt := length(tracks) + n_count;
   setlength(flt, nflt);
@@ -989,22 +984,19 @@ begin
   for i := 0 to (nflt -1) do
       SwapSingle(flt[i]);
   {$ENDIF}
-  {$IFDEF GZ_BFLOAT}
-  FileNameBf := FileName + '.Bfloat.gz';
   mStream := TMemoryStream.Create;
   mStream.Write(flt[0], nflt * sizeof(single));
   mStream.Position := 0;
-  zStream := TGZFileStream.Create(FileNameBf, gzopenwrite);
-  zStream.CopyFrom(mStream, mStream.Size);
-  zStream.Free;
+  if (ExtractFileExtGzUpper(Filename) = '.BFLOAT.GZ') then begin
+    FileNameBf := ChangeFileExtX(FileName, '.Bfloat.gz');
+    zStream := TGZFileStream.Create(FileNameBf, gzopenwrite);
+    zStream.CopyFrom(mStream, mStream.Size);
+    zStream.Free;
+  end else begin
+    FileNameBf := ChangeFileExtX(FileName, '.Bfloat');
+    mStream.SaveToFile(FileNameBf);
+  end;
   mStream.Free;
-  {$ELSE}
-  FileNameBf := changeFileExt(FileName, '.Bfloat');
-  AssignFile(f, FileNameBf);
-  ReWrite(f, sizeof(single));
-  BlockWrite(f, flt[0], nflt);
-  CloseFile(f);
-  {$ENDIF}
 end; //SaveBfloat()
 
 function TTrack.LoadBfloat(const FileName: string): boolean;
@@ -1411,12 +1403,6 @@ begin
      end; //for each scalar
 end; //SetScalarDescriptives()
 
-function TTrack.LoadTrk(const FileName: string): boolean;
-// http://www.trackvis.org/docs/?subsect=fileformat
-// for test of vox2ras https://github.com/neurolabusc/spmScripts/blob/master/nii_makeDTI.m
-label
-   666;
-//const  kBlockSz = 4096;
 type
  TTrackhdr = packed record //trackvis format
    id_string: array [1..6] of ansichar; //"TRACK*"
@@ -1443,6 +1429,12 @@ type
    version  : LongInt;
    hdr_size  : LongInt;
 end;
+
+function TTrack.LoadTrk(const FileName: string): boolean;
+// http://www.trackvis.org/docs/?subsect=fileformat
+// for test of vox2ras https://github.com/neurolabusc/spmScripts/blob/master/nii_makeDTI.m
+label
+   666;
 const
    kChunkSize = 16384;
 var
@@ -1724,6 +1716,7 @@ end;
 begin
   //if (threshold < 0.5) then exit;
   result := false;
+  if (Tol = 0) and (minLength = 0) then exit; //nothing to do
   if (n_count < 1) or (length(tracks) < 4) then exit;
   setlength(xTracks, length(tracks));
   i := 0;
@@ -1796,6 +1789,77 @@ begin
     result := true;
     isBusy := false;
 end; // LoadFromFile()
+
+procedure TTrack.SaveTrk(const FileName: string);
+var
+  //flt: array of single;
+  //i, o, m, mi, nflt: integer;
+  hdr:  TTrackhdr;
+  mStream : TMemoryStream;
+  zStream: TGZFileStream;
+  FileNameBf: string;
+begin
+  if (n_count < 1) or (length(tracks) < 4) then exit;
+  hdr.id_string[1] := 'T'; hdr.id_string[2] := 'R'; hdr.id_string[3] := 'A'; hdr.id_string[4] := 'C'; hdr.id_string[5] := 'K'; hdr.id_string[6] := chr(0);
+  hdr.dim[1] := 181; hdr.dim[2] := 217; hdr.dim[3] := 181;
+  hdr.voxel_size[1] := 1; hdr.voxel_size[2] := 1; hdr.voxel_size[3] := 1;
+  hdr.origin[1] := 91; hdr.origin[2] := 125; hdr.origin[3] := -71;
+  hdr.n_scalars:= 0;
+  fillchar(hdr.scalar_name[1], sizeof(hdr.scalar_name), 0);
+  hdr.n_properties:= 0;
+  fillchar(hdr.property_name[1], sizeof(hdr.scalar_name), 0);
+  hdr.vox_to_ras[1,1] := 1; hdr.vox_to_ras[1,2] := 0; hdr.vox_to_ras[1,3] := 0; hdr.vox_to_ras[1,4] := 0.5;
+  hdr.vox_to_ras[2,1] := 0; hdr.vox_to_ras[2,2] := 1; hdr.vox_to_ras[2,3] := 0; hdr.vox_to_ras[2,4] := 0.5;
+  hdr.vox_to_ras[3,1] := 0; hdr.vox_to_ras[3,2] := 0; hdr.vox_to_ras[3,3] := 1; hdr.vox_to_ras[3,4] := 0.5;
+  hdr.vox_to_ras[4,1] := 0; hdr.vox_to_ras[4,2] := 0; hdr.vox_to_ras[4,3] := 0; hdr.vox_to_ras[4,4] := 1;
+  fillchar(hdr.reserved[1], sizeof(hdr.reserved), 0);
+  hdr.voxel_order[1] := 'R'; hdr.voxel_order[2] := 'A'; hdr.voxel_order[3] := 'S'; hdr.voxel_order[4] := chr(0);
+  fillchar(hdr.pad2[1], sizeof(hdr.pad2), 0);
+  fillchar(hdr.image_orientation_patient[1], sizeof(hdr.image_orientation_patient), 0);
+  fillchar(hdr.pad1[1], sizeof(hdr.pad1), 0);
+  hdr.invert_x:= 0; hdr.invert_y:= 0; hdr.invert_z:= 0;
+  hdr.swap_xy := 0; hdr.swap_yz := 0; hdr.swap_zx := 0;
+  hdr.n_count:= n_count;
+  hdr.version := 2;
+  hdr.hdr_size := sizeof(hdr);
+  mStream := TMemoryStream.Create;
+  mStream.Write(hdr, sizeof(hdr));
+  mStream.Write(tracks[0], length(tracks) * sizeof(single) );
+  mStream.Position := 0;
+  if (ExtractFileExtGzUpper(Filename) = '.TRK.GZ') then begin
+    FileNameBf := ChangeFileExtX(FileName, '.trk.gz');
+    zStream := TGZFileStream.Create(FileNameBf, gzopenwrite);
+    zStream.CopyFrom(mStream, mStream.Size);
+    zStream.Free;
+  end else begin
+    FileNameBf := ChangeFileExtX(FileName, '.trk');
+    mStream.SaveToFile(FileNameBf);
+  end;
+  mStream.Free;
+end; //SaveTrk()
+
+procedure TTrack.Save(FileName: string);
+var
+  ext: string;
+begin
+    ext := ExtractFileExtGzUpper(Filename);
+    if ext = '' then begin
+       Filename := Filename +'.vtk';
+       ext := '.VTK';
+    end;
+    if (ext = '.BFLOAT') or (ext = '.BFLOAT.GZ') then
+       SaveBfloat(FileName)
+    else if (ext = '.TRK') or (ext = '.TRK.GZ') then
+        SaveTrk(FileName)
+    else if (ext = '.VTK') then
+        SaveVtk(FileName)
+    else begin
+         showmessage('Unable to save to format "'+ext+'"');
+         Filename := Filename +'.vtk';
+         SaveVtk(FileName);
+    end;
+    {$ifdef isTerminalApp}showmessage('Created file '+FileName);{$endif}
+end;
 
 destructor TTrack.Destroy;
 begin

@@ -14,6 +14,8 @@ const
   kSaveAsMz3 = 2;
   kSaveAsTrackVtk = 0;
   kSaveAsTrackBfloat = 1;
+  kSaveAsTrackTrk = 2;
+
 
 type
   TMRU =  array [1..knMRU] of string;

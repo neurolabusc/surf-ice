@@ -926,11 +926,9 @@ begin
   UpdateTimer.Enabled := true;
 end;
 
-
-
 procedure TGLForm1.SaveTrack (var lTrack: TTrack);
 const
-    kTrackFilter  = 'VTK (.vtk)|*.vtk|Camino (.Bfloat)|*.Bfloat';
+    kTrackFilter  = 'VTK (.vtk)|*.vtk|Camino (.Bfloat)|*.Bfloat|CaminoGZ (.Bfloat.gz)|*.Bfloat.gz|TrackVis (.trk)|*.trk|TrackVisGZ (.trk.gz)|*.trk.gz';
 var
   nam: string;
 begin
@@ -945,7 +943,11 @@ begin
  if not fileexists(nam) then
    nam := 'Track.vtk';
  nam := extractfilename (nam);
- if gPrefs.SaveAsFormatTrack = kSaveAsTrackBfloat then begin
+ if gPrefs.SaveAsFormatTrack = kSaveAsTrackTrk then begin
+   SaveMeshDialog.DefaultExt:= '.trk';
+   SaveMeshDialog.FileName := changeFileExt(nam, '.trk');
+   SaveMeshDialog.FilterIndex := 4;
+ end else if gPrefs.SaveAsFormatTrack = kSaveAsTrackBfloat then begin
    SaveMeshDialog.DefaultExt:= '.BFloat';
    SaveMeshDialog.FileName := changeFileExt(nam, '.BFloat');
    SaveMeshDialog.FilterIndex := 2;
@@ -956,7 +958,9 @@ begin
  end;
  if not SaveMeshDialog.Execute then exit;
  nam := UpperCase(ExtractFileExt(SaveMeshDialog.Filename));
- if (SaveMeshDialog.FilterIndex = 2) or (nam = '.BFLOAT') then
+ if (SaveMeshDialog.FilterIndex = 4) or (SaveMeshDialog.FilterIndex = 5) or (nam = '.TRK') or (nam = '.TRK.GZ') then
+    lTrack.SaveTrk(SaveMeshDialog.Filename)
+ else if (SaveMeshDialog.FilterIndex = 2) or (SaveMeshDialog.FilterIndex = 3) or (nam = '.BFLOAT') or (nam = '.BFLOAT.GZ') then
     lTrack.SaveBfloat(SaveMeshDialog.Filename)
  else
      lTrack.SaveVtk(SaveMeshDialog.Filename);

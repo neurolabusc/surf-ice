@@ -183,13 +183,19 @@ var
   Tol2: TFloat;
 begin
   Result := 0;
+  N := Length(Orig);
   //Simple := Copy(Orig, Low(Orig), Length(Orig));
   if length(Orig) < 2 then
     exit;
+  if Tol = 0 then begin
+     result := N;
+     for i := 0 to N - 1 do
+         Simple[i] := Orig[i];
+    exit;
+  end;
   Tol2 := sqr(Tol);
 
   // Create a marker array
-  N := Length(Orig);
   SetLength(Marker, N);
   // Include first and last point
   Marker[0]     := True;

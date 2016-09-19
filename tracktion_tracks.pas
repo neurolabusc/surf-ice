@@ -5,7 +5,7 @@ unit tracktion_tracks;
 interface
 
 uses
-  Classes, SysUtils, math, define_types, matmath, track_simplify;
+  Classes, SysUtils, math, define_types, matmath, track_simplify, zstream;
 
 Type
 
@@ -29,9 +29,13 @@ TTrack = class
     procedure SetDescriptives;
   public
     constructor Create;
+    function SimplifyRemoveRedundant(Tol: float): boolean;
     function SimplifyMM(Tol, minLength: float): boolean;
     procedure SaveBfloat(const FileName: string);
     procedure SaveVtk(const FileName: string);
+    procedure SaveTrk(const FileName: string);
+    procedure Save(FileName: string);
+    function Smooth: boolean;
     procedure Close;
   end;
 
@@ -158,6 +162,7 @@ end;
 begin
   //if (threshold < 0.5) then exit;
   result := false;
+  if (Tol = 0) and (minLength = 0) then exit; //nothing to do
   if (n_count < 1) or (length(tracks) < 4) then exit;
   setlength(xTracks, length(tracks));
   i := 0;
@@ -199,21 +204,287 @@ begin
   result := true;
 end; //SimplifyMM()
 
+function vectorDistanceSqr(A,B: TPoint3f): single; inline;
+//do not apply sqrt for dramatic speedup!
+begin
+  //result := sqrt(sqr(A.X-B.X)+ sqr(A.Y-B.Y) + sqr(A.Z-B.Z));
+  result := (sqr(A.X-B.X)+ sqr(A.Y-B.Y) + sqr(A.Z-B.Z));
+end;
+
+function TTrack.Smooth: boolean;
+//smooth nodes
+//  http://dev.theomader.com/gaussian-kernel-calculator/
+var
+   fiber, fibersmooth: array of TPoint3f;
+   i, startPos, m, mi: integer;
+begin
+  result := false;
+  if (n_count < 1) or (length(tracks) < 4) then exit;
+  setlength(fiber, 1024);
+  setlength(fibersmooth, 1024);
+  i := 0;
+  while i < length(tracks) do begin
+        m :=   asInt( tracks[i]);
+        inc(i);
+        if m < 5 then begin
+           i := i + 3 * m;
+           continue; //skip this fiber
+        end;
+        if m > length(fiber) then begin
+           setlength(fiber, m);
+           setlength(fibersmooth, m);
+        end;
+        startPos := i;
+        for mi := 0 to (m-1) do begin
+            fiber[mi].X := tracks[i]; inc(i);
+            fiber[mi].Y := tracks[i]; inc(i);
+            fiber[mi].Z := tracks[i]; inc(i);
+        end;
+        fibersmooth[0] := fiber[0];
+        fibersmooth[1] := fiber[1];
+        fibersmooth[m-2] := fiber[m-2];
+        fibersmooth[m-1] := fiber[m-1];
+        for mi := 2 to (m-3) do begin
+            fibersmooth[mi].X :=  fiber[mi-2].X*0.06136+ fiber[mi-1].X*0.24477+fiber[mi].X*00.38774+ fiber[mi+1].X*0.24477+ fiber[mi+2].X*0.06136;
+            fibersmooth[mi].Y :=  fiber[mi-2].Y*0.06136+ fiber[mi-1].Y*0.24477+fiber[mi].Y*00.38774+ fiber[mi+1].Y*0.24477+ fiber[mi+2].Y*0.06136;
+            fibersmooth[mi].Z :=  fiber[mi-2].Z*0.06136+ fiber[mi-1].Z*0.24477+fiber[mi].Z*00.38774+ fiber[mi+1].Z*0.24477+ fiber[mi+2].Z*0.06136;
+        end;
+        //replace fiber with fibersmooth
+        i := startPos;
+        for mi := 0 to (m-1) do begin
+            tracks[i] := fibersmooth[mi].X; inc(i);
+            tracks[i] := fibersmooth[mi].Y; inc(i);
+            tracks[i] := fibersmooth[mi].Z; inc(i);
+        end;
+
+  end;
+  setlength(fiber,0);
+  result := true;
+end; //Smooth()
+
+type
+TProps = record
+  lo,hi: TPoint3f; //full range of scalar
+  index: integer;
+  unique: boolean;
+end;
+TPropsArray = array of TProps;
+
+
+//http://stackoverflow.com/questions/24335585/quicksort-drama
+procedure QuickSort(left, right: integer; var s: TPropsArray);
+// left:      Index des 1. Elements, right: Index des letzten Elements
+var
+  l, r, lswap: integer;
+  pivot: single;
+begin
+  if (right > left) then begin
+    l := left;
+    r := right;
+    pivot := s[s[(right + left) div 2].index].lo.Z;
+    while (l < r) do begin
+      while s[s[l].index].lo.Z < pivot do
+        l := l + 1;
+      while s[s[r].index].lo.Z > pivot do
+        r := r - 1;
+      if (l <= r) then begin
+        lswap := s[r].index;
+        s[r].index := s[l].index;
+        s[l].index := lswap;
+        l := l + 1;
+        r := r - 1;
+      end;
+    end;
+    if (left < r) then
+      QuickSort(left, r, s);
+    if (right > l) then
+      QuickSort(l, right, s);
+  end;
+end;
+
+procedure SortArray(var s: TPropsArray);
+var
+ i : integer;
+begin
+     if length(s) < 1 then exit;
+     for i := 0 to (length(s)-1) do  //set indices
+         s[i].index := i;
+     quicksort(low(s), high(s), s);
+end;
+
+function TTrack.SimplifyRemoveRedundant(Tol: float): boolean;
+var
+   pos, pos0: TPoint3f;
+   track, i, j, m, mi: integer;
+   xI, xJ : ^TProps;
+   xTracks: TPropsArray;
+   tolSqr, dx : single;
+begin
+    result := false;
+
+  if (tol <= 0.0) then exit;
+  if (n_count < 1) or (length(tracks) < 4) then exit;
+  showmessage('Warning: SimplifyRemoveRedundant not optimized: please check for updates');
+  tolSqr := sqr(tol); //e.g. if tol=3mm, then tolSqr=9, avoiding slow sqrt in pythagorean formule
+  setlength(xTracks, n_count);
+  //first pass: record endpoints of all tracks
+  track := 0;
+  i := 0;
+  while i < length(tracks) do begin
+        m :=   asInt( tracks[i]);
+        inc(i);
+        for mi := 0 to (m-1) do begin
+            pos.X := tracks[i]; inc(i);
+            pos.Y := tracks[i]; inc(i);
+            pos.Z := tracks[i]; inc(i);
+            if mi = 0 then
+               pos0 := pos;
+        end;
+        xTracks[track].unique := true;
+        if pos0.Z < pos.Z then begin
+           xTracks[track].lo := pos0;
+           xTracks[track].hi := pos;
+        end else begin
+            xTracks[track].hi := pos0;
+            xTracks[track].lo := pos;
+        end;
+        track := track + 1;
+  end;
+  track := 0;
+  //{$DEFINE SLOW_METHOD}
+  {$IFDEF SLOW_METHOD}
+  for i := 0 to (n_count - 2) do begin
+      for j := (i + 1) to (n_count - 1) do begin
+          if (xTracks[j].unique) and (vectorDistanceSqr(xTracks[i].lo, xTracks[j].lo) < tolSqr) and (vectorDistanceSqr(xTracks[i].hi, xTracks[j].hi) < tolSqr) then begin
+             xTracks[j].unique := false;
+             track := track + 1;
+          end;
+      end;
+  end;
+  {$ELSE}
+  SortArray(xTracks);
+  for i := 0 to (n_count - 2) do begin
+    xI := @xTracks[xTracks[i].index];
+    j := i + 1;
+    repeat
+          xJ := @xTracks[xTracks[j].index];
+          dx :=  sqr(xJ^.lo.Z - xI^.lo.Z);
+          //if dx < 0 then showmessage('sorting error');
+          if (xJ^.unique) and (vectorDistanceSqr(xI^.lo, xJ^.lo) < tolSqr) and (vectorDistanceSqr(xI^.hi, xJ^.hi) < tolSqr) then begin
+             xJ^.unique := false;
+             track := track + 1;
+          end;
+          j := j + 1;
+    until (j = n_count) or (dx > tolSqr);
+  end;
+  {$ENDIF}
+  if track < 1 then exit; //no redundant tracks
+
+  showmessage(format('Removed %d redundant tracks (endpoints nearer than %.4g)', [track, tol]));
+  //remove redundant fibers
+  j := 0;
+  i := 0;
+  track := 0;
+  while i < length(tracks) do begin
+        m :=   asInt( tracks[i]); inc(i);
+        if xTracks[track].unique then begin
+           tracks[j] := asSingle(m); inc(j);
+        end;
+        if xTracks[track].unique then
+          for mi := 1 to (m * 3) do begin//*3 as each vertex stores XYZ
+              tracks[j] := tracks[i]; inc(j); inc(i);
+          end
+        else
+            i := i + (m * 3);
+        track := track + 1;
+  end;
+  setlength(tracks,j);
+  result := true;
+end; //SimplifyRemoveRedundant()
+
+type
+ TTrackhdr = packed record //trackvis format
+   id_string: array [1..6] of ansichar; //"TRACK*"
+   dim: array [1..3] of smallInt;
+   voxel_size: array [1..3] of single;
+   origin: array [1..3] of single;  //not used!
+   n_scalars: Smallint;
+   scalar_name: array [1..200] of ansichar;
+   n_properties: Smallint;
+   property_name: array [1..200] of ansichar;
+   vox_to_ras: array [1..4, 1..4] of single;
+   reserved: array [1..444] of ansichar;
+   voxel_order: array [1..4] of ansichar;
+   pad2: array [1..4] of ansichar;
+   image_orientation_patient: array [1..6] of single;
+   pad1: array [1..2] of ansichar;
+   invert_x: byte;
+   invert_y: byte;
+   invert_z: byte;
+   swap_xy: byte;
+   swap_yz: byte;
+   swap_zx: byte;
+   n_count : LongInt;
+   version  : LongInt;
+   hdr_size  : LongInt;
+end;
+
+procedure TTrack.SaveTrk(const FileName: string);
+var
+  //flt: array of single;
+  //i, o, m, mi, nflt: integer;
+  hdr:  TTrackhdr;
+  mStream : TMemoryStream;
+  zStream: TGZFileStream;
+  FileNameBf: string;
+begin
+  if (n_count < 1) or (length(tracks) < 4) then exit;
+  hdr.id_string[1] := 'T'; hdr.id_string[2] := 'R'; hdr.id_string[3] := 'A'; hdr.id_string[4] := 'C'; hdr.id_string[5] := 'K'; hdr.id_string[6] := chr(0);
+  hdr.dim[1] := 181; hdr.dim[2] := 217; hdr.dim[3] := 181;
+  hdr.voxel_size[1] := 1; hdr.voxel_size[2] := 1; hdr.voxel_size[3] := 1;
+  hdr.origin[1] := 91; hdr.origin[2] := 125; hdr.origin[3] := -71;
+  hdr.n_scalars:= 0;
+  fillchar(hdr.scalar_name[1], sizeof(hdr.scalar_name), 0);
+  hdr.n_properties:= 0;
+  fillchar(hdr.property_name[1], sizeof(hdr.scalar_name), 0);
+  hdr.vox_to_ras[1,1] := 1; hdr.vox_to_ras[1,2] := 0; hdr.vox_to_ras[1,3] := 0; hdr.vox_to_ras[1,4] := 0.5;
+  hdr.vox_to_ras[2,1] := 0; hdr.vox_to_ras[2,2] := 1; hdr.vox_to_ras[2,3] := 0; hdr.vox_to_ras[2,4] := 0.5;
+  hdr.vox_to_ras[3,1] := 0; hdr.vox_to_ras[3,2] := 0; hdr.vox_to_ras[3,3] := 1; hdr.vox_to_ras[3,4] := 0.5;
+  hdr.vox_to_ras[4,1] := 0; hdr.vox_to_ras[4,2] := 0; hdr.vox_to_ras[4,3] := 0; hdr.vox_to_ras[4,4] := 1;
+  fillchar(hdr.reserved[1], sizeof(hdr.reserved), 0);
+  hdr.voxel_order[1] := 'R'; hdr.voxel_order[2] := 'A'; hdr.voxel_order[3] := 'S'; hdr.voxel_order[4] := chr(0);
+  fillchar(hdr.pad2[1], sizeof(hdr.pad2), 0);
+  fillchar(hdr.image_orientation_patient[1], sizeof(hdr.image_orientation_patient), 0);
+  fillchar(hdr.pad1[1], sizeof(hdr.pad1), 0);
+  hdr.invert_x:= 0; hdr.invert_y:= 0; hdr.invert_z:= 0;
+  hdr.swap_xy := 0; hdr.swap_yz := 0; hdr.swap_zx := 0;
+  hdr.n_count:= n_count;
+  hdr.version := 2;
+  hdr.hdr_size := sizeof(hdr);
+  mStream := TMemoryStream.Create;
+  mStream.Write(hdr, sizeof(hdr));
+  mStream.Write(tracks[0], length(tracks) * sizeof(single) );
+  mStream.Position := 0;
+  if (ExtractFileExtGzUpper(Filename) = '.TRK.GZ') then begin
+    FileNameBf := ChangeFileExtX(FileName, '.trk.gz');
+    zStream := TGZFileStream.Create(FileNameBf, gzopenwrite);
+    zStream.CopyFrom(mStream, mStream.Size);
+    zStream.Free;
+  end else begin
+    FileNameBf := ChangeFileExtX(FileName, '.trk');
+    mStream.SaveToFile(FileNameBf);
+  end;
+  mStream.Free;
+end; //SaveTrk()
+
 procedure TTrack.SaveBfloat(const FileName: string);
-//{$DEFINE GZ_BFLOAT}
 var
   flt: array of single;
   i, o, m, mi, nflt: integer;
-  {$IFDEF GZ_BFLOAT}
   mStream : TMemoryStream;
   zStream: TGZFileStream;
-  {$ELSE}
-  f: file;
-  {$ENDIF}
   FileNameBf: string;
 begin
-  //   flt: array of single;
-  // sz, nflt, i, outPos, nVtx, v : integer;
   if (n_count < 1) or (length(tracks) < 4) then exit;
   nflt := length(tracks) + n_count;
   setlength(flt, nflt);
@@ -233,22 +504,19 @@ begin
   for i := 0 to (nflt -1) do
       SwapSingle(flt[i]);
   {$ENDIF}
-  {$IFDEF GZ_BFLOAT}
-  FileNameBf := FileName + '.Bfloat.gz';
   mStream := TMemoryStream.Create;
   mStream.Write(flt[0], nflt * sizeof(single));
   mStream.Position := 0;
-  zStream := TGZFileStream.Create(FileNameBf, gzopenwrite);
-  zStream.CopyFrom(mStream, mStream.Size);
-  zStream.Free;
+  if (ExtractFileExtGzUpper(Filename) = '.BFLOAT.GZ') then begin
+    FileNameBf := ChangeFileExtX(FileName, '.Bfloat.gz');
+    zStream := TGZFileStream.Create(FileNameBf, gzopenwrite);
+    zStream.CopyFrom(mStream, mStream.Size);
+    zStream.Free;
+  end else begin
+    FileNameBf := ChangeFileExtX(FileName, '.Bfloat');
+    mStream.SaveToFile(FileNameBf);
+  end;
   mStream.Free;
-  {$ELSE}
-  FileNameBf := changeFileExt(FileName, '.Bfloat');
-  AssignFile(f, FileNameBf);
-  ReWrite(f, sizeof(single));
-  BlockWrite(f, flt[0], nflt);
-  CloseFile(f);
-  {$ENDIF}
 end; //SaveBfloat()
 
 function MemoryStreamAsString(vms: TMemoryStream): string;
@@ -318,10 +586,31 @@ begin
     CloseFile(f);
 end; //SaveVtk()
 
-procedure TTrack.Close;
-var i: integer;
+procedure TTrack.Save(FileName: string);
+var
+  ext: string;
 begin
-  i := 1;
+    ext := ExtractFileExtGzUpper(Filename);
+    if ext = '' then begin
+       Filename := Filename +'.vtk';
+       ext := '.VTK';
+    end;
+    if (ext = '.BFLOAT') or (ext = '.BFLOAT.GZ') then
+       SaveBfloat(FileName)
+    else if (ext = '.TRK') or (ext = '.TRK.GZ') then
+        SaveTrk(FileName)
+    else if (ext = '.VTK') then
+        SaveVtk(FileName)
+    else begin
+         showmessage('Unable to save to format "'+ext+'"');
+         Filename := Filename +'.vtk';
+         SaveVtk(FileName);
+    end;
+    {$ifdef isTerminalApp}showmessage('Created file '+FileName);{$endif}
+end;
+
+procedure TTrack.Close;
+begin
      n_count := 0;
      n_vertices := 0;
      n_faces := 0;

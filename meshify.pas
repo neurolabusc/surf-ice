@@ -29,7 +29,7 @@ var
     SmoothCombo: TComboBox;
 begin
     PrefForm:=TForm.Create(nil);
-    PrefForm.SetBounds(100, 100, 410, 182);
+    PrefForm.SetBounds(100, 100, 510, 182);
     PrefForm.Caption:='Volume to mesh preferences';
     PrefForm.Position := poScreenCenter;
     PrefForm.BorderStyle := bsDialog;
@@ -58,7 +58,9 @@ begin
     ThreshEdit.DecimalPlaces:= 3;
     {$ELSE}
     ThreshEdit:=TEdit.create(PrefForm);
-    ThreshEdit.Caption := FloatToStr(Thresh);
+    //ThreshEdit.Caption := FloatToStr(Thresh);
+    ThreshEdit.Caption := FloatToStrF(Thresh, ffGeneral, 4, 4);
+
     {$ENDIF}
     ThreshEdit.Top := 42;
     ThreshEdit.Width := 92;
@@ -86,7 +88,7 @@ begin
     SmoothCombo.Items.Add('Raw (Jagged)');
     SmoothCombo.Items.Add('Masked smooth (Smooth except at brain mask)');
     SmoothCombo.Items.Add('Smooth (Eroded by brain mask)');
-    SmoothCombo.ItemIndex:= 0;
+    SmoothCombo.ItemIndex:= 2;
     SmoothCombo.Style := csDropDownList;
     SmoothCombo.Parent:=PrefForm;
     //OK button

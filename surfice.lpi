@@ -60,8 +60,8 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="278"/>
-        <CursorPos X="78" Y="296"/>
+        <TopLine Value="934"/>
+        <CursorPos X="11" Y="950"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -70,17 +70,15 @@
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="4"/>
-        <TopLine Value="195"/>
-        <CursorPos X="40" Y="209"/>
+        <CursorPos X="21" Y="16"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit2>
       <Unit3>
         <Filename Value="nifti_loader.pas"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="5"/>
-        <CursorPos X="88" Y="7"/>
+        <CursorPos X="30" Y="5"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit3>
@@ -96,8 +94,9 @@
       <Unit5>
         <Filename Value="track.pas"/>
         <IsPartOfProject Value="True"/>
-        <TopLine Value="1759"/>
-        <CursorPos X="24" Y="1789"/>
+        <IsVisibleTab Value="True"/>
+        <TopLine Value="1424"/>
+        <CursorPos Y="1454"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit5>
