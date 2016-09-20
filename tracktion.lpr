@@ -567,7 +567,7 @@ begin
   if HasOption('3','3') then
      p.minLength := round(StrToFloatDef(GetOptionValue('3','3'), p.minLength));
   if HasOption('4','4') then
-     p.redundancyToleranceMM := round(StrToFloatDef(GetOptionValue('4','4'), p.redundancyToleranceMM));
+     p.redundancyToleranceMM := StrToFloatDef(GetOptionValue('4','4'), p.redundancyToleranceMM);
   if HasOption('5','5') then
      p.seedsPerVoxel := round(StrToFloatDef(GetOptionValue('5','5'), p.seedsPerVoxel));
 
