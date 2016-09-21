@@ -2068,7 +2068,7 @@ procedure TGLForm1.AboutMenuClick(Sender: TObject);
 const
   kSamp = 36;
 var
-  TrackStr, MeshStr, str : string;
+  TrackStr, MeshStr, str: string;
   s: dword;
   i: integer;
   scale: single;
@@ -2090,7 +2090,7 @@ begin
      GLbox.Repaint;
   end;
   origin := GetOrigin(scale);
-  str :=  'Surf Ice '+' 28 August 2016 '
+  str :=  'Surf Ice '+' 21 September 2016 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
