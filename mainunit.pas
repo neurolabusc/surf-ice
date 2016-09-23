@@ -455,6 +455,7 @@ begin
      nodename := ChangeFileExt(FileName, '.node');
      if fileexists(nodename) then begin
         OpenNode(nodename);
+        UpdateToolbar;
         exit;
      end;
  end;
@@ -641,7 +642,7 @@ begin
   end else if (ext = '.EDGE') then begin
     OpenEdge(Filename);
     exit;
-  end else if (ext = '.NODE') then begin
+  end else if (ext = '.NODE') or (ext = '.NODZ') then begin
     OpenNode(Filename);
     exit;
   end;
@@ -2041,12 +2042,6 @@ begin
   GLForm1.close;
 end;
 
-procedure TGLForm1.DepthLabelDblClick(Sender: TObject);
-begin
-  gPrefs.OverlayClip := not gPrefs.OverlayClip;
-  GLBoxRequestUpdate(Sender);
-end;
-
 {$ELSE} //ShellExecute(Handle,'open', 'c:\windows\notepad.exe','c:\SomeText.txt', nil, SW_SHOWNORMAL) ;
 begin
   gPrefs.SkipPrefWriting := true;
@@ -2057,6 +2052,12 @@ begin
   GLForm1.close;
 end;
 {$ENDIF}
+
+procedure TGLForm1.DepthLabelDblClick(Sender: TObject);
+begin
+  gPrefs.OverlayClip := not gPrefs.OverlayClip;
+  GLBoxRequestUpdate(Sender);
+end;
 
 procedure TGLForm1.CenterMeshMenuClick(Sender: TObject);
 begin

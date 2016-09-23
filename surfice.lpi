@@ -20,9 +20,6 @@
     <i18n>
       <EnableI18N LFM="False"/>
     </i18n>
-    <VersionInfo>
-      <StringTable ProductVersion=""/>
-    </VersionInfo>
     <BuildModes Count="1" Active="Default">
       <Item1 Name="Default" Default="True"/>
     </BuildModes>
@@ -61,11 +58,10 @@
         <ResourceBaseClass Value="Form"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="2063"/>
-        <CursorPos X="25" Y="2071"/>
+        <TopLine Value="386"/>
+        <CursorPos X="70" Y="409"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
-        <LoadedDesigner Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="prefs.pas"/>
@@ -79,7 +75,8 @@
         <Filename Value="nifti_loader.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="5"/>
-        <CursorPos X="30" Y="5"/>
+        <TopLine Value="4"/>
+        <CursorPos X="56"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit3>

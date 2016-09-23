@@ -15,8 +15,8 @@ implementation
 
 
 procedure ScaleForm(Control: TControl; FromDPI: integer);
-{$IFDEF Windows}
 var
+{$IFDEF Windows}
    h: THandle;
    r: TRect;
    TB, LR: integer;

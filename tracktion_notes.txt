@@ -1,0 +1,54 @@
+This software can create streamlines from FSL V1/FA files.
+
+Advantages:
+-Preserves spatial orientation
+-Creates streamlines in popular formats (VTK, bfloat, trk, bfloat.gz, trk.gz)
+-Allows you to restrict streamlines to those that traverse voxel-defined waypoints
+-Very fast
+
+Limitation:
+-FSL V1 files do not allow us to solve crossing fibers
+-In regions of low FA, FSL defaults to having fibers pointing left-right, causing 'ghost fibers' (solution: do not reduce FA threshold too much).
+-Linear interpolation does not work well for FSL V1 maps
+
+To do:
+-Compute measures that allow fiber crossing
+-Erode/dilate waypoints
+
+
+**EXAMPLES**
+
+Default option (use M2165_FA and M2165_V1 to create M2165.vtk)
+./tracktion  M2165
+
+Draw streamlines for whole brain (9 fibers per voxel)
+./tracktion  -5 9 -t 0.2 -4 0.3 -o high-res.trk.gz  M2165
+
+Draw streamline for whole brain (9 fibers per voxel)
+./tracktion  -w M2165_ROI CorpusCallosum.trk  M2165
+
+
+Identify fibers that traverse both left and right splenium waypoints
+./tracktion -w M2165_jhu.nii,128 -w M2165_jhu.nii,127 -o Splenium.trk  M2165
+
+
+**FULL HELP**
+Tracktion by Chris Rorden version 19Sept2016
+Usage: tracktion [options] basename
+ Requires dtifit V1 FA images (basename_V1.nii.gz, basename_FA.nii.gz)
+Options
+ -a maximum angle bend (degrees, default 45)
+ -h show help
+ -l minimum length (mm, default 12)
+ -o output name (.bfloat, .bfloat.gz or .vtk; default "inputName.vtk")
+ -s simplification tolerance (mm, default 0.2)
+ -t fa threshold (default 0.15)
+ -w waypoint name (up to 8; default: none)
+ -1 smooth (0=not, 1=yes, default 1)
+ -2 stepsize (voxels, voxels 0.5)
+ -3 minimum steps (voxels, default 1)
+ -4 redundant fiber removal threshold (mm, default 0)
+ -5 seeds per voxel (default 1)
+Examples
+ tracktion -t 0.2 -o "~/out/fibers.vtk" "~/img_V1.nii.gz"
+ tracktion -w BA44.nii -w BA44.nii "~/img_V1.nii"
