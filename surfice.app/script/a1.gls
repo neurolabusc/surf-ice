@@ -2,9 +2,9 @@ BEGIN
 	RESETDEFAULTS;
 	//	MESHLOAD('BrainMesh_ICBM152Right.mz3');
 	//OVERLAYLOAD('motor_4t95vol.nii.gz');
-	TRACKLOAD('/Users/rorden/Downloads/TRK-2/test.trk.gz');
+	//TRACKLOAD('/Users/rorden/Downloads/TRK-2/test.trk.gz');
 
-	//NODELOAD('/Users/rorden/abc.nodz');
+NODELOAD('/Users/rorden/Downloads/M.2016.0802dti_jhu_23Sep2016_102956/dti_jhu_WAB__AQZ.nodz');
 	//TRACKLOAD('/Users/rorden/Downloads/trk/trk/results.trk');
 	//TRACKLOAD('/Users/rorden/Downloads/trk/trk/Merge.trk');
 	//TRACKLOAD('/Users/rorden/Downloads/studio/stroke.trk');

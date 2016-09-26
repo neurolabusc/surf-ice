@@ -36,7 +36,6 @@ object ScriptForm: TScriptForm
     ScrollBars = ssAutoHorizontal
     TabOrder = 0
     WantTabs = True
-    WordWrap = False
   end
   object Memo2: TMemo
     Left = 0

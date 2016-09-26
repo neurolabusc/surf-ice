@@ -18,6 +18,7 @@ type
   { TGLForm1 }
   TGLForm1 = class(TForm)
     AOLabel: TLabel;
+    RestrictSep2Menu: TMenuItem;
     RestrictHideNodesWithoutEdges: TMenuItem;
     TrackScalarRangeBtn: TButton;
     ColorbarMenu: TMenuItem;
@@ -2754,7 +2755,7 @@ begin
   gMesh.isBusy := false;
   isBusy := false;
   {$IFDEF Darwin}
-  SimplifyMeshMenu.ShortCut :=  ShortCut(Word('W'), [ssMeta]);
+  CloseMenu.ShortCut :=  ShortCut(Word('W'), [ssMeta]);
   SwapYZMenu.ShortCut :=  ShortCut(Word('X'), [ssMeta]);
   ScriptMenu.ShortCut :=  ShortCut(Word('Z'), [ssMeta]);
   OpenMenu.ShortCut :=  ShortCut(Word('O'), [ssMeta]);

@@ -1163,7 +1163,10 @@ begin
               inc(nNodeThresh);
      end;
      nodeColorVaries := false;
-     if (nodePrefs.isNodeColorVaries) and (nodePrefs.minNodeColor <> nodePrefs.maxNodeColor) then
+
+     if (nodePrefs.isNodeThresholdBySize) and (nodePrefs.isNodeColorVaries) and (nodePrefs.minNodeSize <> nodePrefs.maxNodeSize) then
+        nodeColorVaries := true;
+     if (not nodePrefs.isNodeThresholdBySize) and (nodePrefs.isNodeColorVaries) and (nodePrefs.minNodeColor <> nodePrefs.maxNodeColor) then
         nodeColorVaries := true;
      if (nEdgeThresh = 0) and (nNodeThresh = 0) then exit;
      lSphere := TMesh.Create;
@@ -1180,20 +1183,28 @@ begin
      face := 0;
      vert := 0;
      cLUT := UpdateTransferFunction (nodePrefs.NodeLUTindex);
-     //draw balls/spheres
-      if nNodeThresh > 0 then begin
+     //draw nodes/balls/spheres
+     if nNodeThresh > 0 then begin
        for n := 0 to (nNode-1) do begin
            if isNodeSurvives(n) then begin //if (nodes[n].Radius >= thresholdNodeSize) then begin
               if nodeColorVaries then begin
                  if nodePrefs.isNodeThresholdBySize then
-                    clr := cLUT[round(255 * Value2Frac(nodes[n].Clr, nodePrefs.minNodeColor, nodePrefs.maxNodeColor) )]
+                    clr := cLUT[round(255 * Value2Frac(nodes[n].Radius, nodePrefs.minNodeThresh, nodePrefs.maxNodeThresh) )]
                  else
                     clr := cLUT[round(255 * Value2Frac(nodes[n].Clr, nodePrefs.minNodeThresh, nodePrefs.maxNodeThresh) )]
+                 (*if nodePrefs.isNodeThresholdBySize then
+                    clr := cLUT[round(255 * Value2Frac(nodes[n].Clr, nodePrefs.minNodeColor, nodePrefs.maxNodeColor) )]
+                 else
+                    clr := cLUT[round(255 * Value2Frac(nodes[n].Clr, nodePrefs.minNodeThresh, nodePrefs.maxNodeThresh) )] *)
               end else
                   clr := cLUT[192];
               lSphere.MakeSphere; //new unit sphere
              //showmessage(format('%g %g %g %g',[ nodes[n].Radius, nodes[n].X, nodes[n].Y, nodes[n].Z]));
-             ScaleTranslate(lSphere, nodes[n].Radius * nodePrefs.scaleNodeSize, nodes[n].X, nodes[n].Y, nodes[n].Z);
+             if (nodePrefs.minNodeThresh = nodePrefs.maxNodeThresh) and (nodePrefs.isNodeThresholdBySize) then
+                radius := 1
+             else
+                radius := nodes[n].Radius;
+             ScaleTranslate(lSphere, radius * nodePrefs.scaleNodeSize, nodes[n].X, nodes[n].Y, nodes[n].Z);
              for f := 0 to (sphereF-1) do begin
                  faces[face].X := lSphere.faces[f].X + vert;
                  faces[face].Y := lSphere.faces[f].Y + vert;

@@ -609,6 +609,9 @@ object GLForm1: TGLForm1
           ''
           ''
           ''
+          ''
+          ''
+          ''
         )
         TabOrder = 3
       end
@@ -1250,6 +1253,7 @@ object GLForm1: TGLForm1
       end
       object CloseMenu: TMenuItem
         Caption = 'Close'
+        ShortCut = 16471
         OnClick = CloseMenuClick
       end
       object SaveMenu: TMenuItem
@@ -1404,9 +1408,13 @@ object GLForm1: TGLForm1
           Tag = 2
           AutoCheck = True
           Caption = 'Negative edges only'
+          Checked = True
           GroupIndex = 124
           RadioItem = True
           OnClick = RestrictEdgeMenuClick
+        end
+        object RestrictSep2Menu: TMenuItem
+          Caption = '-'
         end
         object RestrictHideNodesWithoutEdges: TMenuItem
           AutoCheck = True
@@ -1534,7 +1542,6 @@ object GLForm1: TGLForm1
       end
       object SimplifyMeshMenu: TMenuItem
         Caption = 'Simplify mesh'
-        ShortCut = 16471
         OnClick = SimplifyMeshMenuClick
       end
     end
