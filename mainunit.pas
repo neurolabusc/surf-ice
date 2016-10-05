@@ -2384,10 +2384,10 @@ begin
   Memo1.Lines.Add(format('Node color table %d',[gNode.nodePrefs.nodeLUTindex]) );
   if NodeThreshDrop.ItemIndex = 0 then begin
      gNode.nodePrefs.isNodeThresholdBySize := true;
-     Memo1.Lines.Add(format('Node size threshold min..max %g..%g',[gNode.NodePrefs.minNodeThresh, gNode.nodePrefs.maxNodeThresh]));
+     Memo1.Lines.Add(format('Node size threshold min..max %.4g..%.4g',[gNode.NodePrefs.minNodeThresh, gNode.nodePrefs.maxNodeThresh]));
   end else begin
     gNode.nodePrefs.isNodeThresholdBySize := false;
-    Memo1.Lines.Add(format('Node color threshold min..max %g..%g',[gNode.NodePrefs.minNodeThresh, gNode.nodePrefs.maxNodeThresh]));
+    Memo1.Lines.Add(format('Node color threshold min..max %.4g..%.4g',[gNode.NodePrefs.minNodeThresh, gNode.nodePrefs.maxNodeThresh]));
   end;
   Memo1.Lines.Add(format('Edge range min..max %.4g..%.4g',[gNode.NodePrefs.minEdge, gNode.nodePrefs.maxEdge]));
   Memo1.Lines.Add(format('Edge threshold min..max %.4g..%.4g',[gNode.NodePrefs.minEdgeThresh, gNode.nodePrefs.maxEdgeThresh]));

@@ -50,6 +50,7 @@
 			<string>trk</string>
 			<string>node</string>
 			<string>edge</string>
+			<string>nodez</string>
       </array>
       <key>CFBundleTypeOSTypes</key>
       <array>
