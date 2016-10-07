@@ -17,7 +17,7 @@ You can also build this project from the command line (assuming you have FPC Laz
 
 ##### Recent Versions
 
-21-September-2016
+30-September-2016
  - Add support for the TRK.GZ (DSI studio), DAT (MRI studio) formats.
  - Support for tracks with [scalars](https://github.com/johncolby/along-tract-stats) and [properties](http://trackvis.org/blog/tag/track_merge/).
  - "Faster" track viewing mode looks better (Lucas Nesi's imposter method).
