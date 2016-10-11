@@ -66,17 +66,18 @@
       <Unit2>
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="4"/>
-        <TopLine Value="400"/>
-        <CursorPos X="63" Y="407"/>
+        <TopLine Value="142"/>
+        <CursorPos X="31" Y="168"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit2>
       <Unit3>
         <Filename Value="nifti_loader.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="6"/>
-        <TopLine Value="45"/>
+        <EditorIndex Value="5"/>
+        <TopLine Value="46"/>
         <CursorPos X="19" Y="70"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>

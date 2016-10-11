@@ -5,7 +5,7 @@ VAR
 BEGIN
 	RESETDEFAULTS;
 	MESHLOAD('stroke.mz3');
-	TRACKLOAD('stroke.trk');
+	TRACKLOAD('stroke.trk.gz');
 	TRACKPREFS(15, 3, 0.5);
 	FOR i := 1 TO kSteps DO BEGIN
 		CLIPAZIMUTHELEVATION(( (0.8*i)/kSteps ), 0, 130);

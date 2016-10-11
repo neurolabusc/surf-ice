@@ -165,11 +165,7 @@ function DefaultMeshName (indx: integer): string;
     lPath,lName {$IFDEF Darwin}, lExt {$ENDIF}: string;
   begin
    lPath := ExtractFileDir(AppDir2());
-   {$IFDEF Darwin}
-   FilenameParts (lPath, lPath,lName,lExt) ;
-   {$ELSE}
    lPath := lPath + PathDelim;
-   {$ENDIF}
    case indx of
         2: lName := lPath  +  'BrainNet'+ PathDelim + 'BrainMesh_ICBM152_smoothed.mz3';
         3: lName := lPath  + 'BrainNet'+ PathDelim + 'BrainMesh_ICBM152Left_smoothed.mz3';
