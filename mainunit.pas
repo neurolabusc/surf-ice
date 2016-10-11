@@ -2066,6 +2066,52 @@ begin
  GLBoxRequestUpdate(Sender);
 end;
 
+{$IFDEF Darwin}
+function GetHardwareVersion: string;
+//returns number of CPUs for MacOSX computer
+//example - will return 4 if the computer has two dual core CPUs
+//requires Process in Uses Clause
+//see http://wiki.lazarus.freepascal.org/Executing_External_Programs
+var
+   lProcess: TProcess;
+   lStringList: TStringList;
+begin
+     Result := '';
+     lProcess := TProcess.Create(nil);
+     lStringList := TStringList.Create;
+     lProcess.CommandLine := 'sysctl hw.model';
+     lProcess.Options := lProcess.Options + [poWaitOnExit, poUsePipes];
+     lProcess.Execute;
+     lStringList.LoadFromStream(lProcess.Output);
+     if lStringList.Count > 0 then
+       result := lStringList.Strings[0];
+     lStringList.Free;
+     lProcess.Free;
+end;
+
+function GetOSVersion: string;
+//returns number of CPUs for MacOSX computer
+//example - will return 4 if the computer has two dual core CPUs
+//requires Process in Uses Clause
+//see http://wiki.lazarus.freepascal.org/Executing_External_Programs
+var
+   lProcess: TProcess;
+   lStringList: TStringList;
+begin
+     Result := '';
+     lProcess := TProcess.Create(nil);
+     lStringList := TStringList.Create;
+     lProcess.CommandLine := 'sw_vers';
+     lProcess.Options := lProcess.Options + [poWaitOnExit, poUsePipes];
+     lProcess.Execute;
+     lStringList.LoadFromStream(lProcess.Output);
+     if lStringList.Count > 1 then
+       result := lStringList.Strings[1];
+     lStringList.Free;
+     lProcess.Free;
+end;
+{$ENDIF}
+
 procedure TGLForm1.AboutMenuClick(Sender: TObject);
 const
   kSamp = 36;
@@ -2102,6 +2148,11 @@ begin
    {$IFDEF Windows} + ' Windows'{$ENDIF}
    {$IFDEF DGL} + ' DGL'{$ENDIF}
    {$IFNDEF COREGL}+' (Legacy OpenGL)'{$ENDIF}
+   {$IFDEF Darwin}
+           +LineEnding+' '+ GetOSVersion
+           +LineEnding+' @: '+ AppDir2
+           +LineEnding+' '+GetHardwareVersion
+   {$ENDIF}
    +LineEnding+' www.mricro.com :: BSD 2-Clause License (opensource.org/licenses/BSD-2-Clause)'
    +LineEnding+' FPS ' +inttostr(round( (kSamp*1000)/(gettickcount-s)))
    +LineEnding+format(' Scale %.4f',[scale])

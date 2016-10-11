@@ -6,8 +6,13 @@ interface
 function IniName: string;
 function DefaultsDir (lSubFolder: string): string;
 function DesktopFolder: string;
-function AppDir: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app
+{$IFDEF OLDOSX}
+function AppDir: string;  //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app
+{$ELSE}
+function AppDir: string;  //e.g. c:\folder\ for c:\folder\myapp.exe, but /myapp.app/Contents/Resources
+{$ENDIF}
 function AppDir2: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/ for /folder/myapp.app/app
+//function ResourceDir: string; //e.g. /MRIcroGL.app/Contents/Resources
  //function ExeDir: string;
 
 implementation
@@ -215,7 +220,8 @@ end;
 
 {$IFDEF Darwin}
 
-function AppDir: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app
+function AppDirActual: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app
+//OSX Sierra: randomlocation on your drive https://9to5mac.com/2016/06/15/macos-sierra-gatekeeper-changes/
 var
    lInName,lPath,lName,lExt: string;
 begin
@@ -231,11 +237,25 @@ begin
     result := lPath+lName+lExt+pathdelim;
 end;
 
+
+{$IFDEF OLDOSX}
+function AppDir: string;  //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app
+begin
+     result := AppDirActual;
+end;
+{$ELSE}
+///MRIcroGL.app/Contents/Resources
+function AppDir: string;  //e.g. c:\folder\ for c:\folder\myapp.exe, but /myapp.app/Contents/Resources
+begin
+     result := AppDirActual+'Contents'+pathdelim+'Resources'+pathdelim;
+end;
+{$ENDIF}
+
 function AppDir2: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app
 begin
- result := ExtractFilePath(ExtractFileDir(AppDir));
-
+ result := ExtractFilePath(ExtractFileDir(AppDirActual));
 end;
+
 {$ELSE}
 function AppDir: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app
 begin

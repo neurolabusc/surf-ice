@@ -27,6 +27,7 @@ type
     window_width, window_height, RenderQuality, SaveAsFormat,SaveAsFormatTrack, OcclusionAmount: integer;
     ObjColor,BackColor: TColor;
     PrevFilename, PrevScriptName: TMRU;
+    //{$IFDEF Darwin}BaseDirname,  {$ENDIF} //OSX Sierra puts application in random directory, so 'Sample' 'BrainNet' folders will be in unknown locations
     PrevTrackname, PrevNodename, PrevOverlayname,PrevScript, InitScript : string;
     TextColor,TextBorder,GridAndBorder: TRGBA;
     ColorBarPos: TUnitRect;
@@ -160,12 +161,58 @@ end; //IniFloat
 const
   kNumDefaultMesh = 6;
 function DefaultMeshName (indx: integer): string;
+  var
+    lPath,lName {$IFDEF Darwin}, lExt {$ENDIF}: string;
+  begin
+   lPath := ExtractFileDir(AppDir2());
+   {$IFDEF Darwin}
+   FilenameParts (lPath, lPath,lName,lExt) ;
+   {$ELSE}
+   lPath := lPath + PathDelim;
+   {$ENDIF}
+   case indx of
+        2: lName := lPath  +  'BrainNet'+ PathDelim + 'BrainMesh_ICBM152_smoothed.mz3';
+        3: lName := lPath  + 'BrainNet'+ PathDelim + 'BrainMesh_ICBM152Left_smoothed.mz3';
+        4: lName := lPath  +  'BrainNet'+ PathDelim + 'BrainMesh_ICBM152Right_smoothed.mz3';
+        5:  lName := lPath  +  'fs'+ PathDelim + 'lh.inflated';
+        6:  lName := lPath  +  'fs'+ PathDelim + 'lh.pial';
+    else
+          lName := lPath  + 'sample'+ PathDelim + 'mni152_2009.mz3';
+   end;
+   if fileexists(lName) then
+     result := lName
+   else
+       result := '';
+  end;
+
+(* below: basic outline for OSX Sierra - unused since we now code sign a DMG
+function DefaultMeshName (indx: integer; var lPrefs: TPrefs): string;
 var
   lPath,lName {$IFDEF Darwin}, lExt {$ENDIF}: string;
+  {$IFDEF Darwin}
+  dirDlg : TSelectDirectoryDialog;
+  {$ENDIF}
 begin
  lPath := ExtractFileDir(AppDir());
- {$IFDEF Darwin}
- FilenameParts (lPath, lPath,lName,lExt) ;
+ {$IFDEF Darwin} //OSX Sierra: application in randomized location on your drive https://9to5mac.com/2016/06/15/macos-sierra-gatekeeper-changes/
+ if (length(lPrefs.BaseDirname) < 1) or (not fileexists(lPrefs.BaseDirname)) then begin
+
+    FilenameParts (lPath, lPath,lName,lExt) ;
+    lName := lPath  + 'sample';
+    showmessage(lName);
+    if not fileexists(lName) then begin
+      dirDlg := TSelectDirectoryDialog.Create(nil);
+      dirDlg.Title:='Please select "sample" folder';
+      if dirDlg.Execute then begin
+         //lName := dirDlg.FileName;
+         FilenameParts (dirDlg.FileName, lPath,lName,lExt) ;
+         lName := lPath;
+      end;
+      dirDlg.Free;
+    end;
+    lPrefs.BaseDirname := lName;
+ end else
+     lPath := lPrefs.BaseDirname;
  {$ELSE}
  lPath := lPath + PathDelim;
  {$ENDIF}
@@ -183,7 +230,7 @@ begin
    result := lName
  else
      result := '';
-end;
+end; *)
 
 procedure SetDefaultPrefs (var lPrefs: TPrefs; lEverything: boolean);
 var
@@ -202,6 +249,7 @@ begin
               PrevFilename[i] := '';
               PrevScriptName[i] := '';
             end;
+            //lPrefs.BaseDirName := '';
             for i := 1 to kNumDefaultMesh do
                 PrevFilename[i] := DefaultMeshName(i);
        end;
@@ -336,7 +384,7 @@ begin
   StrToRGB(lStr,lValue);
 end; //IniRGBA
 
-procedure IniMRU(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lMRU: TMRU);
+procedure IniMRU(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lMRU: TMRU; var lPrefs: TPrefs);
 var
 	lI,lOK: integer;
         lStr: string;
@@ -457,7 +505,6 @@ function IniFile(lRead: boolean; lFilename: string; var lPrefs: TPrefs): boolean
 //Read or write initialization variables to disk
 var
   lIniFile: TIniFile;
-  i: integer;
 begin
   result := false;
   if (lRead) then
@@ -487,7 +534,7 @@ begin
   IniStr(lRead, lIniFile, 'PrevNodename', lPrefs.PrevNodename);
   IniStr(lRead, lIniFile, 'PrevOverlayname', lPrefs.PrevOverlayname);
   IniStr(lRead,lIniFile,'PrevScript',lPrefs.PrevScript);
-  IniMRU(lRead,lIniFile,'PrevFilename',lPrefs.PrevFilename);
+  IniMRU(lRead,lIniFile,'PrevFilename',lPrefs.PrevFilename, lPrefs);
   //IniMRU(lRead,lIniFile,'PrevScriptName',lPrefs.PrevScriptName);
   IniRGBA(lRead,lIniFile, 'TextColor',lPrefs.TextColor);
   IniRGBA(lRead,lIniFile, 'TextBorder',lPrefs.TextBorder);
