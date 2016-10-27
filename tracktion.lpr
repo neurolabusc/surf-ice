@@ -15,7 +15,7 @@ type
   TTrackingPrefs = record
     mskName, v1Name, msk2Name, v2Name, outName: string;
     waypointName: array [0..(kMaxWayPoint-1)] of string;
-    simplifyToleranceMM, simplifyMinLengthMM, mskThresh, stepSize, maxAngleDeg, redundancyToleranceMM : single;
+    simplifyToleranceMM, simplifyMinLengthMM, mskThresh, stepSize, maxAngleDeg, bedpostExponent, redundancyToleranceMM : single;
     minLength, smooth, seedsPerVoxel: integer;
   end;
   { TFiberQuant }
@@ -375,7 +375,7 @@ begin
            if msk.img[i] > 0 then begin
               msk2.img[i] := msk2.img[i] / msk.img[i];
               //however, we might want to adjust this weighting using sqr or sqrt
-              msk2.img[i] := sqrt(msk2.img[i]);
+              msk2.img[i] := power(msk2.img[i],p.bedpostExponent); //exponent=0: f1 and f2 treated equally, 1: f1 and f2 proportional to probability, 100: strongly prefer f1
            end;
        end;
      end;
@@ -542,6 +542,7 @@ begin
   showmsg(format(' -s simplification tolerance (mm, default %.3g)', [p.simplifyToleranceMM]));
   showmsg(format(' -t threshold (FA for dtifit, probability for bedpost) (default %.3g)', [p.mskThresh]));
   showmsg(format(' -w waypoint name (up to %d; default: none)',[kMaxWayPoint]));
+  showmsg(format(' -x bedpost exponent (0=sample p1/p2 equally, 2=strongly prefer p1, default %.3g)', [p.bedpostExponent]));
   showmsg(format(' -1 smooth (0=not, 1=yes, default %d)', [p.smooth]));
   showmsg(format(' -2 stepsize (voxels, voxels %.3g)', [p.stepSize]));
   showmsg(format(' -3 minimum steps (voxels, default %d)', [p.minLength]));
@@ -624,6 +625,7 @@ var
     mskThresh: 0.15;
     stepSize: 0.5;
     maxAngleDeg: 45;
+    bedpostExponent: 0.5;
     redundancyToleranceMM: 0;
     minLength: 1;
     smooth: 1;
@@ -654,6 +656,11 @@ begin
   if HasOption('t','t') then begin
      p.mskThresh := StrToFloatDef(GetOptionValue('t','t'), p.mskThresh);
      isThreshSpecified := true;
+  end;
+  if HasOption('x','x') then begin
+     p.bedpostExponent := StrToFloatDef(GetOptionValue('a','a'), p.bedpostExponent);
+     if p.bedpostExponent < 0 then
+        p.bedpostExponent := 0;
   end;
   for i := 1 to (ParamCount-2) do begin
     if UpperCase(paramstr(i)) = ('-W') then begin
