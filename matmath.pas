@@ -206,7 +206,7 @@ begin
       result := ptf(-u.y, u.x, 0);
 end; //perp_hm()
 
-procedure frenet(prevPos, nextPos: TPoint3f; var N,B: TPoint3f);
+procedure frenet(prevPos, nextPos: TPoint3f; out N,B: TPoint3f);
 //Compute (N)ormal and (B)inormal of a line
 //https://en.wikipedia.org/wiki/Frenet–Serret_formulas
 var

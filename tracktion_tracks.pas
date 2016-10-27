@@ -9,8 +9,6 @@ uses
 
 Type
 
-// const
-//   kMaxScalars = 3; //maximum number of properties/scalars from TRK file, e.g. FA, pval, pval_corr
 TScalar = record
   mn, mx: single; //full range of scalar
   mnView, mxView: single; //selected window for displaying scalar, e.g. if 0..1 with a grayscale color table than values <0 will be black and >1 will be white
@@ -18,7 +16,6 @@ TScalar = record
   name: string;
 end;
 TTrack = class
-  //utime: QWord;
   scale, minFiberLength, ditherColorFrac, maxObservedFiberLength  : single;
   origin, mxV, mnV : TPoint3f;
   isBusy, isRebuildList, isTubes, isWorldSpaceMM: boolean;
@@ -55,7 +52,7 @@ begin
 end;
 
 procedure TTrack.SetDescriptives;
-var
+var  //{$DEFINE MNVEC} //verbose - report track descriptives
   {$IFDEF MNVEC} numV: integer; sumV : TPoint3f; {$ENDIF}
   len: single;
    i, m, mi: integer;
@@ -73,7 +70,6 @@ begin
   {$ENDIF}
   {$IFDEF TRACK2CLIPBOARD}str := '';{$ENDIF}
   i := 0;
-  //showmessage(format('--> %g %g %g',[tracks[1], tracks[2], tracks[3]]) );
   while i < length(tracks) do begin
         m :=   asInt( tracks[i]); inc(i);
         for mi := 1 to m do begin
@@ -94,7 +90,6 @@ begin
              {$IFDEF TRACK2CLIPBOARD}
              str := str + format('%g%s%g%s%g%s%g%s%g%s%g%s%g%s',[vectorLength(pt1,pt),kTab,  pt1.X,kTab,pt1.Y,kTab,pt1.Z, kTab,pt.X,kTab,pt.Y,kTab,pt.Z, kEOLN]);
              {$ENDIF}
-
             end;
         end;
   end;
@@ -108,11 +103,6 @@ begin
     mnV := mn;
     mxV := mx;
   //showmessage(format('%d  -> %g..%g %g..%g %g..%g max : %g', [length(tracks), mn.X, mx.X, mn.Y, mx.Y, mn.Z, mx.Z, maxObservedFiberLength]));
-  (*scale := (mx.X - mn.X);
-  if  (mx.Y - mn.Y) > scale then
-      scale := (mx.Y - mn.Y);
-  if  (mx.Z - mn.Z) > scale then
-      scale := (mx.Z - mn.Z); *)
   origin.X := (0.5 * (mx.X - mn.X)) + mn.X;
   origin.Y := (0.5 * (mx.Y - mn.Y)) + mn.Y;
   origin.Z := (0.5 * (mx.Z - mn.Z)) + mn.Z;
@@ -123,7 +113,7 @@ begin
         Scale := abs(mx.Z - origin.Z);
     //Scale := 2 * scale;
     //GLForm1.Caption := format('%g..%g %g..%g %g..%g',[mn.X,mx.X, mn.Y,mx.Y, mn.Z, mx.Z]) ;
-end; // SetDescriptives()
+end;// SetDescriptives()
 
 constructor  TTrack.Create;
 var
@@ -260,7 +250,7 @@ begin
   end;
   setlength(fiber,0);
   result := true;
-end; //Smooth()
+end;// Smooth()
 
 type
 TProps = record
@@ -270,10 +260,8 @@ TProps = record
 end;
 TPropsArray = array of TProps;
 
-
 //http://stackoverflow.com/questions/24335585/quicksort-drama
 procedure QuickSort(left, right: integer; var s: TPropsArray);
-// left:      Index des 1. Elements, right: Index des letzten Elements
 var
   l, r, lswap: integer;
   pivot: single;
@@ -306,10 +294,10 @@ procedure SortArray(var s: TPropsArray);
 var
  i : integer;
 begin
-     if length(s) < 1 then exit;
-     for i := 0 to (length(s)-1) do  //set indices
-         s[i].index := i;
-     quicksort(low(s), high(s), s);
+  if length(s) < 1 then exit;
+  for i := 0 to (length(s)-1) do  //set indices
+     s[i].index := i;
+  quicksort(low(s), high(s), s);
 end;
 
 function TTrack.SimplifyRemoveRedundant(Tol: float): boolean;
@@ -320,8 +308,7 @@ var
    xTracks: TPropsArray;
    tolSqr, dx : single;
 begin
-    result := false;
-
+  result := false;
   if (tol <= 0.0) then exit;
   if (n_count < 1) or (length(tracks) < 4) then exit;
   showmessage('Warning: SimplifyRemoveRedundant not optimized: please check for updates');
@@ -379,7 +366,6 @@ begin
   end;
   {$ENDIF}
   if track < 1 then exit; //no redundant tracks
-
   showmessage(format('Removed %d redundant tracks (endpoints nearer than %.4g)', [track, tol]));
   //remove redundant fibers
   j := 0;
@@ -431,8 +417,6 @@ end;
 
 procedure TTrack.SaveTrk(const FileName: string);
 var
-  //flt: array of single;
-  //i, o, m, mi, nflt: integer;
   hdr:  TTrackhdr;
   mStream : TMemoryStream;
   zStream: TGZFileStream;
@@ -617,9 +601,6 @@ begin
      n_indices := 0;
      setlength(tracks, 0);
 end;
-
-
-
 
 end.
 

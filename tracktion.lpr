@@ -13,7 +13,7 @@ const
   kMaxWayPoint = 8; //we can store 8 independent waypoint maps with 1-byte per pixel
 type
   TTrackingPrefs = record
-    mskName, v1Name, outName: string;
+    mskName, v1Name, msk2Name, v2Name, outName: string;
     waypointName: array [0..(kMaxWayPoint-1)] of string;
     simplifyToleranceMM, simplifyMinLengthMM, mskThresh, stepSize, maxAngleDeg, redundancyToleranceMM : single;
     minLength, smooth, seedsPerVoxel: integer;
@@ -38,7 +38,6 @@ end;
 const
   mxTrkLen = 512;
 
-
 type
   TNewTrack = record
     len: integer;
@@ -48,7 +47,7 @@ type
 
 procedure showMat(vox2mmMat: TMat44);
 begin
-     showmsg(format('v2mm= [%g %g %g %g; %g %g %g %g; %g %g %g %g; 0 0 0 1]',
+     showmsg(format('vox2mm= [%g %g %g %g; %g %g %g %g; %g %g %g %g; 0 0 0 1]',
         [vox2mmMat[1,1],vox2mmMat[1,2],vox2mmMat[1,3],vox2mmMat[1,4],
         vox2mmMat[2,1],vox2mmMat[2,2],vox2mmMat[2,3],vox2mmMat[2,4],
         vox2mmMat[3,1],vox2mmMat[3,2],vox2mmMat[3,3],vox2mmMat[3,4] ]) );
@@ -83,14 +82,14 @@ begin
   end;
   //FilenameParts (basename, pth,n, x);
   if fileexists(filename) then exit;
-  FilenameParts (filename, p,n, x);
+  FilenameParts (filename, p, n, x);
   filename := p + n + '.nii.gz';
   if fileexists(filename) then exit;
   filename := p + n + '.nii';
   if fileexists(filename) then exit;
   showmsg('Unable to find images "'+basename+'"');
   result := false;
-end; //FindImgVol
+end;// FindImgVol()
 
 procedure MatOK(var vox2mmMat: TMat44);
 var
@@ -109,37 +108,31 @@ function track (var p: TTrackingPrefs): boolean;
 //http://individual.utoronto.ca/ktaylor/DTIstudio_mori2006.pdf
 // http://www.ncbi.nlm.nih.gov/pubmed/16413083
 //Specifically section 2.3 Fiber Tracking
+{$DEFINE BEDPOST} //if defined, input is bedpost output (multiple fibers)
 const
-  (*mskName = '/Users/rorden/Documents/pas/surfice/FA.nii.gz';
-  v1Name = '/Users/rorden/Documents/pas/surfice/V1.nii.gz';
-  simplifyToleranceMM = 0.2;
-  simplifyMinLengthMM = 12;
-  mskThresh : single = 0.15;   //minFA 0.15
-  stepSize : single = 0.5;
-  maxAngleDeg : single = 45;
-  minLength = 10;  *)
   kChunkSize = 16384;
-
 label
   666;
 var
   startTime: TDateTime;
-   msk, v1: TNIFTI;
-   waypointBits: byte;
-   mskMap, waypointMap :TImgRaw;
-   vox2mmMat: TMat44;
-   seedOrigin : TPoint3f;
-   waypointName: string;
-   TrkPos, vx, i, j, x,y,z, sliceVox, volVox, seed, waypointVal: integer;
-   YMap, ZMap: TInts;
-   negTrk, posTrk: TNewTrack;
-   minCosine: single;
-   Trk: TTrack;
+  {$IFDEF BEDPOST} isBedpost {$ENDIF}: boolean;
+
+  msk, v1, {$IFDEF BEDPOST} msk2, v2 {$ENDIF}: TNIFTI;
+  waypointBits: byte;
+  mskMap, waypointMap :TImgRaw;
+  vox2mmMat: TMat44;
+  seedOrigin : TPoint3f;
+  waypointName: string;
+  TrkPos, vx, i, j, x,y,z, sliceVox, volVox, seed, waypointVal: integer;
+  YMap, ZMap: TInts;
+  negTrk, posTrk: TNewTrack;
+  minCosine {$IFDEF BEDPOST}, frac{$ENDIF} : single;
+  Trk: TTrack;
 function XYZ2vox(xi,yi,zi: integer): integer; inline;
 //convert from 3D coordinates to 1D array
 begin
      result := xi + YMap[yi] + ZMap[zi];
-end;
+end;//nested XYZ2vox()
 {$IFDEF LINEAR_INTERPOLATE}
 function getVoxelIntensity(Pt: TPoint3f; vol: integer): single;
 //http://paulbourke.net/miscellaneous/interpolation/
@@ -167,16 +160,16 @@ begin
              + v1.img[XYZ2vox(PtHi.X, PtHi.Y, PtLo.Z)+volOffset] * FracHi.X *FracHi.Y * FracLo.Z //110
              + v1.img[XYZ2vox(PtHi.X, PtHi.Y, PtHi.Z)+volOffset] * FracHi.X *FracHi.Y * FracHi.Z //111
              ;
-end;
+end;//nested
 {$ELSE}
 function getVoxelIntensity(Pt: TPoint3f; vol: integer): single;
 // nearest neighbor
 var
   PtLo: TPoint3i;
 begin
-     PtLo:= pti(trunc(Pt.x), trunc(Pt.y), trunc(Pt.z));
+     PtLo:= pti(round(Pt.x), round(Pt.y), round(Pt.z));
      result := v1.img[XYZ2vox(PtLo.X, PtLo.Y, PtLo.Z)+vol*volVox]; //000
-end;
+end;//nested
 {$ENDIF}
 function getDir(Pt: TPoint3f): TPoint3f; inline;
 var
@@ -192,12 +185,37 @@ begin
      result.Y := getVoxelIntensity(Pt, 1);
      result.Z := getVoxelIntensity(Pt, 2);
      vectorNormalize(result);
-end;
-
+end;//nested
+{$IFDEF BEDPOST}
+function getVoxelIntensity2(Pt: TPoint3f; vol: integer): single;
+// nearest neighbor
+var
+  PtLo: TPoint3i;
+begin
+     PtLo:= pti(round(Pt.x), round(Pt.y), round(Pt.z));
+     result := v2.img[XYZ2vox(PtLo.X, PtLo.Y, PtLo.Z)+vol*volVox]; //000
+end;//nested
+function getDir2(Pt: TPoint3f; out frac1vs2: single): TPoint3f; inline;
+var
+  iPt: TPoint3i;
+//convert from 3D coordinates to 1D array
+begin
+     iPt:= pti(round(Pt.x), round(Pt.y), round(Pt.z));
+     if mskMap[XYZ2vox(iPt.X, iPt.Y, iPt.Z)] <> 1 then begin //FA out of range
+        result := ptf(10,10,10);
+        exit;
+     end;
+     result.X := getVoxelIntensity2(Pt, 0);
+     result.Y := getVoxelIntensity2(Pt, 1);
+     result.Z := getVoxelIntensity2(Pt, 2);
+     vectorNormalize(result);
+     frac1vs2 := msk2.img [XYZ2vox(round(Pt.x), round(Pt.y), round(Pt.z))];
+end;//nested
+{$ENDIF}
 procedure AddSteps(var newTrk: TNewTrack; seedStart: TPoint3f; reverseDir: boolean);
 var
-   pos, dir: TPoint3f;
-   cosine: single;
+   pos, dir {$IFDEF BEDPOST}, dir2 {$ENDIF}: TPoint3f;
+   cosine {$IFDEF BEDPOST}, cosine2, frac1vs2 {$ENDIF}: single;
 begin
      newTrk.len := 0;
      pos := seedStart;
@@ -210,13 +228,25 @@ begin
            vectorAdd(pos, vectorMult(newTrk.dir, p.stepSize)); //move in new direction by step size
            dir := getDir(pos);
            cosine := vectorDot(dir, newTrk.dir);
+           {$IFDEF BEDPOST}
+           if (isBedpost) then begin
+              dir2 := getDir2(pos, frac1vs2);
+              cosine2 := vectorDot(dir2, newTrk.dir);
+              //cost function: to compare two vectors v1, v2
+              // a.) cosine in range 0..1 is higher for lower bending angle
+              // b.) mask2 is in range 0.5..1 with higher values meaning v1 more likely
+              if ((abs(cosine2) * frac1vs2)  > abs(cosine)) then begin
+                 cosine := cosine2;
+                 dir := dir2;
+              end;
+           end;
+           {$ENDIF}
            if ( abs(cosine) < minCosine) then exit; //if steep angle: fiber ends
            if (cosine < 0) and (dir.X < 5) then
               dir := vectorMult(dir,-1);
            newTrk.dir := dir;
      end;
-end; //AddStep
-
+end;//nested AddSteps()
 procedure AddFiber;
 var
    newVtx, newItems, outPos, i, iStop : integer;
@@ -270,12 +300,16 @@ begin
      end;
      TrkPos := TrkPos + newItems;
      Trk.n_count := Trk.n_count + 1;
-end; //AddFiber()
+end;//nested AddFiber()
 begin
      result := false;
      startTime := Now;
      msk := TNIFTI.Create;
      v1 := TNIFTI.Create;
+     {$IFDEF BEDPOST}
+     msk2 := TNIFTI.Create;
+     v2 := TNIFTI.Create;
+     {$ENDIF}
      Trk := TTrack.Create;
      TrkPos := 0; //empty TRK file
      minCosine := cos(DegToRad(p.maxAngleDeg));
@@ -290,7 +324,6 @@ begin
      end;
      vox2mmMat := msk.mat;
      MatOK(vox2mmMat);
-
      if (msk.minInten = msk.maxInten) then begin
         showmsg('Error: No variability in mask '+ p.mskName);
         goto 666;
@@ -313,6 +346,40 @@ begin
         showmsg(format('Error: v1 should have 3 times the voxels as the mask (voxels %d  vs %d). Check v1 has 3 volumes and image dimensions match', [length(v1.img), length(msk.img)] ));
         goto 666;
      end;
+     {$IFDEF BEDPOST}
+     isBedpost := false;
+     if (p.v2Name <> '') and (p.msk2Name <> '') then begin
+       isBedpost := true;
+       v2.isLoad4D:= true;
+       if not v2.LoadFromFile(p.v2Name, kNiftiSmoothNone) then begin
+          showmsg(format('Unable to load V2 named "%s"', [p.v2Name]));
+          goto 666;
+       end;
+       if length(v1.img) <> length(v2.img) then begin
+          showmsg(format('Dimension mismatch "%s" "%s"', [p.v1Name, p.v2Name] ));
+          goto 666;
+       end;
+       if not msk2.LoadFromFile(p.msk2Name, kNiftiSmoothNone) then begin
+          showmsg(format('Unable to load mask 2 named "%s"', [p.msk2Name]));
+          goto 666;
+       end;
+       if length(msk.img) <> length(msk2.img) then begin
+          showmsg(format('Dimension mismatch "%s" "%s"', [p.mskName, p.msk2Name] ));
+          goto 666;
+       end;
+       for i := 0 to (volVox -1) do begin
+           //set msk to be sum of probabilities for v1 and v2, set msk2 to my proportion of v1/(v1+v2)
+           msk.img[i] := msk.img[i] + msk2.img[i];  //probability of both fibers is mean_f1samples + mean_f2samples
+           //msk2 will be the cost function for selecting the 2nd fiber instead of the first
+           // Intuitively, the probability of fiber 2 vs fiber 1, e.g. if mean_f1samples = 0.6 and mean_f1samples = 0.2 then frac1vs2 = 0.2/0.6 = 0.3333
+           if msk.img[i] > 0 then begin
+              msk2.img[i] := msk2.img[i] / msk.img[i];
+              //however, we might want to adjust this weighting using sqr or sqrt
+              msk2.img[i] := sqrt(msk2.img[i]);
+           end;
+       end;
+     end;
+     {$ENDIF}
      //make arrays for converting from 3D coordinates to 1D array
      sliceVox := msk.hdr.dim[1] * msk.hdr.dim[2]; //voxels per slice
      setlength(YMap, msk.hdr.dim[2]);
@@ -355,7 +422,12 @@ begin
         showmsg(format(' No voxels have FA above %.3f',[p.mskThresh]));
         goto 666;
      end;
-     showmsg(format(' %d voxels have FA below %.3f',[vx, p.mskThresh]));
+     {$IFDEF BEDPOST}
+     if (isBedpost) then
+        showmsg(format(' %d voxels have probabilities above %.3f',[vx, p.mskThresh]))
+     else
+     {$ENDIF}
+     showmsg(format(' %d voxels have FA above %.3f',[vx, p.mskThresh]));
      //setup waypoints
      setlength(waypointMap, volVox);
      fillchar(waypointMap[0], volVox, 0);
@@ -386,13 +458,11 @@ begin
                    waypointMap[j] := waypointMap[j] + x;
                    vx := vx + 1;
                 end;
-
          if vx > 0 then begin
             waypointBits := waypointBits + (1 shl i); //1,2,4,8,16
             showmsg(format('%s has %d voxels',[p.waypointName[i], vx]));
          end else
              showmsg(format('Warning: %s has NO surviving voxels. Intensity range %g..%g',[p.waypointName[i], msk.minInten, msk.maxInten ]));
-
      end;
      if waypointBits = 0 then
         setlength(waypointMap, 0);
@@ -420,7 +490,7 @@ begin
                  end; //FA above threshold: create new fiber
              end; //for x
     setlength(Trk.tracks, TrkPos);
-    //simplify
+    //smooth tracks and simplify
     if length(Trk.tracks) < 1 then begin
       showmsg('No fibers found');
       goto 666;
@@ -438,9 +508,12 @@ begin
 666:
      msk.Free;
      v1.Free;
+     {$IFDEF BEDPOST}
+     msk2.Free;
+     v2.Free;
+     {$ENDIF}
      Trk.Close;
 end;
-
 
 constructor TFiberQuant.Create(TheOwner: TComponent);
 begin
@@ -467,7 +540,7 @@ begin
   showmsg(format(' -l minimum length (mm, default %.3g)', [p.simplifyMinLengthMM]));
   showmsg(' -o output name (.bfloat, .bfloat.gz or .vtk; default "inputName.vtk")');
   showmsg(format(' -s simplification tolerance (mm, default %.3g)', [p.simplifyToleranceMM]));
-  showmsg(format(' -t fa threshold (default %.3g)', [p.mskThresh]));
+  showmsg(format(' -t threshold (FA for dtifit, probability for bedpost) (default %.3g)', [p.mskThresh]));
   showmsg(format(' -w waypoint name (up to %d; default: none)',[kMaxWayPoint]));
   showmsg(format(' -1 smooth (0=not, 1=yes, default %d)', [p.smooth]));
   showmsg(format(' -2 stepsize (voxels, voxels %.3g)', [p.stepSize]));
@@ -483,6 +556,25 @@ begin
   {$ENDIF}
 end;
 
+function FindDyads(pth: string; var p: TTrackingPrefs; reportError: integer): boolean;
+begin
+     result := true;
+     p.v1Name := pth + 'dyads1.nii.gz';
+     p.mskName := pth+ 'mean_f1samples.nii.gz';
+     if fileexists(p.v1Name) and fileexists(p.mskName) then begin
+        p.v2Name := pth + 'dyads2.nii.gz';
+        p.msk2Name := pth+ 'mean_f2samples.nii.gz';
+        if (not fileexists(p.v2Name)) or (not fileexists(p.msk2Name)) then begin
+           p.v2Name := '';
+           p.msk2Name := '';
+        end;
+        exit;
+     end;
+     result := false;
+     if reportError <> 0 then
+        showmsg(format('Unable to find bedpostX images "%s" and "%s"',[p.v1Name, p.mskName]));
+end;//FindDyads()
+
 function FindV1FA(pth, n, x: string; var p: TTrackingPrefs; reportError: integer): boolean;
 begin
      result := true;
@@ -492,6 +584,7 @@ begin
      result := false;
      if reportError <> 0 then
         showmsg(format('Unable to find "%s" and "%s"',[p.v1Name, p.mskName]));
+     result := FindDyads(pth, p, reportError);
 end;//FindV1FA()
 
 function FindNiiFiles(var basename: string; var p: TTrackingPrefs): boolean;
@@ -500,6 +593,12 @@ var
    i: integer;
 begin
   result := true;
+  if DirectoryExists(basename) then begin // if ~/dir/bedpost.bedpostX/ then find ~/dir/bedpost.bedpostX/dyads1.nii.gz
+    pth := basename;
+    if pth[length(pth)] <> pathdelim then
+     pth := pth + pathdelim; //e.g. ~/dir and ~/dir/ both become ~/dir/
+    if FindDyads(pth, p, 1) then exit;
+  end;
   FilenameParts (basename, pth,n, x);
   for i := 0 to 1 do begin
     x := '.nii.gz';
@@ -514,11 +613,11 @@ begin
     end;
   end;
   result := false;
-end; //FindNiiFiles()
+end;// FindNiiFiles()
 
 procedure TFiberQuant.DoRun;
 var
-  p : TTrackingPrefs = (mskName: ''; v1Name: ''; outName: '';
+  p : TTrackingPrefs = (mskName: ''; v1Name: ''; msk2Name: ''; v2Name: ''; outName: '';
     waypointName: ('','','','',  '','','','');
     simplifyToleranceMM: 0.2;
     simplifyMinLengthMM: 12;
@@ -532,6 +631,9 @@ var
   basename: string;
   i: integer;
   nWaypoint: integer = 0;
+  {$IFDEF BEDPOST}
+  isThreshSpecified: boolean = false;
+  {$ENDIF}
 begin
   // parse parameters
   basename := 'test.nii,7';
@@ -549,8 +651,10 @@ begin
      p.outName := GetOptionValue('o','o');
   if HasOption('s','s') then
      p.simplifyToleranceMM := StrToFloatDef(GetOptionValue('s','s'), p.simplifyToleranceMM);
-  if HasOption('t','t') then
+  if HasOption('t','t') then begin
      p.mskThresh := StrToFloatDef(GetOptionValue('t','t'), p.mskThresh);
+     isThreshSpecified := true;
+  end;
   for i := 1 to (ParamCount-2) do begin
     if UpperCase(paramstr(i)) = ('-W') then begin
       if nWaypoint < kMaxWayPoint then
@@ -570,19 +674,26 @@ begin
      p.redundancyToleranceMM := StrToFloatDef(GetOptionValue('4','4'), p.redundancyToleranceMM);
   if HasOption('5','5') then
      p.seedsPerVoxel := round(StrToFloatDef(GetOptionValue('5','5'), p.seedsPerVoxel));
-
   basename := ParamStr(ParamCount);
   if not FindNiiFiles(basename, p) then begin
      WriteHelp(p);
      Terminate;
      Exit;
   end;
-  if p.outName = '' then
-     p.outName := ChangeFileExtX(basename, '.vtk');
-  //SimplifyTracks(inname, outname, tol);
+  if p.outName = '' then begin
+     if DirectoryExists(basename) then begin
+        if basename[length(basename)] = pathdelim then
+           p.outName := basename + 'track.vtk'
+        else
+            p.outName := basename + pathdelim + 'track.vtk'
+     end else
+         p.outName := ChangeFileExtX(basename, '.vtk');
+  end;
+  if (not isThreshSpecified) and (p.v2Name <> '') then
+     p.mskThresh := 0.01; //for bedpost, use 1% probability, where for FA we usually set a higher threshold (e.g. 0.15)
   track(p);
   Terminate;
-end;
+end;// DoRun()
 
 var
   Application: TFiberQuant;

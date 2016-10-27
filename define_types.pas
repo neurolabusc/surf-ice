@@ -49,7 +49,7 @@ type
      L,T,R,B: single;
   end;
 
-procedure FilenameParts (lInName: string; var lPath,lName,lExt: string);
+procedure FilenameParts (lInName: string; out lPath,lName,lExt: string);
 procedure SensibleUnitRect (var U: TUnitRect);
 procedure SortSingle(var lLo,lHi: single);
 function RealToStr(lR: double; lDec: integer): string;
@@ -96,8 +96,6 @@ end;
 {$endif}
 
 function ReadNumBin(var f: TFByte): string; //read next ASCII number in binary file
-const
-  kEOLN = $0A;
 var
    bt : Byte;
    ch : Char;
@@ -303,7 +301,7 @@ begin
      result := FloatToStrF(lR, ffFixed,7,lDec);
 end;
 
-procedure FilenameParts (lInName: string; var lPath,lName,lExt: string);
+procedure FilenameParts (lInName: string; out lPath,lName,lExt: string);
 var
    lX: string;
 begin

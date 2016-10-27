@@ -16,7 +16,7 @@ cp ./optsCore.inc ./opts.inc
 /Users/rorden/lazarus/lazbuild ./surfice.lpr --cpu=x86_64 --ws=cocoa --compiler="/usr/local/lib/fpc/3.1.1/ppcx64"
 #/Developer/lazarus/lazbuild ./surfice.lpr --ws=cocoa
 strip ./surfice
-cp surfice /Users/rorden/Desktop/Surf_Ice/surfice.app/Contents/MacOS/surfice
+cp surfice /Users/rorden/Desktop/Surf_Ice/Surfice/surfice.app/Contents/MacOS/surfice
 
 
 
@@ -24,7 +24,7 @@ cp surfice /Users/rorden/Desktop/Surf_Ice/surfice.app/Contents/MacOS/surfice
 cp ./optsCompat.inc ./opts.inc
 /Developer/lazarus/lazbuild ./surfice.lpr
 strip ./surfice
-cp surfice /Users/rorden/Desktop/Surf_Ice/surficeOld.app/Contents/MacOS/surfice
+cp surfice /Users/rorden/Desktop/Surf_Ice/Surfice/surficeOld.app/Contents/MacOS/surfice
 
 
 

@@ -371,10 +371,10 @@ end;
 
 function FixDataType (var lHdr: TNIFTIhdr): boolean;
 var
-  ldatatypebpp,lbitpix: integer;
+  ldatatypebpp: integer;
 begin
   result := true;
-  lbitpix := lHdr.bitpix;
+  //lbitpix := lHdr.bitpix;
   case lHdr.datatype of
     kDT_BINARY : ldatatypebpp := 1;
     kDT_UNSIGNED_CHAR  : ldatatypebpp := 8;     // unsigned char (8 bits/voxel)
