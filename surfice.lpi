@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectOptions>
-    <Version Value="9"/>
+    <Version Value="10"/>
     <General>
       <Flags>
         <SaveOnlyProjectUnits Value="True"/>
@@ -14,6 +14,8 @@
       <UseXPManifest Value="True"/>
       <XPManifest>
         <DpiAware Value="True"/>
+        <TextName Value="CompanyName.ProductName.AppName"/>
+        <TextDesc Value="Your application description."/>
       </XPManifest>
       <Icon Value="0"/>
     </General>
@@ -66,7 +68,6 @@
       <Unit2>
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="4"/>
         <TopLine Value="142"/>
         <CursorPos X="31" Y="168"/>
@@ -77,25 +78,26 @@
         <Filename Value="nifti_loader.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="5"/>
-        <TopLine Value="46"/>
-        <CursorPos X="19" Y="70"/>
+        <TopLine Value="45"/>
+        <CursorPos X="68" Y="55"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit3>
       <Unit4>
         <Filename Value="colorTable.pas"/>
         <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="2"/>
-        <TopLine Value="74"/>
-        <CursorPos X="57" Y="78"/>
+        <TopLine Value="3"/>
+        <CursorPos X="3" Y="14"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit4>
       <Unit5>
         <Filename Value="track.pas"/>
         <IsPartOfProject Value="True"/>
-        <TopLine Value="11"/>
-        <CursorPos X="6" Y="22"/>
+        <TopLine Value="17"/>
+        <CursorPos X="18" Y="36"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit5>

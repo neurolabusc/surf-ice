@@ -5,13 +5,18 @@ unit scriptengine;
 interface
 {$IFDEF FPC} {$mode delphi}{$H+} {$ENDIF}
 uses
-{$IFDEF FPC}LResources,
-{$ELSE}
+{$ifndef isTerminalApp}
+  {$IFDEF FPC}
+         {$IFDEF Unix} LCLIntf,  {$ENDIF}
+         Resources,
+  {$ELSE}
     Windows,
-{$ENDIF}
-{$IFDEF Unix} LCLIntf,  {$ENDIF}    //Messages,
+  {$ENDIF}
+  ClipBrd,
+{$endif}
+   //Messages,
  //{$IFNDEF USETRANSFERTEXTURE}  scaleimageintensity,{$ENDIF}
-ClipBrd, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
+ SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
   ExtCtrls, StdCtrls, define_types, Menus,
   uPSComponent,commandsu;
 

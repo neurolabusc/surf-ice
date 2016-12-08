@@ -20,6 +20,10 @@ type
    TRGBA = packed record //Next: analyze Format Header structure
     R,G,B,A : byte;
   end;
+       {$ifdef isTerminalApp}
+  TColor = -$7FFFFFFF-1..$7FFFFFFF;
+  TLUT = array [0..255] of TRGBA;
+  {$endif}
   TPoint4f = packed record
      X: single;
      Y: single;
@@ -71,7 +75,11 @@ function FSize (lFName: String): longint;
 function ChangeFileExtX( lFilename: string; lExt: string): string;
 function ReadNumBin(var f: TFByte): string; //read next ASCII number in binary file
 {$ifdef isTerminalApp}
+function RGBToColor(R, G, B: Byte): TColor;
 procedure ShowMessage(msg: string);
+function Red(rgb: TColor): BYTE;
+function Green(rgb: TColor): BYTE;
+function Blue(rgb: TColor): BYTE;
 {$else}
 function asRGBA(clr: TColor): TRGBA;
 {$endif}
@@ -81,6 +89,25 @@ implementation
 uses sysutils;//, dialogs;
 
 {$ifdef isTerminalApp}
+function Blue(rgb: TColor): BYTE;
+begin
+  Result := (rgb shr 16) and $000000ff;
+end;
+
+function Green(rgb: TColor): BYTE;
+begin
+  Result := (rgb shr 8) and $000000ff;
+end;
+
+function Red(rgb: TColor): BYTE;
+begin
+  Result := rgb and $000000ff;
+end;
+function RGBToColor(R, G, B: Byte): TColor;
+begin
+Result := (B shl 16) or (G shl 8) or R;
+end;
+
 procedure ShowMessage(msg: string);
 begin
   writeln(msg);

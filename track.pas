@@ -4,8 +4,11 @@ unit track;
 interface
 
 uses
+  {$ifndef isTerminalApp}
+    ClipBrd,dialogs,colorTable,
+  {$endif}
   {$IFDEF DGL} dglOpenGL, {$ELSE} gl, {$IFDEF COREGL}glext,{$ENDIF} {$ENDIF}
-  colorTable, ClipBrd,Classes, SysUtils,  dialogs, matmath, math, define_types, track_simplify, zstream;
+  Classes, SysUtils, math, define_types, matmath, track_simplify, zstream;
 
 Type
 
@@ -43,8 +46,10 @@ TTrack = class
     function LoadVtk(const FileName: string): boolean;
     procedure SetDescriptives;
     procedure SetScalarDescriptives;
+    {$ifndef isTerminalApp}
     procedure BuildListStrip;
     procedure BuildListTubes ;
+    {$endif}
   public
     constructor Create;
     function SimplifyMM(Tol, minLength: float): boolean;
@@ -54,14 +59,18 @@ TTrack = class
     procedure SaveTrk(const FileName: string);
     procedure Save(FileName: string);
     procedure Close;
+    {$ifndef isTerminalApp}
     procedure DrawGL;
+    {$endif}
     procedure CenterX;
     destructor Destroy; override;
   end;
 
 implementation
 
+{$ifndef isTerminalApp}
 uses mainunit, shaderu, {$IFDEF COREGL} gl_core_3d {$ELSE} gl_legacy_3d {$ENDIF};
+{$endif}
 
 procedure TTrack.CenterX;
 var
@@ -100,7 +109,9 @@ procedure TTrack.Close;
 var i: integer;
 begin
   i := 1;
+  {$ifndef isTerminalApp}
   scalarLUT := UpdateTransferFunction(i); //red-yellow
+  {$endif}
   scalarSelected := -1; //none: color based on direction
      n_count := 0;
      n_vertices := 0;
@@ -128,6 +139,8 @@ begin
   result.Z := (abs(pt1.Z - pt2.Z)/len);
 end;
 
+{$ifndef isTerminalApp}
+
 function RGBA2pt3f(RGBA: TRGBA): TPoint3f;
 begin
      result.X := RGBA.R/255;
@@ -153,7 +166,8 @@ begin
      result.B := round(UnitBound(v.Z) * 255);
      result.A := 255;
 end;
-   procedure TTrack.BuildListStrip;
+
+procedure TTrack.BuildListStrip;
 // create displaylist where tracks are drawn as connected line segments
 var
   vRGBA: TVertexRGBA;
@@ -622,13 +636,15 @@ begin
   {$ENDIF}
   isBusy := false;
 end; // DrawGL()
-
+{$endif}
 constructor  TTrack.Create;
 var
   i : integer;
 begin
   i := 1;
+  {$ifndef isTerminalApp}
   scalarLUT := UpdateTransferFunction(i); ; //red-yellow
+  {$endif}
   scalarSelected := -1; //none: color based on direction
      SetLength(tracks, 0);
      n_count := 0;

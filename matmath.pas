@@ -21,6 +21,7 @@ uses
  procedure matrixEye(var a: TMat33);
  procedure vectorSubtract (var A: TPoint3f; B: TPoint3f);  inline;
  procedure minMax(var v, mn, mx: TPoint3f); overload;
+ procedure minMax(var v, mn, mx: TPoint3i); overload;
  procedure minMax(var v: TPoint3i; var mn, mx: integer); overload;
  function vectorLength(pt1, pt2: TPoint3F): single;
  function vectorSame(pt1, pt2: TPoint3f): boolean;
@@ -444,6 +445,22 @@ begin
 end; // pti()
 
 procedure minMax(var v, mn, mx: TPoint3f); overload;
+begin
+     if v.X > mx.X then
+        mx.X := v.X;
+     if v.X < mn.X then
+        mn.X := v.X;
+     if v.Y > mx.Y then
+        mx.Y := v.Y;
+     if v.Y < mn.Y then
+        mn.Y := v.Y;
+     if v.Z > mx.Z then
+        mx.Z := v.Z;
+     if v.Z < mn.Z then
+        mn.Z := v.Z;
+end; // minMax()
+
+procedure minMax(var v, mn, mx: TPoint3i); overload;
 begin
      if v.X > mx.X then
         mx.X := v.X;

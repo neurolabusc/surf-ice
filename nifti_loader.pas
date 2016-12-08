@@ -30,6 +30,8 @@ TNIFTI = class
     procedure SetDescriptives;
   public
     function mm2intensity( Xmm, Ymm, Zmm: single): single;
+    function mm2vox0(Xmm, Ymm, Zmm: single): TPoint3i; //rounded, voxels indexed from 0! e.g. if dim[0]=50 then output will range 0..49
+    function validVox0(vox: TPoint3i): boolean; //returns true if voxel [indexed from 0] is inside volume, e.g. if dim[0]=50 then vox.X must be in range 0..49
     constructor Create;
     function LoadFromFile(const FileName: string; smoothMethod: integer): boolean; //smoothMethod is one of kNiftiSmooth...  options
     procedure SmoothMaskZero;
@@ -141,6 +143,21 @@ begin
         result := 0
    else
        result := 1;
+end;
+
+function TNIfTI.validVox0(vox: TPoint3i): boolean; //returns true if voxel [indexed from 0] is inside volume, e.g. if dim[0]=50 then vox.X must be in range 0..49
+begin
+   result := false;
+   if (vox.X < 0) or (vox.Y < 0) or (vox.Z < 0) then exit;
+   if (vox.X >= hdr.dim[1]) or (vox.Y >= hdr.dim[2]) or (vox.Z >= hdr.dim[3]) then exit;
+   result := true;
+end;
+
+function TNIfTI.mm2vox0(Xmm, Ymm, Zmm: single): TPoint3i; //voxels indexed from 0!
+begin
+   result.X := round(Xmm*invMat[1,1] + Xmm*invMat[1,2] + Xmm*invMat[1,3] + invMat[1,4]);
+   result.Y := round(Ymm*invMat[2,1] + Ymm*invMat[2,2] + Ymm*invMat[2,3] + invMat[2,4]);
+   result.Z := round(Zmm*invMat[3,1] + Zmm*invMat[3,2] + Zmm*invMat[3,3] + invMat[3,4]);
 end;
 
 function TNIfTI.mm2intensity( Xmm, Ymm, Zmm: single): single;

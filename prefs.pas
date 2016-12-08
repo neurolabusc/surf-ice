@@ -3,7 +3,7 @@ unit prefs;
 {$H+}
 
 interface
-uses IniFiles,SysUtils,define_types,graphics,Dialogs,Classes;
+uses {$ifndef isTerminalApp}graphics,Dialogs,{$endif}IniFiles,SysUtils,define_types,Classes;  //,
 const
   knMRU = 10;
   kRenderPoor = 0;
