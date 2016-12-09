@@ -37,7 +37,8 @@ uses
  procedure vectorNegate(var v: TPoint3f);  inline;
  function AlignVector(alignmentVector: TPoint3f): TMat33;
 
- function vectorDistance(A,B: TPoint3f): single;
+ function vectorDistance(A,B: TPoint3f): single; //[euclidean distance] = sqrt(dX^2+dY^2+dZ^2)
+ function vectorDistanceSqr(A,B: TPoint3f): single; inline;//[fast as no sqrt]  = (dX^2+dY^2+dZ^2)
  function vectorScale(A: TPoint3f; Scale: single): TPoint3f;
  procedure MakeCylinder(radius: single; start, dest: TPoint3f; var faces: TFaces; var vertices: TVertices; slices: integer = 20); overload;
  procedure MakeCylinder( radius, len: single; var faces: TFaces; var vertices: TVertices; slices: integer = 20); overload;
@@ -45,6 +46,13 @@ uses
 
 
 implementation
+
+function vectorDistanceSqr(A,B: TPoint3f): single; inline;
+//do not apply sqrt for dramatic speedup!
+begin
+  //result := sqrt(sqr(A.X-B.X)+ sqr(A.Y-B.Y) + sqr(A.Z-B.Z));
+  result := (sqr(A.X-B.X)+ sqr(A.Y-B.Y) + sqr(A.Z-B.Z));
+end;
 
 function vectorMult (var A: TPoint3f; B: single): TPoint3f;  inline;
 begin

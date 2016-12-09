@@ -7,7 +7,7 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Classes, SysUtils, CustApp, nifti_loader, define_types, matmath, math,
-tracktion_tracks, DateUtils;
+track, DateUtils;
 
 const
   kMaxWayPoint = 8; //we can store 8 independent waypoint maps with 1-byte per pixel
@@ -116,7 +116,6 @@ label
 var
   startTime: TDateTime;
   {$IFDEF BEDPOST} isBedpost {$ENDIF}: boolean;
-
   msk, v1, {$IFDEF BEDPOST} msk2, v2 {$ENDIF}: TNIFTI;
   waypointBits: byte;
   mskMap, waypointMap :TImgRaw;
@@ -126,7 +125,7 @@ var
   TrkPos, vx, i, j, x,y,z, sliceVox, volVox, seed, waypointVal: integer;
   YMap, ZMap: TInts;
   negTrk, posTrk: TNewTrack;
-  minCosine {$IFDEF BEDPOST}, frac{$ENDIF} : single;
+  minCosine: single;
   Trk: TTrack;
 function XYZ2vox(xi,yi,zi: integer): integer; inline;
 //convert from 3D coordinates to 1D array

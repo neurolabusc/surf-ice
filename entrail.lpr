@@ -1,4 +1,4 @@
-program tracktion;
+program entrail;
 
 {$mode objfpc}{$H+}
 
@@ -6,32 +6,25 @@ uses
   {$IFDEF UNIX}{$IFDEF UseCThreads}
   cthreads,
   {$ENDIF}{$ENDIF}
-  Classes, SysUtils, CustApp, nifti_loader, define_types, matmath, math,
-  track, //tracktion_tracks,
-  DateUtils;
+  Classes, SysUtils, CustApp, nifti_loader, define_types, matmath, math,track,DateUtils;
 
 const
-  kVers = 'Entrail by Chris Rorden version 19Sept2016';
-  kMaxWayPoint = 8; //we can store 8 independent waypoint maps with 1-byte per pixel
+  kVers = 'Entrail by Chris Rorden version 9Dec2016';
 type
   TTrackingPrefs = record
     trackName, atlasName, outName : string;
   end;
   TFiber = record
-    startPt, endPt : TPoint3f;
     startROI, endROI: integer;
   end;
-  { TFiberQuant }
-
   TFiberQuant = class(TCustomApplication)
   protected
     procedure DoRun; override;
   public
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
-    procedure WriteHelp(var p: TTrackingPrefs); virtual;
+    procedure WriteHelp; virtual;
   end;
-
 
 procedure showMsg(msg: string);
 begin
@@ -53,37 +46,6 @@ begin
      result.Z := Pt.X*vox2mmMat[3,1] + Pt.Y*vox2mmMat[3,2] + Pt.Z*vox2mmMat[3,3] + vox2mmMat[3,4];
 end;
 
-function FindImgVal(var filename: string; out volume: integer): boolean;
-// "/dir/img" will return "/dir/img.nii"; "img.nii,3" will return 3 as volume number
-var
-   p,n,x, basename: string;
-   idx: integer;
-begin
-  result := true;
-  basename := filename;
-  volume := 0;
-  idx := LastDelimiter(',',filename);
-  if (idx > 0) and (idx < length(filename)) then begin
-     x := copy(filename, idx+1, length(filename));
-     volume := StrToIntDef(x,-1);
-     if volume < 0 then
-        showmsg('Expected positive integer after comma: '+filename)
-     else
-         filename := copy(filename, 1, idx-1);
-     //if not file
-     //showmsg(format('"%s" %d', [filename, volume]) );
-  end;
-  //FilenameParts (basename, pth,n, x);
-  if fileexists(filename) then exit;
-  FilenameParts (filename, p, n, x);
-  filename := p + n + '.nii.gz';
-  if fileexists(filename) then exit;
-  filename := p + n + '.nii';
-  if fileexists(filename) then exit;
-  showmsg('Unable to find images "'+basename+'"');
-  result := false;
-end;// FindImgVol()
-
 procedure MatOK(var vox2mmMat: TMat44);
 var
   Pt0,Pt1: TPoint3f;
@@ -98,8 +60,6 @@ begin
 end;
 
 function endtrack (var p: TTrackingPrefs): boolean;
-const
-  kMaxROI = 1024;
 label
   666;
 var
@@ -109,13 +69,14 @@ var
   track: TTrack;
   pos, nVox, maxROI, i, n, m: integer;
   str: string;
+  pt: TPoint3f;
   vox: TPoint3i;
   atlasImg: TInts;
   fibers: array of TFiber;
   fiberConnect: array of array of integer;
   txtFile : TextFile;
 begin
-     result := false;
+     result := false; //assume failure
      startTime := Now;
      showmsg(kVers);
      atlas := TNIFTI.Create;
@@ -163,13 +124,24 @@ begin
               showmsg(format('Catastrophic error decoding tractography file "%s"', [p.trackName]));
               goto 666;
            end;
-           fibers[n].startPt.X := track.tracks[i]; inc(i);
-           fibers[n].startPt.Y := track.tracks[i]; inc(i);
-           fibers[n].startPt.Z := track.tracks[i]; inc(i);
+           //find ROI of first node
+           pt.X := track.tracks[i]; inc(i);
+           pt.Y := track.tracks[i]; inc(i);
+           pt.Z := track.tracks[i]; inc(i);
+           vox := atlas.mm2vox0(pt.X, pt.Y, pt.Z);
+           fibers[n].startROI:= -1; //assume out of volume
+           if (vox.X >= 0) and (vox.Y >= 0) and (vox.Z >= 0) and (vox.X < atlas.hdr.dim[1]) and (vox.Y < atlas.hdr.dim[2]) and (vox.Z < atlas.hdr.dim[3]) then
+              fibers[n].startROI := atlasImg[vox.X + (vox.Y * atlas.hdr.dim[1]) + (vox.Z * atlas.hdr.dim[1] * atlas.hdr.dim[3])];
+           //skip nodes between start and end
            i := i + (3 * (m-2));
-           fibers[n].endPt.X := track.tracks[i]; inc(i);
-           fibers[n].endPt.Y := track.tracks[i]; inc(i);
-           fibers[n].endPt.Z := track.tracks[i]; inc(i);
+           //find ROI of final node
+           pt.X := track.tracks[i]; inc(i);
+           pt.Y := track.tracks[i]; inc(i);
+           pt.Z := track.tracks[i]; inc(i);
+           vox := atlas.mm2vox0(pt.X, pt.Y, pt.Z);
+           fibers[n].endROI:= -1; //assume out of volume
+           if (vox.X >= 0) and (vox.Y >= 0) and (vox.Z >= 0) and (vox.X < atlas.hdr.dim[1]) and (vox.Y < atlas.hdr.dim[2]) and (vox.Z < atlas.hdr.dim[3]) then
+              fibers[n].endROI := atlasImg[vox.X + (vox.Y * atlas.hdr.dim[1]) + (vox.Z * atlas.hdr.dim[1] * atlas.hdr.dim[3])];
            n := n + 1;
            if n > track.n_count then begin
               showmsg(format('Catastrophic error reading tractography file "%s"', [p.trackName]));
@@ -179,20 +151,6 @@ begin
      if track.n_count <> n then begin
         showmsg(format(' Catastrophic error parsing tractography file: %d %d', [track.n_count, n]));
         goto 666;
-     end;
-     //find the region of each start point
-     for i := 0 to (track.n_count-1) do begin
-         fibers[i].startROI:= -1; //assume out of volume
-         vox := atlas.mm2vox0(fibers[i].startPt.X, fibers[i].startPt.Y, fibers[i].startPt.Z);
-         if (vox.X >= 0) and (vox.Y >= 0) and (vox.Z >= 0) and (vox.X < atlas.hdr.dim[1]) and (vox.Y < atlas.hdr.dim[2]) and (vox.Z < atlas.hdr.dim[3]) then
-            fibers[i].startROI := atlasImg[vox.X + (vox.Y * atlas.hdr.dim[1]) + (vox.Z * atlas.hdr.dim[1] * atlas.hdr.dim[3])];
-     end;
-     //find the region of each end point
-     for i := 0 to (track.n_count-1) do begin
-         fibers[i].endROI := -1; //assume out of volume
-         vox := atlas.mm2vox0(fibers[i].endPt.X, fibers[i].endPt.Y, fibers[i].endPt.Z);
-         if (vox.X >= 0) and (vox.Y >= 0) and (vox.Z >= 0) and (vox.X < atlas.hdr.dim[1]) and (vox.Y < atlas.hdr.dim[2]) and (vox.Z < atlas.hdr.dim[3]) then
-            fibers[i].endROI := atlasImg[vox.X + (vox.Y * atlas.hdr.dim[1]) + (vox.Z * atlas.hdr.dim[1] * atlas.hdr.dim[3])];
      end;
      //create matrix of connections
      if not track.isWorldSpaceMM then
@@ -222,6 +180,7 @@ begin
         showmsg(format(' Creating output %s', [p.outName]));
         AssignFile(txtFile, p.outName);
         ReWrite(txtFile);
+        WriteLn(txtFile, kVers);
         WriteLn(txtFile, format('Atlas %s', [p.atlasName]));
         WriteLn(txtFile, format('Track %s', [p.trackName]));
         WriteLn(txtFile, format('Fibers within regions %d (of total %d)', [i, track.n_count]));
@@ -261,7 +220,7 @@ begin
   inherited Destroy;
 end;
 
-procedure TFiberQuant.WriteHelp (var p: TTrackingPrefs);
+procedure TFiberQuant.WriteHelp;
 var
    xname: string;
 begin
@@ -275,7 +234,7 @@ begin
   showmsg(' -o output name (e.g. "basename.txt")');
   showmsg('Examples');
   {$IFDEF UNIX}
-   showmsg(' '+xname+' -a "~/atlas/jhu.nii" "~/img_V1.nii.gz"');
+   showmsg(' '+xname+' -a "~/atlas/jhu.nii" "~/fiber.trk.gz"');
   {$ELSE}
    to do showmsg(' '+xname+' -t 1 -o "c:\out dir\shrunk.vtk" "c:\in dir in.vtk"');
   {$ENDIF}
@@ -313,7 +272,7 @@ var
 begin
   // parse parameters
   if HasOption('h', 'help') or (ParamCount = 0) then begin
-    WriteHelp(p);
+    WriteHelp;
     Terminate;
     Exit;
   end;
@@ -321,7 +280,7 @@ begin
      p.atlasName := GetOptionValue('a','a');
   if not FindNiiFiles(p.atlasName, p) then begin
      showmsg('Error: unable to find atlas file');
-     WriteHelp(p);
+     WriteHelp;
      Terminate;
      Exit;
   end;
@@ -329,7 +288,7 @@ begin
      p.outName := GetOptionValue('o','o');
   p.trackName := ParamStr(ParamCount);
   if not fileexists(p.trackName) then begin
-     WriteHelp(p);
+     WriteHelp;
      Terminate;
      Exit;
   end;

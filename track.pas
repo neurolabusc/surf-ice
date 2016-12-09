@@ -58,6 +58,8 @@ TTrack = class
     procedure SaveVtk(const FileName: string);
     procedure SaveTrk(const FileName: string);
     procedure Save(FileName: string);
+    function Smooth: boolean;
+    function SimplifyRemoveRedundant(Tol: float): boolean;
     procedure Close;
     {$ifndef isTerminalApp}
     procedure DrawGL;
@@ -1876,6 +1878,194 @@ begin
     end;
     {$ifdef isTerminalApp}showmessage('Created file '+FileName);{$endif}
 end;
+
+function TTrack.Smooth: boolean;
+//smooth nodes
+//  http://dev.theomader.com/gaussian-kernel-calculator/
+var
+   fiber, fibersmooth: array of TPoint3f;
+   i, startPos, m, mi: integer;
+begin
+  result := false;
+  if (n_count < 1) or (length(tracks) < 4) then exit;
+  setlength(fiber, 1024);
+  setlength(fibersmooth, 1024);
+  i := 0;
+  while i < length(tracks) do begin
+        m :=   asInt( tracks[i]);
+        inc(i);
+        if m < 5 then begin
+           i := i + 3 * m;
+           continue; //skip this fiber
+        end;
+        if m > length(fiber) then begin
+           setlength(fiber, m);
+           setlength(fibersmooth, m);
+        end;
+        startPos := i;
+        for mi := 0 to (m-1) do begin
+            fiber[mi].X := tracks[i]; inc(i);
+            fiber[mi].Y := tracks[i]; inc(i);
+            fiber[mi].Z := tracks[i]; inc(i);
+        end;
+        fibersmooth[0] := fiber[0];
+        fibersmooth[1] := fiber[1];
+        fibersmooth[m-2] := fiber[m-2];
+        fibersmooth[m-1] := fiber[m-1];
+        for mi := 2 to (m-3) do begin
+            fibersmooth[mi].X :=  fiber[mi-2].X*0.06136+ fiber[mi-1].X*0.24477+fiber[mi].X*00.38774+ fiber[mi+1].X*0.24477+ fiber[mi+2].X*0.06136;
+            fibersmooth[mi].Y :=  fiber[mi-2].Y*0.06136+ fiber[mi-1].Y*0.24477+fiber[mi].Y*00.38774+ fiber[mi+1].Y*0.24477+ fiber[mi+2].Y*0.06136;
+            fibersmooth[mi].Z :=  fiber[mi-2].Z*0.06136+ fiber[mi-1].Z*0.24477+fiber[mi].Z*00.38774+ fiber[mi+1].Z*0.24477+ fiber[mi+2].Z*0.06136;
+        end;
+        //replace fiber with fibersmooth
+        i := startPos;
+        for mi := 0 to (m-1) do begin
+            tracks[i] := fibersmooth[mi].X; inc(i);
+            tracks[i] := fibersmooth[mi].Y; inc(i);
+            tracks[i] := fibersmooth[mi].Z; inc(i);
+        end;
+
+  end;
+  setlength(fiber,0);
+  result := true;
+end;// Smooth()
+
+type
+TProps = record
+  lo,hi: TPoint3f; //full range of scalar
+  index: integer;
+  unique: boolean;
+end;
+TPropsArray = array of TProps;
+
+//http://stackoverflow.com/questions/24335585/quicksort-drama
+procedure QuickSort(left, right: integer; var s: TPropsArray);
+var
+  l, r, lswap: integer;
+  pivot: single;
+begin
+  if (right > left) then begin
+    l := left;
+    r := right;
+    pivot := s[s[(right + left) div 2].index].lo.Z;
+    while (l < r) do begin
+      while s[s[l].index].lo.Z < pivot do
+        l := l + 1;
+      while s[s[r].index].lo.Z > pivot do
+        r := r - 1;
+      if (l <= r) then begin
+        lswap := s[r].index;
+        s[r].index := s[l].index;
+        s[l].index := lswap;
+        l := l + 1;
+        r := r - 1;
+      end;
+    end;
+    if (left < r) then
+      QuickSort(left, r, s);
+    if (right > l) then
+      QuickSort(l, right, s);
+  end;
+end;
+
+procedure SortArray(var s: TPropsArray);
+var
+ i : integer;
+begin
+  if length(s) < 1 then exit;
+  for i := 0 to (length(s)-1) do  //set indices
+     s[i].index := i;
+  quicksort(low(s), high(s), s);
+end;
+
+
+function TTrack.SimplifyRemoveRedundant(Tol: float): boolean;
+var
+   pos, pos0: TPoint3f;
+   track, i, j, m, mi: integer;
+   xI, xJ : ^TProps;
+   xTracks: TPropsArray;
+   tolSqr, dx : single;
+begin
+  result := false;
+  if (tol <= 0.0) then exit;
+  if (n_count < 1) or (length(tracks) < 4) then exit;
+  showmessage('Warning: SimplifyRemoveRedundant not optimized: please check for updates');
+  tolSqr := sqr(tol); //e.g. if tol=3mm, then tolSqr=9, avoiding slow sqrt in pythagorean formule
+  setlength(xTracks, n_count);
+  //first pass: record endpoints of all tracks
+  track := 0;
+  i := 0;
+  while i < length(tracks) do begin
+        m :=   asInt( tracks[i]);
+        inc(i);
+        for mi := 0 to (m-1) do begin
+            pos.X := tracks[i]; inc(i);
+            pos.Y := tracks[i]; inc(i);
+            pos.Z := tracks[i]; inc(i);
+            if mi = 0 then
+               pos0 := pos;
+        end;
+        xTracks[track].unique := true;
+        if pos0.Z < pos.Z then begin
+           xTracks[track].lo := pos0;
+           xTracks[track].hi := pos;
+        end else begin
+            xTracks[track].hi := pos0;
+            xTracks[track].lo := pos;
+        end;
+        track := track + 1;
+  end;
+  track := 0;
+  //{$DEFINE SLOW_METHOD}
+  {$IFDEF SLOW_METHOD}
+  for i := 0 to (n_count - 2) do begin
+      for j := (i + 1) to (n_count - 1) do begin
+          if (xTracks[j].unique) and (vectorDistanceSqr(xTracks[i].lo, xTracks[j].lo) < tolSqr) and (vectorDistanceSqr(xTracks[i].hi, xTracks[j].hi) < tolSqr) then begin
+             xTracks[j].unique := false;
+             track := track + 1;
+          end;
+      end;
+  end;
+  {$ELSE}
+  SortArray(xTracks);
+  for i := 0 to (n_count - 2) do begin
+    xI := @xTracks[xTracks[i].index];
+    j := i + 1;
+    repeat
+          xJ := @xTracks[xTracks[j].index];
+          dx :=  sqr(xJ^.lo.Z - xI^.lo.Z);
+          //if dx < 0 then showmessage('sorting error');
+          if (xJ^.unique) and (vectorDistanceSqr(xI^.lo, xJ^.lo) < tolSqr) and (vectorDistanceSqr(xI^.hi, xJ^.hi) < tolSqr) then begin
+             xJ^.unique := false;
+             track := track + 1;
+          end;
+          j := j + 1;
+    until (j = n_count) or (dx > tolSqr);
+  end;
+  {$ENDIF}
+  if track < 1 then exit; //no redundant tracks
+  showmessage(format('Removed %d redundant tracks (endpoints nearer than %.4g)', [track, tol]));
+  //remove redundant fibers
+  j := 0;
+  i := 0;
+  track := 0;
+  while i < length(tracks) do begin
+        m :=   asInt( tracks[i]); inc(i);
+        if xTracks[track].unique then begin
+           tracks[j] := asSingle(m); inc(j);
+        end;
+        if xTracks[track].unique then
+          for mi := 1 to (m * 3) do begin//*3 as each vertex stores XYZ
+              tracks[j] := tracks[i]; inc(j); inc(i);
+          end
+        else
+            i := i + (m * 3);
+        track := track + 1;
+  end;
+  setlength(tracks,j);
+  result := true;
+end; //SimplifyRemoveRedundant()
 
 destructor TTrack.Destroy;
 begin
