@@ -55,13 +55,11 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <TopLine Value="2130"/>
-        <CursorPos X="36" Y="2141"/>
+        <CursorPos X="82" Y="2138"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
-        <LoadedDesigner Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="prefs.pas"/>
@@ -75,6 +73,7 @@
       <Unit3>
         <Filename Value="nifti_loader.pas"/>
         <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="5"/>
         <TopLine Value="45"/>
         <CursorPos X="48" Y="45"/>
@@ -144,6 +143,10 @@
       <CompilerMessages>
         <IgnoredMessages idx5057="True"/>
       </CompilerMessages>
+      <CustomOptions Value="if SrcOS='linux' then begin
+  UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src';
+  IncPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src';
+end;"/>
     </Other>
   </CompilerOptions>
   <Debugging>
