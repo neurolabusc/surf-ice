@@ -3,20 +3,17 @@ program surfice;
 {$mode objfpc}{$H+}
 
 uses
-{$IFDEF FPC}{$IFNDEF UNIX} uscaledpi, {$ENDIF}{$IFDEF LINUX} Graphics, uscaledpi, {$ENDIF}{$ENDIF}
-  {$IFDEF UNIX}{$IFDEF UseCThreads}
-  cthreads,
-  {$ENDIF}{$ENDIF}
-  Interfaces, // this includes the LCL widgetset
+{$IFDEF FPC}Graphics, {$ENDIF}
+{$IFDEF UNIX}{$IFDEF UseCThreads}cthreads,{$ENDIF}{$ENDIF}
+  uscaledpi,Interfaces,
   Forms, lazopenglcontext, pascalscript, mainunit, Shaderu, prefs, nifti_loader,
   colorTable, track, scriptengine;
 
 {$R *.res}
 
 begin
-  RequireDerivedFormResource:=True;
-    Application.Title:='Surf Ice';
-
+  //RequireDerivedFormResource:=True;
+  Application.Title:='Surf Ice';
   Application.Initialize;
   Application.CreateForm(TGLForm1, GLForm1);
     Application.CreateForm(TScriptForm, ScriptForm);

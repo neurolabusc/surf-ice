@@ -10,7 +10,6 @@
       </Flags>
       <MainUnit Value="0"/>
       <Title Value="Surf Ice"/>
-      <ResourceType Value="res"/>
       <UseXPManifest Value="True"/>
       <XPManifest>
         <DpiAware Value="True"/>
@@ -67,7 +66,7 @@
       <Unit2>
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="4"/>
         <TopLine Value="142"/>
         <CursorPos X="31" Y="168"/>
         <UsageCount Value="210"/>
@@ -76,7 +75,7 @@
       <Unit3>
         <Filename Value="nifti_loader.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="5"/>
         <TopLine Value="45"/>
         <CursorPos X="48" Y="45"/>
         <UsageCount Value="210"/>
