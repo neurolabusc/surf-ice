@@ -17,4 +17,4 @@ cp surfice ~/Surf_Ice/surficeOld
 
 
 cd ~
-zip -FSr surfice_lx.zip Surf_Ice
+zip -FSr surfice_linux.zip Surf_Ice
