@@ -76,7 +76,7 @@
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="5"/>
         <TopLine Value="45"/>
-        <CursorPos X="48" Y="45"/>
+        <CursorPos X="75" Y="52"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit3>
@@ -121,6 +121,17 @@
       <OtherUnitFiles Value="lzma"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
+    <Conditionals Value="if TargetOS='linux' then
+  UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src';
+// example for adding linker options on Mac OS X
+//if TargetOS='darwin' then
+//  LinkerOptions := ' -framework OpenGL';
+
+// example for adding a unit and include path on Windows
+//if SrcOS='win' then begin
+//  UnitPath += ';win';
+//  IncPath += ';win';
+//end;"/>
     <CodeGeneration>
       <SmartLinkUnit Value="True"/>
       <Optimizations>
@@ -143,10 +154,6 @@
       <CompilerMessages>
         <IgnoredMessages idx5057="True"/>
       </CompilerMessages>
-      <CustomOptions Value="if SrcOS='linux' then begin
-  UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src';
-  IncPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src';
-end;"/>
     </Other>
   </CompilerOptions>
   <Debugging>
