@@ -8,7 +8,7 @@ interface
 //{$include options.inc}
  uses
    {$IFDEF DGL} dglOpenGL, {$ELSE} gl, glext, {$ENDIF}
-   {$IFDEF FPC}FileUtil, GraphType, LCLProc,  LCLIntf,LResources,OpenGLContext,{$ELSE}Windows,glpanel, {$ENDIF}
+  uscaledpi, {$IFDEF FPC} FileUtil, GraphType, LCLProc,  LCLIntf,LResources,OpenGLContext,{$ELSE}Windows,glpanel, {$ENDIF}
   Graphics,Classes, SysUtils, Forms,  Buttons,userdir, define_types,
 
   Dialogs, ComCtrls, Menus, Controls,
@@ -30,6 +30,7 @@ var
  aLabel: array of TLabel;
  aTrack: array of TTrackbar;
  gUpdateGLSL: boolean = false;
+ kScale: single = 1.0;
 
 function Val2Percent (min,val,max: single): integer;
 var
@@ -67,38 +68,48 @@ var
 begin
  {$IFDEF FPC}
  {$IFDEF WINDOWS}
-   kT := GLForm1.LightElevTrack.top+4; //Check with Windows * and 150% scaling!
+   kT := GLForm1.LightElevTrack.top+2; //Check with Windows * and 150% scaling!
  {$ELSE}
    {$IFDEF Darwin}
     kT := GLForm1.LightElevTrack.top; //do this dynamically - if user adjusts text size in Windows7, the position of static controls changes!
 
    {$ELSE} //Linux
-   kT := GLForm1.LightElevTrack.top+4; //do this dynamically - if user adjusts text size in Windows7, the position of static controls changes!
+   kT := GLForm1.Label2.top+4; //do this dynamically - if user adjusts text size in Windows7, the position of static controls changes!
    {$ENDIF}
  {$ENDIF}
  {$ELSE}
    kT := GLForm1.LightElevTrack.top+1; //do this dynamically - if user adjusts text size in Windows7, the position of static controls changes!
 {$ENDIF}
-  result := kT+ (kH* N);
+  result := kT+ round(kScale * kH* N);
 end;
 
 function ShaderPanelHeight: integer;
+var
+  i: integer;
 begin
 {$IFDEF FPC}
  {$IFDEF WINDOWS}
-   result := 1 + GLForm1.LightElevTrack.top+round((GLForm1.LightElevTrack.height+1)* (gShader.nUniform+2));
-   //result := controlTop(gShader.nUniform+1);
+   result := 3 + GLForm1.ElevTrack.top+round((GLForm1.ElevTrack.height+1)* (gShader.nUniform+1.5));
  {$ELSE}
-   {$IFDEF LCLCocoa}
-      result := controlTop(gShader.nUniform+1);
+   {$IFDEF LINUX}
+    //result := controlTop(round(kScale * (gShader.nUniform+1)+(kH )));
+    i := gShader.nUniform+1;
+
+    if (i > kMaxUniform) then
+       i := kMaxUniform;
+    if (i < 1) then
+     result := aLabel[1].Top
+    else
+        result := aLabel[i].Top+aLabel[i].Height;
    {$ELSE}
      result := controlTop(gShader.nUniform+1)+(kH div 2);
-   {$ENDIF}
+    {$ENDIF}
  {$ENDIF}
 {$ELSE}
     result := controlTop(gShader.nUniform+1)+(kH div 2)-12;
 {$ENDIF}
 end;
+
 
 procedure CreateControl(N: integer; var aLabel: TLabel; var aCheck: TCheckbox; var aTrack: TTrackbar);
 const
@@ -137,15 +148,16 @@ lT := ControlTop(N);
     aTrack.TickStyle := tsNone;
     aTrack.Visible := false;
     {$IFDEF LINUX}
-    aTrack.Top := lT-10;
+    aTrack.Top := lT-12;
+    aTrack.Width := 120;
     {$ELSE}
     aTrack.Top := lT;
+    aTrack.Width := 120;
     {$ENDIF}
     aTrack.Tag := N;
     aTrack.Left := kL2;
     aTrack.Min := 0;
     aTrack.Max := 100;
-    aTrack.Width := 140;
     {$IFDEF FPC}{$IFDEF WINDOWS}
     aTrack.Height := 30;
     {$ENDIF} {$ENDIF}
@@ -389,6 +401,11 @@ begin
 end;
 
 
-
+initialization
+kScale := getFontScale;
+if kScale > 0 then
+   kScale := 1/kScale
+else
+    kScale := 1;
 end.
 

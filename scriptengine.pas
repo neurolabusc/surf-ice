@@ -8,7 +8,7 @@ uses
 {$ifndef isTerminalApp}
   {$IFDEF FPC}
          {$IFDEF Unix} LCLIntf,  {$ENDIF}
-         Resources,
+         //Resources,
   {$ELSE}
     Windows,
   {$ENDIF}
