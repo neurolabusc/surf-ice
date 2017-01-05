@@ -2,7 +2,7 @@ unit mesh;
 {$Include opts.inc} //compile for either dglOpenGL or glext
 {$mode objfpc}{$H+}
 interface
-
+// added 3do, PLY2, wfr formats
 uses
   {$IFDEF DGL} dglOpenGL, {$ELSE} gl, {$IFDEF COREGL}glext,  {$ENDIF}  {$ENDIF}
   {$IFDEF CTM} ctm_loader, {$ENDIF}
@@ -68,6 +68,7 @@ type
     procedure MakeSphere;
     procedure BuildList  (Clr: TRGBA);
     procedure BuildListOverlay (Clr: TRGBA);
+    function Load3Do(const FileName: string): boolean;
     function LoadAc(const FileName: string): boolean;
     function LoadDae(const FileName: string): boolean; //only subset!
     function LoadGts(const FileName: string): boolean;
@@ -92,12 +93,14 @@ type
     function LoadOff(const FileName: string): boolean;
     procedure LoadPial(const FileName: string);
     procedure LoadPly(const FileName: string);
+    function LoadPly2(const FileName: string): boolean;
     procedure LoadStlAscii(const FileName: string);
     procedure LoadStl(const FileName: string);
     function LoadSurf(const FileName: string): boolean;
     function LoadSrf(const FileName: string): boolean;
     procedure LoadVtk(const FileName: string);
     procedure LoadW(const FileName: string; lOverlayIndex: integer);
+    function LoadWfr(const FileName: string): boolean; //EMSE wireframe
     procedure LoadNii(const FileName: string; lOverlayIndex: integer);
     procedure LoadMeshAsOverlay(const FileName: string; lOverlayIndex: integer);
   public
@@ -1853,6 +1856,41 @@ begin
    strlst.Free;
 end; // LoadPly()
 
+function TMesh.LoadPly2(const FileName: string): boolean;
+//http://www.riken.jp/brict/Yoshizawa/Research/PLYformat/PLYformat.html
+label
+   666;
+var
+   f: TextFile;
+   v, t, i3, num_v, num_f: integer;
+begin
+     result := false;
+     AssignFile(f, FileName);
+     Reset(f);
+     Read(f, num_v);
+     Read(f, num_f);
+     if (num_v < 3) or (num_f < 1) then
+        goto 666;
+     setlength(vertices, num_v); //this format does not report number of faces/vertices, so we need to guess
+     setlength(faces, num_f);
+     for v := 0 to (num_v - 1) do begin
+         read(f, vertices[v].X);
+         read(f, vertices[v].Y);
+         read(f, vertices[v].Z);
+     end;
+     for t := 0 to (num_f - 1) do begin
+         read(f, i3);
+         if i3 <> 3 then goto 666;
+         read(f, faces[t].X);
+         read(f, faces[t].Y);
+         read(f, faces[t].Z);
+     end;
+     result := true;
+ 666:
+     if not result then showmessage('Unable to load PLY2 file '+filename);
+     CloseFile(f);
+end;
+
 function KeyStringInt(key, str: string): integer;
 // KeyStringInt('Dim0', 'Dim0="5124"') returns 5123
 var
@@ -2566,6 +2604,57 @@ if sList.Count >= item then
 sList.free;
 end; //item2ToInt()
 
+function TMesh.Load3Do(const FileName: string): boolean;
+//http://wiki.xentax.com/index.php/Shaiya_Online/Model
+//assume this is always little-endian?
+label
+   666;
+type
+  T3Do_vertex = packed record
+     vx, vy, vz, nx, ny, nz, tu, tv: single;
+  end;
+  T3Do_face = packed record
+    v1, v2, v3: uint16;
+  end;
+var
+   f: file;
+   sz, i: integer;
+   vert: T3Do_vertex;
+   face: T3Do_face;
+   null, numVerts, numFaces: uint32;
+begin
+  result := false;
+  AssignFile(f, FileName);
+  FileMode := fmOpenRead;
+  Reset(f,1);
+  sz := FileSize(f);
+  if sz < 64 then goto 666;
+  blockread(f, null, SizeOf(null) );
+  blockread(f, numVerts, SizeOf(numVerts) );
+  if (null <> 0) or (numVerts < 3) then goto 666; //signature incorrect
+  setlength(vertices, numVerts);
+  for i := 0 to (numVerts - 1) do begin
+    blockread(f, vert, SizeOf(vert) );
+    vertices[i].X := vert.vx;
+    vertices[i].Y := vert.vy;
+    vertices[i].Z := vert.vz;
+  end;
+  blockread(f, numFaces, SizeOf(numFaces));
+  if numFaces < 1 then goto 666;
+  setlength(faces, numFaces);
+  for i := 0 to (numFaces - 1) do begin
+    blockread(f, face, SizeOf(face) );
+    faces[i].X := face.v1;
+    faces[i].Y := face.v2;
+    faces[i].Z := face.v3;
+  end;
+  result := true;
+  666 :
+  CloseFile(f);
+  if not result then showmessage('Unable to decode Shaiya_Online/Model '+ FileName);
+  //UnifyVertices(faces, vertices);
+end; // Load3Do()
+
 function TMesh.LoadAc(const FileName: string): boolean;
 //http://www.inivis.com/ac3d/man/ac3dfileformat.html
 //https://en.wikipedia.org/wiki/AC3D
@@ -3201,8 +3290,6 @@ begin
      end;
 end; //ReadNum()
 
-
-
 function TMesh.LoadMeshAscii(const FileName: string): boolean;
 label 666;
 var
@@ -3266,7 +3353,6 @@ end;
 
 function TMesh.LoadMesh(const FileName: string): boolean;
 // http://brainvisa.info/aimsdata-4.5/user_doc/formats.html
-//
 type
   THdr = packed record
      sig: array [1..5] of char; //"binar" or "ascii"
@@ -3500,7 +3586,6 @@ begin
                vertices[i + nV].Z := vertices[i + nV].Y;
                vertices[i + nV].Y := temp;
            end;
-
         end;
         if (id = 'POLS') then begin
            blockread(f, chunk.ID, SizeOf(chunk.ID) );
@@ -4093,6 +4178,8 @@ begin
      CloseOverlays;
      setlength(faces, 0);
      setlength(vertices, 0);
+     if (ext = '.3DO') then
+        Load3Do(Filename);
      if (ext = '.AC') then
         LoadAc(Filename);
      if (ext = '.DAE') then
@@ -4121,6 +4208,8 @@ begin
          LoadOff(Filename);
      if (ext = '.PLY') then
          LoadPly(Filename);
+     if (ext = '.PLY2') then
+         LoadPly2(Filename);
      if (ext = '.GII') then
          LoadGii(Filename,0, 1);
      if (ext = '.VTK') then
@@ -4140,6 +4229,8 @@ begin
         LoadAsc_Srf(Filename);
      if (ext = '.OBJ') then
          LoadObj(Filename);
+     if (ext = '.WFR') then
+        LoadWfr(Filename);
      if length(faces) < 1 then begin//not yet loaded - see if it is freesurfer format (often saved without filename extension)
         LoadPial(Filename);
         if length(faces) > 0 then
@@ -4454,6 +4545,66 @@ begin
      end;
      CloseFile(f);
 end; // LoadW()
+
+function TMesh.LoadWfr(const FileName: string): boolean; //EMSE wireframe
+//http://eeg.sourceforge.net/doc_m2html/bioelectromagnetism/emse_write_wfr.html
+//http://eeg.sourceforge.net/doc_m2html/bioelectromagnetism/emse_read_wfr.html
+label
+   666;
+const
+  kBlockSize = 16384;
+var
+   f: TextFile;
+   s: string;
+   version, file_type, minor_rev, num_v, num_f, meshtype: integer;
+   strlst : TStringList;
+begin
+     result := false;
+     strlst:=TStringList.Create;
+     AssignFile(f, FileName);
+     Reset(f);
+     Readln(f, version, file_type);  //'3\t4000\n'
+     Readln(f, minor_rev);  //'3\n'
+     if ((file_type <> 4000) and (file_type <> 8000)) or (minor_rev <> 3) then begin
+       showmessage(format('cannot read WFR file type: %d revision %d',[file_type, minor_rev]));
+       goto 666;
+     end;
+     Readln(f, meshtype); //meshtype - 0=unknown, 40=scalp, 80=outerskull, 100=innerskull, 200=brain
+     setlength(vertices, kBlockSize); //this format does not report number of faces/vertices, so we need to guess
+     setlength(faces, kBlockSize);
+     num_v := 0;
+     num_f := 0;
+     DefaultFormatSettings.DecimalSeparator := '.';
+     while not EOF(f) do begin
+           Readln(f, s);  //'v -75.442212 -33.082844 -24.913490' or 't 0 1 2'
+           if length(s) < 7 then continue;
+           if (upcase(s[1]) <> 'V') and (upcase(s[1]) <> 'T') then continue; //only read 'f'ace and 'v'ertex lines
+           strlst.DelimitedText := s;
+           if (strlst.count < 4) then continue;
+           if upcase(s[1]) = 'V' then begin //vertex
+              if ((num_v) >= length(vertices)) then
+                 setlength(vertices, length(vertices)+kBlockSize);
+              vertices[num_v].X := strtofloatDef(strlst[1], 0);
+              vertices[num_v].Y := strtofloatDef(strlst[2], 0);
+              vertices[num_v].Z := strtofloatDef(strlst[3], 0);
+              inc(num_v);
+           end;
+           if upcase(s[1]) = 'T' then begin //triangle
+              if ((num_f) >= length(faces)) then
+                 setlength(faces, length(faces)+kBlockSize);
+              faces[num_f].X := strtointDef(strlst[1], 1);
+              faces[num_f].Y := strtointDef(strlst[2], 1);
+              faces[num_f].Z := strtointDef(strlst[3], 1);
+              inc(num_f);
+           end;
+     end;
+     setlength(vertices, num_v); //trim to correct size
+     setlength(faces, num_f); //trim to correct size
+     result := true;
+ 666:
+     CloseFile(f);
+     strlst.free;
+end;
 
 procedure TMesh.LoadNii(const FileName: string; lOverlayIndex: integer);
 //Load NIfTI image as overlay
