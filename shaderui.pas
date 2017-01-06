@@ -55,7 +55,12 @@ const
   //kTrackHt = 30;
   kH = 30;//height
   {$ELSE}
-  kH = 30;//height
+   {$IFDEF Darwin}
+   kH = 22;
+   {$ELSE}
+   kH : integer = 26;//height
+   kTrackKludge : integer = 0; //Centos6 trackbars default to huge size aligned to bottom, Debian is different
+   {$ENDIF}
   {$ENDIF}
 {$ELSE}
 const
@@ -68,13 +73,12 @@ var
 begin
  {$IFDEF FPC}
  {$IFDEF WINDOWS}
-   kT := GLForm1.LightElevTrack.top+2; //Check with Windows * and 150% scaling!
+   kT := GLForm1.ElevTrack.top+2; //Check with Windows * and 150% scaling!
  {$ELSE}
    {$IFDEF Darwin}
     kT := GLForm1.LightElevTrack.top; //do this dynamically - if user adjusts text size in Windows7, the position of static controls changes!
-
    {$ELSE} //Linux
-   kT := GLForm1.Label2.top+4; //do this dynamically - if user adjusts text size in Windows7, the position of static controls changes!
+   kT := GLForm1.LightElevTrack.top; //do this dynamically - if user adjusts text size in Windows7, the position of static controls changes!
    {$ENDIF}
  {$ENDIF}
  {$ELSE}
@@ -92,15 +96,13 @@ begin
    result := 3 + GLForm1.ElevTrack.top+round((GLForm1.ElevTrack.height+1)* (gShader.nUniform+1.5));
  {$ELSE}
    {$IFDEF LINUX}
-    //result := controlTop(round(kScale * (gShader.nUniform+1)+(kH )));
-    i := gShader.nUniform+1;
-
-    if (i > kMaxUniform) then
-       i := kMaxUniform;
-    if (i < 1) then
-     result := aLabel[1].Top
-    else
-        result := aLabel[i].Top+aLabel[i].Height;
+   i := gShader.nUniform;
+   if (i > kMaxUniform) then
+      i := kMaxUniform;
+   if (i < 1) then
+    result := aTrack[1].Top+aTrack[1].Height
+   else
+       result := aTrack[i].Top+aTrack[i].Height + 6;
    {$ELSE}
      result := controlTop(gShader.nUniform+1)+(kH div 2);
     {$ENDIF}
@@ -110,12 +112,10 @@ begin
 {$ENDIF}
 end;
 
-
 procedure CreateControl(N: integer; var aLabel: TLabel; var aCheck: TCheckbox; var aTrack: TTrackbar);
 const
-  //kH = 30;//height
   kL1 = 6;
-  kL2 = 118;
+  kL2 = 136;
 var
   lT: integer;
   //kT: integer;
@@ -126,48 +126,69 @@ begin
    kT := GLForm1.ShaderDrop.top+1{+GLForm1.ShaderDrop.height}; //do this dynamically - if user adjusts text size in Windows7, the position of static controls changes!
 {$ENDIF} *)
 lT := ControlTop(N);
+aTrack := TTrackbar.Create(GLForm1);
+aTrack.Parent := GLForm1.ShaderBox;
+aTrack.TickStyle := tsNone;
+aTrack.Visible := false;
+{$IFDEF LINUX}
+ if aTrack.Height < kH then
+    aTrack.Height := kH;
+if (aTrack.Height > kH) then begin
+ //kH := aTrack.Height+2;
+ lT := ControlTop(N);
+end;
+kTrackKludge := 0 ;
+//if aTrack.Height > 22)
+//writeln('--->'+inttostr(aTrack.Height));
+aTrack.Top := lT;
+aTrack.Width := 72;
+{$ELSE}
+aTrack.Top := lT;
+aTrack.Width := 72;
+{$ENDIF}
+aTrack.Tag := N;
+aTrack.Left := kL2;
+aTrack.Min := 0;
+aTrack.Max := 100;
+{$IFDEF FPC}{$IFDEF WINDOWS}
+aTrack.Height := 30;
+{$ENDIF} {$ENDIF}
+{$IFDEF FPC}
+aTrack.OnChange := GLForm1.UniformChange; //aTrack.OnChange := @GLForm1.UniformChange;
+{$ELSE}
+aTrack.OnChange := GLForm1.UniformChange;
+{$ENDIF}
+{$IFNDEF FPC}
+aTrack.Height := kH; //Delphi7 uses a crazy default height
+{$ENDIF}
+
    aLabel := TLabel.Create(GLForm1);
    aLabel.Parent := GLForm1.ShaderBox;
    aLabel.Visible := false;
    aLabel.Caption := inttostr(N);//U.Name;
-   aLabel.Top := lT;//kT+ (kH* N);
+   //aLabel.Top := lT;
+   //aLabel.Top := lT+((kH-aLabel.Height) );//kT+ (kH* N);
+   {$IFDEF Linux}
+   aLabel.Top := lT +kTrackKludge;//kT+ (kH* N);
+   {$ELSE}
+   aLabel.Top := lT;
+   {$ENDIF}
    aLabel.Left := kL1;
     aCheck := TCheckbox.Create(GLForm1);
     aCheck.Parent := GLForm1.ShaderBox;
     aCheck.Visible := false;
+    {$IFDEF Linux}
+    aCheck.Top := lT + kTrackKludge;
+    {$ELSE}
     aCheck.Top := lT;//kT+ (kH* N);
+    {$ENDIF}
+    //aCheck.Top := lT;
     aCheck.Tag := N;
     aCheck.Left := kL2;
     {$IFDEF FPC}
      aCheck.OnClick := GLForm1.UniformChange; //2015   aCheck.OnClick := @GLForm1.UniformChange;
     {$ELSE}
     aCheck.OnClick := GLForm1.UniformChange;
-    {$ENDIF}
-    aTrack := TTrackbar.Create(GLForm1);
-    aTrack.Parent := GLForm1.ShaderBox;
-    aTrack.TickStyle := tsNone;
-    aTrack.Visible := false;
-    {$IFDEF LINUX}
-    aTrack.Top := lT-12;
-    aTrack.Width := 120;
-    {$ELSE}
-    aTrack.Top := lT;
-    aTrack.Width := 120;
-    {$ENDIF}
-    aTrack.Tag := N;
-    aTrack.Left := kL2;
-    aTrack.Min := 0;
-    aTrack.Max := 100;
-    {$IFDEF FPC}{$IFDEF WINDOWS}
-    aTrack.Height := 30;
-    {$ENDIF} {$ENDIF}
-    {$IFDEF FPC}
-    aTrack.OnChange := GLForm1.UniformChange; //aTrack.OnChange := @GLForm1.UniformChange;
-    {$ELSE}
-    aTrack.OnChange := GLForm1.UniformChange;
-    {$ENDIF}
-    {$IFNDEF FPC}
-    aTrack.Height := kH; //Delphi7 uses a crazy default height
     {$ENDIF}
  end;
 
@@ -403,6 +424,9 @@ end;
 
 initialization
 kScale := getFontScale;
+{$IFDEF LINUX}
+kH := round(kH * kScale);
+{$ENDIF}
 if kScale > 0 then
    kScale := 1/kScale
 else

@@ -44,9 +44,7 @@ begin
        (Control as TStringGrid).DefaultColWidth := ScaleY((Control as TStringGrid).DefaultColWidth, FromDPI);
       (Control as TStringGrid).DefaultRowHeight := ScaleY((Control as TStringGrid).DefaultRowHeight, FromDPI);
     end;
-
   end;
-
   if Control is TWinControl then
   begin
     WinControl := TWinControl(Control);
