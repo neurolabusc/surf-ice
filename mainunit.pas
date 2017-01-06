@@ -2720,7 +2720,6 @@ var
   c: char;
   forceReset: boolean = false;
 begin
-
   //check if user includes parameters
   gPrefs.initScript := ''; //e.g. 'c:\dir\script.gls'
   i := 1;
@@ -2768,16 +2767,12 @@ begin
      gTrack.TrackTubeSlices := gPrefs.TrackTubeSlices;
   gTrack.isTubes := gPrefs.TracksAreTubes;
   Application.ShowButtonGlyphs:= sbgNever;
-  //GLbox:= TOpenGLControl.Create(GLForm1);
-  //GLbox.Align := alClient;
-  //GLBox.Parent := GLForm1;
   {$IFDEF COREGL}
   GLbox.OpenGLMajorVersion:= 4;
   {$ELSE}
   GLbox.OpenGLMajorVersion:= 2;
   {$ENDIF}
   GLbox.OpenGLMinorVersion:= 1;
-
   GLbox.AutoResizeViewport:= true;   // http://www.delphigl.com/forum/viewtopic.php?f=10&t=11311
   if gPrefs.MultiSample then
   GLBox.MultiSampling:= 4;
@@ -2833,7 +2828,7 @@ begin
   gPrefs.SupportBetterRenderQuality := InitGLSL(true);
   GLBox.ReleaseContext;
   MultiPassRenderingToolsUpdate;
-   ShaderDropChange(sender);
+  ShaderDropChange(sender);
   //AddNodesMenuClick(sender);
   //AddOverlayMenuClick(sender);
   //AddTracksMenuClick(sender);

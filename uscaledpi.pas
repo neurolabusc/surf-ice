@@ -5,8 +5,8 @@ unit uscaledpi;
 interface
 
 uses
-   {$IFDEF Linux} FileUtil, Process, Classes,SysUtils, {$ENDIF}
-   Forms, Graphics, Controls, ComCtrls;
+   {$IFDEF Linux} StrUtils, FileUtil, Process, Classes,SysUtils, {$ENDIF}
+   Forms, Graphics, Controls, ComCtrls, Grids;
 
 procedure HighDPI(FromDPI: integer);
 procedure ScaleDPI(Control: TControl; FromDPI: integer);
@@ -24,17 +24,26 @@ begin
   begin
     Left := ScaleX(Left, FromDPI);
 
-    //if (Height > 30) and (Height <= 36) then begin
-    if Control is TTrackBar then begin
-      i := 22;
-      Top := ScaleY(Top, FromDPI) ;
-       Height := ScaleY(i, FromDPI);
+    {$IFDEF LINUX} //strange minimum size and height on Lazarus 1.6.2
+    if (Control is TTrackBar) then begin
+      //i := 22;
+      Height := ScaleY(Height, FromDPI);
+      i := (Height) div 3;
+      Top := ScaleY(Top, FromDPI) - i ;
+
     end else begin
        Top :=ScaleY(Top, FromDPI);
        Height := ScaleY(Height, FromDPI);
     end;
+    {$ELSE}
+       Top :=ScaleY(Top, FromDPI);
+       Height := ScaleY(Height, FromDPI);
+    {$ENDIF}
     Width := ScaleX(Width, FromDPI);
-
+    if (Control is TStringGrid) then begin
+       (Control as TStringGrid).DefaultColWidth := ScaleY((Control as TStringGrid).DefaultColWidth, FromDPI);
+      (Control as TStringGrid).DefaultRowHeight := ScaleY((Control as TStringGrid).DefaultRowHeight, FromDPI);
+    end;
 
   end;
 
@@ -52,15 +61,36 @@ end;
 function getFontScale: single;
 var
   AProcess: TProcess;
-  Exe: String;
+  Exe, Str: String;
   AStringList: TStringList;
 begin
+  //result := 1.5; exit;
   result := 1.0;
+  if (Screen.PixelsPerInch > 48) then
+     result := Screen.PixelsPerInch / 96;
   Exe := FindDefaultExecutablePath('gsettings');
   if length(Exe) < 1 then exit;
   if not FileExists(Exe) then exit;
+  result := 1;
   AProcess := TProcess.Create(nil);
   AProcess.Executable:=Exe;
+  //get scaling factor - this is an uint32, e.g. 1,2,3
+  AProcess.Parameters.Add('get');
+  AProcess.Parameters.Add('org.gnome.desktop.interface');
+  AProcess.Parameters.Add('scaling-factor');
+  AProcess.Options := AProcess.Options + [poWaitOnExit, poUsePipes];
+  AProcess.Execute;
+  if (AProcess.ExitCode = 0) then begin
+     AStringList := TStringList.Create;
+     AStringList.LoadFromStream(AProcess.Output);
+     if AStringList.Count > 0 then begin  //"uint32 2"
+        Str := ExtractDelimited(2, AStringList.Strings[0],[' ']); //remove "uint32 "
+        result := result * strtofloatdef(Str, 1.0);
+     end;
+     AStringList.Free;
+  end;
+  //get fractional text-scaling-factor, range 1..1.9999, e.g. "1.5" - total zoom is scaling-factor*text-scaling-factor
+  AProcess.Parameters.Clear;
   AProcess.Parameters.Add('get');
   AProcess.Parameters.Add('org.gnome.desktop.interface');
   AProcess.Parameters.Add('text-scaling-factor');
@@ -70,10 +100,9 @@ begin
      AStringList := TStringList.Create;
      AStringList.LoadFromStream(AProcess.Output);
      if AStringList.Count > 0 then
-        result := strtofloatdef(AStringList.Strings[0], 1.0);
+        result := result * strtofloatdef(AStringList.Strings[0], 1.0);
      AStringList.Free;
   end;
-  // Now that the output from the process is processed, it can be freed.
   AProcess.Free;
 end;
 {$ELSE}
@@ -88,8 +117,6 @@ var
   i, FromDPI: integer;
   scale: single;
 begin
-  //if (fontSize <= 13) then exit;
-  //FromDPI :=  round(14/fontSize * 96);
   scale := getFontScale;
   if (scale = 1) or (scale = 0) then exit;
   FromDPI := round( 96/scale);
