@@ -83,7 +83,8 @@ begin
      AStringList.LoadFromStream(AProcess.Output);
      if AStringList.Count > 0 then begin  //"uint32 2"
         Str := ExtractDelimited(2, AStringList.Strings[0],[' ']); //remove "uint32 "
-        result := result * strtofloatdef(Str, 1.0);
+        result := strtofloatdef(Str, 1.0);
+        if result <= 0 then result := 1; //some machines report "0" for 1
      end;
      AStringList.Free;
   end;
@@ -99,6 +100,7 @@ begin
      AStringList.LoadFromStream(AProcess.Output);
      if AStringList.Count > 0 then
         result := result * strtofloatdef(AStringList.Strings[0], 1.0);
+     if result <= 0 then result := 1; //some machines report "0" for 1
      AStringList.Free;
   end;
   AProcess.Free;
