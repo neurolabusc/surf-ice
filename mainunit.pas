@@ -2768,11 +2768,13 @@ begin
   gTrack.isTubes := gPrefs.TracksAreTubes;
   Application.ShowButtonGlyphs:= sbgNever;
   {$IFDEF COREGL}
-  GLbox.OpenGLMajorVersion:= 4;
+  GLbox.OpenGLMajorVersion:= 3;
+  GLbox.OpenGLMinorVersion:= 3;
   {$ELSE}
   GLbox.OpenGLMajorVersion:= 2;
-  {$ENDIF}
   GLbox.OpenGLMinorVersion:= 1;
+  {$ENDIF}
+
   GLbox.AutoResizeViewport:= true;   // http://www.delphigl.com/forum/viewtopic.php?f=10&t=11311
   if gPrefs.MultiSample then
   GLBox.MultiSampling:= 4;
