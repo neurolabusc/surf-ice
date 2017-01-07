@@ -1,7 +1,7 @@
 unit define_types;
 interface
 {$ifndef isTerminalApp}
-uses graphics;
+uses graphics, math;
 {$endif}
 const
   NaN : double = 1/0;
@@ -74,6 +74,7 @@ function ExtractFileExtGzUpper(FileName: string): string;
 function FSize (lFName: String): longint;
 function ChangeFileExtX( lFilename: string; lExt: string): string;
 function ReadNumBin(var f: TFByte): string; //read next ASCII number in binary file
+function float2str(Avalue:double; ADigits:integer):string; //e.g x:single=2.6; floattostrf(x,8,4);
 {$ifdef isTerminalApp}
 function RGBToColor(R, G, B: Byte): TColor;
 procedure ShowMessage(msg: string);
@@ -87,6 +88,27 @@ function asRGBA(clr: TColor): TRGBA;
 implementation
 
 uses sysutils;//, dialogs;
+
+function float2str(Avalue:double; ADigits:integer):string; //e.g x:single=2.6; floattostrf(x,8,4);
+//http://stackoverflow.com/questions/5650051/how-to-keep-2-decimal-places-in-delphi
+var v:double; p:integer; e:string;
+begin
+if abs(Avalue)<1 then
+begin
+  result:=floatTostr(Avalue);
+  p:=pos('E',result);
+  if p>0 then
+  begin
+    e:=copy(result,p,length(result));
+    setlength(result,p-1);
+    v:=RoundTo(StrToFloat(result),-Adigits);
+    result:=FloatToStr(v)+e;
+  end else
+    result:=FloatToStr(RoundTo(Avalue,-Adigits));
+end
+else
+  result:=FloatToStr(RoundTo(Avalue,-Adigits));
+end;
 
 {$ifdef isTerminalApp}
 function Blue(rgb: TColor): BYTE;

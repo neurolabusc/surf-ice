@@ -1348,8 +1348,8 @@ begin
    GLForm1.StringGrid1.Cells[kFName, lIndex] := gMesh.Overlay[lIndex].FileName;
    GLForm1.StringGrid1.Cells[kLUT, lIndex] := GLForm1.LutDrop.Items[gMesh.Overlay[lIndex].LUTindex];
     OverlayBox.Height :=  2+ ( (2+gMesh.OpenOverlays)*(StringGrid1.DefaultRowHeight+1));
-    StringGrid1.Cells[kMin,lIndex] := FloatToStrF(gMesh.Overlay[lIndex].WindowScaledMin, ffGeneral, 8, 4);
-    StringGrid1.Cells[kMax,lIndex] := FloatToStrF(gMesh.Overlay[lIndex].WindowScaledMax, ffGeneral, 8, 4);
+    StringGrid1.Cells[kMin,lIndex] := float2str(gMesh.Overlay[lIndex].WindowScaledMin,3);//FloatToStrF(gMesh.Overlay[lIndex].WindowScaledMin, ffGeneral, 8, 4);
+    StringGrid1.Cells[kMax,lIndex] := float2str(gMesh.Overlay[lIndex].WindowScaledMax,3);//FloatToStrF(gMesh.Overlay[lIndex].WindowScaledMax, ffGeneral, 8, 4);
   end;
   UpdateImageIntensity;
 end;
@@ -2176,7 +2176,7 @@ begin
      GLbox.Repaint;
   end;
   origin := GetOrigin(scale);
-  str :=  'Surf Ice '+' 25 December 2016 '
+  str :=  'Surf Ice '+' 1 January 2016 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}

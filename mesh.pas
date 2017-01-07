@@ -7,7 +7,7 @@ uses
   {$IFDEF DGL} dglOpenGL, {$ELSE} gl, {$IFDEF COREGL}glext,  {$ENDIF}  {$ENDIF}
   {$IFDEF CTM} ctm_loader, {$ENDIF}
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, strutils,
-  base64, zstream, LcLIntf, nifti_loader, colorTable, matmath,
+  base64, zstream, LcLIntf, nifti_loader, colorTable, matmath, math,
   define_types;
 
 const
@@ -4644,7 +4644,7 @@ end; // LoadMeshAsOverlay()
 procedure TMesh.SetOverlayDescriptives(lOverlayIndex: integer);
 var
    mx, mn: single;
-   i, num_v: integer;
+   i, num_v, lLog10: integer;
 begin
   num_v := length(overlay[lOverlayIndex].intensity);
   if (num_v < 3) then exit;
@@ -4656,15 +4656,16 @@ begin
       if mn > overlay[lOverlayIndex].intensity  [i] then mn := overlay[lOverlayIndex].intensity  [i];
   overlay[lOverlayIndex].minIntensity := mn;
   overlay[lOverlayIndex].maxIntensity := mx;
+  lLog10 := trunc(log10( mx-mn))-1;
   if (mx > 4) and (mn < -1) then begin
      overlay[lOverlayIndex].windowScaledMin:= 2;
-     overlay[lOverlayIndex].windowScaledMax:= mx;
+     overlay[lOverlayIndex].windowScaledMax:= roundto(mx,lLog10);
   end else if (mx <= 0) and (mn < -4) then begin
      overlay[lOverlayIndex].windowScaledMin:= -2;
-     overlay[lOverlayIndex].windowScaledMax:= mn;
+     overlay[lOverlayIndex].windowScaledMax:= roundto(mn,lLog10); ;
   end else begin
-      overlay[lOverlayIndex].windowScaledMin:= mn;
-      overlay[lOverlayIndex].windowScaledMax := mx;
+      overlay[lOverlayIndex].windowScaledMin:= roundto(mn,lLog10);
+      overlay[lOverlayIndex].windowScaledMax := roundto(mx,lLog10);
   end;
   if (mn = mx) then begin
      showmessage('Error: no variability in overlay '+floattostr(mn));
