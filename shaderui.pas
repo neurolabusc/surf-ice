@@ -5,12 +5,12 @@ unit shaderui;
 {$mode delphi} {$H+}
 {$ENDIF}
 interface
-//{$include options.inc}
+{$include opts.inc}
  uses
-   {$IFDEF DGL} dglOpenGL, {$ELSE} gl, glext, {$ENDIF}
-  uscaledpi, {$IFDEF FPC} FileUtil, GraphType, LCLProc,  LCLIntf,LResources,OpenGLContext,{$ELSE}Windows,glpanel, {$ENDIF}
-  Graphics,Classes, SysUtils, Forms,  Buttons,userdir, define_types,
-
+   {$IFDEF DGL} dglOpenGL, {$ELSE} gl, {$ENDIF}
+   {$IFDEF COREGL} define_types, {$ENDIF} //UnitBound
+  {$IFDEF FPC} FileUtil, GraphType, LCLProc,  LCLIntf,LResources,OpenGLContext,{$ELSE}Windows,glpanel, {$ENDIF}
+  Graphics,Classes, SysUtils, Forms,  Buttons,userdir,
   Dialogs, ComCtrls, Menus, Controls,
   ExtCtrls, StdCtrls, shaderu;
 
@@ -26,11 +26,10 @@ implementation
 uses mainunit;
 
 var
- aCheck: array of TCheckbox;
- aLabel: array of TLabel;
- aTrack: array of TTrackbar;
- gUpdateGLSL: boolean = false;
- kScale: single = 1.0;
+   sLabel: array [1..kMaxUniform] of integer; //control count for Labels
+   sCheck: array [1..kMaxUniform] of integer; //control count for CheckBoxes
+   sTrack: array [1..kMaxUniform] of integer; //control count for TrackBars
+   gUpdateGLSL: boolean = false;
 
 function Val2Percent (min,val,max: single): integer;
 var
@@ -49,195 +48,79 @@ begin
   result := round(S);
 end;
 
-{$IFDEF FPC}
-const
-  {$IFDEF WINDOWS}
-  //kTrackHt = 30;
-  kH = 30;//height
-  {$ELSE}
-   {$IFDEF Darwin}
-   kH = 22;
-   {$ELSE}
-   kH : integer = 26;//height
-   kTrackKludge : integer = 0; //Centos6 trackbars default to huge size aligned to bottom, Debian is different
-   {$ENDIF}
-  {$ENDIF}
-{$ELSE}
-const
-  kH = 30;//height
-{$ENDIF}
-
-function ControlTop(N: integer): integer;
-var
-  kT: integer;
-begin
- {$IFDEF FPC}
- {$IFDEF WINDOWS}
-   kT := GLForm1.ElevTrack.top+2; //Check with Windows * and 150% scaling!
- {$ELSE}
-   {$IFDEF Darwin}
-    kT := GLForm1.LightElevTrack.top; //do this dynamically - if user adjusts text size in Windows7, the position of static controls changes!
-   {$ELSE} //Linux
-   kT := GLForm1.LightElevTrack.top; //do this dynamically - if user adjusts text size in Windows7, the position of static controls changes!
-   {$ENDIF}
- {$ENDIF}
- {$ELSE}
-   kT := GLForm1.LightElevTrack.top+1; //do this dynamically - if user adjusts text size in Windows7, the position of static controls changes!
-{$ENDIF}
-  result := kT+ round(kScale * kH* N);
-end;
-
 function ShaderPanelHeight: integer;
-var
-  i: integer;
 begin
-{$IFDEF FPC}
- {$IFDEF WINDOWS}
-   result := 3 + GLForm1.ElevTrack.top+round((GLForm1.ElevTrack.height+1)* (gShader.nUniform+1.5));
- {$ELSE}
-   {$IFDEF LINUX}
-   i := gShader.nUniform;
-   if (i > kMaxUniform) then
-      i := kMaxUniform;
-   if (i < 1) then
-    result := aTrack[1].Top+aTrack[1].Height
-   else
-       result := aTrack[i].Top+aTrack[i].Height + 6;
-   {$ELSE}
-     result := controlTop(gShader.nUniform+1)+(kH div 2);
-    {$ENDIF}
- {$ENDIF}
-{$ELSE}
-    result := controlTop(gShader.nUniform+1)+(kH div 2)-12;
-{$ENDIF}
+  result := 1 + GLForm1.LightElevTrack.top+GLForm1.LightElevTrack.height;
+  if (gShader.nUniform < 1) or (gShader.nUniform > kMaxUniform) or (sTrack[gShader.nUniform] = 0) then exit;
+  result := 1 + (GLForm1.ShaderBox.Controls[sTrack[gShader.nUniform]] as TTrackBar).top + (GLForm1.ShaderBox.Controls[sTrack[gShader.nUniform]] as TTrackBar).height;
 end;
 
-procedure CreateControl(N: integer; var aLabel: TLabel; var aCheck: TCheckbox; var aTrack: TTrackbar);
-const
-  kL1 = 6;
-  kL2 = 136;
-var
-  lT: integer;
-  //kT: integer;
-begin
-(*{$IFDEF FPC}
-   kT := GLForm1.ShaderDrop.top+4{+GLForm1.ShaderDrop.height}; //do this dynamically - if user adjusts text size in Windows7, the position of static controls changes!
-{$ELSE}
-   kT := GLForm1.ShaderDrop.top+1{+GLForm1.ShaderDrop.height}; //do this dynamically - if user adjusts text size in Windows7, the position of static controls changes!
-{$ENDIF} *)
-lT := ControlTop(N);
-aTrack := TTrackbar.Create(GLForm1);
-aTrack.Parent := GLForm1.ShaderBox;
-aTrack.TickStyle := tsNone;
-aTrack.Visible := false;
-{$IFDEF LINUX}
- if aTrack.Height < kH then
-    aTrack.Height := kH;
-if (aTrack.Height > kH) then begin
- //kH := aTrack.Height+2;
- lT := ControlTop(N);
-end;
-kTrackKludge := 0 ;
-//if aTrack.Height > 22)
-//writeln('--->'+inttostr(aTrack.Height));
-aTrack.Top := lT;
-aTrack.Width := 72;
-{$ELSE}
-aTrack.Top := lT;
-aTrack.Width := 72;
-{$ENDIF}
-aTrack.Tag := N;
-aTrack.Left := kL2;
-aTrack.Min := 0;
-aTrack.Max := 100;
-{$IFDEF FPC}{$IFDEF WINDOWS}
-aTrack.Height := 30;
-{$ENDIF} {$ENDIF}
-{$IFDEF FPC}
-aTrack.OnChange := GLForm1.UniformChange; //aTrack.OnChange := @GLForm1.UniformChange;
-{$ELSE}
-aTrack.OnChange := GLForm1.UniformChange;
-{$ENDIF}
-{$IFNDEF FPC}
-aTrack.Height := kH; //Delphi7 uses a crazy default height
-{$ENDIF}
-
-   aLabel := TLabel.Create(GLForm1);
-   aLabel.Parent := GLForm1.ShaderBox;
-   aLabel.Visible := false;
-   aLabel.Caption := inttostr(N);//U.Name;
-   //aLabel.Top := lT;
-   //aLabel.Top := lT+((kH-aLabel.Height) );//kT+ (kH* N);
-   {$IFDEF Linux}
-   aLabel.Top := lT +kTrackKludge;//kT+ (kH* N);
-   {$ELSE}
-   aLabel.Top := lT;
-   {$ENDIF}
-   aLabel.Left := kL1;
-    aCheck := TCheckbox.Create(GLForm1);
-    aCheck.Parent := GLForm1.ShaderBox;
-    aCheck.Visible := false;
-    {$IFDEF Linux}
-    aCheck.Top := lT + kTrackKludge;
-    {$ELSE}
-    aCheck.Top := lT;//kT+ (kH* N);
-    {$ENDIF}
-    //aCheck.Top := lT;
-    aCheck.Tag := N;
-    aCheck.Left := kL2;
-    {$IFDEF FPC}
-     aCheck.OnClick := GLForm1.UniformChange; //2015   aCheck.OnClick := @GLForm1.UniformChange;
-    {$ELSE}
-    aCheck.OnClick := GLForm1.UniformChange;
-    {$ENDIF}
- end;
-
- procedure CreateAllControls;
+procedure CreateAllControls;
  var
-  i: integer;
+   i, t: integer;
  begin
-  gUpdateGLSL := true;
-  setlength(aLabel,kMaxUniform+1);
-  setlength(aCheck,kMaxUniform+1);
-  setlength(aTrack,kMaxUniform+1);
-  for i := 1 to kMaxUniform do
-    CreateControl(i, aLabel[i], aCheck[i], aTrack[i]);
-  gUpdateGLSL := false;
+   for t := 1 to kMaxUniform do begin //assume we can not find control
+     sCheck[t] := 0;
+     sLabel[t] := 0;
+     sTrack[t] := 0;
+   end;
+   for i := 0 to GLForm1.ShaderBox.ControlCount - 1 do begin
+       t := GLForm1.ShaderBox.Controls[i].tag;
+       if (t < 1) or (t > kMaxUniform) then continue;
+       if (GLForm1.ShaderBox.Controls[i] is TCheckBox) then
+          sCheck[t] := i;
+       if (GLForm1.ShaderBox.Controls[i] is TLabel) then
+          sLabel[t] := i;
+       if (GLForm1.ShaderBox.Controls[i] is TTrackBar) then
+          sTrack[t] := i;
+   end;
  end;
 
- procedure ShowUniform(N: integer; U: TUniform);
- begin
-  if (n > kMaxUniform) or (n < 1) then
-    exit;
-  aLabel[n].Caption := U.Name;
-  aLabel[n].Visible := true;
-  if U.Widget = kBool then begin
-    aCheck[n].Visible := true;
-    aCheck[n].Checked := U.Bool;
-  end else
-    aCheck[n].visible := false;
-  if (U.Widget = kInt) or (U.Widget = kFloat) then begin
-    aTrack[n].Visible := true;
-    aTrack[n].position := Val2Percent(U.Min, U.DefaultV,U.Max);
-  end else
-    aTrack[n].visible := false;
- end;
-
+procedure ShowUniform(N: integer; U: TUniform);
+var
+  aCheck: TCheckBox;
+  aLabel: TLabel;
+  aTrack: TTrackBar;
+begin
+ if (n > kMaxUniform) or (n < 1) then
+   exit;
+ aCheck := (GLForm1.ShaderBox.Controls[sCheck[n]] as TCheckBox);
+ aLabel := (GLForm1.ShaderBox.Controls[sLabel[n]] as TLabel);
+ aTrack := (GLForm1.ShaderBox.Controls[sTrack[n]] as TTrackBar);
+ aLabel.Caption := U.Name;
+ aLabel.Visible := true;
+ if U.Widget = kBool then begin
+   aCheck.Visible := true;
+   aCheck.Checked := U.Bool;
+ end else
+   aCheck.visible := false;
+ if (U.Widget = kInt) or (U.Widget = kFloat) then begin
+   aTrack.Visible := true;
+   aTrack.position := Val2Percent(U.Min, U.DefaultV,U.Max);
+ end else
+   aTrack.visible := false;
+end;
 
  procedure SetShaderAdjust(lProperty: string; lVal: single);
 var
   UpperName: string;
   i: integer;
+   aCheck: TCheckBox;
+   aLabel: TLabel;
+   aTrack: TTrackBar;
 begin
   if gShader.nUniform < 1  then
     exit;
   UpperName := UpperCase(lProperty);
   for i := 1 to gShader.nUniform do begin
-    if UpperName = upperCase(aLabel[i].Caption) then begin
-      if aCheck[i].visible then
-        aCheck[i].Checked := not (lVal = 0.0)
+    aCheck := (GLForm1.ShaderBox.Controls[sCheck[i]] as TCheckBox);
+    aLabel := (GLForm1.ShaderBox.Controls[sLabel[i]] as TLabel);
+    aTrack := (GLForm1.ShaderBox.Controls[sTrack[i]] as TTrackBar);
+    if UpperName = upperCase(aLabel.Caption) then begin
+      if aCheck.visible then
+        aCheck.Checked := not (lVal = 0.0)
       else
-          aTrack[i].position := Val2Percent(gShader.Uniform[i].Min, lVal,gShader.Uniform[i].Max);
+          aTrack.position := Val2Percent(gShader.Uniform[i].Min, lVal,gShader.Uniform[i].Max);
       GLForm1.UniformChange(nil);
     end;//if property matches shader's caption
   end; //for each uniform
@@ -255,7 +138,6 @@ begin
   result := AppDir+'shadersOld'
   {$ENDIF}
 end;
-
 
 {$IFDEF COREGL}
 procedure UpdateTrackUniforms;
@@ -278,17 +160,14 @@ var
 begin
   gUpdateGLSL := true;
   LoadShader(lFilename, gShader);
-  //gUpdateGLSL := false; exit;
-  //if length(aLabel) <  kMaxUniform then
-  //  exit;
   if gShader.nUniform > 0  then
     for i := 1 to gShader.nUniform do
       ShowUniform(i, gShader.Uniform[i]);
   if gShader.nUniform < kMaxUniform then begin
     for i :=   (gShader.nUniform+1) to kMaxUniform do begin
-      aLabel[i].Visible := false;
-      aCheck[i].Visible := false;
-      aTrack[i].Visible := false;
+      (GLForm1.ShaderBox.Controls[sCheck[i]] as TCheckBox).Visible := false;
+      (GLForm1.ShaderBox.Controls[sLabel[i]] as TLabel).Visible := false;
+      (GLForm1.ShaderBox.Controls[sTrack[i]] as TTrackBar).Visible := false;
     end;//for all unused
   end; //not max uniforms
   GLForm1.ShaderBoxResize(nil);
@@ -387,28 +266,33 @@ end;
 procedure ReportUniformChange(Sender: TObject);
 var
   i: integer;
+  aCheck: TCheckBox;
+  aTrack: TTrackBar;
 begin
   if gUpdateGLSL then exit;
   //GLForm1.updatetimer.enabled := true;
   if gShader.nUniform > 0  then
     for i := 1 to gShader.nUniform do begin
+      aCheck := (GLForm1.ShaderBox.Controls[sCheck[i]] as TCheckBox);
+      aTrack := (GLForm1.ShaderBox.Controls[sTrack[i]] as TTrackBar);
       case gShader.Uniform[i].Widget of
         kBool: begin
-          if ACheck[i].visible then
-            gShader.Uniform[i].Bool := ACheck[i].checked;
+          if ACheck.visible then
+            gShader.Uniform[i].Bool := ACheck.checked;
           GLForm1.memo1.lines.add('Bool '+ gShader.Uniform[i].name+' '+boolstr(gShader.Uniform[i].Bool) );
 
           end;
         kInt:begin
-          if aTrack[i].visible then
-            gShader.Uniform[i].DefaultV := Track2I(aTrack[i].Position, gShader.Uniform[i].Min,gShader.Uniform[i].Max) ;
+          if aTrack.visible then
+            gShader.Uniform[i].DefaultV := Track2I(aTrack.Position, gShader.Uniform[i].Min,gShader.Uniform[i].Max) ;
           GLForm1.memo1.lines.add('Int '+ gShader.Uniform[i].name+' '+ inttostr(round(gShader.Uniform[i].defaultV)) );
           end;
         kFloat:
         begin
-          if aTrack[i].visible then
-            gShader.Uniform[i].DefaultV := Track2S(aTrack[i].Position, gShader.Uniform[i].Min,gShader.Uniform[i].Max) ;
+          if aTrack.visible then
+            gShader.Uniform[i].DefaultV := Track2S(aTrack.Position, gShader.Uniform[i].Min,gShader.Uniform[i].Max) ;
           GLForm1.memo1.lines.add('Float '+ gShader.Uniform[i].name+' '+ floattostrf(gShader.Uniform[i].defaultV,ffGeneral,4,4) );
+          //GLForm1.memo1.lines.add('FloatZ '+ floattostrf(gShader.Uniform[i].Min,ffGeneral,4,4))+' '+floattostrf(gShader.Uniform[i].Max,ffGeneral,4,4)) );
           (*{$IFDEF COREGL}
               if AnsiCompareText(gShader.Uniform[i].name, 'Ambient') = 0 then gShader.TrackAmbient:= UnitBound(gShader.Uniform[i].defaultV);
               if AnsiCompareText(gShader.Uniform[i].name, 'Diffuse') = 0 then gShader.TrackDiffuse:= UnitBound(gShader.Uniform[i].defaultV);
@@ -418,18 +302,8 @@ begin
       end;//case
     end;//cor each item
   {$IFDEF COREGL} UpdateTrackUniforms; {$ENDIF}
-
 end;
 
-
-initialization
-kScale := getFontScale;
-{$IFDEF LINUX}
-kH := round(kH * kScale);
-{$ENDIF}
-if kScale > 0 then
-   kScale := 1/kScale
-else
-    kScale := 1;
 end.
+
 

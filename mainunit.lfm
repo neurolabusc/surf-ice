@@ -1,12 +1,12 @@
 object GLForm1: TGLForm1
-  Left = 264
-  Height = 865
-  Top = 23
-  Width = 1060
+  Left = 393
+  Height = 780
+  Top = 114
+  Width = 1095
   AllowDropFiles = True
   Caption = 'Surf Ice'
-  ClientHeight = 865
-  ClientWidth = 1060
+  ClientHeight = 780
+  ClientWidth = 1095
   Menu = MainMenu1
   OnClose = FormClose
   OnCreate = FormCreate
@@ -15,11 +15,11 @@ object GLForm1: TGLForm1
   LCLVersion = '1.7'
   object ToolPanel: TPanel
     Left = 0
-    Height = 865
+    Height = 780
     Top = 0
     Width = 272
     Align = alLeft
-    ClientHeight = 865
+    ClientHeight = 780
     ClientWidth = 272
     TabOrder = 1
     object ClipBox: TGroupBox
@@ -98,12 +98,12 @@ object GLForm1: TGLForm1
     end
     object ShaderBox: TGroupBox
       Left = 1
-      Height = 195
+      Height = 110
       Top = 669
       Width = 270
       Align = alClient
       Caption = 'Shader'
-      ClientHeight = 173
+      ClientHeight = 88
       ClientWidth = 262
       ParentFont = False
       TabOrder = 1
@@ -154,10 +154,435 @@ object GLForm1: TGLForm1
         TickStyle = tsNone
         TabOrder = 2
       end
+      object meshAlphaTrack: TTrackBar
+        Left = 52
+        Height = 30
+        Hint = 'Adjust main mesh transparency'
+        Top = 30
+        Width = 92
+        Max = 100
+        OnChange = SurfaceAppearanceChange
+        Position = 100
+        TickStyle = tsNone
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 4
+      end
+      object XRayLabel: TLabel
+        Left = 4
+        Height = 16
+        Hint = 'These sliders control transparency of background image (left) and enhance occluded overlay/tracks/nodes (right).  Easter egg: click this button to toggle whether shader is applied to overlays/tracks/nodes'
+        Top = 34
+        Width = 30
+        Caption = 'XRay'
+        ParentColor = False
+        ParentShowHint = False
+        ShowHint = True
+        OnClick = XRayLabelClick
+      end
+      object MeshBlendTrack: TTrackBar
+        Left = 170
+        Height = 30
+        Hint = 'XRay: make internal overlays, tracks and nodes visible'
+        Top = 30
+        Width = 92
+        Max = 100
+        OnChange = SurfaceAppearanceChange
+        Position = 0
+        TickStyle = tsNone
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 5
+      end
+      object occlusionTrack: TTrackBar
+        Left = 170
+        Height = 30
+        Hint = 'Ambient Occlusion: make sulci and other crevices darker'
+        Top = 0
+        Width = 92
+        Max = 100
+        OnChange = SurfaceAppearanceChange
+        Position = 25
+        TickStyle = tsNone
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 6
+      end
+      object AOLabel: TLabel
+        Left = 138
+        Height = 16
+        Hint = 'Ambient occlusion makes sucli and other crevices darker'
+        Top = 4
+        Width = 19
+        Caption = 'AO'
+        ParentColor = False
+        ParentShowHint = False
+        ShowHint = True
+      end
+      object S1Track: TTrackBar
+        Tag = 1
+        Left = 170
+        Height = 30
+        Top = 90
+        Width = 92
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        TabOrder = 7
+      end
+      object S1Label: TLabel
+        Tag = 1
+        Left = 4
+        Height = 16
+        Top = 92
+        Width = 15
+        Caption = 'S1'
+        ParentColor = False
+        ParentShowHint = False
+      end
+      object S1Check: TCheckBox
+        Tag = 1
+        Left = 141
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 92
+        Width = 20
+        Checked = True
+        OnChange = UniformChange
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 8
+      end
+      object S2Label: TLabel
+        Tag = 2
+        Left = 4
+        Height = 16
+        Top = 122
+        Width = 15
+        Caption = 'S2'
+        ParentColor = False
+        ParentShowHint = False
+      end
+      object S2Check: TCheckBox
+        Tag = 2
+        Left = 141
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 122
+        Width = 20
+        Checked = True
+        OnChange = UniformChange
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 10
+      end
+      object S2Track: TTrackBar
+        Tag = 2
+        Left = 170
+        Height = 30
+        Top = 120
+        Width = 92
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        TabOrder = 9
+      end
+      object S3Track: TTrackBar
+        Tag = 3
+        Left = 170
+        Height = 30
+        Top = 150
+        Width = 92
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        TabOrder = 11
+      end
+      object S3Check: TCheckBox
+        Tag = 3
+        Left = 141
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 152
+        Width = 20
+        Checked = True
+        OnChange = UniformChange
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 12
+      end
+      object S3Label: TLabel
+        Tag = 3
+        Left = 4
+        Height = 16
+        Top = 152
+        Width = 15
+        Caption = 'S3'
+        ParentColor = False
+        ParentShowHint = False
+      end
+      object S4Label: TLabel
+        Tag = 4
+        Left = 4
+        Height = 16
+        Top = 182
+        Width = 15
+        Caption = 'S4'
+        ParentColor = False
+        ParentShowHint = False
+      end
+      object S4Check: TCheckBox
+        Tag = 4
+        Left = 141
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 182
+        Width = 20
+        Checked = True
+        OnChange = UniformChange
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 14
+      end
+      object S4Track: TTrackBar
+        Tag = 4
+        Left = 170
+        Height = 30
+        Top = 180
+        Width = 92
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        TabOrder = 13
+      end
+      object S5Label: TLabel
+        Tag = 5
+        Left = 4
+        Height = 16
+        Top = 212
+        Width = 15
+        Caption = 'S5'
+        ParentColor = False
+        ParentShowHint = False
+      end
+      object S5Check: TCheckBox
+        Tag = 5
+        Left = 141
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 212
+        Width = 20
+        Checked = True
+        OnChange = UniformChange
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 16
+      end
+      object S5Track: TTrackBar
+        Tag = 5
+        Left = 170
+        Height = 30
+        Top = 210
+        Width = 92
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        TabOrder = 15
+      end
+      object S6Label: TLabel
+        Tag = 6
+        Left = 4
+        Height = 16
+        Top = 242
+        Width = 15
+        Caption = 'S6'
+        ParentColor = False
+        ParentShowHint = False
+      end
+      object S7Label: TLabel
+        Tag = 7
+        Left = 4
+        Height = 16
+        Top = 272
+        Width = 15
+        Caption = 'S7'
+        ParentColor = False
+        ParentShowHint = False
+      end
+      object S8Label: TLabel
+        Tag = 8
+        Left = 4
+        Height = 16
+        Top = 302
+        Width = 15
+        Caption = 'S8'
+        ParentColor = False
+        ParentShowHint = False
+      end
+      object S9Label: TLabel
+        Tag = 9
+        Left = 4
+        Height = 16
+        Top = 332
+        Width = 15
+        Caption = 'S9'
+        ParentColor = False
+        ParentShowHint = False
+      end
+      object S10Label: TLabel
+        Tag = 10
+        Left = 4
+        Height = 16
+        Top = 362
+        Width = 23
+        Caption = 'S10'
+        ParentColor = False
+        ParentShowHint = False
+      end
+      object S6Check: TCheckBox
+        Tag = 6
+        Left = 141
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 242
+        Width = 20
+        Checked = True
+        OnChange = UniformChange
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 18
+      end
+      object S7Check: TCheckBox
+        Tag = 7
+        Left = 141
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 272
+        Width = 20
+        Checked = True
+        OnChange = UniformChange
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 20
+      end
+      object S8Check: TCheckBox
+        Tag = 8
+        Left = 141
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 302
+        Width = 20
+        Checked = True
+        OnChange = UniformChange
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 22
+      end
+      object S9Check: TCheckBox
+        Tag = 9
+        Left = 141
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 332
+        Width = 20
+        Checked = True
+        OnChange = UniformChange
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 24
+      end
+      object S10Check: TCheckBox
+        Tag = 10
+        Left = 141
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 362
+        Width = 20
+        Checked = True
+        OnChange = UniformChange
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 26
+      end
+      object S6Track: TTrackBar
+        Tag = 6
+        Left = 170
+        Height = 30
+        Top = 240
+        Width = 92
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        TabOrder = 17
+      end
+      object S7Track: TTrackBar
+        Tag = 7
+        Left = 170
+        Height = 30
+        Top = 270
+        Width = 92
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        TabOrder = 19
+      end
+      object S8Track: TTrackBar
+        Tag = 8
+        Left = 170
+        Height = 30
+        Top = 300
+        Width = 92
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        TabOrder = 21
+      end
+      object S9Track: TTrackBar
+        Tag = 9
+        Left = 170
+        Height = 30
+        Top = 330
+        Width = 92
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        TabOrder = 23
+      end
+      object S10Track: TTrackBar
+        Tag = 10
+        Left = 170
+        Height = 30
+        Top = 360
+        Width = 92
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        TabOrder = 25
+      end
       object Memo1: TMemo
         Left = 0
         Height = 58
-        Top = 115
+        Top = 30
         Width = 262
         Align = alBottom
         Lines.Strings = (
@@ -615,71 +1040,6 @@ object GLForm1: TGLForm1
           ''
         )
         TabOrder = 3
-      end
-      object meshAlphaTrack: TTrackBar
-        Left = 52
-        Height = 30
-        Hint = 'Adjust main mesh transparency'
-        Top = 30
-        Width = 92
-        Max = 100
-        OnChange = SurfaceAppearanceChange
-        Position = 100
-        TickStyle = tsNone
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 4
-      end
-      object XRayLabel: TLabel
-        Left = 4
-        Height = 16
-        Hint = 'These sliders control transparency of background image (left) and enhance occluded overlay/tracks/nodes (right).  Easter egg: click this button to toggle whether shader is applied to overlays/tracks/nodes'
-        Top = 34
-        Width = 30
-        Caption = 'XRay'
-        ParentColor = False
-        ParentShowHint = False
-        ShowHint = True
-        OnClick = XRayLabelClick
-      end
-      object MeshBlendTrack: TTrackBar
-        Left = 170
-        Height = 30
-        Hint = 'XRay: make internal overlays, tracks and nodes visible'
-        Top = 30
-        Width = 92
-        Max = 100
-        OnChange = SurfaceAppearanceChange
-        Position = 0
-        TickStyle = tsNone
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 5
-      end
-      object occlusionTrack: TTrackBar
-        Left = 170
-        Height = 30
-        Hint = 'Ambient Occlusion: make sulci and other crevices darker'
-        Top = 0
-        Width = 92
-        Max = 100
-        OnChange = SurfaceAppearanceChange
-        Position = 25
-        TickStyle = tsNone
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 6
-      end
-      object AOLabel: TLabel
-        Left = 138
-        Height = 16
-        Hint = 'Ambient occlusion makes sucli and other crevices darker'
-        Top = 4
-        Width = 19
-        Caption = 'AO'
-        ParentColor = False
-        ParentShowHint = False
-        ShowHint = True
       end
     end
     object TrackBox: TGroupBox
@@ -1185,7 +1545,7 @@ object GLForm1: TGLForm1
   end
   object CollapsedToolPanel: TPanel
     Left = 272
-    Height = 865
+    Height = 780
     Top = 0
     Width = 6
     Align = alLeft
@@ -1195,9 +1555,9 @@ object GLForm1: TGLForm1
   end
   object GLBox: TOpenGLControl
     Left = 278
-    Height = 865
+    Height = 780
     Top = 0
-    Width = 782
+    Width = 817
     Align = alClient
     OpenGLMajorVersion = 2
     OpenGLMinorVersion = 1

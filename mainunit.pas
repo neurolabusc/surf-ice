@@ -18,8 +18,38 @@ type
   { TGLForm1 }
   TGLForm1 = class(TForm)
     AOLabel: TLabel;
+    S1Check: TCheckBox;
+    S6Check: TCheckBox;
+    S6Label: TLabel;
+    S6Track: TTrackBar;
+    S2Check: TCheckBox;
+    S1Label: TLabel;
+    S7Check: TCheckBox;
+    S7Label: TLabel;
+    S7Track: TTrackBar;
+    S3Check: TCheckBox;
+    S2Label: TLabel;
+    S1Track: TTrackBar;
     RestrictSep2Menu: TMenuItem;
     RestrictHideNodesWithoutEdges: TMenuItem;
+    S8Check: TCheckBox;
+    S8Label: TLabel;
+    S8Track: TTrackBar;
+    S4Check: TCheckBox;
+    S3Label: TLabel;
+    S2Track: TTrackBar;
+    S9Check: TCheckBox;
+    S9Label: TLabel;
+    S9Track: TTrackBar;
+    S5Check: TCheckBox;
+    S4Label: TLabel;
+    S3Track: TTrackBar;
+    S10Check: TCheckBox;
+    S5Label: TLabel;
+    S4Track: TTrackBar;
+    S10Label: TLabel;
+    S5Track: TTrackBar;
+    S10Track: TTrackBar;
     TrackScalarRangeBtn: TButton;
     ColorbarMenu: TMenuItem;
     HelpMenu: TMenuItem;
@@ -224,6 +254,7 @@ type
     function ScreenShot: TBitmap;
     procedure ScriptMenuClick(Sender: TObject);
     procedure SetOverlayTransparency(Sender: TObject);
+    procedure ShaderBoxClick(Sender: TObject);
     procedure ShaderBoxResize(Sender: TObject);
     procedure ShaderDropChange(Sender: TObject);
     procedure ShowmessageError(s: string);
@@ -778,6 +809,11 @@ begin
   OverlayTimerStart;
 end;
 
+procedure TGLForm1.ShaderBoxClick(Sender: TObject);
+begin
+    //xxx
+end;
+
 
 procedure TGLForm1.ShaderBoxResize(Sender: TObject);
 const
@@ -787,8 +823,10 @@ var
 begin
   if not ShaderBox.Visible then exit;
   lDesiredControlSz := ShaderPanelHeight;
-  if ShaderBox.Height > (lDesiredControlSz+kMinMemoSz) then begin
+  if ShaderBox.ClientHeight > (lDesiredControlSz+kMinMemoSz) then begin
+    //if ShaderBox.Height > (lDesiredControlSz+kMinMemoSz) then begin
     Memo1.Height := ShaderBox.Height - lDesiredControlSz;
+    Memo1.Height := ShaderBox.ClientHeight - lDesiredControlSz;
     Memo1.visible := true;
   end
   else
@@ -2707,6 +2745,7 @@ procedure TGLForm1.UpdateTimerTimer(Sender: TObject);
 begin
   if isBusy or gMesh.isBusy then exit; //defer
   Updatetimer.enabled := false;
+
   GLbox.Invalidate;
 end;
 
