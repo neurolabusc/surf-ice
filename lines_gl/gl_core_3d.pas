@@ -5,7 +5,7 @@ unit gl_core_3d;
 interface
 
 uses
-    {$IFDEF DGL}dglOpenGL, {$ELSE}  gl, glext, {$ENDIF}
+    {$IFDEF DGL}dglOpenGL, {$ELSE}  gl, {$IFDEF COREGL}glext,{$ENDIF} {$ENDIF}
   gl_core_matrix, Classes, SysUtils, mesh, matMath, Graphics, define_types, Prefs, Track;
 
 //procedure LoadBufferData (var faces: TFaces; var vertices: TVertices;  var vertexRGBA: TVertexRGBA) ;

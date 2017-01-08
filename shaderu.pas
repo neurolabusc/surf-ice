@@ -363,7 +363,9 @@ begin
         //glProgramParameteri ( gShader.program3d, GL_GEOMETRY_VERTICES_OUT, 3 );
         //glProgramParameteriEXT(result, GL_GEOMETRY_VERTICES_OUT_EXT, 3);  //GL_GEOMETRY_VERTICES_OUT_EXT = $8DDA;
         {$IFNDEF COREGL}
+        //The next line requires the updated glext.pp http://mantis.freepascal.org/view.php?id=29051
         glProgramParameteriEXT(result, GL_GEOMETRY_VERTICES_OUT_EXT, 3);  //GL_GEOMETRY_VERTICES_OUT_EXT = $8DDA;
+        //The following line works on the old glext.pp but the executable crashes with shaders using the geometry engine (wire, wireframe)
         //glProgramParameteri(result, $8DDA, 3);  //GL_GEOMETRY_VERTICES_OUT_EXT = $8DDA;
         {$ENDIF}
   end;

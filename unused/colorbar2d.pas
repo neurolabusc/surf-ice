@@ -3,7 +3,7 @@ unit colorbar2d;
 {$Include opts.inc} //compile for either dglOpenGL or glext
 interface
 uses
-{$IFDEF DGL} dglOpenGL, {$ELSE} gl, glext, {$ENDIF}
+{$IFDEF DGL} dglOpenGL, {$ELSE} gl, {$IFDEF COREGL}glext,{$ENDIF} {$ENDIF}
 define_types, textfx,  math, prefs, colorTable, mesh, shaderu;
 
 //var

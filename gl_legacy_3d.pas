@@ -5,7 +5,7 @@ unit gl_legacy_3d;
 interface
 
 uses
-    {$IFDEF DGL}dglOpenGL, {$ELSE}  gl, glext, {$ENDIF}   prefs, math,
+    {$IFDEF DGL}dglOpenGL, {$ELSE}  gl, {$IFDEF COREGL}glext,{$ENDIF} {$ENDIF}   prefs, math,
   Classes, SysUtils, mesh, colorTable, matMath, Graphics, define_types, track;
 
 const

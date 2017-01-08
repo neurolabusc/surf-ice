@@ -6,7 +6,7 @@ interface
 {$Include opts.inc} //compile for either dglOpenGL or glext
 uses
     {$IFDEF COREGL}gl_core_matrix,  {$ENDIF}
-    {$IFDEF DGL}dglOpenGL, {$ELSE}  gl, glext, {$ENDIF}
+    {$IFDEF DGL}dglOpenGL, {$ELSE}  gl,  glext, {$ENDIF}
    colorTable, matmath, define_types, prefs,
   Classes, SysUtils, mesh, math;
 
