@@ -45,7 +45,8 @@
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="4"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="2"/>
         <CursorPos X="12"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
@@ -118,7 +119,9 @@
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Conditionals Value="if TargetOS='linux' then
-  UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src';
+  UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src;/usr/lib/fpc/3.0.0/source/packages/opengl/src';
+//CentOS/NeuroDebian /usr/share/fpcsrc/3.0.0/packages/opengl/src;
+//Gentoo /usr/lib/fpc/3.0.0/source/packages/opengl/src/glext.pp
 // example for adding linker options on Mac OS X
 //if TargetOS='darwin' then
 //  LinkerOptions := ' -framework OpenGL';
