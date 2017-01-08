@@ -5,7 +5,7 @@ unit meshify;
 interface
 
 uses
-  {$IFDEF Windows}uscaledpi, {$ENDIF}
+  {$IFNDEF Darwin}uscaledpi, {$ENDIF}
   meshify_simplify, LCLintf, Classes, SysUtils, mesh, nifti_loader, meshify_marchingcubes, dialogs,
   define_types, matmath, Forms, StdCtrls, Controls, Spin;
 

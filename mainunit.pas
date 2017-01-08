@@ -6,7 +6,8 @@ uses
   //{$IFDEF SCRIPTING}
   scriptengine,
   //{$ENDIF}
-  {$IFNDEF UNIX} shellapi, uscaledpi, {$ENDIF}
+  {$IFNDEF UNIX} shellapi,  {$ENDIF}
+  {$IFNDEF Darwin}uscaledpi, {$ENDIF}
   {$IFDEF DGL} dglOpenGL, {$ELSE} gl,  {$ENDIF}
   {$IFDEF COREGL} gl_core_3d, {$ELSE}     gl_legacy_3d, {$ENDIF}
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,math,

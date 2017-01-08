@@ -128,7 +128,7 @@ end;
 
 procedure ScaleDPIX(Control: TControl; FromDPI: integer);
 var
-  vDPI: integer;
+  vDPI, i: integer;
 begin
   vDPI := LinuxEffectiveDPI;
   if (vDPI = FromDPI) then exit;
