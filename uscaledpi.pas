@@ -9,9 +9,7 @@ uses
    Forms, Graphics, Controls, ComCtrls, Grids;
 
 procedure HighDPI(FromDPI: integer);
-procedure ScaleDPI(Control: TControl; FromDPI: integer);
-procedure HighDPILinux;
-function getFontScale: single;
+procedure ScaleDPIX(Control: TControl; FromDPI: integer);
 
 implementation
 
@@ -105,25 +103,39 @@ begin
   end;
   AProcess.Free;
 end;
-{$ELSE}
-function getFontScale: single;
-begin
-     result := 1.0;
-end;
-{$ENDIF}
 
-procedure HighDPILinux;
+function LinuxEffectiveDPI: integer;
 var
   i, FromDPI: integer;
   scale: single;
 begin
+  result := 96;
   scale := getFontScale;
   if (scale = 1) or (scale = 0) then exit;
-  FromDPI := round( 96/scale);
-  for i := 0 to Screen.FormCount - 1 do
-    ScaleDPI(Screen.Forms[i], FromDPI);
+  result := round( 96/scale);
+
 end;
 
+procedure HighDPI(FromDPI: integer);
+var
+  vDPI: integer;
+begin
+  vDPI := LinuxEffectiveDPI;
+  if (vDPI = FromDPI) then exit;
+  for i := 0 to Screen.FormCount - 1 do
+    ScaleDPI(Screen.Forms[i], vDPI);
+end;
+
+procedure ScaleDPIX(Control: TControl; FromDPI: integer);
+var
+  vDPI: integer;
+begin
+  vDPI := LinuxEffectiveDPI;
+  if (vDPI = FromDPI) then exit;
+  ScaleDPI(Control, vDPI);
+end;
+
+{$ELSE}
 procedure HighDPI(FromDPI: integer);
 var
   i: integer;
@@ -133,6 +145,12 @@ begin
   for i := 0 to Screen.FormCount - 1 do
     ScaleDPI(Screen.Forms[i], FromDPI);
 end;
+
+procedure ScaleDPIX(Control: TControl; FromDPI: integer);
+begin
+     ScaleDPI(Control, FromDPI);
+end;
+{$ENDIF}
 
 end.
 

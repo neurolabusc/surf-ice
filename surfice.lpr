@@ -5,7 +5,8 @@ program surfice;
 uses
 {$IFDEF FPC}Graphics, {$ENDIF}
 {$IFDEF UNIX}{$IFDEF UseCThreads}cthreads,{$ENDIF}{$ENDIF}
-  uscaledpi,Interfaces,
+{$IFNDEF Darwin}uscaledpi,{$ENDIF}
+  Interfaces,
   Forms, lazopenglcontext, pascalscript, mainunit, Shaderu, prefs, nifti_loader,
   colorTable, track, scriptengine;
 
@@ -16,9 +17,8 @@ begin
   Application.Title:='Surf Ice';
   Application.Initialize;
   Application.CreateForm(TGLForm1, GLForm1);
-    Application.CreateForm(TScriptForm, ScriptForm);
- {$IFDEF FPC}{$IFDEF LINUX} HighDPILinux; {$ENDIF} {$ENDIF}
-  {$IFDEF FPC}{$IFNDEF UNIX}HighDPI(96);{$ENDIF}{$ENDIF}
+  Application.CreateForm(TScriptForm, ScriptForm);
+  {$IFDEF FPC}{$IFNDEF Darwin}HighDPI(96);{$ENDIF}{$ENDIF}
   Application.Run;
 end.
 

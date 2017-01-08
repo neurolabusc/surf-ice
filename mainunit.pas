@@ -1052,7 +1052,7 @@ begin
     OkBtn.Left := PrefForm.Width - OkBtn.Width - 8;
     OkBtn.Parent:=PrefForm;
     OkBtn.ModalResult:= mrOK;
-    {$IFDEF Windows} ScaleDPI(PrefForm, 96);{$ENDIF}
+    {$IFNDEF Darwin} ScaleDPIX(PrefForm, 96);{$ENDIF}
     PrefForm.ShowModal;
     Tol := StrToFloatDef(TolEdit.Caption, Tol);
     minLength := StrToFloatDef(minLengthEdit.Caption, minLength);
@@ -1177,7 +1177,7 @@ begin
     OkBtn.Left := PrefForm.Width - OkBtn.Width - 8;
     OkBtn.Parent:=PrefForm;
     OkBtn.ModalResult:= mrOK;
-    {$IFDEF Windows} ScaleDPI(PrefForm, 96);{$ENDIF}
+    {$IFNDEF Darwin} ScaleDPIX(PrefForm, 96);{$ENDIF}
     PrefForm.ShowModal;
     min := StrToFloatDef(minEdit.Caption, min);
     max := StrToFloatDef(maxEdit.Caption, max);
@@ -1493,7 +1493,7 @@ begin
   AdvancedBtn.Top := 228;
   AdvancedBtn.Parent:=PrefForm;
   AdvancedBtn.ModalResult:= mrYesToAll;
-  {$IFDEF Windows} ScaleDPI(PrefForm, 96);  {$ENDIF}
+  {$IFNDEF Darwin} ScaleDPIX(PrefForm, 96);  {$ENDIF}
   PrefForm.ShowModal;
   if (PrefForm.ModalResult <> mrOK) and (PrefForm.ModalResult <> mrYesToAll) then begin
     FreeAndNil(PrefForm);

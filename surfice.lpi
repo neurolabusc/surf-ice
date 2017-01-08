@@ -45,9 +45,8 @@
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="2"/>
-        <CursorPos X="12"/>
+        <EditorIndex Value="3"/>
+        <CursorPos X="3" Y="9"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -58,8 +57,8 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="1265"/>
-        <CursorPos X="130" Y="1277"/>
+        <TopLine Value="2873"/>
+        <CursorPos X="37" Y="9"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -91,6 +90,7 @@
       <Unit5>
         <Filename Value="track.pas"/>
         <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
         <TopLine Value="17"/>
         <CursorPos X="18" Y="36"/>
         <UsageCount Value="210"/>
