@@ -6,7 +6,7 @@ interface
 uses
   {$IFDEF DGL} dglOpenGL, {$ELSE} gl, glext,  {$ENDIF}
   {$IFDEF COREGL} gl_core_3d, {$ELSE} gl_legacy_3d, {$ENDIF}
-  sysutils,dialogs, define_types,  userdir; //matmath
+  sysutils,dialogs, define_types,  userdir, StrUtils;
 const
 {$IFDEF DGL}
    kGL_FALSE = FALSE;
@@ -42,6 +42,7 @@ type
     f1, f2,  fScreenShot: TFrameBuffer;
     lightPos : TPoint3f;
     {$IFDEF COREGL} TrackAmbient, TrackDiffuse, TrackSpecular : single; {$ENDIF}
+    isGeometryShaderSupported: boolean;
     FragmentProgram,VertexProgram, GeometryProgram, Note, Vendor: AnsiString;
     Uniform: array [1..kMaxUniform] of TUniform;
   end;
@@ -356,18 +357,22 @@ begin
   if (fs = 0) then exit;
   glAttachShader(result, fs);
   if (length(geom) > 0) then begin
-        gs := compileShaderOfType(GL_GEOMETRY_SHADER, geom);
-        if (gs = 0) then exit;
-        glAttachShader(result, gs);
-        //if length(gShader.GeometryProgram) > 0 then
-        //glProgramParameteri ( gShader.program3d, GL_GEOMETRY_VERTICES_OUT, 3 );
-        //glProgramParameteriEXT(result, GL_GEOMETRY_VERTICES_OUT_EXT, 3);  //GL_GEOMETRY_VERTICES_OUT_EXT = $8DDA;
-        {$IFNDEF COREGL}
-        //The next line requires the updated glext.pp http://mantis.freepascal.org/view.php?id=29051
-        glProgramParameteriEXT(result, GL_GEOMETRY_VERTICES_OUT_EXT, 3);  //GL_GEOMETRY_VERTICES_OUT_EXT = $8DDA;
-        //The following line works on the old glext.pp but the executable crashes with shaders using the geometry engine (wire, wireframe)
-        //glProgramParameteri(result, $8DDA, 3);  //GL_GEOMETRY_VERTICES_OUT_EXT = $8DDA;
-        {$ENDIF}
+    if not gShader.isGeometryShaderSupported then begin
+      GLForm1.ShowmessageError('Error: graphics driver does not support geometry shaders');
+      exit;
+    end;
+    gs := compileShaderOfType(GL_GEOMETRY_SHADER, geom);
+    if (gs = 0) then exit;
+    glAttachShader(result, gs);
+    //if length(gShader.GeometryProgram) > 0 then
+    //glProgramParameteri ( gShader.program3d, GL_GEOMETRY_VERTICES_OUT, 3 );
+    //glProgramParameteriEXT(result, GL_GEOMETRY_VERTICES_OUT_EXT, 3);  //GL_GEOMETRY_VERTICES_OUT_EXT = $8DDA;
+    {$IFNDEF COREGL}
+    //The next line requires the updated glext.pp http://mantis.freepascal.org/view.php?id=29051
+    glProgramParameteriEXT(result, GL_GEOMETRY_VERTICES_OUT_EXT, 3);  //GL_GEOMETRY_VERTICES_OUT_EXT = $8DDA;
+    //The following line works on the old glext.pp but the executable crashes with shaders using the geometry engine (wire, wireframe)
+    //glProgramParameteri(result, $8DDA, 3);  //GL_GEOMETRY_VERTICES_OUT_EXT = $8DDA;
+    {$ENDIF}
   end;
   glLinkProgram(result);
   //ReportCompileShaderHint(666, result);
@@ -405,14 +410,21 @@ begin
   end; //for each uniform
 end; //AdjustShaders()
 
+function HasGeometryShaderSupport: boolean; //in OpenGL 2.1 the geometry shader is optional, e.g. not in Mesa for Intel
+var
+  AllExtStr: string;
+begin
+  AllExtStr := glGetString(GL_EXTENSIONS);
+  result := AnsiContainsText (AllExtStr, '_geometry_shader'); //GL_EXT_geometry_shader4, ARB_geometry_shader4
+  if not result then
+     GLForm1.ShowmessageError('Error: geometry shader unsupported ');
+end;
 
 function InitGLSL (isStartUp: boolean): boolean;
 var
   lShader: TShader;
 begin
    result := true;
-
-
   if isStartUp then begin
       {$IFDEF DGL}
               InitOpenGL;
@@ -420,6 +432,7 @@ begin
       {$ELSE}
              //If your compiler does not find Load_GL_version_3_3_CORE you will need to update glext.pp
              {$IFDEF COREGL}
+             gShader.isGeometryShaderSupported := true; //OpenGL core always supports the geometry shader
              gShader.TrackAmbient := 0.5;
              gShader.TrackDiffuse := 0.7;
              gShader.TrackSpecular := 0.2;
@@ -434,13 +447,13 @@ begin
              Load_GL_EXT_framebuffer_object;
              Load_GL_ARB_framebuffer_object;
              Load_GL_EXT_texture_object;
+             gShader.isGeometryShaderSupported := HasGeometryShaderSupport();
              {$ENDIF}
       {$ENDIF}
       gShader.Vendor := glGetString(GL_VENDOR)+' :: OpenGL  '+glGetString(GL_VERSION)+' :: GLSL ' +glGetString(GL_SHADING_LANGUAGE_VERSION);
       gShader.program2d := initVertFrag(kVert2D, '', kFrag2D);
       gShader.program3dx :=  initVertFrag(kVert3d, '', kFrag3d);
       gShader.programDefault :=  initVertFrag(kVert3d, '', kFrag3d);
-
       {$IFDEF COREGL}
       if LoadShader(AppDir+'ao3.glsl', lShader)  then
           gShader.programAoID :=  initVertFrag(lShader.VertexProgram, lShader.GeometryProgram,  lShader.FragmentProgram)
@@ -604,7 +617,6 @@ const
   kFragBOM = kBOM + kFragStr;
   kGeomStr = '//geom';
   kGeomBOM = kBOM + kGeomStr;
-
 var
   mode: integer;
   F : TextFile;
@@ -766,7 +778,6 @@ var
   left, right, top, bottom: single;
 {$ENDIF}
 begin
-
   glUseProgram(gShader.programAoID);
   glActiveTexture( GL_TEXTURE1);
   glBindTexture(GL_TEXTURE_2D, f1.tex);//all items
