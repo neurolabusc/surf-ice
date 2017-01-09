@@ -45,7 +45,7 @@
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="4"/>
         <CursorPos X="21"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
@@ -57,8 +57,8 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="2192"/>
-        <CursorPos X="38" Y="2204"/>
+        <TopLine Value="849"/>
+        <CursorPos X="10" Y="851"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
