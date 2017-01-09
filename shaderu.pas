@@ -345,6 +345,10 @@ var
    fs, gs, vs: GLuint;
 begin
   result := 0;
+  if (not gShader.isGeometryShaderSupported) and (length(geom) > 0) then begin
+    GLForm1.ShowmessageError('Error: graphics driver does not support geometry shaders');
+    exit;
+  end;
   glGetError(); //<- ignore proior errors
   //GetError(121); // <- report prior errors
   result := glCreateProgram();
@@ -357,10 +361,6 @@ begin
   if (fs = 0) then exit;
   glAttachShader(result, fs);
   if (length(geom) > 0) then begin
-    if not gShader.isGeometryShaderSupported then begin
-      GLForm1.ShowmessageError('Error: graphics driver does not support geometry shaders');
-      exit;
-    end;
     gs := compileShaderOfType(GL_GEOMETRY_SHADER, geom);
     if (gs = 0) then exit;
     glAttachShader(result, gs);
