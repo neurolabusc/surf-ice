@@ -45,8 +45,9 @@
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="3"/>
-        <CursorPos X="3" Y="9"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="2"/>
+        <CursorPos X="21"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -117,7 +118,9 @@
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Conditionals Value="if TargetOS='linux' then
-  UnitPath += ';$(FPCSrcDir)/packages/opengl/src';
+   UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src;/usr/lib/fpc/3.0.0/source/packages/opengl/src';
+
+//  UnitPath += ';$(FPCSrcDir)/packages/opengl/src';
 //if TargetOS='linux' then
 //  UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src;/usr/lib/fpc/3.0.0/source/packages/opengl/src';
 //CentOS/NeuroDebian /usr/share/fpcsrc/3.0.0/packages/opengl/src;
