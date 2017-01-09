@@ -416,8 +416,8 @@ var
 begin
   AllExtStr := glGetString(GL_EXTENSIONS);
   result := AnsiContainsText (AllExtStr, '_geometry_shader'); //GL_EXT_geometry_shader4, ARB_geometry_shader4
-  if not result then
-     GLForm1.ShowmessageError('Error: geometry shader unsupported ');
+  //if not result then
+  //   GLForm1.ShowmessageError('Error: geometry shader unsupported ');
 end;
 
 function InitGLSL (isStartUp: boolean): boolean;
