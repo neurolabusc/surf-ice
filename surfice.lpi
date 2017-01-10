@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectOptions>
-    <Version Value="10"/>
+    <Version Value="9"/>
     <General>
       <Flags>
         <SaveOnlyProjectUnits Value="True"/>
@@ -118,8 +118,8 @@
       <OtherUnitFiles Value="lzma"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
-    <Conditionals Value="//if TargetOS='linux' then
-//   UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src;/usr/lib/fpc/3.0.0/source/packages/opengl/src';
+    <Conditionals Value="if TargetOS='linux' then
+   UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src;/usr/lib/fpc/3.0.0/source/packages/opengl/src';
 
 //  UnitPath += ';$(FPCSrcDir)/packages/opengl/src;/Users/rorden/lazarus/lcl/interfaces/carbon';
 //if TargetOS='linux' then
