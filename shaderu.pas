@@ -346,7 +346,11 @@ var
 begin
   result := 0;
   if (not gShader.isGeometryShaderSupported) and (length(geom) > 0) then begin
-    GLForm1.ShowmessageError('Error: graphics driver does not support geometry shaders');
+     {$IFDEF GEOM_GLEXT} //requires new version of glext.pp with glProgramParameteriEXT
+     GLForm1.ShowmessageError('Error: graphics driver does not support geometry shaders');
+     {$ELSE}
+     GLForm1.ShowmessageError('Error: software not compiled to support geometry shaders');
+     {$ENDIF}
     exit;
   end;
   glGetError(); //<- ignore proior errors
@@ -368,10 +372,11 @@ begin
     //glProgramParameteri ( gShader.program3d, GL_GEOMETRY_VERTICES_OUT, 3 );
     //glProgramParameteriEXT(result, GL_GEOMETRY_VERTICES_OUT_EXT, 3);  //GL_GEOMETRY_VERTICES_OUT_EXT = $8DDA;
     {$IFNDEF COREGL}
-    //The next line requires the updated glext.pp http://mantis.freepascal.org/view.php?id=29051
-    glProgramParameteriEXT(result, GL_GEOMETRY_VERTICES_OUT_EXT, 3);  //GL_GEOMETRY_VERTICES_OUT_EXT = $8DDA;
-    //The following line works on the old glext.pp but the executable crashes with shaders using the geometry engine (wire, wireframe)
-    //glProgramParameteri(result, $8DDA, 3);  //GL_GEOMETRY_VERTICES_OUT_EXT = $8DDA;
+      //The next line requires the updated glext.pp http://mantis.freepascal.org/view.php?id=29051
+      {$IFDEF GEOM_GLEXT} //requires new version of glext.pp with glProgramParameteriEXT
+      glProgramParameteriEXT(result, GL_GEOMETRY_VERTICES_OUT_EXT, 3);  //GL_GEOMETRY_VERTICES_OUT_EXT = $8DDA;
+      //glProgramParameteri(result, $8DDA, 3);  // <- using this on the old GLEXT does not work
+      {$ENDIF}
     {$ENDIF}
   end;
   glLinkProgram(result);
@@ -447,7 +452,11 @@ begin
              Load_GL_EXT_framebuffer_object;
              Load_GL_ARB_framebuffer_object;
              Load_GL_EXT_texture_object;
+             {$IFDEF GEOM_GLEXT} //requires new version of glext.pp with glProgramParameteriEXT
              gShader.isGeometryShaderSupported := HasGeometryShaderSupport();
+             {$ELSE}
+             gShader.isGeometryShaderSupported := false;
+             {$ENDIF}
              {$ENDIF}
       {$ENDIF}
       gShader.Vendor := glGetString(GL_VENDOR)+' :: OpenGL  '+glGetString(GL_VERSION)+' :: GLSL ' +glGetString(GL_SHADING_LANGUAGE_VERSION);

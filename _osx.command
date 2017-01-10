@@ -6,6 +6,12 @@ cd ~/Documents/pas/surfice/
 
 rm -rf lib
 
+#1.) build OpenGL core version of surfice
+
+
+#the copy of glext that comes with freepascal 3.0 does not support geometry shaders
+cp ./coregl/glext.pp ./glext.pp
+
 #compile Surfice as 64-bit Cocoa (OpenGL 4.1 Core)
 cp ./optsCore.inc ./opts.inc
 # /Developer/lazarus/lazbuild ./surfice.lpr --cpu=x86_64 --ws=cocoa --compiler="/usr/local/bin/ppcx64"
@@ -18,14 +24,17 @@ cp ./optsCore.inc ./opts.inc
 strip ./surfice
 cp surfice /Users/rorden/Desktop/Surf_Ice/Surfice/surfice.app/Contents/MacOS/surfice
 
-
+#2.) build OpenGL legacy version with geomtery shaders
 
 #compile Surfice as 32-bit Carbon: OSX 10.6 OpenGL support (OpenGL2.1)
-cp ./optsCompat.inc ./opts.inc
-/Developer/lazarus/lazbuild ./surfice.lpr
+cp ./optsCompatGeom.inc ./opts.inc
+/Developer/lazarus/lazbuild -B ./surfice.lpr
 strip ./surfice
 cp surfice /Users/rorden/Desktop/Surf_Ice/Surfice/surficeOld.app/Contents/MacOS/surfice
 
+#return to default version
+cp ./optsCompat.inc ./opts.inc
+rm ./glext.pp
 
 
 rm *.bak

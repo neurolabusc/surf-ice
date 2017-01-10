@@ -45,8 +45,9 @@
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="2"/>
-        <CursorPos X="21"/>
+        <CursorPos X="4" Y="4"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -57,7 +58,7 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="849"/>
+        <TopLine Value="864"/>
         <CursorPos X="10" Y="851"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
@@ -117,10 +118,10 @@
       <OtherUnitFiles Value="lzma"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
-    <Conditionals Value="if TargetOS='linux' then
-   UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src;/usr/lib/fpc/3.0.0/source/packages/opengl/src';
+    <Conditionals Value="//if TargetOS='linux' then
+//   UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src;/usr/lib/fpc/3.0.0/source/packages/opengl/src';
 
-//  UnitPath += ';$(FPCSrcDir)/packages/opengl/src';
+//  UnitPath += ';$(FPCSrcDir)/packages/opengl/src;/Users/rorden/lazarus/lcl/interfaces/carbon';
 //if TargetOS='linux' then
 //  UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src;/usr/lib/fpc/3.0.0/source/packages/opengl/src';
 //CentOS/NeuroDebian /usr/share/fpcsrc/3.0.0/packages/opengl/src;

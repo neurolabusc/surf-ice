@@ -1,0 +1,8 @@
+Lazarus 1.6.2 does not yet support Core OpenGL. This will be included in a future release of Lazarus. In the meantime, surfice will compile for legacy OpenGL 2.1 (and uses the shaders from the ShadersOld folder). To recompile for Core OpenGL 3.3 follow these instructions:
+
+1.) Place the file glext.pp into the base SurfIce source folder (the directory with surfice.lpr)
+
+2.) Edit the SurfIce "opts.inc" and uncomment the line "{$DEFINE COREGL}"
+
+3.) Compile the project
+  lazbuild -B surfice.lpr

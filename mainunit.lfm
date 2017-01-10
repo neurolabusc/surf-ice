@@ -1,12 +1,12 @@
 object GLForm1: TGLForm1
-  Left = 185
-  Height = 780
+  Left = 170
+  Height = 862
   Top = 23
-  Width = 1095
+  Width = 1110
   AllowDropFiles = True
   Caption = 'Surf Ice'
-  ClientHeight = 780
-  ClientWidth = 1095
+  ClientHeight = 862
+  ClientWidth = 1110
   Menu = MainMenu1
   OnClose = FormClose
   OnCreate = FormCreate
@@ -15,11 +15,11 @@ object GLForm1: TGLForm1
   LCLVersion = '1.7'
   object ToolPanel: TPanel
     Left = 0
-    Height = 780
+    Height = 862
     Top = 0
     Width = 272
     Align = alLeft
-    ClientHeight = 780
+    ClientHeight = 862
     ClientWidth = 272
     TabOrder = 1
     object ClipBox: TGroupBox
@@ -98,12 +98,12 @@ object GLForm1: TGLForm1
     end
     object ShaderBox: TGroupBox
       Left = 1
-      Height = 110
+      Height = 192
       Top = 669
       Width = 270
       Align = alClient
       Caption = 'Shader'
-      ClientHeight = 88
+      ClientHeight = 170
       ClientWidth = 262
       ParentFont = False
       TabOrder = 1
@@ -112,7 +112,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Hint = 'Set the elevation and azimuth of the illumination'
-        Top = 62
+        Top = 64
         Width = 32
         Caption = 'Light'
         ParentColor = False
@@ -172,7 +172,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Hint = 'These sliders control transparency of background image (left) and enhance occluded overlay/tracks/nodes (right).  Easter egg: click this button to toggle whether shader is applied to overlays/tracks/nodes'
-        Top = 34
+        Top = 36
         Width = 30
         Caption = 'XRay'
         ParentColor = False
@@ -212,7 +212,7 @@ object GLForm1: TGLForm1
         Left = 138
         Height = 16
         Hint = 'Ambient occlusion makes sucli and other crevices darker'
-        Top = 4
+        Top = 6
         Width = 19
         Caption = 'AO'
         ParentColor = False
@@ -582,7 +582,7 @@ object GLForm1: TGLForm1
       object Memo1: TMemo
         Left = 0
         Height = 58
-        Top = 30
+        Top = 112
         Width = 262
         Align = alBottom
         Lines.Strings = (
@@ -1064,10 +1064,10 @@ object GLForm1: TGLForm1
         ParentColor = False
       end
       object TrackLengthTrack: TTrackBar
-        Left = 70
+        Left = 98
         Height = 28
         Top = 0
-        Width = 190
+        Width = 162
         Max = 100
         OnChange = TrackBoxChange
         Position = 20
@@ -1075,10 +1075,10 @@ object GLForm1: TGLForm1
         TabOrder = 0
       end
       object TrackWidthTrack: TTrackBar
-        Left = 70
+        Left = 98
         Height = 28
         Top = 30
-        Width = 190
+        Width = 162
         Max = 12
         Min = 1
         OnChange = TrackBoxChange
@@ -1095,10 +1095,10 @@ object GLForm1: TGLForm1
         ParentColor = False
       end
       object TrackDitherTrack: TTrackBar
-        Left = 72
+        Left = 98
         Height = 28
         Top = 60
-        Width = 190
+        Width = 162
         OnChange = TrackBoxChange
         Position = 3
         TickStyle = tsNone
@@ -1545,7 +1545,7 @@ object GLForm1: TGLForm1
   end
   object CollapsedToolPanel: TPanel
     Left = 272
-    Height = 780
+    Height = 862
     Top = 0
     Width = 6
     Align = alLeft
@@ -1555,9 +1555,9 @@ object GLForm1: TGLForm1
   end
   object GLBox: TOpenGLControl
     Left = 278
-    Height = 780
+    Height = 862
     Top = 0
-    Width = 817
+    Width = 832
     Align = alClient
     OpenGLMajorVersion = 2
     OpenGLMinorVersion = 1
