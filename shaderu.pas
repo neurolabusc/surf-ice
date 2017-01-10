@@ -421,8 +421,23 @@ var
 begin
   AllExtStr := glGetString(GL_EXTENSIONS);
   result := AnsiContainsText (AllExtStr, '_geometry_shader'); //GL_EXT_geometry_shader4, ARB_geometry_shader4
-  //if not result then
-  //   GLForm1.ShowmessageError('Error: geometry shader unsupported ');
+end;
+
+function GLVersionError(major, minor: integer): boolean;
+var
+  s: string;
+  current, req: double;
+begin
+  result := false; //assume OK
+  //Use GL_VERSION to support OpenGL 2.1
+  // for OpenGL 3.0+: glGetIntegerv(GL_MAJOR_VERSION, @lMajorV); glGetIntegerv(GL_MINOR_VERSION, @lMinorV);
+  s := glGetString(GL_VERSION); //"4.1 Intel"
+  if length(s) > 3 then
+     s := copy(s, 1, 3);
+  current := strtofloatdef(s, 2.0);
+  req := major + (0.1*minor);
+  if (current >= req) then exit; //all OK
+  result := true; //ERROR
 end;
 
 function InitGLSL (isStartUp: boolean): boolean;
@@ -441,12 +456,13 @@ begin
              gShader.TrackAmbient := 0.5;
              gShader.TrackDiffuse := 0.7;
              gShader.TrackSpecular := 0.2;
-             if not  Load_GL_version_3_3_CORE then begin
+             if (not  Load_GL_version_3_3_CORE) or GLVersionError(GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion) then begin
              {$ELSE}
-             if not  Load_GL_VERSION_2_1 then begin
+             if not  (Load_GL_VERSION_2_1) or GLVersionError(GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion) then begin
              {$ENDIF}
-                GLForm1.ShowmessageError('Error '+glGetString(GL_VENDOR)+'; OpenGL= '+glGetString(GL_VERSION)+'; Shader='+glGetString(GL_SHADING_LANGUAGE_VERSION));
-                exit;
+                 showmessage(format('Requires OpenGL %d.%d found %s. Vendor %s. GLSL %s',[GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion, glGetString(GL_VERSION), glGetString(GL_VENDOR),glGetString(GL_SHADING_LANGUAGE_VERSION)]));
+                 halt();
+                 exit;
              end;
              {$IFNDEF COREGL}
              Load_GL_EXT_framebuffer_object;

@@ -2814,7 +2814,6 @@ begin
   GLbox.OpenGLMajorVersion:= 2;
   GLbox.OpenGLMinorVersion:= 1;
   {$ENDIF}
-
   GLbox.AutoResizeViewport:= true;   // http://www.delphigl.com/forum/viewtopic.php?f=10&t=11311
   if gPrefs.MultiSample then
   GLBox.MultiSampling:= 4;
