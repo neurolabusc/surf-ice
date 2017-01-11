@@ -45,8 +45,9 @@
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="4"/>
-        <CursorPos X="4" Y="4"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="2"/>
+        <CursorPos X="17" Y="2"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -117,8 +118,8 @@
       <OtherUnitFiles Value="lzma"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
-    <Conditionals Value="if TargetOS='linux' then
-   UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src;/usr/lib/fpc/3.0.0/source/packages/opengl/src';
+    <Conditionals Value="//if TargetOS='linux' then
+//   UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src;/usr/lib/fpc/3.0.0/source/packages/opengl/src';
 
 //  UnitPath += ';$(FPCSrcDir)/packages/opengl/src;/Users/rorden/lazarus/lcl/interfaces/carbon';
 //if TargetOS='linux' then
