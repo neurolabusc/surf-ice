@@ -120,8 +120,8 @@
     </SearchPaths>
     <Conditionals Value="//if TargetOS='linux' then
 //   UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src;/usr/lib/fpc/3.0.0/source/packages/opengl/src';
-
-//  UnitPath += ';$(FPCSrcDir)/packages/opengl/src;/Users/rorden/lazarus/lcl/interfaces/carbon';
+if TargetOS='linux' then
+  UnitPath += ';$(FPCSrcDir)/packages/opengl/src';
 //if TargetOS='linux' then
 //  UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src;/usr/lib/fpc/3.0.0/source/packages/opengl/src';
 //CentOS/NeuroDebian /usr/share/fpcsrc/3.0.0/packages/opengl/src;
