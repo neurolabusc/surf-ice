@@ -424,6 +424,8 @@ begin
 end;
 
 function GLVersionError(major, minor: integer): boolean;
+const
+ kEps = 1.0E-6;
 var
   s: string;
   current, req: double;
@@ -434,7 +436,7 @@ begin
   s := glGetString(GL_VERSION); //"4.1 Intel"
   if length(s) > 3 then
      s := copy(s, 1, 3);
-  current := strtofloatdef(s, 2.0);
+  current := strtofloatdef(s, 2.0)+keps;
   req := major + (0.1*minor);
   if (current >= req) then exit; //all OK
   result := true; //ERROR
@@ -456,11 +458,16 @@ begin
              gShader.TrackAmbient := 0.5;
              gShader.TrackDiffuse := 0.7;
              gShader.TrackSpecular := 0.2;
-             if (not  Load_GL_version_3_3_CORE) or GLVersionError(GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion) then begin
+             if (not  Load_GL_version_3_3_CORE) then begin
              {$ELSE}
-             if not  (Load_GL_VERSION_2_1) or GLVersionError(GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion) then begin
+             if not  (Load_GL_VERSION_2_1) then begin
              {$ENDIF}
-                 showmessage(format('Requires OpenGL %d.%d found %s. Vendor %s. GLSL %s',[GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion, glGetString(GL_VERSION), glGetString(GL_VENDOR),glGetString(GL_SHADING_LANGUAGE_VERSION)]));
+                 showmessage(format('Unable to load OpenGL %d.%d found %s. Vendor %s. GLSL %s',[GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion, glGetString(GL_VERSION), glGetString(GL_VENDOR),glGetString(GL_SHADING_LANGUAGE_VERSION)]));
+                 halt();
+                 exit;
+             end;
+             if GLVersionError(GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion) then begin
+                showmessage(format('Requires OpenGL %d.%d found %s. Vendor %s. GLSL %s',[GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion, glGetString(GL_VERSION), glGetString(GL_VENDOR),glGetString(GL_SHADING_LANGUAGE_VERSION)]));
                  halt();
                  exit;
              end;

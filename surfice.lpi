@@ -45,7 +45,7 @@
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="4"/>
         <CursorPos X="4" Y="4"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
@@ -56,7 +56,6 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <TopLine Value="2858"/>
         <CursorPos X="11" Y="2875"/>
