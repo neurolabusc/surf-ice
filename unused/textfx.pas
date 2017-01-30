@@ -1,8 +1,8 @@
 unit textfx;
-{$Include opts.inc} //compile for either dglOpenGL or glext
+{$Include opts.inc}
 interface
 uses
-  {$IFDEF DGL} dglOpenGL, {$ELSE} gl, {$IFDEF COREGL}glext,{$ENDIF} {$ENDIF}
+  {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
   define_types, prefs, classes;
 
 procedure TextArrow (X,Y,Sz: single; NumStr: string; orient: integer;FontColor,ArrowColor: TRGBA);

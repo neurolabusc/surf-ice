@@ -1,12 +1,12 @@
 object GLForm1: TGLForm1
-  Left = 170
-  Height = 862
+  Left = 277
+  Height = 755
   Top = 23
-  Width = 1110
+  Width = 1003
   AllowDropFiles = True
   Caption = 'Surf Ice'
-  ClientHeight = 862
-  ClientWidth = 1110
+  ClientHeight = 755
+  ClientWidth = 1003
   Menu = MainMenu1
   OnClose = FormClose
   OnCreate = FormCreate
@@ -15,11 +15,11 @@ object GLForm1: TGLForm1
   LCLVersion = '1.7'
   object ToolPanel: TPanel
     Left = 0
-    Height = 862
+    Height = 755
     Top = 0
     Width = 272
     Align = alLeft
-    ClientHeight = 862
+    ClientHeight = 755
     ClientWidth = 272
     TabOrder = 1
     object ClipBox: TGroupBox
@@ -98,12 +98,12 @@ object GLForm1: TGLForm1
     end
     object ShaderBox: TGroupBox
       Left = 1
-      Height = 192
+      Height = 85
       Top = 669
       Width = 270
       Align = alClient
       Caption = 'Shader'
-      ClientHeight = 170
+      ClientHeight = 63
       ClientWidth = 262
       ParentFont = False
       TabOrder = 1
@@ -224,7 +224,7 @@ object GLForm1: TGLForm1
         Left = 170
         Height = 30
         Top = 90
-        Width = 92
+        Width = 88
         Max = 100
         OnChange = UniformChange
         Position = 50
@@ -284,7 +284,7 @@ object GLForm1: TGLForm1
         Left = 170
         Height = 30
         Top = 120
-        Width = 92
+        Width = 88
         Max = 100
         OnChange = UniformChange
         Position = 50
@@ -296,7 +296,7 @@ object GLForm1: TGLForm1
         Left = 170
         Height = 30
         Top = 150
-        Width = 92
+        Width = 88
         Max = 100
         OnChange = UniformChange
         Position = 50
@@ -356,7 +356,7 @@ object GLForm1: TGLForm1
         Left = 170
         Height = 30
         Top = 180
-        Width = 92
+        Width = 88
         Max = 100
         OnChange = UniformChange
         Position = 50
@@ -392,7 +392,7 @@ object GLForm1: TGLForm1
         Left = 170
         Height = 30
         Top = 210
-        Width = 92
+        Width = 88
         Max = 100
         OnChange = UniformChange
         Position = 50
@@ -524,7 +524,7 @@ object GLForm1: TGLForm1
         Left = 170
         Height = 30
         Top = 240
-        Width = 92
+        Width = 88
         Max = 100
         OnChange = UniformChange
         Position = 50
@@ -536,7 +536,7 @@ object GLForm1: TGLForm1
         Left = 170
         Height = 30
         Top = 270
-        Width = 92
+        Width = 88
         Max = 100
         OnChange = UniformChange
         Position = 50
@@ -548,7 +548,7 @@ object GLForm1: TGLForm1
         Left = 170
         Height = 30
         Top = 300
-        Width = 92
+        Width = 88
         Max = 100
         OnChange = UniformChange
         Position = 50
@@ -560,7 +560,7 @@ object GLForm1: TGLForm1
         Left = 170
         Height = 30
         Top = 330
-        Width = 92
+        Width = 88
         Max = 100
         OnChange = UniformChange
         Position = 50
@@ -572,7 +572,7 @@ object GLForm1: TGLForm1
         Left = 170
         Height = 30
         Top = 360
-        Width = 92
+        Width = 88
         Max = 100
         OnChange = UniformChange
         Position = 50
@@ -581,8 +581,8 @@ object GLForm1: TGLForm1
       end
       object Memo1: TMemo
         Left = 0
-        Height = 58
-        Top = 112
+        Height = 50
+        Top = 13
         Width = 262
         Align = alBottom
         Lines.Strings = (
@@ -1545,7 +1545,7 @@ object GLForm1: TGLForm1
   end
   object CollapsedToolPanel: TPanel
     Left = 272
-    Height = 862
+    Height = 755
     Top = 0
     Width = 6
     Align = alLeft
@@ -1555,9 +1555,9 @@ object GLForm1: TGLForm1
   end
   object GLBox: TOpenGLControl
     Left = 278
-    Height = 862
+    Height = 755
     Top = 0
-    Width = 832
+    Width = 725
     Align = alClient
     OpenGLMajorVersion = 2
     OpenGLMinorVersion = 1

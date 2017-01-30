@@ -1,5 +1,5 @@
 unit shaderui;
-{$Include opts.inc} //compile for either dglOpenGL or glext
+{$Include opts.inc}
 {$D-,O+,Q-,R-,S-} //Delphi only L- Y-
 {$IFDEF FPC}
 {$mode delphi} {$H+}
@@ -7,7 +7,7 @@ unit shaderui;
 interface
 {$include opts.inc}
  uses
-   {$IFDEF DGL} dglOpenGL, {$ELSE} gl, {$ENDIF}
+  {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
    {$IFDEF COREGL} define_types, {$ENDIF} //UnitBound
   {$IFDEF FPC} FileUtil, GraphType, LCLProc,  LCLIntf,LResources,OpenGLContext,{$ELSE}Windows,glpanel, {$ENDIF}
   Graphics,Classes, SysUtils, Forms,  Buttons,userdir,

@@ -1,11 +1,11 @@
 unit gl_core_3d;
 
 {$mode objfpc}{$H+}
-{$Include opts.inc} //compile for either dglOpenGL or glext, core or legacy opengl
+{$Include opts.inc}
 interface
 
 uses
-    {$IFDEF DGL}dglOpenGL, {$ELSE}  gl, {$IFDEF COREGL}glext,{$ENDIF} {$ENDIF}
+{$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
   gl_core_matrix, Classes, SysUtils, mesh, matMath, Graphics, define_types, Prefs, Track;
 
 //procedure LoadBufferData (var faces: TFaces; var vertices: TVertices;  var vertexRGBA: TVertexRGBA) ;

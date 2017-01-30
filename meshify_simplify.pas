@@ -1,6 +1,6 @@
 unit meshify_simplify;
 
-{$Include opts.inc} //compile for either dglOpenGL or glext
+{$Include opts.inc}
 {$mode objfpc}{$H+}
 // OLD_SIMPLIFY ported from Stan Melax's progmesh.cpp
 // https://github.com/melax/sandbox/blob/master/bunnylod/progmesh.cpp

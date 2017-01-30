@@ -1,10 +1,11 @@
 unit mesh;
-{$Include opts.inc} //compile for either dglOpenGL or glext
+{$Include opts.inc}
 {$mode objfpc}{$H+}
 interface
 // added 3do, PLY2, wfr formats
 uses
-  {$IFDEF DGL} dglOpenGL, {$ELSE} gl, {$IFDEF COREGL}glext,  {$ENDIF}  {$ENDIF}
+
+  {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
   {$IFDEF CTM} ctm_loader, {$ENDIF}
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, strutils,
   base64, zstream, LcLIntf, nifti_loader, colorTable, matmath, math,

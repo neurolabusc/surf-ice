@@ -1,10 +1,10 @@
 unit shaderu;
-{$Include opts.inc} //compile for either dglOpenGL or glext
+{$Include opts.inc}
 {$IFDEF FPC}{$mode objfpc}{$H+}{$ENDIF}
 {$D-,O+,Q-,R-,S-}
 interface
 uses
-  {$IFDEF DGL} dglOpenGL, {$ELSE} gl, glext,  {$ENDIF}
+ {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, glext, {$ENDIF}  {$ENDIF DGL}
   {$IFDEF COREGL} gl_core_3d, {$ELSE} gl_legacy_3d, {$ENDIF}
   sysutils,dialogs, define_types,  userdir, StrUtils;
 const
@@ -57,12 +57,12 @@ procedure RunTrackGLSL (lineWidth, ScreenPixelX, ScreenPixelY: integer);
 procedure RunAoGLSL (var f1, f2 : TFrameBuffer; zoom : integer; alpha1, blend1, fracAO, distance: single);
 function setFrame (wid, ht: integer; var f : TFrameBuffer; isMultiSample: boolean) : boolean; //returns true if multi-sampling
 procedure releaseFrame;
-procedure Set2DDraw (w,h: integer; r,g,b: byte);
+//procedure Set2DDraw (w,h: integer; r,g,b: byte);
 
 implementation
 uses mainunit, gl_2d;
 
-procedure Set2DDraw (w,h: integer; r,g,b: byte);
+(*moved to gl_2d procedure Set2DDraw (w,h: integer; r,g,b: byte);
 begin
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
@@ -77,7 +77,7 @@ begin
   glClearColor(r/255, g/255, b/255, 0.0); //Set background
   glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT or GL_STENCIL_BUFFER_BIT);
   glViewport( 0, 0, w, h); //required when bitmap zoom <> 1
-end;
+end; *)
 
 procedure uniform1ix(prog: GLint; name: AnsiString; value: integer);
 begin
@@ -167,7 +167,7 @@ begin
      result := isMultiSample;
      if (w = f.w) and (h = f.h) then begin
          {$IFDEF COREGL}
-         glBindFramebuffer(GL_FRAMEBUFFER_EXT, f.frameBuf);
+         glBindFramebuffer(GL_FRAMEBUFFER, f.frameBuf);
          {$ELSE}
          glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, f.frameBuf);    //only included in 3.0! https://www.opengl.org/sdk/docs/man/html/glBindFramebuffer.xhtml
          {$ENDIF}
@@ -463,14 +463,12 @@ begin
              if not  (Load_GL_VERSION_2_1) then begin
              {$ENDIF}
                  //On Ubuntu 14.04 LTS on VirtualBox with Chromium 19 drivers Load_GL_VERSION_2_1 fails but still works...
-                 //showmessage(format('Unable to load OpenGL %d.%d found %s. Vendor %s. GLSL %s',[GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion, glGetString(GL_VERSION), glGetString(GL_VENDOR),glGetString(GL_SHADING_LANGUAGE_VERSION)]));
-                 //halt();
-                 //exit;
+                 showmessage(format('Unable to load OpenGL %d.%d found %s. Vendor %s. GLSL %s',[GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion, glGetString(GL_VERSION), glGetString(GL_VENDOR),glGetString(GL_SHADING_LANGUAGE_VERSION)]));
+                 halt();
              end;
              if GLVersionError(GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion) then begin
                 showmessage(format('Requires OpenGL %d.%d found %s. Vendor %s. GLSL %s',[GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion, glGetString(GL_VERSION), glGetString(GL_VENDOR),glGetString(GL_SHADING_LANGUAGE_VERSION)]));
                  halt();
-                 exit;
              end;
              {$IFNDEF COREGL}
              Load_GL_EXT_framebuffer_object;

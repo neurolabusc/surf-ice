@@ -1,14 +1,15 @@
 unit mainunit;
- {$Include opts.inc} //compile for either dglOpenGL or glext
+ {$Include opts.inc} //optiosn: DGL, CoreGL or legacy GL
 {$mode delphi}{$H+}
 interface
 uses
+  {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
+
   //{$IFDEF SCRIPTING}
   scriptengine,
   //{$ENDIF}
   {$IFNDEF UNIX} shellapi,  {$ENDIF}
   {$IFNDEF Darwin}uscaledpi, {$ENDIF}
-  {$IFDEF DGL} dglOpenGL, {$ELSE} gl,  {$ENDIF}
   {$IFDEF COREGL} gl_core_3d, {$ELSE}     gl_legacy_3d, {$ENDIF}
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,math,
   ExtCtrls, OpenGLContext, mesh, LCLintf, ComCtrls, Menus, graphtype,

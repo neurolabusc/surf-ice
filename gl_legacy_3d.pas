@@ -1,12 +1,12 @@
 unit gl_legacy_3d;
-{$Include opts.inc} //compile for either dglOpenGL or glext
+{$Include opts.inc}
 {$mode objfpc}{$H+}
 
 interface
 
 uses
-    {$IFDEF DGL}dglOpenGL, {$ELSE}  gl, {$IFDEF COREGL}glext,{$ENDIF} {$ENDIF}   prefs, math,
-  Classes, SysUtils, mesh, colorTable, matMath, Graphics, define_types, track;
+ {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
+    prefs, math, Classes, SysUtils, mesh, colorTable, matMath, Graphics, define_types, track;
 
 const
   kPrimitiveRestart = 2147483647;
@@ -192,7 +192,7 @@ begin
 end;
 
 
-{$IFNDEF DGL}  //glext does not link to the glu functions, so we will write our own
+{$IFNDEF DGL}  //gl.pp does not link to the glu functions, so we will write our own
 procedure gluPerspective (fovy, aspect, zNear, zFar: single);
 //https://www.opengl.org/sdk/docs/man2/xhtml/gluPerspective.xml
 var

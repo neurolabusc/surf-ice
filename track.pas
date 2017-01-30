@@ -1,13 +1,13 @@
 unit track;
 {$mode objfpc}{$H+}
-{$Include opts.inc} //compile for either dglOpenGL or glext
+{$Include opts.inc}
 interface
 
 uses
+  {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
   {$ifndef isTerminalApp}
     ClipBrd,dialogs,colorTable,
   {$endif}
-  {$IFDEF DGL} dglOpenGL, {$ELSE} gl, {$IFDEF COREGL}glext,{$ENDIF} {$ENDIF}
   Classes, SysUtils, math, define_types, matmath, track_simplify, zstream;
 
 Type
