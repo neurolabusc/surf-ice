@@ -2178,7 +2178,7 @@ begin
      GLbox.Repaint;
   end;
   origin := GetOrigin(scale);
-  str :=  'Surf Ice '+' 1 January 2016 '
+  str :=  'Surf Ice '+' 30 January 2017 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
