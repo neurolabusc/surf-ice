@@ -1607,6 +1607,10 @@ object GLForm1: TGLForm1
     end
     object FileMenu: TMenuItem
       Caption = 'File'
+      object NewWindow1: TMenuItem
+        Caption = 'New window'
+        OnClick = NewWindow1Click
+      end
       object OpenMenu: TMenuItem
         Caption = 'Open'
         ShortCut = 16463

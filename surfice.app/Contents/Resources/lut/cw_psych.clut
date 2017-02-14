@@ -1,0 +1,33 @@
+# https://github.com/Washington-University/workbench/tree/master/src/Palette
+#  Copyright (C) 2014  Washington University School of Medicine
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License along
+#  with this program; if not, write to the Free Software Foundation, Inc.,
+#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+[FLT]
+min=0
+max=0
+[INT]
+numnodes=5
+[BYT]
+nodeintensity0=0
+nodeintensity1=64
+nodeintensity2=128
+nodeintensity3=192
+nodeintensity4=255
+[RGBA255]
+nodergba0=0|68|255|55
+nodergba1=255|68|0|73
+nodergba2=255|105|0|91
+nodergba3=255|204|0|109
+nodergba4=238|238|85|128

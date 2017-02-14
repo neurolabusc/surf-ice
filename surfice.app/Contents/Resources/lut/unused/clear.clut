@@ -1,0 +1,55 @@
+# https://github.com/Washington-University/workbench/tree/master/src/Palette
+#  Copyright (C) 2014  Washington University School of Medicine
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License along
+#  with this program; if not, write to the Free Software Foundation, Inc.,
+#  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+[FLT]
+min=0
+max=0
+[INT]
+numnodes=16
+[BYT]
+nodeintensity0=0
+nodeintensity1=17
+nodeintensity2=34
+nodeintensity3=51
+nodeintensity4=68
+nodeintensity5=85
+nodeintensity6=102
+nodeintensity7=119
+nodeintensity8=136
+nodeintensity9=153
+nodeintensity10=170
+nodeintensity11=187
+nodeintensity12=204
+nodeintensity13=221
+nodeintensity14=238
+nodeintensity15=255
+[RGBA255]
+nodergba0=187|187|187|0
+nodergba1=221|221|221|17
+nodergba2=255|255|255|34
+nodergba3=255|56|141|51
+nodergba4=226|81|226|68
+nodergba5=16|176|16|85
+nodergba6=00|255|00|102
+nodergba7=00|255|255|119
+nodergba8=102|00|51|136
+nodergba9=51|51|76|153
+nodergba10=76|76|127|170
+nodergba11=127|127|204|187
+nodergba12=00|255|00|204
+nodergba13=16|176|16|221
+nodergba14=255|153|00|238
+nodergba15=255|00|00|255

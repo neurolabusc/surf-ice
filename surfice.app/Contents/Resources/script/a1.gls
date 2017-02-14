@@ -1,22 +1,8 @@
 BEGIN
 	RESETDEFAULTS;
-	//	MESHLOAD('BrainMesh_ICBM152Right.mz3');
-	//OVERLAYLOAD('motor_4t95vol.nii.gz');
-	//TRACKLOAD('/Users/rorden/Downloads/TRK-2/test.trk.gz');
-
-NODELOAD('/Users/rorden/Downloads/M.2016.0802dti_jhu_23Sep2016_102956/dti_jhu_WAB__AQZ.nodz');
-	//TRACKLOAD('/Users/rorden/Downloads/trk/trk/results.trk');
-	//TRACKLOAD('/Users/rorden/Downloads/trk/trk/Merge.trk');
-	//TRACKLOAD('/Users/rorden/Downloads/studio/stroke.trk');
-	//TRACKLOAD('stroke.trk');
-exit;
-	AZIMUTHELEVATION(70, 15);
-	MESHLOAD('BrainMesh_ICBM152Right.mz3');
-	OVERLAYLOAD('motor_4t95vol.nii.gz');
-	OVERLAYMINMAX(1,2,4);
-	OVERLAYLOAD('motor_4t95vol.nii.gz');
-	OVERLAYMINMAX(2,3,5);
-	COLORBARVISIBLE(true);
-	//OVERLAYTRANSPARENCYONBACKGROUND(25);
-	OVERLAYADDITIVE(true);
+	MESHLOAD('/Users/rorden/Downloads/workbench/bin_macosx64/Q1-Q6_R440.L.midthickness.164k_fs_LR.surf.gii');	OVERLAYLOAD('/Users/rorden/Downloads/workbench/bin_macosx64/Q1-Q6_R440.All.MyelinMap_BC.164k_fs_LR.dscalar.nii');	//MESHLOAD('/Users/rorden/Downloads/cifti-2_test_data/Conte69.R.inflated.32k_fs_LR.surf.gii');
+	//OVERLAYLOAD('/Users/rorden/Downloads/cifti-2_test_data/Conte69.MyelinAndCorrThickness.32k_fs_LR.dtseries.nii');
+	OVERLAYMINMAX(1, 1.11, 1.641);
+//OVERLAYCOLORNAME(1, 'hsb8clrmid');
+OVERLAYCOLORNAME(1, 'psych_no_none');
 END.

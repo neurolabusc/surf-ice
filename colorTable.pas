@@ -7,7 +7,7 @@ uses
   Classes, SysUtils, dialogs, userdir, prefs, IniFiles, define_types;
 
 const  //maximum number of control points for color schemes...
-  maxNodes = 6;
+  maxNodes = 32;
 
 type
 
@@ -73,9 +73,11 @@ begin
     else
          result := lut[round(255* (1.0-   (intensity-mn)/(mx-mn)))];
   end else begin
-     if intensity <= mn then begin
-        result := lut[0];
-     end else if intensity >= mx then
+     if (intensity <= mn) and (intensity <> 0) and (LUT[0].A <> 0) then
+        result := lut[1]
+     else if intensity <= mn then
+        result := lut[0]
+     else if intensity >= mx then
         result := lut[255]
      else
           result := lut[round(255*(intensity-mn)/(mx-mn))];
@@ -149,7 +151,9 @@ begin
  end;
  lIniFile := TIniFile.Create(lFilename);
  IniInt(true,lIniFile, 'numnodes', numnodes);
- if (numnodes < 1) or (numnodes > 256) then begin
+ if (numnodes < 1) or (numnodes > maxNodes) then begin
+   if (numnodes > maxNodes) then
+      showmessage(format('Too many nodes (%d, maximum %d)', [numnodes, maxNodes]));
      lIniFile.Free;
     lIndex := 0;
     exit;
@@ -306,7 +310,7 @@ begin
  end;
 
  if lLUTNodes.isFreeSurfer then exit; //not for freesurfer
- result[0].A := 0;
+ //result[0].A := 0; //see LUT[0].A <> 0
  for lInc := 1 to 255 do
      result[lInc].A := 255;
 end;//LoadLUT()

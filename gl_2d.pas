@@ -325,7 +325,7 @@ procedure DrawCLUTtrk ( lU: TUnitRect; lBorder, lMin, lMax: single; var lPrefs: 
 
 procedure DrawCube (lScrnWid, lScrnHt, lAzimuth, lElevation: integer);
 procedure DrawCLUT ( lU: TUnitRect; lBorder: single; var lPrefs: TPrefs; lMesh: TMesh; window_width, window_height: integer );
-procedure DrawText (var lPrefs: TPrefs; lScrnWid, lScrnHt: integer);
+//procedure DrawText (var lPrefs: TPrefs; lScrnWid, lScrnHt: integer);
 
 implementation
 
@@ -1006,7 +1006,7 @@ TColorBar = packed record
  end;
 TColorBars = array of TColorBar;
 
-procedure DrawColorBars ( lU: TUnitRect; lBorder: single; var lPrefs: TPrefs; lColorBars: TColorBars; window_width, window_height: integer );
+(*procedure DrawColorBars ( lU: TUnitRect; lBorder: single; var lPrefs: TPrefs; lColorBars: TColorBars; window_width, window_height: integer );
 var
       lU2:TUnitRect;
    nLUT, lI: integer;
@@ -1068,7 +1068,7 @@ begin
     UOffset(lU2,lX,lY);
   end;
 glDisable (GL_BLEND);
-end;
+end; *)
 
 procedure DrawCLUT ( lU: TUnitRect; lBorder: single; var lPrefs: TPrefs; lMesh: TMesh; window_width, window_height: integer );
 var
@@ -1081,9 +1081,12 @@ var
      mn, mx: array [1..3] of single;
 begin
   if (lMesh.OpenOverlays < 1) and (length(lMesh.nodes) < 1) then exit;
+  nLUT := 0;
   if (lMesh.OpenOverlays > 0) then
-    nLUT := lMesh.OpenOverlays
-  else begin
+     for lI := 1 to lMesh.OpenOverlays do
+         if lMesh.overlay[lI].LUTvisible then
+            inc(nLUT);
+  if (nLUT < 1) then begin
     nLUT := 0;
   if (lMesh.nodePrefs.isNodeColorVaries) then begin
      inc(nLUT);
@@ -1159,11 +1162,13 @@ end; //if overlays else edges
   lU2 := lU;
   if (lMesh.OpenOverlays > 0) then begin
     for lI := 1 to lMesh.OpenOverlays do begin
+      if not lMesh.overlay[lI].LUTvisible then continue;
       DrawCLUTx(lMesh.overlay[lI].LUT,lU2,lPrefs);
       UOffset(lU2,lX,lY);
     end;
     lU2 := lU;
     for lI := 1 to lMesh.OpenOverlays do begin
+      if not lMesh.overlay[lI].LUTvisible then continue;
       lMin := lMesh.overlay[lI].WindowScaledMin;
       lMax := lMesh.overlay[lI].WindowScaledMax;
       SortSingle(lMin,lMax);
@@ -1294,7 +1299,7 @@ begin
   DrawStrips (lScrnWid, lScrnHt);
 end;   *)
 
-procedure TestColorBar (var lPrefs: TPrefs; window_width, window_height: integer);
+(*procedure TestColorBar (var lPrefs: TPrefs; window_width, window_height: integer);
 var
   c: TColorBars;
   lU: TUnitRect;
@@ -1311,21 +1316,21 @@ begin
   c[1].mn := -2;
   c[1].mx := -10;
   DrawColorBars ( lU, 0.005,  lPrefs, c, window_width, window_height );
-end;
+end;*)
 
 {$IFDEF COREGL}
-procedure DrawText (var lPrefs: TPrefs; lScrnWid, lScrnHt: integer);
+(*procedure DrawText (var lPrefs: TPrefs; lScrnWid, lScrnHt: integer);
 begin
  setlength(g2Dvnc, 0);
  DrawTextCore(lScrnWid, lScrnHt);
  TestColorBar(lPrefs, lScrnWid, lScrnHt);
  DrawStrips (lScrnWid, lScrnHt);
-end;
+end; *)
 {$ELSE}
-procedure DrawText (var lPrefs: TPrefs; lScrnWid, lScrnHt: integer);
+(*procedure DrawText (var lPrefs: TPrefs; lScrnWid, lScrnHt: integer);
 begin
  TestColorBar(lPrefs, lScrnWid, lScrnHt);
-end;
+end;*)
 
 {$ENDIF}
 

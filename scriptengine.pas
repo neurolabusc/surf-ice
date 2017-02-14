@@ -120,6 +120,8 @@ type
     procedure AppleMenuClick(Sender: TObject);
     procedure Compile1Click(Sender: TObject);
     procedure File1Click(Sender: TObject);
+    procedure FormActivate(Sender: TObject);
+    procedure FormDeactivate(Sender: TObject);
     procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
     procedure Memo1DragDrop(Sender, Source: TObject; X, Y: Integer);
     procedure ReportCaretPos;
@@ -271,6 +273,16 @@ end;
 procedure TScriptForm.File1Click(Sender: TObject);
 begin
 
+end;
+
+procedure TScriptForm.FormActivate(Sender: TObject);
+begin
+  GLForm1.DisplayMenu.Enabled:= false;
+end;
+
+procedure TScriptForm.FormDeactivate(Sender: TObject);
+begin
+  GLForm1.DisplayMenu.Enabled:= true;
 end;
 
 procedure TScriptForm.FormDropFiles(Sender: TObject;

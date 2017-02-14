@@ -9,7 +9,7 @@ uses
   {$IFDEF CTM} ctm_loader, {$ENDIF}
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, strutils,
   base64, zstream, LcLIntf, nifti_loader, colorTable, matmath, math,
-  define_types;
+  define_types, nifti_types;
 
 const
   kMinOverlayIndex = 1;
@@ -65,12 +65,14 @@ type
   private
     function CheckMesh: boolean;
     procedure SetOverlayDescriptives(lOverlayIndex: integer);
+    procedure MinMaxPct(lOverlayIndex, num_v: integer; var mx, mn: single; isExcludeZero: boolean);
     procedure SetDescriptives;
     procedure MakeSphere;
     procedure BuildList  (Clr: TRGBA);
     procedure BuildListOverlay (Clr: TRGBA);
     function Load3Do(const FileName: string): boolean;
     function LoadAc(const FileName: string): boolean;
+    function loadCifti(fnm: string; lOverlayIndex, lSeriesIndex: integer; isLoadCortexLeft: boolean): integer;
     function LoadDae(const FileName: string): boolean; //only subset!
     function LoadGts(const FileName: string): boolean;
     function LoadDfs(const FileName: string): boolean;
@@ -123,6 +125,7 @@ type
     procedure SaveObj(const FileName: string);
     procedure SavePly(const FileName: string);
     procedure SaveOverlay(const FileName: string; OverlayIndex: integer);
+
     destructor  Destroy; override;
   end;
 
@@ -162,8 +165,6 @@ begin
       result.A := c2.A;
 end;  *)
 {$ENDIF}
-
-
 
 (*function scaleLUT(colorFromZero: boolean; mn, mx: single; lut: TLUT): TLUT;
 var
@@ -4642,9 +4643,67 @@ begin
      lMesh.Free;
 end; // LoadMeshAsOverlay()
 
+procedure TMesh.MinMaxPct(lOverlayIndex, num_v: integer; var mx, mn: single; isExcludeZero: boolean);
+//adjust mn/mx to be top/bottom 1% instead of absolute min/max
+const
+  kBins = 6000;
+  kFrac = 0.01;
+var
+   i, sum, pct, bin: integer;
+   slope, range, mn2, mx2: single;
+   cnt: array [0..kBins] of integer;
+begin
+   range := mx - mn;
+   //showmessage(format('%g %g', [mn, mx]));
+   if (range <= 0) or (num_v < 2) then exit;
+   for i := 0 to kBins do
+       cnt[i] := 0;
+   slope := kBins * 1/range;
+   if isExcludeZero then begin
+      sum := 0;
+      for i := 0 to num_v do begin
+          if overlay[lOverlayIndex].intensity[i] <> 0 then begin
+             bin := round((overlay[lOverlayIndex].intensity[i] - mn) * slope);
+             IntBound(bin, 0, kBins);
+             inc(cnt[bin]);
+             inc(sum);
+          end;
+      end;
+      if sum = 0 then exit;
+      pct := trunc(kFrac * sum);
+   end else begin
+       for i := 0 to num_v do begin
+         bin := round((overlay[lOverlayIndex].intensity[i] - mn) * slope);
+         IntBound(bin, 0, kBins);
+         inc(cnt[bin]);
+       end;
+       pct := trunc(kFrac * num_v);
+   end;
+   //find new max
+   sum := 0;
+   i := kBins+1;
+   while (sum < pct) and (i > 0) do begin
+     i := i - 1;
+     sum := sum + cnt[i];
+   end;
+   mx2 := mn + ((i/kBins) * range);
+   //find new min
+   sum := 0;
+   i := -1;
+   while (sum < pct) and (i < kBins) do begin
+     i := i + 1;
+     sum := sum + cnt[i];
+   end;
+   mn2 := mn + ((i/kBins) * range);
+   if mx2 > mn2 then begin
+      mx := mx2;
+      mn := mn2;
+   end;
+end;
+
 procedure TMesh.SetOverlayDescriptives(lOverlayIndex: integer);
 var
-   mx, mn: single;
+   mx, mn, mnNot0, v: single;
    i, num_v, lLog10: integer;
 begin
   num_v := length(overlay[lOverlayIndex].intensity);
@@ -4652,9 +4711,20 @@ begin
   mn := overlay[lOverlayIndex].intensity[0];
   mx := mn;
   for i := 0 to (num_v-1) do
-      if mx < overlay[lOverlayIndex].intensity  [i] then mx := overlay[lOverlayIndex].intensity  [i];
+      if mx < overlay[lOverlayIndex].intensity[i] then mx := overlay[lOverlayIndex].intensity  [i];
   for i := 0 to (num_v-1) do
-      if mn > overlay[lOverlayIndex].intensity  [i] then mn := overlay[lOverlayIndex].intensity  [i];
+      if mn > overlay[lOverlayIndex].intensity[i] then mn := overlay[lOverlayIndex].intensity  [i];
+  //2nd pass: histogram for percent...
+  MinMaxPct(lOverlayIndex, num_v, mx, mn, false);
+  if mn = 0 then begin //find minimal value that is greater than zero
+     mnNot0 := mx;
+     for i := 0 to (num_v-1) do begin
+         v :=  overlay[lOverlayIndex].intensity[i];
+         if (v < mnNot0) and (v <> 0)  then mnNot0 := v;
+     end;
+     if mnNot0 < mx then
+        mn := mnNot0;
+  end;
   overlay[lOverlayIndex].minIntensity := mn;
   overlay[lOverlayIndex].maxIntensity := mx;
   lLog10 := trunc(log10( mx-mn))-1;
@@ -4676,23 +4746,32 @@ begin
   //showmessage('overlay'+floattostr(mn)+'  '+floattostr(mx));
 end; // SetOverlayDescriptives()
 
+{$Include cifti.inc}
+
 function TMesh.LoadOverlay(const FileName: string): boolean; //; isSmooth: boolean
 var
    i, nOverlays: integer;
    ext: string;
+   isCiftiNii: boolean;
 begin
   result := false;
-  nOverlays := 1;
   if not FileExists(FileName) then exit;
+  nOverlays := 1;
+  isCiftiNii := false;
+  ext := UpperCase(ExtractFileExt(Filename));
+  if (ext = '.NII') then
+     isCiftiNii := isCIfTI(FileName);
   if (length(vertices) < 3) then begin
-     showmessage('Unable to load overlay: load background mesh first');
+     if isCiftiNii then
+       showmessage('Unable to load overlay: load background mesh (.surf.gii) first')
+     else
+         showmessage('Unable to load overlay: load background mesh first');
      exit; //load background first
   end;
   if (OpenOverlays >= kMaxOverlays) then begin
      showmessage('Unable to add overlay: too many overlays open');
      exit;
   end;
-  ext := UpperCase(ExtractFileExt(Filename));
   if (ext = '.ANNOT') then
      if LoadAnnot(FileName) then begin
         result := true;
@@ -4716,36 +4795,53 @@ begin
         exit;
      end;
   end;
-  if (ext = '.GII') then begin
-     nOverlays := LoadGii(FileName, OpenOverlays, 1);
+  if (ext = '.GII') or isCiftiNii then begin
+     if isCiftiNii then begin
+        nOverlays := loadCifti(FileName, OpenOverlays, 1, (origin.X < 0));
+        Overlay[OpenOverlays].LUTindex := 1;
+     end else
+         nOverlays := LoadGii(FileName, OpenOverlays, 1);
+     if ((OpenOverlays+nOverlays+1) > kMaxOverlays) then
+        nOverlays := kMaxOverlays - 1 - OpenOverlays;
+     if nOverlays > 3 then
+        nOverlays := 3; // <- this line constrains loading and is optional
      if (nOverlays > 1) and ( (OpenOverlays+nOverlays-1) <= kMaxOverlays) then begin
         for i := 2 to nOverlays do begin //GIfTI files can store multiple overlays - see NITRC Caret GIfTI examples
             SetOverlayDescriptives(OpenOverlays);
             OpenOverlays := OpenOverlays + 1;
             setlength(Overlay[OpenOverlays].intensity,0);
-            Overlay[OpenOverlays].LUTvisible:= true;
+            Overlay[OpenOverlays].LUTvisible:= not isCiftiNii;
             Overlay[OpenOverlays].filename  := ExtractFilename(FileName);
-            LoadGii(FileName, OpenOverlays, i);
-            if OpenOverlays > 12 then
+            if isCiftiNii then
+               nOverlays := loadCifti(FileName, OpenOverlays, i, (origin.X < 0))
+            else
+                LoadGii(FileName, OpenOverlays, i);
+            if isCiftiNii then
+               Overlay[OpenOverlays].LUTindex := 1
+            else if OpenOverlays > 12 then
                Overlay[OpenOverlays].LUTindex := 0
             else
                 Overlay[OpenOverlays].LUTindex := OpenOverlays;
         end;
      end else
          nOverlays := 1;
+
      if (length(overlay[OpenOverlays].faces) < 1 ) and (length(overlay[OpenOverlays].intensity) < 1 ) then begin //unable to open as an overlay - perhaps vertex colors?
         OpenOverlays := OpenOverlays - 1;
         exit;
      end;
+
   end;
-  {$IFDEF FOREIGNVOL}
-   //kVolFilter = 'Neuroimaging (*.nii)|*.hdr;*.nii;*.nii.gz;*.voi;*.HEAD;*.mgh;*.mgz;*.mha;*.mhd;*.nhdr;*.nrrd';
-  if (ext = '.NII') or (ext = '.IMG') or (ext = '.HDR')  or (ext = '.GZ')  or (ext = '.VOI') or (ext = '.NHDR')
-    or (ext = '.NRRD') or (ext = '.HEAD') or (ext = '.MGH')  or (ext = '.MGZ')  or (ext = '.MHA') or (ext = '.MHD') then
-  {$ELSE}
-  if (ext = '.NII') or (ext = '.IMG') or (ext = '.HDR')  or (ext = '.GZ') then
-  {$ENDIF}
-     LoadNii(FileName, OpenOverlays);
+  if not isCiftiNii then begin
+    {$IFDEF FOREIGNVOL}
+     //kVolFilter = 'Neuroimaging (*.nii)|*.hdr;*.nii;*.nii.gz;*.voi;*.HEAD;*.mgh;*.mgz;*.mha;*.mhd;*.nhdr;*.nrrd';
+    if (ext = '.NII') or (ext = '.IMG') or (ext = '.HDR')  or (ext = '.GZ')  or (ext = '.VOI') or (ext = '.NHDR')
+      or (ext = '.NRRD') or (ext = '.HEAD') or (ext = '.MGH')  or (ext = '.MGZ')  or (ext = '.MHA') or (ext = '.MHD') then
+    {$ELSE}
+    if (ext = '.NII') or (ext = '.IMG') or (ext = '.HDR')  or (ext = '.GZ') then
+    {$ENDIF}
+       LoadNii(FileName, OpenOverlays);
+  end;
   if (length(overlay[OpenOverlays].intensity) < 1 )  then
        LoadW(FileName, OpenOverlays);
   //if (length(overlay[OpenOverlays].intensity) < 1 )   then

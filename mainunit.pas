@@ -20,6 +20,7 @@ type
   { TGLForm1 }
   TGLForm1 = class(TForm)
     AOLabel: TLabel;
+    NewWindow1: TMenuItem;
     S1Check: TCheckBox;
     S6Check: TCheckBox;
     S6Label: TLabel;
@@ -188,6 +189,7 @@ type
     ObjectColorMenu: TMenuItem;
     OpenMenu: TMenuItem;
     procedure DepthLabelDblClick(Sender: TObject);
+    procedure NewWindow1Click(Sender: TObject);
     procedure Quit2TextEditor;
     procedure CenterMeshMenuClick(Sender: TObject);
     procedure AdditiveOverlayMenuClick(Sender: TObject);
@@ -485,7 +487,7 @@ begin
    result := true;
  ext := UpperCase(ExtractFileExt(Filename));
  setlength(gNode.edges,0); //clear edges array
- if (ext = '.NODE') or (length(gNode.nodes) < 1) then begin
+ if (ext = '.NODEZ') or (ext = '.NODE') or (length(gNode.nodes) < 1) then begin
      nodename := ChangeFileExt(FileName, '.node');
      if fileexists(nodename) then begin
         OpenNode(nodename);
@@ -938,7 +940,7 @@ end;
 procedure TGLForm1.CloseOverlaysMenuClick(Sender: TObject);
 begin
   if (Sender <> nil) and (gMesh.OpenOverlays > 0) then begin
-    if gMesh.Overlay[1].LUTindex > 14 then
+    if (gMesh.Overlay[1].LUTindex >= 15) and (gMesh.Overlay[1].LUTindex <= 18) then
          if MessageDlg('Curvature overlay open', 'Close the FreeSurfer CURV file?', mtConfirmation, [mbYes, mbNo],0) = mrNo then
            exit;
   end;
@@ -1663,7 +1665,8 @@ begin
   Row := GLForm1.StringGrid1.DefaultRowHeight div 2;
   Row := round((Y-Row)/GLForm1.StringGrid1.DefaultRowHeight);
   if (Row > 0) or (Row <= gMesh.OpenOverlays) then
-     StringGrid1.Hint := GLForm1.StringGrid1.Cells[0, Row];
+      StringGrid1.Hint := GLForm1.StringGrid1.Cells[0, Row];
+     //StringGrid1.Hint := format('%s %g..%g',[GLForm1.StringGrid1.Cells[0, Row], gMesh.overlay[Row].minIntensity, gMesh.overlay[Row].maxIntensity]);
   if (X >  (GLForm1.StringGrid1.DefaultColWidth *2)) then
     exit; //not one of the first two colums
   Col := X div GLForm1.StringGrid1.DefaultColWidth;
@@ -1857,8 +1860,8 @@ begin
  //ScalarPref(gTrack.scalars[gTrack.scalarSelected].mnView, gTrack.scalars[gTrack.scalarSelected].mxView);
   //TestColorBar(gPrefs, w, h);
   //DrawText (gPrefs, w, h);
-  if isToScreen then
-     GLbox.SwapBuffers;
+  if (isToScreen) then
+             GLbox.SwapBuffers;
   //nDraw;
     isBusy := false;
 end;
@@ -2100,6 +2103,39 @@ begin
   GLBoxRequestUpdate(Sender);
 end;
 
+procedure TGLForm1.NewWindow1Click(Sender: TObject);
+{$IFNDEF UNIX}
+begin
+   ShellExecute(handle,'open',PChar(paramstr(0)), '','',SW_SHOWNORMAL); //uses ShellApi;
+end;
+{$ELSE}
+var
+    AProcess: TProcess;
+    i : integer;
+    //http://wiki.freepascal.org/Executing_External_Programs
+begin
+  IniFile(false,IniName,gPrefs);  //load new window with latest settings
+  AProcess := TProcess.Create(nil);
+  AProcess.InheritHandles := False;
+  //AProcess.Options := [poNoConsole];  //poNoConsole is Windows only! http://lazarus-ccr.sourceforge.net/docs/fcl/process/tprocess.options.html
+  //AProcess.ShowWindow := swoShow; //Windows only http://www.freepascal.org/docs-html/fcl/process/tprocess.showwindow.html
+  for I := 1 to GetEnvironmentVariableCount do
+      AProcess.Environment.Add(GetEnvironmentString(I));
+  {$IFDEF Darwin}
+  AProcess.Executable := 'open';
+  AProcess.Parameters.Add('-n');
+  AProcess.Parameters.Add('-a');
+  AProcess.Parameters.Add(paramstr(0));
+  {$ELSE}
+  AProcess.Executable := paramstr(0);
+  {$ENDIF}
+  //AProcess.Parameters.Add('/Users/rorden/Documents/osx/MRIcroGL.app/Contents/MacOS/MRIcroGL');
+  AProcess.Execute;
+  AProcess.Free;
+end;
+{$ENDIF}
+
+
 procedure TGLForm1.CenterMeshMenuClick(Sender: TObject);
 begin
  gMesh.CenterOrigin;
@@ -2178,7 +2214,7 @@ begin
      GLbox.Repaint;
   end;
   origin := GetOrigin(scale);
-  str :=  'Surf Ice '+' 30 January 2017 '
+  str :=  'Surf Ice '+' 2 February 2017 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
