@@ -4,5 +4,5 @@ BEGIN
 	//OVERLAYLOAD('/Users/rorden/Downloads/cifti-2_test_data/Conte69.MyelinAndCorrThickness.32k_fs_LR.dtseries.nii');
 	OVERLAYMINMAX(1, 1.11, 1.641);
 //OVERLAYCOLORNAME(1, 'hsb8clrmid');
-OVERLAYCOLORNAME(1, 'psych_no_none');
+OVERLAYCOLORNAME(1, 'cw_psych');
 END.

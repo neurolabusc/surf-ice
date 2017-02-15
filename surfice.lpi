@@ -114,7 +114,6 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
         <TopLine Value="930"/>
         <CursorPos X="78" Y="943"/>
         <UsageCount Value="210"/>
@@ -142,8 +141,8 @@
         <Filename Value="colorTable.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="237"/>
-        <CursorPos X="23" Y="237"/>
+        <TopLine Value="256"/>
+        <CursorPos X="43" Y="282"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit4>
@@ -175,9 +174,10 @@
       </Unit7>
       <Unit8>
         <Filename Value="mesh.pas"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="8"/>
-        <TopLine Value="2292"/>
-        <CursorPos X="76" Y="2305"/>
+        <TopLine Value="114"/>
+        <CursorPos X="86" Y="137"/>
         <UsageCount Value="15"/>
         <Loaded Value="True"/>
       </Unit8>

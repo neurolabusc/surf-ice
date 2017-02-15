@@ -133,8 +133,8 @@ implementation
 
 
 uses
-  meshify_simplify,
-  shaderu, {$IFDEF COREGL} gl_core_3d {$ELSE} gl_legacy_3d {$ENDIF}; //mainunit;
+  //mainunit,
+  meshify_simplify,shaderu, {$IFDEF COREGL} gl_core_3d {$ELSE} gl_legacy_3d {$ENDIF};
 
 {$IFDEF COREGL}
 function mixRGBA(c1, c2: TRGBA; frac2: single): TRGBA;
@@ -4844,8 +4844,6 @@ begin
   end;
   if (length(overlay[OpenOverlays].intensity) < 1 )  then
        LoadW(FileName, OpenOverlays);
-  //if (length(overlay[OpenOverlays].intensity) < 1 )   then
-  //      LoadStc(FileName, OpenOverlays)
   if (length(overlay[OpenOverlays].intensity) < 1 )   then begin
       LoadCurv(FileName, OpenOverlays);
       if (length(overlay[OpenOverlays].intensity) > 0 ) then
@@ -4856,7 +4854,7 @@ begin
       LoadMeshAsOverlay(FileName, OpenOverlays);
   end else
       SetOverlayDescriptives(OpenOverlays);
-  if Overlay[OpenOverlays].LUTindex > 13 then begin //CURV file
+  if (Overlay[OpenOverlays].LUTindex >= 16) and (Overlay[OpenOverlays].LUTindex <= 16) then begin //CURV file
      Overlay[OpenOverlays].windowScaledMin:= -0.1;
      Overlay[OpenOverlays].windowScaledMax := 0.8;
   end;

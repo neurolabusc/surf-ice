@@ -17,12 +17,15 @@ You can also build this project from the command line (assuming you have FPC Laz
 
 ##### Recent Versions
 
-30-January-2017
+2-February-2017
  - Looks better on Linux high-DPI screens
+ - Support for several variations of the [CIfTI format](https://www.humanconnectome.org/software/get-connectome-workbench.html)(dscalar.nii, dlabel.nii, dtseries.nii).
+
 30-September-2016
  - Add support for the TRK.GZ (DSI studio), DAT (MRI studio) formats.
  - Support for tracks with [scalars](https://github.com/johncolby/along-tract-stats) and [properties](http://trackvis.org/blog/tag/track_merge/).
  - "Faster" track viewing mode looks better (Lucas Nesi's imposter method).
+
 20-April-2016
  - Add support for the 3DS, MS3D, LWO2, DXF and GTS formats.
 
