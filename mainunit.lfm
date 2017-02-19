@@ -1174,6 +1174,7 @@ object GLForm1: TGLForm1
       object StringGrid1: TStringGrid
         Left = 0
         Height = 60
+        Hint = 'Click on name to hide, control+click to reverse palette'
         Top = 0
         Width = 262
         Align = alClient
@@ -1865,6 +1866,11 @@ object GLForm1: TGLForm1
           Caption = 'Blue'
           OnClick = QuickColorClick
         end
+        object GoldColorMenu: TMenuItem
+          Tag = 4
+          Caption = 'Gold'
+          OnClick = QuickColorClick
+        end
       end
       object ColorbarMenu: TMenuItem
         Caption = 'Colorbar'
@@ -1908,6 +1914,18 @@ object GLForm1: TGLForm1
       object SimplifyMeshMenu: TMenuItem
         Caption = 'Simplify mesh'
         OnClick = SimplifyMeshMenuClick
+      end
+      object CurvMenu: TMenuItem
+        Caption = 'Compute Curvature File'
+        Hint = 'Create a curv file in same folder as mesh: will be loaded with mesh'
+        OnClick = CurvMenuClick
+      end
+      object CurvMenuTemp: TMenuItem
+        Tag = 1
+        Caption = 'Compute Curvature'
+        Hint = 'Compute and load a temporary curv file'
+        ShortCut = 16459
+        OnClick = CurvMenuClick
       end
     end
     object HelpMenu: TMenuItem

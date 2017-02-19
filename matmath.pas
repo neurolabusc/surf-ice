@@ -20,6 +20,7 @@ uses
  function vectorAdd (A: TPoint3i; B: integer): TPoint3i;  inline; overload;
  procedure matrixEye(var a: TMat33);
  procedure vectorSubtract (var A: TPoint3f; B: TPoint3f);  inline;
+ function vectorSubtractF (A: TPoint3f; B: TPoint3f): TPoint3f;  inline;
  procedure minMax(var v, mn, mx: TPoint3f); overload;
  procedure minMax(var v, mn, mx: TPoint3i); overload;
  procedure minMax(var v: TPoint3i; var mn, mx: integer); overload;
@@ -561,6 +562,13 @@ begin
      v.Y := -v.Y;
      v.Z := -v.Z;
 end; // vectorNegate()
+
+function vectorSubtractF (A: TPoint3f; B: TPoint3f): TPoint3f;  inline;
+begin
+ result.X := A.X - B.X;
+ result.Y := A.Y - B.Y;
+ result.Z := A.Z - B.Z;
+end;
 
 procedure vectorSubtract (var A: TPoint3f; B: TPoint3f);  inline;
 //sum two vectors

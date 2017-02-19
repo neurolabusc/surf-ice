@@ -12,7 +12,7 @@ uses
   {$IFNDEF Darwin}uscaledpi, {$ENDIF}
   {$IFDEF COREGL} gl_core_3d, {$ELSE}     gl_legacy_3d, {$ENDIF}
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,math,
-  ExtCtrls, OpenGLContext, mesh, LCLintf, ComCtrls, Menus, graphtype,
+  ExtCtrls, OpenGLContext, mesh, LCLintf, ComCtrls, Menus, graphtype, curv,
   ClipBrd, shaderui, shaderu, prefs, userdir, LCLtype, Grids, Spin, matmath,
   colorTable, Track, types,  define_types, meshify,  gl_2d, zstream, gl_core_matrix, Process, meshify_simplify;
 
@@ -20,6 +20,9 @@ type
   { TGLForm1 }
   TGLForm1 = class(TForm)
     AOLabel: TLabel;
+    CurvMenu: TMenuItem;
+    CurvMenuTemp: TMenuItem;
+    GoldColorMenu: TMenuItem;
     NewWindow1: TMenuItem;
     S1Check: TCheckBox;
     S6Check: TCheckBox;
@@ -188,6 +191,7 @@ type
     SaveMenu: TMenuItem;
     ObjectColorMenu: TMenuItem;
     OpenMenu: TMenuItem;
+    procedure CurvMenuClick(Sender: TObject);
     procedure DepthLabelDblClick(Sender: TObject);
     procedure NewWindow1Click(Sender: TObject);
     procedure Quit2TextEditor;
@@ -239,6 +243,7 @@ type
     procedure OpenMenuClick(Sender: TObject);
     procedure OverlayTimerTimer(Sender: TObject);
     procedure OverlayVisible(lOverlay: integer; lVisible: boolean);
+    procedure OverlayInvert(lOverlay: integer; lInvert: boolean);
     procedure PrefMenuClick(Sender: TObject);
     procedure QuickColorClick(Sender: TObject);
     procedure ExitMenuClick(Sender: TObject);
@@ -697,11 +702,11 @@ begin
   OpenDialog.InitialDir:= ExtractFileDir(Filename);
   UpdateToolbar;
   AddMRU(Filename);
-  if gMesh.isFreeSurferMesh then begin
+  //if gMesh.isFreeSurferMesh then begin
      curvname := changefileext(Filename, '.curv');
      if fileexists(curvname) then
         OpenOverlay(curvname);
-  end;
+  //end;
   GLBoxRequestUpdate(nil);
 end;
 
@@ -939,11 +944,11 @@ end;
 
 procedure TGLForm1.CloseOverlaysMenuClick(Sender: TObject);
 begin
-  if (Sender <> nil) and (gMesh.OpenOverlays > 0) then begin
-    if (gMesh.Overlay[1].LUTindex >= 15) and (gMesh.Overlay[1].LUTindex <= 18) then
+  (*if (Sender <> nil) and (gMesh.OpenOverlays > 0) then begin
+    if isFreeSurferLUT(gMesh.Overlay[1].LUTindex) then
          if MessageDlg('Curvature overlay open', 'Close the FreeSurfer CURV file?', mtConfirmation, [mbYes, mbNo],0) = mrNo then
            exit;
-  end;
+  end;*)
   gMesh.CloseOverlays;
   GLForm1.SetFocusedControl(nil); //GLForm1.ActiveControl := nil;
   UpdateToolbar;
@@ -1112,7 +1117,7 @@ begin
   TrackScalarLUTdrop.Enabled := (gTrack.scalarSelected >= 0); //disable if color based on direction not scalar
   TrackScalarRangeBtn.Enabled := TrackScalarLUTdrop.Enabled;
   i := TrackScalarLUTdrop.ItemIndex;
-  gTrack.scalarLUT := UpdateTransferFunction(i);
+  gTrack.scalarLUT := UpdateTransferFunction(i, false);
   gTrack.isRebuildList:= true;
   GLBoxRequestUpdate(Sender);
 end;
@@ -1231,7 +1236,14 @@ procedure TGLForm1.StringGrid1DrawCell(Sender: TObject; aCol, aRow: Integer;
   aRect: TRect; aState: TGridDrawState);
 begin
  if aRow < 1 then exit;
- if (gMesh.Overlay[aRow].LUTvisible) then exit;
+
+ if (gMesh.Overlay[aRow].LUTvisible) then begin
+    if (gMesh.Overlay[aRow].LUTinvert) then begin
+       TStringGrid(Sender).Canvas.Font.Color := clBlue;
+       TStringGrid(Sender).Canvas.TextOut(aRect.Left+2,aRect.Top+2, TStringGrid(Sender).Cells[ACol, ARow]);
+    end;
+    exit;
+ end;
  //make rows of invisible overlays red
  TStringGrid(Sender).Canvas.Font.Color := clRed;
  TStringGrid(Sender).Canvas.TextOut(aRect.Left+2,aRect.Top+2, TStringGrid(Sender).Cells[ACol, ARow]);
@@ -1364,6 +1376,16 @@ begin
     exit;
   gMesh.Overlay[lOverlay].LUTvisible := lVisible;
   UpdateOverlaySpread;
+end;
+
+procedure TGLForm1.OverlayInvert(lOverlay: integer; lInvert: boolean);
+begin
+  if (lOverlay > gMesh.OpenOverlays) or (lOverlay < 1) then
+    exit;
+  gMesh.Overlay[lOverlay].LUTinvert := lInvert;
+  UpdateOverlaySpread;
+  gMesh.overlay[lOverlay].LUT := UpdateTransferFunction (gMesh.Overlay[lOverlay].LUTindex, gMesh.Overlay[lOverlay].LUTinvert);
+  OverlayTimerStart;
 end;
 
 procedure TGLForm1.PrefMenuClick(Sender: TObject);
@@ -1539,10 +1561,11 @@ end; // PrefMenuClick()
 procedure TGLForm1.QuickColorClick(Sender: TObject);
 begin
   case (sender as TMenuItem).tag of
-       1: gPrefs.ObjColor:= RGBToColor(210,148,148); //pink
+       1: gPrefs.ObjColor:= RGBToColor(210,148,148); //red
        2: gPrefs.ObjColor:= RGBToColor(128,162,128); //green
        3: gPrefs.ObjColor:= RGBToColor(167,171,253); //blue
-       else gPrefs.ObjColor:= RGBToColor(192,192,192);
+       4: gPrefs.ObjColor:= RGBToColor(226,171,0); //gold
+       else gPrefs.ObjColor:= RGBToColor(192,192,192); //gray
   end;
   {$IFDEF COREGL}
   gMesh.isRebuildList := true;
@@ -1664,8 +1687,12 @@ begin
   if (gMesh.OpenOverlays < 1) then exit;
   Row := GLForm1.StringGrid1.DefaultRowHeight div 2;
   Row := round((Y-Row)/GLForm1.StringGrid1.DefaultRowHeight);
-  if (Row > 0) or (Row <= gMesh.OpenOverlays) then
-      StringGrid1.Hint := GLForm1.StringGrid1.Cells[0, Row];
+  if (Row > 0) and (Row <= gMesh.OpenOverlays) then
+      StringGrid1.Hint := GLForm1.StringGrid1.Cells[0, Row]
+  else begin
+       StringGrid1.Hint := 'Click on name to hide, control+click to reverse palette';
+       exit;
+  end;
      //StringGrid1.Hint := format('%s %g..%g',[GLForm1.StringGrid1.Cells[0, Row], gMesh.overlay[Row].minIntensity, gMesh.overlay[Row].maxIntensity]);
   if (X >  (GLForm1.StringGrid1.DefaultColWidth *2)) then
     exit; //not one of the first two colums
@@ -1679,6 +1706,15 @@ begin
   end;
   GLForm1.LUTdrop.visible := false;
   if (Row < 1) or (Row > gMesh.OpenOverlays) then exit;
+  if (ssCtrl in Shift) then begin
+     (*gMesh.Overlay[Row].LUTreverse := not gMesh.Overlay[Row].LUTreverse;
+     UpdateOverlaySpread;
+     gMesh.overlay[Row].LUT := UpdateTransferFunction (gMesh.Overlay[Row].LUTindex, gMesh.Overlay[Row].LUTreverse);
+        xxx
+     OverlayTimerStart;*)
+   OverlayInvert(Row, not gMesh.Overlay[Row].LUTinvert);
+     exit;
+  end;
   If (Col = kFname) or  ((ssRight in Shift) or (ssShift in Shift)) then begin //hide overlay
       OverlayVisible(Row, (not gMesh.Overlay[Row].LUTvisible) );
       OverlayTimerStart;
@@ -2103,6 +2139,33 @@ begin
   GLBoxRequestUpdate(Sender);
 end;
 
+procedure TGLForm1.CurvMenuClick(Sender: TObject);
+var
+  fnm: string;
+  isTemp: boolean;
+begin
+    if length(gMesh.Faces) < 1 then begin
+       showmessage('Unable to compute curvature: no mesh is loaded (use File/Open).');
+       exit;
+    end;
+    //isTemp := (MessageDlg('Temporary CURV file?', mtConfirmation, [mbNo, mbYes], 0) = mrYes);
+    isTemp := (Sender as TMenuItem).Tag = 1;
+
+    fnm := changefileext(gPrefs.PrevFilename[1],'.curv');
+    if isTemp then begin
+       fnm := DesktopFolder + ExtractFileName(fnm);
+
+    end;
+    if fileexists(fnm) then begin
+       showmessage('File already exists '+fnm);
+       exit;
+    end;
+    GenerateCurv(fnm, gMesh.faces, gMesh.vertices);
+    OpenOverlay(fnm);
+    if isTemp then
+      deletefile(fnm);
+end;
+
 procedure TGLForm1.NewWindow1Click(Sender: TObject);
 {$IFNDEF UNIX}
 begin
@@ -2422,7 +2485,7 @@ begin
     StringGrid1.Cells[kLUT, lOverlay] := LUTdrop.Items[gMesh.Overlay[lOverlay].LUTindex];
     //LUTdrop.ItemIndex := gOverlayImg[lOverlay].LUTindex;
   end;
-  gMesh.overlay[lOverlay].LUT := UpdateTransferFunction (gMesh.Overlay[lOverlay].LUTindex);
+  gMesh.overlay[lOverlay].LUT := UpdateTransferFunction (gMesh.Overlay[lOverlay].LUTindex, gMesh.Overlay[lOverlay].LUTinvert);
   //LUTdropLoad(gMesh.Overlay[lOverlay].LUTindex, gMesh.Overlay[lOverlay].LUT, LUTdrop.Items[lLUTindex], gOverlayCLUTrec[lOverlay]);
 end;
 
@@ -2879,6 +2942,7 @@ begin
   gMesh.isBusy := false;
   isBusy := false;
   {$IFDEF Darwin}
+  CurvMenuTemp.ShortCut:= ShortCut(Word('K'), [ssMeta]); ;
   CloseMenu.ShortCut :=  ShortCut(Word('W'), [ssMeta]);
   SwapYZMenu.ShortCut :=  ShortCut(Word('X'), [ssMeta]);
   ScriptMenu.ShortCut :=  ShortCut(Word('Z'), [ssMeta]);

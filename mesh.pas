@@ -24,14 +24,14 @@ type
    end;
 
  TOverlay = record
-    LUTvisible: boolean;
+    LUTvisible, LUTinvert: boolean;
     LUTindex : integer;
     LUT: TLUT;
     minIntensity, maxIntensity, windowScaledMin, windowScaledMax: single;
     filename: string;
     intensity: TFloats;
     //next: if loaded as mesh...
-    faces : TFaces;//array of TPoint3i;
+    faces : TFaces;
     vertices: TVertices;
  end;
 
@@ -1187,7 +1187,7 @@ begin
      setlength(self.vertexRGBA, sphereV * nNodeThresh + CylV * nEdgeThresh);
      face := 0;
      vert := 0;
-     cLUT := UpdateTransferFunction (nodePrefs.NodeLUTindex);
+     cLUT := UpdateTransferFunction (nodePrefs.NodeLUTindex, false);
      //draw nodes/balls/spheres
      if nNodeThresh > 0 then begin
        for n := 0 to (nNode-1) do begin
@@ -1226,9 +1226,9 @@ begin
       end; //at least on node
      // draw sticks/cylinders
      if nEdgeThresh > 0 then begin
-       cLUT := UpdateTransferFunction (nodePrefs.edgeLUTindex);
+       cLUT := UpdateTransferFunction (nodePrefs.edgeLUTindex, false);
        i := nodePrefs.edgeLUTindex + 1;
-       cLUTneg := UpdateTransferFunction (i);
+       cLUTneg := UpdateTransferFunction (i, false);
        if (nodePrefs.minEdgeThresh <> nodePrefs.maxEdgeThresh) then
           denom := 1 /(nodePrefs.maxEdgeThresh - nodePrefs.minEdgeThresh)
        else
@@ -4454,6 +4454,7 @@ var
    i, sz: integer;
    num_v, num_f, ValsPerVertex : LongWord;
    sig : array [1..3] of byte;
+   mn, mx: single;
 begin
      AssignFile(f, FileName);
      FileMode := fmOpenRead;
@@ -4463,7 +4464,7 @@ begin
         CloseFile(f);
         exit;
      end;
-     blockread(f, sig, 3 ); //since these files do not have a file extension, check first 8 bytes "0xFFFFFE creat"
+     blockread(f, sig, 3 ); //since these files do not have a file extension, check first 3 bytes "0xFFFFFF"
      blockread(f, num_v, 4 ); //uint32
      blockread(f, num_f, 4 ); //uint32
      blockread(f, ValsPerVertex, 4 ); //uint32
@@ -4706,6 +4707,7 @@ var
    mx, mn, mnNot0, v: single;
    i, num_v, lLog10: integer;
 begin
+  overlay[lOverlayIndex].LUTinvert := false;
   num_v := length(overlay[lOverlayIndex].intensity);
   if (num_v < 3) then exit;
   mn := overlay[lOverlayIndex].intensity[0];
@@ -4788,7 +4790,7 @@ begin
      Overlay[OpenOverlays].LUTindex := 0
   else
       Overlay[OpenOverlays].LUTindex := OpenOverlays;
-  Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex);
+  Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex, Overlay[OpenOverlays].LUTinvert);
   if (ext = '.MZ3') then begin
      if not LoadMz3(FileName, OpenOverlays) then begin //unable to open as an overlay - perhaps vertex colors?
         OpenOverlays := OpenOverlays - 1;
@@ -4854,11 +4856,12 @@ begin
       LoadMeshAsOverlay(FileName, OpenOverlays);
   end else
       SetOverlayDescriptives(OpenOverlays);
-  if (Overlay[OpenOverlays].LUTindex >= 16) and (Overlay[OpenOverlays].LUTindex <= 16) then begin //CURV file
-     Overlay[OpenOverlays].windowScaledMin:= -0.1;
+  if isFreeSurferLUT(Overlay[OpenOverlays].LUTindex) then begin //CURV file
+     Overlay[OpenOverlays].windowScaledMin:= 0.0;//-0.1;
      Overlay[OpenOverlays].windowScaledMax := 0.8;
   end;
-  Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex); //set color scheme
+
+  Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex, Overlay[OpenOverlays].LUTinvert); //set color scheme
   isRebuildList := true;
   //showmessage(format('%d %d', [length(Overlay[OpenOverlays].intensity), length(Overlay[OpenOverlays].vertices) ]));
   result :=  (length(Overlay[OpenOverlays].intensity) > 0) or (length(Overlay[OpenOverlays].vertices) > 0);

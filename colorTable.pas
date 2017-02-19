@@ -18,17 +18,23 @@ type
         intensity: array [0..maxNodes] of integer;
 	end;
 
-function UpdateTransferFunction (var lIndex: integer): TLUT;//change color table
+function UpdateTransferFunction (var lIndex: integer; isInvert: boolean): TLUT;//change color table
 function CLUTDir: string;
 function blendRGBA(c1, c2: TRGBA ): TRGBA;
 function maxRGBA(c1, c2: TRGBA ): TRGBA;
 function inten2rgb(intensity, mn, mx: single; lut: TLUT): TRGBA;
 function inten2rgb1(intensity, mn, mx: single; lut: TLUT): TRGBA; //use 1st not 0th LUT color (0 is transparent)
 function desaturateRGBA ( rgba: TRGBA; frac: single; alpha: byte): TRGBA;
+function isFreeSurferLUT(lIndex: integer): boolean;
 
 implementation
 
 uses mainunit;
+
+function isFreeSurferLUT(lIndex: integer): boolean;
+begin
+     result := (lIndex >= 15) and (lIndex <= 18);
+end;
 
 function blendRGBA(c1, c2: TRGBA ): TRGBA;
 var
@@ -287,11 +293,12 @@ begin
   result.A := round(p1.A + frac * (p2.A - p1.A));
 end;//lerpRGBA()
 
-function UpdateTransferFunction (var lIndex: integer): TLUT;//change color table
+function UpdateTransferFunction (var lIndex: integer; isInvert: boolean): TLUT;//change color table
 var
  lLUTnodes :TLUTnodes;
  lInc,lNodeLo: integer;
  frac, f: single;
+ rev: TLUT;
 begin
  lLUTNodes := makeLUT(lIndex);
  lNodeLo := 0;
@@ -309,6 +316,13 @@ begin
    result[lInc] := lerpRGBA(lLUTNodes.rgba[lNodeLo],lLUTNodes.rgba[lNodeLo+1],frac);
  end;
 
+ if isInvert then begin
+    rev := result;
+    for lInc := 0 to 255 do
+        result[lInc] := rev[255-lInc];
+    result[0].A := rev[0].A;
+    result[255].A := rev[255].A;
+ end;
  if lLUTNodes.isFreeSurfer then exit; //not for freesurfer
  //result[0].A := 0; //see LUT[0].A <> 0
  for lInc := 1 to 255 do

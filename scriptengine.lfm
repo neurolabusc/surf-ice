@@ -148,6 +148,11 @@ object ScriptForm: TScriptForm
           Hint = 'MESHCOLOR (R,G,B: byte) set red/green/blue components of main image.'
           OnClick = InsertCommand
         end
+        object meshcurv1: TMenuItem
+          Caption = 'meshcurv'
+          Hint = 'MESHCURV displays mesh curvature, so crevices appear dark.'
+          OnClick = InsertCommand
+        end
       end
       object Overlays1: TMenuItem
         Caption = 'Overlays'
@@ -197,6 +202,12 @@ object ScriptForm: TScriptForm
           Tag = 1211
           Caption = 'overlayvisible'
           Hint = 'OVERLAYVISIBLE(OVERLAY: integer; VISIBLE: boolean) The feature allows you to make individual overlays visible or invisible.'
+          OnClick = InsertCommand
+        end
+        object overlayinvert1: TMenuItem
+          Tag = 1211
+          Caption = 'overlayinvert'
+          Hint = 'OVERLAYINVERT(OVERLAY: integer; INVERT: boolean) toggle whether overlay color scheme is inverted.'
           OnClick = InsertCommand
         end
       end

@@ -1080,17 +1080,18 @@ var
      LUT: array [1..3] of TLUT;
      mn, mx: array [1..3] of single;
 begin
+
   if (lMesh.OpenOverlays < 1) and (length(lMesh.nodes) < 1) then exit;
   nLUT := 0;
   if (lMesh.OpenOverlays > 0) then
      for lI := 1 to lMesh.OpenOverlays do
-         if lMesh.overlay[lI].LUTvisible then
+         if (lMesh.overlay[lI].LUTvisible) and (not isFreeSurferLUT(lMesh.overlay[lI].LUTindex)) then
             inc(nLUT);
   if (nLUT < 1) then begin
     nLUT := 0;
   if (lMesh.nodePrefs.isNodeColorVaries) then begin
      inc(nLUT);
-     LUT[nLUT] := UpdateTransferFunction (lMesh.nodePrefs.NodeLUTindex);
+     LUT[nLUT] := UpdateTransferFunction (lMesh.nodePrefs.NodeLUTindex, false);
      if (lMesh.nodePrefs.isNodeThresholdBySize) then begin
         mn[nLUT] := lMesh.nodePrefs.minNodeColor;
         mx[nLUT] := lMesh.nodePrefs.maxNodeColor;
@@ -1105,14 +1106,14 @@ begin
   if (lMesh.nodePrefs.isEdgeColorVaries) and (lMesh.nodePrefs.maxEdge <> lMesh.nodePrefs.minEdge) then begin
     if (lMesh.nodePrefs.maxEdge > 0)  and (not lMesh.nodePrefs.isNoPosEdge) and (lMesh.nodePrefs.minEdgeThresh <> lMesh.nodePrefs.maxEdgeThresh) then begin
        inc(nLUT);
-       LUT[nLUT] := UpdateTransferFunction (lMesh.nodePrefs.edgeLUTindex);
+       LUT[nLUT] := UpdateTransferFunction (lMesh.nodePrefs.edgeLUTindex, false);
        mn[nLUT] := lMesh.nodePrefs.minEdgeThresh;
        mx[nLUT] := lMesh.nodePrefs.maxEdgeThresh;
     end; //positive edges
     if (lMesh.nodePrefs.minEdge < 0)  and (not lMesh.nodePrefs.isNoNegEdge) and (lMesh.nodePrefs.minEdgeThresh <> lMesh.nodePrefs.maxEdgeThresh) then begin
        inc(nLUT);
        lI := lMesh.nodePrefs.edgeLUTindex + 1;
-       LUT[nLUT] := UpdateTransferFunction (lI);
+       LUT[nLUT] := UpdateTransferFunction (lI, false);
        mn[nLUT] := -lMesh.nodePrefs.minEdgeThresh;
        mx[nLUT] := -lMesh.nodePrefs.maxEdgeThresh;
     end; //negative edges
@@ -1162,13 +1163,13 @@ end; //if overlays else edges
   lU2 := lU;
   if (lMesh.OpenOverlays > 0) then begin
     for lI := 1 to lMesh.OpenOverlays do begin
-      if not lMesh.overlay[lI].LUTvisible then continue;
+      if (not lMesh.overlay[lI].LUTvisible) or (isFreeSurferLUT(lMesh.overlay[lI].LUTindex)) then continue;
       DrawCLUTx(lMesh.overlay[lI].LUT,lU2,lPrefs);
       UOffset(lU2,lX,lY);
     end;
     lU2 := lU;
     for lI := 1 to lMesh.OpenOverlays do begin
-      if not lMesh.overlay[lI].LUTvisible then continue;
+      if (not lMesh.overlay[lI].LUTvisible) or (isFreeSurferLUT(lMesh.overlay[lI].LUTindex))then continue;
       lMin := lMesh.overlay[lI].WindowScaledMin;
       lMax := lMesh.overlay[lI].WindowScaledMax;
       SortSingle(lMin,lMax);

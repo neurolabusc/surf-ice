@@ -37,6 +37,8 @@ type
     AppleMenu: TMenuItem;
     MenuItem1: TMenuItem;
     Close1: TMenuItem;
+    meshcurv1: TMenuItem;
+    overlayinvert1: TMenuItem;
     Tracks1: TMenuItem;
     trackprefs1: TMenuItem;
     trackload1: TMenuItem;

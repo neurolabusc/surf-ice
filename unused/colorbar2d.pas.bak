@@ -211,6 +211,7 @@ begin
     for lI := 1 to lMesh.OpenOverlays do begin
       if (lMesh.overlay[lI].LUTvisible) and (not isFreeSurferLUT(lMesh.overlay[lI].LUTindex)) then
         inc(nLUT);
+      glform1.caption := lMesh.overlay[lI].LUTindex;
     end;
   end else begin
     nLUT := 0;

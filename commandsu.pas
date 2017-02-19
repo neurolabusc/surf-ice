@@ -17,6 +17,7 @@ procedure EDGESIZE(size: single; varies: boolean);
 procedure EDGETHRESH (LO, HI: single);
 procedure ELEVATION (DEG: integer);
 procedure MESHLOAD(lFilename: string);
+procedure MESHCURV;
 procedure NODELOAD(lFilename: string);
 procedure MODALMESSAGE(STR: string);
 procedure MODELESSMESSAGE(STR: string);
@@ -34,6 +35,7 @@ procedure OVERLAYLOAD(lFilename: string);
 procedure OVERLAYMINMAX (lOverlay: integer; lMin,lMax: single);
 procedure OVERLAYTRANSPARENCYONBACKGROUND(lPct: integer);
 procedure OVERLAYVISIBLE(lOverlay: integer; VISIBLE: boolean);
+procedure OVERLAYINVERT(lOverlay: integer; INVERT: boolean);
 procedure QUIT;
 procedure RESETDEFAULTS;
 procedure SAVEBMP(lFilename: string);
@@ -61,7 +63,7 @@ const
                Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
              );
 
-knProc = 45;
+knProc = 47;
   kProcRA : array [1..knProc] of TScriptRec = (
    (Ptr:@AZIMUTH;Decl:'AZIMUTH';Vars:'(DEG: integer)'),
    (Ptr:@AZIMUTHELEVATION;Decl:'AZIMUTHELEVATION';Vars:'(AZI, ELEV: integer)'),
@@ -75,6 +77,7 @@ knProc = 45;
    (Ptr:@EDGETHRESH;Decl:'EDGETHRESH';Vars:'(LO, HI: single)'),
    (Ptr:@ELEVATION;Decl:'ELEVATION';Vars:'(DEG: integer)'),
    (Ptr:@EDGELOAD;Decl:'EDGELOAD';Vars:'(lFilename: string)'),
+   (Ptr:@MESHCURV;Decl:'MESHCURV';Vars:''),
    (Ptr:@MESHLOAD;Decl:'MESHLOAD';Vars:'(lFilename: string)'),
    (Ptr:@NODELOAD;Decl:'NODELOAD';Vars:'(lFilename: string)'),
    (Ptr:@MODALMESSAGE;Decl:'MODALMESSAGE';Vars:'(STR: string)'),
@@ -93,6 +96,7 @@ knProc = 45;
    (Ptr:@OVERLAYMINMAX;Decl:'OVERLAYMINMAX';Vars:'(lOverlay: integer; lMin,lMax: single)'),
    (Ptr:@OVERLAYTRANSPARENCYONBACKGROUND;Decl:'OVERLAYTRANSPARENCYONBACKGROUND';Vars:'(lPct: integer)'),
    (Ptr:@OVERLAYVISIBLE;Decl:'OVERLAYVISIBLE';Vars:'(lOverlay: integer; VISIBLE: boolean)'),
+   (Ptr:@OVERLAYINVERT;Decl:'OVERLAYINVERT';Vars:'(lOverlay: integer; INVERT: boolean)'),
    (Ptr:@QUIT;Decl:'QUIT';Vars:''),
    (Ptr:@RESETDEFAULTS;Decl:'RESETDEFAULTS';Vars:''),
    (Ptr:@SAVEBMP;Decl:'SAVEBMP';Vars:'(lFilename: string)'),
@@ -180,6 +184,11 @@ begin
     AZIMUTHELEVATION(90,0)
   else
     AZIMUTHELEVATION(270,0);
+end;
+
+procedure MESHCURV;
+begin
+     GLForm1.CurvMenuTemp.Click;
 end;
 
 procedure MESHLOAD(lFilename: string);
@@ -385,10 +394,14 @@ begin
        GLForm1.Transparency75.Click;
 end;
 
+procedure OVERLAYINVERT(lOverlay: integer; INVERT: boolean);
+begin
+     GLForm1.OverlayInvert(lOverlay, INVERT);
+end;
 
 procedure OVERLAYVISIBLE(lOverlay: integer; VISIBLE: boolean);
 begin
-     GLForm1.OverlayVisible(lOverlay, Visible);
+     GLForm1.OverlayVisible(lOverlay, VISIBLE);
 
 end;
 

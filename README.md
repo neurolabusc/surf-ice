@@ -19,6 +19,8 @@ You can also build this project from the command line (assuming you have FPC Laz
 
 2-February-2017
  - Looks better on Linux high-DPI screens
+ - New command Advanced/ComputeCurvature creates FreeSurfer Format CURV file
+ - Control-clicking overlay name in the overlay panel reverses the overlay colors (and the name is displayed in black instead of blue). Control-click again to switch to normal mode.
  - Support for several variations of the [CIfTI format](https://www.humanconnectome.org/software/get-connectome-workbench.html)(dscalar.nii, dlabel.nii, dtseries.nii).
 
 30-September-2016

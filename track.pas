@@ -112,7 +112,7 @@ var i: integer;
 begin
   i := 1;
   {$ifndef isTerminalApp}
-  scalarLUT := UpdateTransferFunction(i); //red-yellow
+  scalarLUT := UpdateTransferFunction(i, false); //red-yellow
   {$endif}
   scalarSelected := -1; //none: color based on direction
      n_count := 0;
@@ -645,7 +645,7 @@ var
 begin
   i := 1;
   {$ifndef isTerminalApp}
-  scalarLUT := UpdateTransferFunction(i); ; //red-yellow
+  scalarLUT := UpdateTransferFunction(i, false); ; //red-yellow
   {$endif}
   scalarSelected := -1; //none: color based on direction
      SetLength(tracks, 0);
