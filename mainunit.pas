@@ -1697,10 +1697,7 @@ begin
   if (X >  (GLForm1.StringGrid1.DefaultColWidth *2)) then
     exit; //not one of the first two colums
   Col := X div GLForm1.StringGrid1.DefaultColWidth;
-
-
   If (Col = kLUT) then begin //hide overlay
-     //caption := inttostr(row)+'  '+inttostr(random(888));
      StringGrid1SelectCell(Sender, Col, Row, CanSelect);
       exit;
   end;

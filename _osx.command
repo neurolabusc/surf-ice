@@ -42,6 +42,10 @@ rm surfice
 rm -rf lib
 rm -rf backup
 
+#remove Cocoa as widgetset
+awk '{gsub(/Active="MacOS"/,"");}1' surfice.lpi > surfice.tmp && mv surfice.tmp surfice.lpi
+
+
 cd /Users/rorden/Documents/pas/
 zip -FSr /Users/rorden/Documents/pas/surf.zip surfice
 
