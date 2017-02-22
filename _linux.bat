@@ -3,8 +3,9 @@ cd ~/surf-ice
 #1.) build OpenGL core version of surfice
 
 
-#the copy of glext that comes with freepascal 3.0 does not support geometry shaders
-cp ./coregl/glext.pp ./glext.pp
+#next lines obsolete: we use glcorearb.pas
+# the copy of glext that comes with freepascal 3.0 does not support geometry shaders
+# cp ./coregl/glext.pp ./glext.pp
 
 cp ./optsCore.inc ./opts.inc
 rm -rf lib
