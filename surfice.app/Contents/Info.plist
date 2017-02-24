@@ -6,8 +6,6 @@
   <string>English</string>
   <key>CFBundleExecutable</key>
   <string>surfice</string>
-    <key>CFBundleIconFile</key>
-  <string>surfice</string>
   <key>CFBundleName</key>
   <string>Surf Ice</string>
   <key>CFBundleIdentifier</key>
@@ -31,26 +29,7 @@
       <string>Viewer</string>
       <key>CFBundleTypeExtensions</key>
       <array>
-      		<string>gts</string>
-      		<string>dxf</string>
-      		<string>lwo</string>
-			<string>ms3d</string>
-			<string>3ds</string>
-			<string>vtk</string>
-			<string>srf</string>
-			<string>ctm</string>
-			<string>gii</string>
-			<string>mz3</string>
-			<string>nv</string>
-			<string>obj</string>
-			<string>off</string>
-			<string>ply</string>
-			<string>stl</string>
-			<string>vtk</string>
-			<string>trk</string>
-			<string>node</string>
-			<string>edge</string>
-			<string>nodez</string>
+        <string>*</string>
       </array>
       <key>CFBundleTypeOSTypes</key>
       <array>

@@ -1,5 +1,5 @@
 object GLForm1: TGLForm1
-  Left = 277
+  Left = 384
   Height = 755
   Top = 23
   Width = 1003
@@ -1163,12 +1163,15 @@ object GLForm1: TGLForm1
     object OverlayBox: TGroupBox
       Left = 1
       Height = 82
+      Hint = 'Click on name to hide, control+click to reverse palette'
       Top = 391
       Width = 270
       Align = alTop
       Caption = 'Overlays'
       ClientHeight = 60
       ClientWidth = 262
+      ParentShowHint = False
+      ShowHint = True
       TabOrder = 4
       Visible = False
       object StringGrid1: TStringGrid

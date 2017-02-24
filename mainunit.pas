@@ -263,7 +263,6 @@ type
     function ScreenShot: TBitmap;
     procedure ScriptMenuClick(Sender: TObject);
     procedure SetOverlayTransparency(Sender: TObject);
-    procedure ShaderBoxClick(Sender: TObject);
     procedure ShaderBoxResize(Sender: TObject);
     procedure ShaderDropChange(Sender: TObject);
     procedure ShowmessageError(s: string);
@@ -818,10 +817,6 @@ begin
   OverlayTimerStart;
 end;
 
-procedure TGLForm1.ShaderBoxClick(Sender: TObject);
-begin
-    //xxx
-end;
 
 
 procedure TGLForm1.ShaderBoxResize(Sender: TObject);
@@ -1236,7 +1231,6 @@ procedure TGLForm1.StringGrid1DrawCell(Sender: TObject; aCol, aRow: Integer;
   aRect: TRect; aState: TGridDrawState);
 begin
  if aRow < 1 then exit;
-
  if (gMesh.Overlay[aRow].LUTvisible) then begin
     if (gMesh.Overlay[aRow].LUTinvert) then begin
        TStringGrid(Sender).Canvas.Font.Color := clBlue;
@@ -1284,6 +1278,7 @@ begin
      //ARow := abs(GLForm1.StringGrid1.Selection.Top);
      //StringGrid1.Cells[ACol,ARow] := '';
 end;
+
 
 procedure TGLForm1.StringGrid1EditingDone(Sender: TObject);
 var
@@ -1362,7 +1357,7 @@ begin
  if gMesh.OpenOverlays < 1 then exit;
  for lIndex := 1 to gMesh.OpenOverlays do begin
    GLForm1.StringGrid1.Cells[kFName, lIndex] := gMesh.Overlay[lIndex].FileName;
-   GLForm1.StringGrid1.Cells[kLUT, lIndex] := GLForm1.LutDrop.Items[gMesh.Overlay[lIndex].LUTindex];
+    GLForm1.StringGrid1.Cells[kLUT, lIndex] := GLForm1.LutDrop.Items[gMesh.Overlay[lIndex].LUTindex];
     OverlayBox.Height :=  2+ ( (2+gMesh.OpenOverlays)*(StringGrid1.DefaultRowHeight+1));
     StringGrid1.Cells[kMin,lIndex] := float2str(gMesh.Overlay[lIndex].WindowScaledMin,3);//FloatToStrF(gMesh.Overlay[lIndex].WindowScaledMin, ffGeneral, 8, 4);
     StringGrid1.Cells[kMax,lIndex] := float2str(gMesh.Overlay[lIndex].WindowScaledMax,3);//FloatToStrF(gMesh.Overlay[lIndex].WindowScaledMax, ffGeneral, 8, 4);
@@ -1688,7 +1683,7 @@ begin
   Row := GLForm1.StringGrid1.DefaultRowHeight div 2;
   Row := round((Y-Row)/GLForm1.StringGrid1.DefaultRowHeight);
   if (Row > 0) and (Row <= gMesh.OpenOverlays) then
-      StringGrid1.Hint := GLForm1.StringGrid1.Cells[0, Row]
+      StringGrid1.Hint := 'Click on name to hide, control+click to reverse palette for '+GLForm1.StringGrid1.Cells[0, Row]
   else begin
        StringGrid1.Hint := 'Click on name to hide, control+click to reverse palette';
        exit;
@@ -1699,7 +1694,7 @@ begin
   Col := X div GLForm1.StringGrid1.DefaultColWidth;
   If (Col = kLUT) then begin //hide overlay
      StringGrid1SelectCell(Sender, Col, Row, CanSelect);
-      exit;
+     exit;
   end;
   GLForm1.LUTdrop.visible := false;
   if (Row < 1) or (Row > gMesh.OpenOverlays) then exit;
@@ -1739,6 +1734,39 @@ begin
      OverlayTimerStart;
 end;
 
+procedure TGLForm1.LUTdropChange(Sender: TObject);
+var intRow: Integer;
+begin
+  inherited;
+ if GLForm1.Lutdrop.Tag < 1 then
+     exit;
+  //intRow := GLForm1.StringGrid1.Row;
+  //if intRow < 0 then
+    intRow := GLForm1.Lutdrop.Tag;
+  if (intRow < 1) or (intRow > kMaxOverlays) then
+    exit;
+  UpdateLUT(intRow,GLForm1.LUTdrop.ItemIndex,true);
+  OverlayTimerStart;
+  GLForm1.StringGrid1.Selection:=TGridRect(Rect(-1,-1,-1,-1));
+  LutDrop.visible := false;
+end;
+
+procedure TGLForm1.UpdateLUT(lOverlay,lLUTIndex: integer; lChangeDrop: boolean);
+begin
+  if (gMesh.OpenOverlays > kMaxOverlays)  then
+    exit;
+  if lLUTIndex >= LUTdrop.Items.Count then
+    gMesh.Overlay[lOverlay].LUTindex:= 0
+  else
+    gMesh.Overlay[lOverlay].LUTindex:= lLUTIndex;
+  if lChangeDrop then begin
+    StringGrid1.Cells[kLUT, lOverlay] := LUTdrop.Items[gMesh.Overlay[lOverlay].LUTindex];
+    //LUTdrop.ItemIndex := gOverlayImg[lOverlay].LUTindex;
+  end;
+  gMesh.overlay[lOverlay].LUT := UpdateTransferFunction (gMesh.Overlay[lOverlay].LUTindex, gMesh.Overlay[lOverlay].LUTinvert);
+  //LUTdropLoad(gMesh.Overlay[lOverlay].LUTindex, gMesh.Overlay[lOverlay].LUT, LUTdrop.Items[lLUTindex], gOverlayCLUTrec[lOverlay]);
+end;
+
 procedure TGLForm1.StringGrid1SelectCell(Sender: TObject; aCol, aRow: Integer;
   var CanSelect: Boolean);
 var R: TRect;
@@ -1766,11 +1794,12 @@ begin
       Width := (R.Right + 3) - R.Left;
       Height := (R.Bottom + 3) - R.Top;
       {$ENDIF}
-
-      ItemIndex := Items.IndexOf(GLForm1.StringGrid1.Cells[ACol, ARow]);
       Visible := True;
-      SetFocus;
       Tag := ARow;
+      SetFocus;
+      ItemIndex := Items.IndexOf(GLForm1.StringGrid1.Cells[ACol, ARow]);
+
+      exit;
     end;
   end else begin
       GLForm1.LUTdrop.visible := false;
@@ -2136,6 +2165,8 @@ begin
   GLBoxRequestUpdate(Sender);
 end;
 
+
+
 procedure TGLForm1.CurvMenuClick(Sender: TObject);
 var
   fnm: string;
@@ -2470,22 +2501,6 @@ begin
     SetDistance(gDistance * 1.1);
 end;
 
-procedure TGLForm1.UpdateLUT(lOverlay,lLUTIndex: integer; lChangeDrop: boolean);
-begin
-  if (gMesh.OpenOverlays > kMaxOverlays)  then
-    exit;
-  if lLUTIndex >= LUTdrop.Items.Count then
-    gMesh.Overlay[lOverlay].LUTindex:= 0
-  else
-    gMesh.Overlay[lOverlay].LUTindex:= lLUTIndex;
-  if lChangeDrop then begin
-    StringGrid1.Cells[kLUT, lOverlay] := LUTdrop.Items[gMesh.Overlay[lOverlay].LUTindex];
-    //LUTdrop.ItemIndex := gOverlayImg[lOverlay].LUTindex;
-  end;
-  gMesh.overlay[lOverlay].LUT := UpdateTransferFunction (gMesh.Overlay[lOverlay].LUTindex, gMesh.Overlay[lOverlay].LUTinvert);
-  //LUTdropLoad(gMesh.Overlay[lOverlay].LUTindex, gMesh.Overlay[lOverlay].LUT, LUTdrop.Items[lLUTindex], gOverlayCLUTrec[lOverlay]);
-end;
-
 function TGLForm1.ComboBoxName2Index(var lCombo: TComboBox; lName: string): integer;
 var
     lNameU, lItem : string;
@@ -2522,24 +2537,6 @@ begin
  end;//for each shader
  UpdateLUT(lOverlay,lLUTIndex,true); *)
  UpdateLUT(lOverlay,ComboBoxName2Index(LUTdrop, lFilename),true);
-end;
-
-procedure TGLForm1.LUTdropChange(Sender: TObject);
-var intRow: Integer;
-begin
-  inherited;
- if GLForm1.Lutdrop.Tag < 1 then
-     exit;
-  //intRow := GLForm1.StringGrid1.Row;
-  //if intRow < 0 then
-    intRow := GLForm1.Lutdrop.Tag;
-  if (intRow < 1) or (intRow > kMaxOverlays) then
-    exit;
-  GLForm1.StringGrid1.Cells[kLUT, intRow] := GLForm1.LutDrop.Items[GLForm1.LUTdrop.ItemIndex];
-  UpdateLUT(intRow,GLForm1.LUTdrop.ItemIndex,false);
-  OverlayTimerStart;
-  GLForm1.StringGrid1.Selection:=TGridRect(Rect(-1,-1,-1,-1));
-  LutDrop.visible := false;
 end;
 
 procedure TGLForm1.NodePrefChange(Sender: TObject);

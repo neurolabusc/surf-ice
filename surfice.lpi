@@ -18,7 +18,7 @@
     <i18n>
       <EnableI18N LFM="False"/>
     </i18n>
-    <BuildModes Count="2" Active="Default">
+    <BuildModes Count="2" >
       <Item1 Name="Default" Default="True"/>
       <Item2 Name="MacOS">
         <MacroValues Count="1">
@@ -115,8 +115,8 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <IsVisibleTab Value="True"/>
-        <TopLine Value="1712"/>
-        <CursorPos X="24" Y="1717"/>
+        <TopLine Value="803"/>
+        <CursorPos X="71" Y="816"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -177,9 +177,9 @@
       <Unit8>
         <Filename Value="mesh.pas"/>
         <EditorIndex Value="4"/>
-        <TopLine Value="4844"/>
-        <CursorPos X="52" Y="4860"/>
-        <UsageCount Value="29"/>
+        <TopLine Value="1475"/>
+        <CursorPos X="87" Y="1487"/>
+        <UsageCount Value="31"/>
         <Loaded Value="True"/>
       </Unit8>
       <Unit9>
@@ -228,7 +228,7 @@
         <EditorIndex Value="2"/>
         <TopLine Value="89"/>
         <CursorPos X="25" Y="103"/>
-        <UsageCount Value="21"/>
+        <UsageCount Value="23"/>
         <Loaded Value="True"/>
       </Unit15>
       <Unit16>
@@ -264,7 +264,7 @@
         <EditorIndex Value="5"/>
         <TopLine Value="177"/>
         <CursorPos X="7" Y="190"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="13"/>
         <Loaded Value="True"/>
       </Unit20>
     </Units>
