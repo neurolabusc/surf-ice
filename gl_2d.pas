@@ -1085,7 +1085,7 @@ begin
   nLUT := 0;
   if (lMesh.OpenOverlays > 0) then
      for lI := 1 to lMesh.OpenOverlays do
-         if (lMesh.overlay[lI].LUTvisible) and (not isFreeSurferLUT(lMesh.overlay[lI].LUTindex)) then
+         if (lMesh.overlay[lI].LUTvisible <> kLUTinvisible) and (not isFreeSurferLUT(lMesh.overlay[lI].LUTindex)) then
             inc(nLUT);
   if (nLUT < 1) then begin
     nLUT := 0;
@@ -1163,13 +1163,13 @@ end; //if overlays else edges
   lU2 := lU;
   if (lMesh.OpenOverlays > 0) then begin
     for lI := 1 to lMesh.OpenOverlays do begin
-      if (not lMesh.overlay[lI].LUTvisible) or (isFreeSurferLUT(lMesh.overlay[lI].LUTindex)) then continue;
+      if (lMesh.overlay[lI].LUTvisible = kLUTinvisible) or (isFreeSurferLUT(lMesh.overlay[lI].LUTindex)) then continue;
       DrawCLUTx(lMesh.overlay[lI].LUT,lU2,lPrefs);
       UOffset(lU2,lX,lY);
     end;
     lU2 := lU;
     for lI := 1 to lMesh.OpenOverlays do begin
-      if (not lMesh.overlay[lI].LUTvisible) or (isFreeSurferLUT(lMesh.overlay[lI].LUTindex))then continue;
+      if (lMesh.overlay[lI].LUTvisible = kLUTinvisible) or (isFreeSurferLUT(lMesh.overlay[lI].LUTindex))then continue;
       lMin := lMesh.overlay[lI].WindowScaledMin;
       lMax := lMesh.overlay[lI].WindowScaledMax;
       SortSingle(lMin,lMax);

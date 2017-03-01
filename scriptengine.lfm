@@ -204,6 +204,12 @@ object ScriptForm: TScriptForm
           Hint = 'OVERLAYVISIBLE(OVERLAY: integer; VISIBLE: boolean) The feature allows you to make individual overlays visible or invisible.'
           OnClick = InsertCommand
         end
+        object overlaytranslucent1: TMenuItem
+          Tag = 1211
+          Caption = 'overlaytranslucent'
+          Hint = 'OVERLAYTRANSLUCENT(OVERLAY: integer; TRANSLUCENT: boolean) The feature allows you to make individual overlays translucent or opaque.'
+          OnClick = InsertCommand
+        end
         object overlayinvert1: TMenuItem
           Tag = 1211
           Caption = 'overlayinvert'

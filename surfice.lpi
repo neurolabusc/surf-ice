@@ -103,7 +103,7 @@
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="4"/>
         <CursorPos X="36" Y="3"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
@@ -114,9 +114,8 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
-        <TopLine Value="803"/>
-        <CursorPos X="71" Y="816"/>
+        <TopLine Value="1232"/>
+        <CursorPos X="54" Y="1241"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -124,7 +123,7 @@
       <Unit2>
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="1"/>
+        <EditorIndex Value="2"/>
         <TopLine Value="20"/>
         <CursorPos X="17" Y="29"/>
         <UsageCount Value="210"/>
@@ -141,9 +140,9 @@
       <Unit4>
         <Filename Value="colorTable.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="7"/>
-        <TopLine Value="299"/>
-        <CursorPos X="45" Y="300"/>
+        <EditorIndex Value="8"/>
+        <TopLine Value="36"/>
+        <CursorPos X="19" Y="56"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit4>
@@ -161,9 +160,10 @@
         <ComponentName Value="ScriptForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="6"/>
-        <TopLine Value="23"/>
-        <CursorPos X="78" Y="25"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="7"/>
+        <TopLine Value="613"/>
+        <CursorPos X="3" Y="617"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -176,10 +176,10 @@
       </Unit7>
       <Unit8>
         <Filename Value="mesh.pas"/>
-        <EditorIndex Value="4"/>
-        <TopLine Value="1475"/>
-        <CursorPos X="87" Y="1487"/>
-        <UsageCount Value="31"/>
+        <EditorIndex Value="5"/>
+        <TopLine Value="8"/>
+        <CursorPos X="18" Y="18"/>
+        <UsageCount Value="32"/>
         <Loaded Value="True"/>
       </Unit8>
       <Unit9>
@@ -191,9 +191,11 @@
       </Unit9>
       <Unit10>
         <Filename Value="gl_2d.pas"/>
-        <EditorIndex Value="-1"/>
-        <CursorPos X="118" Y="6"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="1162"/>
+        <CursorPos X="28" Y="1170"/>
         <UsageCount Value="25"/>
+        <Loaded Value="True"/>
       </Unit10>
       <Unit11>
         <Filename Value="shaderu.pas"/>
@@ -225,10 +227,10 @@
       </Unit14>
       <Unit15>
         <Filename Value="curv.pas"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="3"/>
         <TopLine Value="89"/>
         <CursorPos X="25" Y="103"/>
-        <UsageCount Value="23"/>
+        <UsageCount Value="24"/>
         <Loaded Value="True"/>
       </Unit15>
       <Unit16>
@@ -261,10 +263,10 @@
       </Unit19>
       <Unit20>
         <Filename Value="commandsu.pas"/>
-        <EditorIndex Value="5"/>
-        <TopLine Value="177"/>
-        <CursorPos X="7" Y="190"/>
-        <UsageCount Value="13"/>
+        <EditorIndex Value="6"/>
+        <TopLine Value="396"/>
+        <CursorPos X="42" Y="398"/>
+        <UsageCount Value="14"/>
         <Loaded Value="True"/>
       </Unit20>
     </Units>

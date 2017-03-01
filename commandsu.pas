@@ -35,6 +35,7 @@ procedure OVERLAYLOAD(lFilename: string);
 procedure OVERLAYMINMAX (lOverlay: integer; lMin,lMax: single);
 procedure OVERLAYTRANSPARENCYONBACKGROUND(lPct: integer);
 procedure OVERLAYVISIBLE(lOverlay: integer; VISIBLE: boolean);
+procedure OVERLAYTRANSLUCENT(lOverlay: integer; TRANSLUCENT: boolean);
 procedure OVERLAYINVERT(lOverlay: integer; INVERT: boolean);
 procedure QUIT;
 procedure RESETDEFAULTS;
@@ -63,7 +64,7 @@ const
                Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
              );
 
-knProc = 47;
+knProc = 48;
   kProcRA : array [1..knProc] of TScriptRec = (
    (Ptr:@AZIMUTH;Decl:'AZIMUTH';Vars:'(DEG: integer)'),
    (Ptr:@AZIMUTHELEVATION;Decl:'AZIMUTHELEVATION';Vars:'(AZI, ELEV: integer)'),
@@ -96,6 +97,7 @@ knProc = 47;
    (Ptr:@OVERLAYMINMAX;Decl:'OVERLAYMINMAX';Vars:'(lOverlay: integer; lMin,lMax: single)'),
    (Ptr:@OVERLAYTRANSPARENCYONBACKGROUND;Decl:'OVERLAYTRANSPARENCYONBACKGROUND';Vars:'(lPct: integer)'),
    (Ptr:@OVERLAYVISIBLE;Decl:'OVERLAYVISIBLE';Vars:'(lOverlay: integer; VISIBLE: boolean)'),
+   (Ptr:@OVERLAYTRANSLUCENT;Decl:'OVERLAYTRANSLUCENT';Vars:'(lOverlay: integer; TRANSLUCENT: boolean)'),
    (Ptr:@OVERLAYINVERT;Decl:'OVERLAYINVERT';Vars:'(lOverlay: integer; INVERT: boolean)'),
    (Ptr:@QUIT;Decl:'QUIT';Vars:''),
    (Ptr:@RESETDEFAULTS;Decl:'RESETDEFAULTS';Vars:''),
@@ -116,7 +118,7 @@ knProc = 47;
 
 implementation
 uses
-    mainunit, define_types, shaderui, graphics, LCLintf, Forms, SysUtils, Dialogs, scriptengine;
+    mainunit, define_types, shaderui, graphics, LCLintf, Forms, SysUtils, Dialogs, scriptengine, mesh;
 
 procedure RESETDEFAULTS;
 begin
@@ -399,10 +401,19 @@ begin
      GLForm1.OverlayInvert(lOverlay, INVERT);
 end;
 
+procedure OVERLAYTRANSLUCENT(lOverlay: integer; TRANSLUCENT: boolean);
+begin
+     if TRANSLUCENT then
+        GLForm1.OverlayVisible(lOverlay, kLUTtranslucent)
+     else
+         GLForm1.OverlayVisible(lOverlay, kLUTopaque);
+end;
 procedure OVERLAYVISIBLE(lOverlay: integer; VISIBLE: boolean);
 begin
-     GLForm1.OverlayVisible(lOverlay, VISIBLE);
-
+     if VISIBLE then
+        GLForm1.OverlayVisible(lOverlay, kLUTopaque)
+     else
+         GLForm1.OverlayVisible(lOverlay, kLUTinvisible);
 end;
 
 procedure OVERLAYCOLORNAME(lOverlay: integer; lFilename: string);

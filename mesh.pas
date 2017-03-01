@@ -14,6 +14,9 @@ uses
 const
   kMinOverlayIndex = 1;
   kMaxOverlays = 32;
+  kLUTinvisible = 0;
+  kLUTtranslucent = 1;
+  kLUTopaque = 2;
 type
   TSphere = packed record
      X: single;
@@ -24,7 +27,8 @@ type
    end;
 
  TOverlay = record
-    LUTvisible, LUTinvert: boolean;
+    LUTinvert: boolean;
+    LUTvisible: integer; //0=invisible, 1=translucent, 2=opaque
     LUTindex : integer;
     LUT: TLUT;
     minIntensity, maxIntensity, windowScaledMin, windowScaledMax: single;
@@ -195,7 +199,7 @@ end;
 
 procedure TMesh.BuildList (Clr: TRGBA);
 var
-  i,c: integer;
+  i,c, translucent: integer;
   mn, mx: single;
   rgb, rgb0: TRGBA;
   vRGBA, vRGBAmx :TVertexRGBA;
@@ -209,7 +213,7 @@ begin
   isOverlayPainting := false;
   if  (OpenOverlays > 0)  then  //ignore overlays if they are all meshes rather than vertex colors
        for c :=  OpenOverlays downto 1 do
-           if (overlay[c].LUTvisible) and (length(overlay[c].intensity) = length(vertices)) then
+           if (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) = length(vertices)) then
               isOverlayPainting := true;
   //if  (OpenOverlays > 0) or (length(vertexRGBA) = length(vertices)) then begin  // <- works, but slower if all overlays are meshes
   if  (isOverlayPainting) or (length(vertexRGBA) = length(vertices)) then begin
@@ -242,7 +246,11 @@ begin
               vRGBAmx[i] := rgb0;
           for c :=  OpenOverlays downto 1 do begin
 
-            if (overlay[c].LUTvisible) and (length(overlay[c].intensity) = length(vertices)) then begin
+            if (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) = length(vertices)) then begin
+               if overlay[c].LUTvisible <> kLUTopaque then
+                  translucent := 2 //if translucent, halve alpha
+               else
+                   translucent := 1;
                if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
                   mn := overlay[c].windowScaledMin;
                   mx := overlay[c].windowScaledMax;
@@ -252,6 +260,7 @@ begin
                end;
                for i := 0 to (length(vertices)-1) do begin
                    rgb := inten2rgb(overlay[c].intensity[i], mn, mx, overlay[c].LUT);
+                   rgb.A := rgb.A div translucent;
                    vRGBAmx[i] := maxRGBA(vRGBAmx[i], rgb);
                end; //for i
             end; //if visible
@@ -260,7 +269,11 @@ begin
               vRGBA[i] := blendRGBA(vRGBA[i],vRGBAmx[i]);
         end else begin
             for c :=  OpenOverlays downto 1 do begin
-              if (overlay[c].LUTvisible) and (length(overlay[c].intensity) = length(vertices)) then begin
+              if (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) = length(vertices)) then begin
+                 if overlay[c].LUTvisible <> kLUTopaque then
+                    translucent := 2 //if translucent, halve alpha
+                 else
+                     translucent := 1;
                  if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
                     mn := overlay[c].windowScaledMin;
                     mx := overlay[c].windowScaledMax;
@@ -270,6 +283,7 @@ begin
                  end;
                  for i := 0 to (length(vertices)-1) do begin
                      rgb := inten2rgb(overlay[c].intensity[i], mn, mx, overlay[c].LUT);
+                     rgb.A := rgb.A div translucent;
                      vRGBA[i] := blendRGBA(vRGBA[i], rgb);
                  end; //for i
               end; //if visible
@@ -402,7 +416,7 @@ begin
      exit;
   nMeshOverlay := 0;
   for c := 1 to OpenOverlays do
-      if (overlay[c].LUTvisible) and (length(overlay[c].vertices) > 2) then
+      if (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].vertices) > 2) then
          nMeshOverlay := nMeshOverlay + 1;
   if nMeshOverlay < 1 then exit;
   nMeshOverlay := 0;
@@ -411,7 +425,7 @@ begin
   for c := 1 to OpenOverlays do begin
       nVert := length(overlay[c].vertices);
       nFace := length(overlay[c].faces);
-      if (overlay[c].LUTvisible) and (nVert > 2) and (nFace > 0) then begin
+      if (overlay[c].LUTvisible <> kLUTinvisible) and (nVert > 2) and (nFace > 0) then begin
             setlength(oFaces, sumFace + nFace);
             for i := 0 to (nFace -1) do
                 oFaces[i+sumFace] := vectorAdd(overlay[c].faces[i], sumVert);
@@ -4784,7 +4798,7 @@ begin
      if LoadGcs(FileName) then exit; //not supported - but inform user
   OpenOverlays := OpenOverlays + 1;
   setlength(Overlay[OpenOverlays].intensity,0);
-  Overlay[OpenOverlays].LUTvisible:= true;
+  Overlay[OpenOverlays].LUTvisible:= kLUTopaque;
   Overlay[OpenOverlays].filename  := ExtractFilename(FileName);
   if OpenOverlays > 12 then
      Overlay[OpenOverlays].LUTindex := 0
@@ -4812,7 +4826,10 @@ begin
             SetOverlayDescriptives(OpenOverlays);
             OpenOverlays := OpenOverlays + 1;
             setlength(Overlay[OpenOverlays].intensity,0);
-            Overlay[OpenOverlays].LUTvisible:= not isCiftiNii;
+            if isCiftiNii then
+               Overlay[OpenOverlays].LUTvisible := kLUTinvisible
+            else
+                Overlay[OpenOverlays].LUTvisible := kLUTopaque;
             Overlay[OpenOverlays].filename  := ExtractFilename(FileName);
             if isCiftiNii then
                nOverlays := loadCifti(FileName, OpenOverlays, i, (origin.X < 0))

@@ -37,6 +37,7 @@ type
     AppleMenu: TMenuItem;
     MenuItem1: TMenuItem;
     Close1: TMenuItem;
+    overlaytranslucent1: TMenuItem;
     meshcurv1: TMenuItem;
     overlayinvert1: TMenuItem;
     Tracks1: TMenuItem;

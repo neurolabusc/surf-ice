@@ -242,7 +242,7 @@ type
     procedure ObjectColorMenuClick(Sender: TObject);
     procedure OpenMenuClick(Sender: TObject);
     procedure OverlayTimerTimer(Sender: TObject);
-    procedure OverlayVisible(lOverlay: integer; lVisible: boolean);
+    procedure OverlayVisible(lOverlay: integer; lVisible: integer);
     procedure OverlayInvert(lOverlay: integer; lInvert: boolean);
     procedure PrefMenuClick(Sender: TObject);
     procedure QuickColorClick(Sender: TObject);
@@ -1231,15 +1231,26 @@ procedure TGLForm1.StringGrid1DrawCell(Sender: TObject; aCol, aRow: Integer;
   aRect: TRect; aState: TGridDrawState);
 begin
  if aRow < 1 then exit;
- if (gMesh.Overlay[aRow].LUTvisible) then begin
+ if (gMesh.Overlay[aRow].LUTinvert) then
+    TStringGrid(Sender).Canvas.Font.Style:= [fsItalic]
+ else
+   TStringGrid(Sender).Canvas.Font.Style:= [];
+ if (gMesh.Overlay[aRow].LUTvisible = kLUTinvisible) then
+    TStringGrid(Sender).Canvas.Font.Color := clRed
+ else if (gMesh.Overlay[aRow].LUTvisible = kLUTtranslucent) then
+      TStringGrid(Sender).Canvas.Font.Color := clBlue
+ else
+     TStringGrid(Sender).Canvas.Font.Color := clBlack;
+ (*if (gMesh.Overlay[aRow].LUTvisible <> kLUTinvisible) then begin
     if (gMesh.Overlay[aRow].LUTinvert) then begin
        TStringGrid(Sender).Canvas.Font.Color := clBlue;
+       TStringGrid(Sender).Canvas.Font.Style:= [fsItalic];
        TStringGrid(Sender).Canvas.TextOut(aRect.Left+2,aRect.Top+2, TStringGrid(Sender).Cells[ACol, ARow]);
     end;
     exit;
  end;
  //make rows of invisible overlays red
- TStringGrid(Sender).Canvas.Font.Color := clRed;
+ TStringGrid(Sender).Canvas.Font.Color := clRed;*)
  TStringGrid(Sender).Canvas.TextOut(aRect.Left+2,aRect.Top+2, TStringGrid(Sender).Cells[ACol, ARow]);
 end;
 
@@ -1365,11 +1376,14 @@ begin
   UpdateImageIntensity;
 end;
 
-procedure TGLForm1.OverlayVisible(lOverlay: integer; lVisible: boolean);
+procedure TGLForm1.OverlayVisible(lOverlay: integer; lVisible: integer);
 begin
   if (lOverlay > gMesh.OpenOverlays) or (lOverlay < 1) then
     exit;
-  gMesh.Overlay[lOverlay].LUTvisible := lVisible;
+  if (lVisible < kLUTinvisible) or (lVisible > kLUTopaque) then
+     gMesh.Overlay[lOverlay].LUTvisible := kLUTopaque
+  else
+     gMesh.Overlay[lOverlay].LUTvisible := lVisible;
   UpdateOverlaySpread;
 end;
 
@@ -1707,8 +1721,14 @@ begin
    OverlayInvert(Row, not gMesh.Overlay[Row].LUTinvert);
      exit;
   end;
-  If (Col = kFname) or  ((ssRight in Shift) or (ssShift in Shift)) then begin //hide overlay
-      OverlayVisible(Row, (not gMesh.Overlay[Row].LUTvisible) );
+  If (Col = kFname) or  ((ssRight in Shift) or (ssShift in Shift)) then begin //toggle overlay from opaque, translucent, and invisible
+     if gMesh.Overlay[Row].LUTvisible = kLUTOpaque then
+        gMesh.Overlay[Row].LUTvisible := kLUTTranslucent
+     else if gMesh.Overlay[Row].LUTvisible = kLUTTranslucent then
+          gMesh.Overlay[Row].LUTvisible := kLUTinvisible
+     else
+         gMesh.Overlay[Row].LUTvisible := kLUTOpaque;
+     OverlayVisible(Row, gMesh.Overlay[Row].LUTvisible );
       OverlayTimerStart;
       exit;
   end;
@@ -2305,7 +2325,7 @@ begin
      GLbox.Repaint;
   end;
   origin := GetOrigin(scale);
-  str :=  'Surf Ice '+' 2 February 2017 '
+  str :=  'Surf Ice '+' 7 February 2017 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
