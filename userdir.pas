@@ -226,17 +226,22 @@ var
    lInName,lPath,lName,lExt: string;
 begin
  result := '';
- lInName := extractfilepath(paramstr(0));
  lExt := '';
- while (length(lInName) > 0) and (upcase(lExt) <> '.APP')  do begin
+ lInName := extractfilepath(paramstr(0));
+ while (length(lInName) > 3) and (upcase(lExt) <> '.APP')  do begin
        FilenameParts (lInName, lPath,lName,lExt) ;
        lInName := ExpandFileName(lInName + '\..');
-       //showmessage(lInName+'   '+lPath+':'+lName+':'+lExt);
  end;
+ if (upcase(lExt) <> '.APP') then begin
+   lInName := GetCurrentDir;
+   while (length(lInName) > 3) and (upcase(lExt) <> '.APP')  do begin
+       FilenameParts (lInName, lPath,lName,lExt) ;
+       lInName := ExpandFileName(lInName + '\..');
+   end;
+ end; //try GetCurrentDir if paramstr(0) fails
  if (upcase(lExt) = '.APP')  then
     result := lPath+lName+lExt+pathdelim;
 end;
-
 
 {$IFDEF OLDOSX}
 function AppDir: string;  //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app

@@ -14,6 +14,7 @@ uses
  function crossProduct(v1, v2: TPoint3f): TPoint3f;
  procedure vectorTransform(var v: TPoint3f; mat:  TMat44);
  procedure vectorNormalize(var v: TPoint3f);  inline;
+ procedure vectorReciprocal(var v: TPoint3f);
  function vectorAbs(var v: TPoint3f): TPoint3f;
  function vectorDot (A: TPoint3f; B: TPoint3f): single;
  procedure vectorAdd (var A: TPoint3f; B: TPoint3f);  inline; overload;
@@ -34,19 +35,27 @@ uses
  procedure matrixNegate(var a: TMat33);
  procedure matrixTranspose(var a: TMat33); overload;
  procedure matrixTranspose(var a: TMat44); overload;
- function vectorMult (var A: TPoint3f; B: single): TPoint3f;  inline;
+ function vectorMult (var A: TPoint3f; B: single): TPoint3f;  inline; //same as vectorScale
  procedure vectorNegate(var v: TPoint3f);  inline;
  function AlignVector(alignmentVector: TPoint3f): TMat33;
 
  function vectorDistance(A,B: TPoint3f): single; //[euclidean distance] = sqrt(dX^2+dY^2+dZ^2)
  function vectorDistanceSqr(A,B: TPoint3f): single; inline;//[fast as no sqrt]  = (dX^2+dY^2+dZ^2)
- function vectorScale(A: TPoint3f; Scale: single): TPoint3f;
+ function vectorScale(A: TPoint3f; Scale: single): TPoint3f; overload;
+ function vectorScale(A: TPoint3f; Scale: TPoint3f): TPoint3f; overload;
  procedure MakeCylinder(radius: single; start, dest: TPoint3f; var faces: TFaces; var vertices: TVertices; slices: integer = 20); overload;
  procedure MakeCylinder( radius, len: single; var faces: TFaces; var vertices: TVertices; slices: integer = 20); overload;
  procedure makeCylinderEnd(radius: single; prevPos, Pos, nextPos: TPoint3f; var vertices: TVertices; var  B: TPoint3f; slices: integer = 20);
 
 
 implementation
+
+procedure vectorReciprocal(var v: TPoint3f);
+begin
+     if v.X <> 0 then v.X := 1/v.X;
+     if v.Y <> 0 then v.Y := 1/v.Y;
+     if v.Z <> 0 then v.Z := 1/v.Z;
+end;
 
 function vectorDistanceSqr(A,B: TPoint3f): single; inline;
 //do not apply sqrt for dramatic speedup!
@@ -72,11 +81,18 @@ begin
         v.Z := vx.X*mat[3,1] + vx.Y*mat[3,2] + vx.Z*mat[3,3] + mat[3,4];
 end;
 
-function vectorScale(A: TPoint3f; Scale: single): TPoint3f;
+function vectorScale(A: TPoint3f; Scale: single): TPoint3f; overload;
 begin
      result.X := A.X * Scale;
      result.Y := A.Y * Scale;
      result.Z := A.Z * Scale;
+end;
+
+function vectorScale(A: TPoint3f; Scale: TPoint3f): TPoint3f; overload;
+begin
+     result.X := A.X * Scale.X;
+     result.Y := A.Y * Scale.Y;
+     result.Z := A.Z * Scale.Z;
 end;
 
 function vectorAdd (A: TPoint3i; B: integer): TPoint3i;  inline; overload;

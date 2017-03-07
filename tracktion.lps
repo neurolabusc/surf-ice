@@ -8,8 +8,8 @@
         <Filename Value="tracktion.lpr"/>
         <IsPartOfProject Value="True"/>
         <IsVisibleTab Value="True"/>
-        <TopLine Value="110"/>
-        <CursorPos Y="131"/>
+        <TopLine Value="330"/>
+        <CursorPos X="28" Y="339"/>
         <UsageCount Value="297"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -19,29 +19,30 @@
         <EditorIndex Value="3"/>
         <TopLine Value="1274"/>
         <CursorPos X="6" Y="1285"/>
-        <UsageCount Value="148"/>
+        <UsageCount Value="176"/>
         <Loaded Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="tracktion_tracks.pas"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="110" Y="488"/>
-        <UsageCount Value="210"/>
+        <UsageCount Value="208"/>
       </Unit2>
       <Unit3>
         <Filename Value="nifti_loader.pas"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="353"/>
-        <CursorPos X="14" Y="367"/>
+        <TopLine Value="24"/>
+        <CursorPos X="50" Y="25"/>
         <UsageCount Value="148"/>
         <Loaded Value="True"/>
       </Unit3>
       <Unit4>
         <Filename Value="define_types.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="83"/>
-        <CursorPos X="84" Y="98"/>
-        <UsageCount Value="148"/>
+        <EditorIndex Value="5"/>
+        <TopLine Value="82"/>
+        <CursorPos X="21" Y="92"/>
+        <UsageCount Value="146"/>
+        <Loaded Value="True"/>
       </Unit4>
       <Unit5>
         <Filename Value="/usr/local/share/fpcsrc/packages/fv/src/dialogs.pas"/>
@@ -49,7 +50,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="1025"/>
         <CursorPos X="6" Y="1039"/>
-        <UsageCount Value="148"/>
+        <UsageCount Value="146"/>
       </Unit5>
       <Unit6>
         <Filename Value="nifti_types.pas"/>
@@ -61,21 +62,21 @@
       <Unit7>
         <Filename Value="matmath.pas"/>
         <EditorIndex Value="4"/>
-        <TopLine Value="34"/>
-        <CursorPos X="21" Y="47"/>
+        <TopLine Value="48"/>
+        <CursorPos X="27" Y="53"/>
         <UsageCount Value="125"/>
         <Loaded Value="True"/>
       </Unit7>
       <Unit8>
         <Filename Value="/usr/local/share/fpcsrc/rtl/objpas/math.pp"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="6"/>
         <CursorPos X="10" Y="106"/>
         <UsageCount Value="105"/>
         <Loaded Value="True"/>
       </Unit8>
       <Unit9>
         <Filename Value="track_simplify.pas"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="7"/>
         <TopLine Value="2"/>
         <CursorPos X="131" Y="5"/>
         <UsageCount Value="102"/>
@@ -87,21 +88,21 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="481"/>
         <CursorPos X="5" Y="482"/>
-        <UsageCount Value="101"/>
+        <UsageCount Value="99"/>
       </Unit10>
       <Unit11>
         <Filename Value="/usr/local/share/fpcsrc/rtl/objpas/sysutils/filutilh.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="99"/>
         <CursorPos X="25" Y="131"/>
-        <UsageCount Value="78"/>
+        <UsageCount Value="76"/>
       </Unit11>
       <Unit12>
         <Filename Value="/usr/local/share/fpcsrc/rtl/objpas/sysutils/finah.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="3"/>
         <CursorPos X="24" Y="27"/>
-        <UsageCount Value="78"/>
+        <UsageCount Value="76"/>
       </Unit12>
     </Units>
     <OtherDefines Count="1">
@@ -109,124 +110,124 @@
     </OtherDefines>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="234" Column="15" TopLine="223"/>
+        <Filename Value="matmath.pas"/>
+        <Caret Line="147" Column="19" TopLine="133"/>
       </Position1>
       <Position2>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="310" Column="10" TopLine="286"/>
+        <Filename Value="matmath.pas"/>
+        <Caret Line="148" Column="23" TopLine="134"/>
       </Position2>
       <Position3>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="372" Column="43" TopLine="353"/>
+        <Filename Value="matmath.pas"/>
+        <Caret Line="409" Column="20" TopLine="394"/>
       </Position3>
       <Position4>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="215" Column="39" TopLine="208"/>
+        <Filename Value="matmath.pas"/>
+        <Caret Line="420" Column="12" TopLine="405"/>
       </Position4>
       <Position5>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="19" Column="62" TopLine="10"/>
+        <Filename Value="matmath.pas"/>
+        <Caret Line="422" Column="20" TopLine="407"/>
       </Position5>
       <Position6>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="378" Column="65" TopLine="353"/>
+        <Filename Value="matmath.pas"/>
+        <Caret Line="432" Column="12" TopLine="417"/>
       </Position6>
       <Position7>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="22" Column="86" TopLine="11"/>
+        <Filename Value="matmath.pas"/>
+        <Caret Line="37" Column="70" TopLine="23"/>
       </Position7>
       <Position8>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="315" Column="42" TopLine="291"/>
+        <Filename Value="define_types.pas"/>
+        <Caret Line="91" TopLine="84"/>
       </Position8>
       <Position9>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="538" Column="79" TopLine="514"/>
+        <Filename Value="define_types.pas"/>
+        <Caret Line="90" Column="20" TopLine="84"/>
       </Position9>
       <Position10>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="547" Column="99" TopLine="521"/>
+        <Filename Value="define_types.pas"/>
+        <Caret Line="92" Column="21" TopLine="82"/>
       </Position10>
       <Position11>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="628" Column="26" TopLine="603"/>
+        <Caret Line="308" Column="22" TopLine="292"/>
       </Position11>
       <Position12>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="662" Column="11" TopLine="641"/>
+        <Caret Line="123" Column="21" TopLine="116"/>
       </Position12>
       <Position13>
-        <Filename Value="track.pas"/>
-        <Caret Line="49" Column="5" TopLine="35"/>
+        <Filename Value="tracktion.lpr"/>
+        <Caret Line="332" Column="18" TopLine="324"/>
       </Position13>
       <Position14>
-        <Filename Value="track.pas"/>
-        <Caret Line="48" Column="42" TopLine="35"/>
+        <Filename Value="tracktion.lpr"/>
+        <Caret Line="330" Column="21" TopLine="319"/>
       </Position14>
       <Position15>
-        <Filename Value="track.pas"/>
-        <Caret Line="61" Column="30" TopLine="44"/>
+        <Filename Value="tracktion.lpr"/>
+        <Caret Line="327" Column="47" TopLine="319"/>
       </Position15>
       <Position16>
-        <Filename Value="track.pas"/>
-        <Caret Line="2020" TopLine="1998"/>
+        <Filename Value="tracktion.lpr"/>
+        <Caret Line="330" Column="45" TopLine="322"/>
       </Position16>
       <Position17>
-        <Filename Value="track.pas"/>
-        <Caret Line="1980" TopLine="1958"/>
+        <Filename Value="tracktion.lpr"/>
+        <Caret Line="331" Column="128" TopLine="323"/>
       </Position17>
       <Position18>
-        <Filename Value="track.pas"/>
-        <Caret Line="11" Column="43"/>
+        <Filename Value="tracktion.lpr"/>
+        <Caret Line="296" Column="11" TopLine="292"/>
       </Position18>
       <Position19>
         <Filename Value="matmath.pas"/>
-        <Caret Line="47" Column="21" TopLine="34"/>
+        <Caret Line="48" Column="21" TopLine="31"/>
       </Position19>
       <Position20>
-        <Filename Value="track.pas"/>
-        <Caret Line="1285" Column="6" TopLine="1274"/>
+        <Filename Value="matmath.pas"/>
+        <Caret Line="114" Column="6" TopLine="99"/>
       </Position20>
       <Position21>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="129" Column="35" TopLine="119"/>
+        <Filename Value="matmath.pas"/>
+        <Caret Line="2" Column="98"/>
       </Position21>
       <Position22>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="141" Column="15" TopLine="123"/>
+        <Filename Value="matmath.pas"/>
+        <Caret Line="44" Column="22" TopLine="31"/>
       </Position22>
       <Position23>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="148" Column="10" TopLine="130"/>
+        <Caret Line="230" Column="37" TopLine="216"/>
       </Position23>
       <Position24>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="149" Column="10" TopLine="131"/>
+        <Filename Value="matmath.pas"/>
+        <Caret Line="37" Column="21" TopLine="29"/>
       </Position24>
       <Position25>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="150" Column="10" TopLine="132"/>
+        <Filename Value="matmath.pas"/>
+        <Caret Line="71" Column="20" TopLine="54"/>
       </Position25>
       <Position26>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="151" Column="10" TopLine="133"/>
+        <Caret Line="216" Column="4" TopLine="207"/>
       </Position26>
       <Position27>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="152" Column="33" TopLine="134"/>
+        <Caret Line="354" Column="17" TopLine="349"/>
       </Position27>
       <Position28>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="154" Column="93" TopLine="136"/>
+        <Caret Line="123" Column="19" TopLine="115"/>
       </Position28>
       <Position29>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="155" Column="93" TopLine="137"/>
+        <Caret Line="230" Column="53" TopLine="217"/>
       </Position29>
       <Position30>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="156" Column="93" TopLine="139"/>
+        <Caret Line="328" Column="13" TopLine="324"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>

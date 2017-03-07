@@ -11,10 +11,6 @@
       <Title Value="Tracktion"/>
       <UseAppBundle Value="False"/>
       <ResourceType Value="res"/>
-      <XPManifest>
-        <TextName Value="CompanyName.ProductName.AppName"/>
-        <TextDesc Value="Your application description."/>
-      </XPManifest>
     </General>
     <i18n>
       <EnableI18N LFM="False"/>

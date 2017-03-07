@@ -120,7 +120,7 @@ var
   waypointBits: byte;
   mskMap, waypointMap :TImgRaw;
   vox2mmMat: TMat44;
-  seedOrigin : TPoint3f;
+  seedOrigin, pixDim : TPoint3f;
   waypointName: string;
   TrkPos, vx, i, j, x,y,z, sliceVox, volVox, seed, waypointVal: integer;
   YMap, ZMap: TInts;
@@ -213,7 +213,7 @@ end;//nested
 {$ENDIF}
 procedure AddSteps(var newTrk: TNewTrack; seedStart: TPoint3f; reverseDir: boolean);
 var
-   pos, dir {$IFDEF BEDPOST}, dir2 {$ENDIF}: TPoint3f;
+   dirScaled, pos, dir {$IFDEF BEDPOST}, dir2 {$ENDIF}: TPoint3f;
    cosine {$IFDEF BEDPOST}, cosine2, frac1vs2 {$ENDIF}: single;
 begin
      newTrk.len := 0;
@@ -224,7 +224,12 @@ begin
      while (newTrk.dir.X < 5) and (newTrk.len < mxTrkLen) do begin
            newTrk.pts[newTrk.len] := pos; //add previous point
            newTrk.len := newTrk.len + 1;
+           {$IFDEF ASSUME_ISOTROPIC}
            vectorAdd(pos, vectorMult(newTrk.dir, p.stepSize)); //move in new direction by step size
+           {$ELSE}
+           dirScaled := vectorScale(newTrk.dir, pixDim);
+           vectorAdd(pos, vectorMult(dirScaled, p.stepSize)); //move in new direction by step size
+           {$ENDIF}
            dir := getDir(pos);
            cosine := vectorDot(dir, newTrk.dir);
            {$IFDEF BEDPOST}
@@ -321,6 +326,16 @@ begin
         showmsg(format('Unable to load mask named "%s"', [p.mskName]));
         goto 666;
      end;
+     //pixDim is normalized pixel scaling, so image with 1x1mm in plane and 2mm slice thickness will be 0.5,0.5,1.0
+     pixDim := ptf(abs(msk.hdr.pixdim[1]),abs(msk.hdr.pixdim[2]),abs(msk.hdr.pixdim[3]));
+     if min(pixDim.X,min(pixDim.Y,pixDim.Z)) <= 0 then
+        pixDim := ptf(1,1,1);
+     vectorReciprocal(pixDim); //in terms of voxels, move much less in the thicker direction than the thinner direction
+     //vectorNormalize(pixDim); //would make vector length 1
+     pixDim := vectorMult(pixDim, 1/max(pixDim.X,max(pixDim.Y,pixDim.Z))); //make longest component 1
+     if min(pixDim.X,min(pixDim.Y,pixDim.Z)) < 0.5 then
+        showmsg(format('Warning: pixel mm very anisotropic %g %g %g ',[msk.hdr.pixdim[1], msk.hdr.pixdim[2], msk.hdr.pixdim[3]]));
+     //showmsg(format('pixel mm anisotropy %g %g %g ',[pixDim.X, pixDim.Y, pixDim.Z]));
      vox2mmMat := msk.mat;
      MatOK(vox2mmMat);
      if (msk.minInten = msk.maxInten) then begin
@@ -530,7 +545,7 @@ var
    xname: string;
 begin
   xname := extractfilename(ExeName);
-  showmsg('Tracktion by Chris Rorden version 19Sept2016');
+  showmsg('Tracktion by Chris Rorden version 14Feb2017');
   showmsg('Usage: '+ xname+ ' [options] basename');
   showmsg(' Requires dtifit V1 FA images (basename_V1.nii.gz, basename_FA.nii.gz)');
   showmsg('Options');
@@ -681,6 +696,8 @@ begin
   if HasOption('5','5') then
      p.seedsPerVoxel := round(StrToFloatDef(GetOptionValue('5','5'), p.seedsPerVoxel));
   basename := ParamStr(ParamCount);
+  if (not FileExists(basename)) and (FileExists(basename +'.bvec')) then
+  	basename := basename +'.bvec';
   if not FindNiiFiles(basename, p) then begin
      WriteHelp(p);
      Terminate;

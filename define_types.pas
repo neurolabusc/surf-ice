@@ -1,7 +1,7 @@
 unit define_types;
 interface
 {$ifndef isTerminalApp}
-uses graphics, math;
+uses graphics;
 {$endif}
 const
   NaN : double = 1/0;
@@ -87,8 +87,14 @@ function asRGBA(clr: TColor): TRGBA;
 
 implementation
 
-uses sysutils;//, dialogs;
+uses sysutils, math;//, dialogs;
 
+{$IFDEF oldFloat2Str}
+function float2str(Avalue:double; ADigits:integer):string; //e.g x:single=2.6; floattostrf(x,8,4);
+begin
+     result := FloatToStrF(Avalue, ffFixed,7,ADigits);
+end;
+{$ELSE}
 function float2str(Avalue:double; ADigits:integer):string; //e.g x:single=2.6; floattostrf(x,8,4);
 //http://stackoverflow.com/questions/5650051/how-to-keep-2-decimal-places-in-delphi
 var v:double; p:integer; e:string;
@@ -109,6 +115,7 @@ end
 else
   result:=FloatToStr(RoundTo(Avalue,-Adigits));
 end;
+{$ENDIF}
 
 {$ifdef isTerminalApp}
 function Blue(rgb: TColor): BYTE;

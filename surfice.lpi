@@ -18,7 +18,7 @@
     <i18n>
       <EnableI18N LFM="False"/>
     </i18n>
-    <BuildModes Count="2" >
+    <BuildModes Count="2" Active="Default">
       <Item1 Name="Default" Default="True"/>
       <Item2 Name="MacOS">
         <MacroValues Count="1">
@@ -99,7 +99,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="21">
+    <Units Count="22">
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -140,7 +140,7 @@
       <Unit4>
         <Filename Value="colorTable.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="10"/>
         <TopLine Value="36"/>
         <CursorPos X="19" Y="56"/>
         <UsageCount Value="210"/>
@@ -160,7 +160,6 @@
         <ComponentName Value="ScriptForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="7"/>
         <TopLine Value="613"/>
         <CursorPos X="3" Y="617"/>
@@ -179,22 +178,24 @@
         <EditorIndex Value="5"/>
         <TopLine Value="8"/>
         <CursorPos X="18" Y="18"/>
-        <UsageCount Value="32"/>
+        <UsageCount Value="33"/>
         <Loaded Value="True"/>
       </Unit8>
       <Unit9>
         <Filename Value="define_types.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="61"/>
-        <CursorPos X="35" Y="71"/>
-        <UsageCount Value="27"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="9"/>
+        <TopLine Value="98"/>
+        <CursorPos X="6" Y="112"/>
+        <UsageCount Value="28"/>
+        <Loaded Value="True"/>
       </Unit9>
       <Unit10>
         <Filename Value="gl_2d.pas"/>
         <EditorIndex Value="1"/>
         <TopLine Value="1162"/>
         <CursorPos X="28" Y="1170"/>
-        <UsageCount Value="25"/>
+        <UsageCount Value="26"/>
         <Loaded Value="True"/>
       </Unit10>
       <Unit11>
@@ -230,7 +231,7 @@
         <EditorIndex Value="3"/>
         <TopLine Value="89"/>
         <CursorPos X="25" Y="103"/>
-        <UsageCount Value="24"/>
+        <UsageCount Value="25"/>
         <Loaded Value="True"/>
       </Unit15>
       <Unit16>
@@ -249,10 +250,11 @@
       </Unit17>
       <Unit18>
         <Filename Value="userdir.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="4"/>
-        <CursorPos X="23" Y="22"/>
-        <UsageCount Value="11"/>
+        <EditorIndex Value="8"/>
+        <TopLine Value="222"/>
+        <CursorPos X="19" Y="232"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
       </Unit18>
       <Unit19>
         <Filename Value="/usr/local/share/fpcsrc/rtl/objpas/sysutils/finah.inc"/>
@@ -266,9 +268,16 @@
         <EditorIndex Value="6"/>
         <TopLine Value="396"/>
         <CursorPos X="42" Y="398"/>
-        <UsageCount Value="14"/>
+        <UsageCount Value="15"/>
         <Loaded Value="True"/>
       </Unit20>
+      <Unit21>
+        <Filename Value="/usr/local/share/fpcsrc/rtl/objpas/math.pp"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1009"/>
+        <CursorPos X="83" Y="1011"/>
+        <UsageCount Value="10"/>
+      </Unit21>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
