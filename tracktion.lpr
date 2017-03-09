@@ -220,7 +220,7 @@ begin
      pos := seedStart;
      newTrk.dir := getDir(SeedStart);
      if reverseDir then
-        newTrk.dir := vectorMult(newTrk.dir,-1);
+        newTrk.dir := vectorScale(newTrk.dir,-1);
      while (newTrk.dir.X < 5) and (newTrk.len < mxTrkLen) do begin
            newTrk.pts[newTrk.len] := pos; //add previous point
            newTrk.len := newTrk.len + 1;
@@ -228,7 +228,7 @@ begin
            vectorAdd(pos, vectorMult(newTrk.dir, p.stepSize)); //move in new direction by step size
            {$ELSE}
            dirScaled := vectorScale(newTrk.dir, pixDim);
-           vectorAdd(pos, vectorMult(dirScaled, p.stepSize)); //move in new direction by step size
+           vectorAdd(pos, vectorScale(dirScaled, p.stepSize)); //move in new direction by step size
            {$ENDIF}
            dir := getDir(pos);
            cosine := vectorDot(dir, newTrk.dir);
@@ -247,7 +247,7 @@ begin
            {$ENDIF}
            if ( abs(cosine) < minCosine) then exit; //if steep angle: fiber ends
            if (cosine < 0) and (dir.X < 5) then
-              dir := vectorMult(dir,-1);
+              dir := vectorScale(dir,-1);
            newTrk.dir := dir;
      end;
 end;//nested AddSteps()
@@ -332,7 +332,7 @@ begin
         pixDim := ptf(1,1,1);
      vectorReciprocal(pixDim); //in terms of voxels, move much less in the thicker direction than the thinner direction
      //vectorNormalize(pixDim); //would make vector length 1
-     pixDim := vectorMult(pixDim, 1/max(pixDim.X,max(pixDim.Y,pixDim.Z))); //make longest component 1
+     pixDim := vectorScale(pixDim, 1/max(pixDim.X,max(pixDim.Y,pixDim.Z))); //make longest component 1
      if min(pixDim.X,min(pixDim.Y,pixDim.Z)) < 0.5 then
         showmsg(format('Warning: pixel mm very anisotropic %g %g %g ',[msk.hdr.pixdim[1], msk.hdr.pixdim[2], msk.hdr.pixdim[3]]));
      //showmsg(format('pixel mm anisotropy %g %g %g ',[pixDim.X, pixDim.Y, pixDim.Z]));
@@ -554,10 +554,14 @@ begin
   showmsg(format(' -l minimum length (mm, default %.3g)', [p.simplifyMinLengthMM]));
   showmsg(' -o output name (.bfloat, .bfloat.gz or .vtk; default "inputName.vtk")');
   showmsg(format(' -s simplification tolerance (mm, default %.3g)', [p.simplifyToleranceMM]));
+  {$IFDEF BEDPOST}
   showmsg(format(' -t threshold (FA for dtifit, probability for bedpost) (default %.3g)', [p.mskThresh]));
+  {$ELSE}
+  showmsg(format(' -t threshold (FA for dtifit) (default %.3g)', [p.mskThresh]));
+  {$ENDIF}
   showmsg(format(' -w waypoint name (up to %d; default: none)',[kMaxWayPoint]));
   showmsg(format(' -x bedpost exponent (0=sample p1/p2 equally, 2=strongly prefer p1, default %.3g)', [p.bedpostExponent]));
-  showmsg(format(' -1 smooth (0=not, 1=yes, default %d)', [p.smooth]));
+  showmsg(format(' -1 smooth (0=no, 1=yes, default %d)', [p.smooth]));
   showmsg(format(' -2 stepsize (voxels, voxels %.3g)', [p.stepSize]));
   showmsg(format(' -3 minimum steps (voxels, default %d)', [p.minLength]));
   showmsg(format(' -4 redundant fiber removal threshold (mm, default %g)', [p.redundancyToleranceMM]));
@@ -566,19 +570,28 @@ begin
   {$IFDEF UNIX}
    showmsg(' '+xname+' -t 0.2 -o "~/out/fibers.vtk" "~/img_V1.nii.gz"');
    showmsg(' '+xname+' -w BA44.nii -w BA44.nii "~/img_V1.nii"');
+   {$IFDEF BEDPOST}
+   showmsg(' '+xname+' dyads1.nii.gz"');
+   {$ENDIF}
   {$ELSE}
    to do showmsg(' '+xname+' -t 1 -o "c:\out dir\shrunk.vtk" "c:\in dir in.vtk"');
   {$ENDIF}
 end;
 
-function FindDyads(pth: string; var p: TTrackingPrefs; reportError: integer): boolean;
+function FindDyads(pth: string; var p: TTrackingPrefs; reportError: integer; isGz: boolean): boolean;
+var
+  ext: string;
 begin
+     if isGz then
+        ext := '.nii.gz'
+     else
+         ext := '.nii';
      result := true;
-     p.v1Name := pth + 'dyads1.nii.gz';
-     p.mskName := pth+ 'mean_f1samples.nii.gz';
+     p.v1Name := pth + 'dyads1'+ext;
+     p.mskName := pth+ 'mean_f1samples'+ext;
      if fileexists(p.v1Name) and fileexists(p.mskName) then begin
-        p.v2Name := pth + 'dyads2.nii.gz';
-        p.msk2Name := pth+ 'mean_f2samples.nii.gz';
+        p.v2Name := pth + 'dyads2'+ext;
+        p.msk2Name := pth+ 'mean_f2samples'+ext;
         if (not fileexists(p.v2Name)) or (not fileexists(p.msk2Name)) then begin
            p.v2Name := '';
            p.msk2Name := '';
@@ -596,10 +609,12 @@ begin
      p.v1Name := pth+n+'_V1'+x;
      p.mskName := pth+n+'_FA'+x;
      if fileexists(p.v1Name) and fileexists(p.mskName) then exit;
-     result := false;
      if reportError <> 0 then
         showmsg(format('Unable to find "%s" and "%s"',[p.v1Name, p.mskName]));
-     result := FindDyads(pth, p, reportError);
+     result := false;
+     result := FindDyads(pth, p, reportError,false);
+     if result then exit;
+     result := FindDyads(pth, p, reportError,true);
 end;//FindV1FA()
 
 function FindNiiFiles(var basename: string; var p: TTrackingPrefs): boolean;
@@ -612,7 +627,8 @@ begin
     pth := basename;
     if pth[length(pth)] <> pathdelim then
      pth := pth + pathdelim; //e.g. ~/dir and ~/dir/ both become ~/dir/
-    if FindDyads(pth, p, 1) then exit;
+    if FindDyads(pth, p, 1, true) then exit;
+    if FindDyads(pth, p, 1, false) then exit;
   end;
   FilenameParts (basename, pth,n, x);
   for i := 0 to 1 do begin

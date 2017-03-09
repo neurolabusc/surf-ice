@@ -18,7 +18,7 @@
     <i18n>
       <EnableI18N LFM="False"/>
     </i18n>
-    <BuildModes Count="2" Active="Default">
+    <BuildModes Count="2" >
       <Item1 Name="Default" Default="True"/>
       <Item2 Name="MacOS">
         <MacroValues Count="1">
@@ -186,7 +186,7 @@
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="9"/>
         <TopLine Value="98"/>
-        <CursorPos X="6" Y="112"/>
+        <CursorPos X="72" Y="106"/>
         <UsageCount Value="28"/>
         <Loaded Value="True"/>
       </Unit9>

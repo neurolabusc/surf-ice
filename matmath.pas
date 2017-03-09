@@ -35,13 +35,12 @@ uses
  procedure matrixNegate(var a: TMat33);
  procedure matrixTranspose(var a: TMat33); overload;
  procedure matrixTranspose(var a: TMat44); overload;
- function vectorMult (var A: TPoint3f; B: single): TPoint3f;  inline; //same as vectorScale
+ //function vectorMult (var A: TPoint3f; B: single): TPoint3f;  inline; //same as vectorScale
  procedure vectorNegate(var v: TPoint3f);  inline;
  function AlignVector(alignmentVector: TPoint3f): TMat33;
-
  function vectorDistance(A,B: TPoint3f): single; //[euclidean distance] = sqrt(dX^2+dY^2+dZ^2)
  function vectorDistanceSqr(A,B: TPoint3f): single; inline;//[fast as no sqrt]  = (dX^2+dY^2+dZ^2)
- function vectorScale(A: TPoint3f; Scale: single): TPoint3f; overload;
+ function vectorScale(A: TPoint3f; Scale: single): TPoint3f; overload; //same as vectorMult
  function vectorScale(A: TPoint3f; Scale: TPoint3f): TPoint3f; overload;
  procedure MakeCylinder(radius: single; start, dest: TPoint3f; var faces: TFaces; var vertices: TVertices; slices: integer = 20); overload;
  procedure MakeCylinder( radius, len: single; var faces: TFaces; var vertices: TVertices; slices: integer = 20); overload;
@@ -64,12 +63,13 @@ begin
   result := (sqr(A.X-B.X)+ sqr(A.Y-B.Y) + sqr(A.Z-B.Z));
 end;
 
+(* //now called vectorScale()
 function vectorMult (var A: TPoint3f; B: single): TPoint3f;  inline;
 begin
   result.X := A.X * B;
   result.Y := A.Y * B;
   result.Z := A.Z * B;
-end;
+end;*)
 
 procedure vectorTransform(var v: TPoint3f; mat : TMat44);
 var
