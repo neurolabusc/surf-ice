@@ -607,6 +607,8 @@ function FindV1FA(pth, n, x: string; var p: TTrackingPrefs; reportError: integer
 begin
      result := true;
      p.v1Name := pth+n+'_V1'+x;
+     if (not fileexists(p.v1Name)) and (x = '.nii') then
+     	p.v1Name := pth+n+'_V1'+ '.nii.gz'; //Allow V1.nii.gz and FA.nii or vice versa
      p.mskName := pth+n+'_FA'+x;
      if fileexists(p.v1Name) and fileexists(p.mskName) then exit;
      if reportError <> 0 then
