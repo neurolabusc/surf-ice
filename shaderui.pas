@@ -127,16 +127,26 @@ begin
 end;
 
 function ShaderDir: string;
+var
+   s: string;
 begin
   {$IFDEF COREGL}   //OpenGL 3 Core shaders not compatible with OpenGL2
     {$IFDEF HEMISSAO}
-    result := AppDir+'shader'
+    s := 'shader';
     {$ELSE}
-    result := AppDir+'shaders'
+    s := 'shaders';
     {$ENDIF}
   {$ELSE}
-  result := AppDir+'shadersOld'
+  s := 'shadersOld';
   {$ENDIF}
+  result := AppDir+s;
+  {$IFDEF UNIX}
+  if fileexists(result) then exit;
+  result := '/usr/share/surfice/'+s;
+  if fileexists(result) then exit;
+  result := AppDir+s;
+  {$ENDIF}
+
 end;
 
 {$IFDEF COREGL}

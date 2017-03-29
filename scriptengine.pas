@@ -200,7 +200,13 @@ end;
 
 function ScriptDir: string;
 begin
+  result := AppDir+'script';
+  {$IFDEF UNIX}
+  if fileexists(result) then exit;
+  result := '/usr/share/surfice/script';
+  if fileexists(result) then exit;
   result := AppDir+'script'
+  {$ENDIF}
   //with latest versions of Darwin I store scripts in same folder
   //result := ExeDir+'script'
 end;

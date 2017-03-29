@@ -127,7 +127,13 @@ end;
 function CLUTDir: string;
 begin
   //result := extractfilepath(paramstr(0))+'lut';
-  result := AppDir+'lut'
+  result := AppDir+'lut';
+  {$IFDEF UNIX}
+  if fileexists(result) then exit;
+  result := '/usr/share/surfice/lut';
+  if fileexists(result) then exit;
+  result := AppDir+'lut';
+  {$ENDIF}
 end;
 
 procedure setNode (r,g,b,a,i, node: integer; var  lLUTnodes : TLUTnodes);
