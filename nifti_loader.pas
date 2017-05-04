@@ -29,7 +29,7 @@ TNIFTI = class
     procedure setMatrix;
     procedure SetDescriptives;
   public
-    function mm2intensity( Xmm, Ymm, Zmm: single): single;
+    function mm2intensity( Xmm, Ymm, Zmm: single; isInterpolate: boolean): single;
     function mm2vox0(Xmm, Ymm, Zmm: single): TPoint3i; //rounded, voxels indexed from 0! e.g. if dim[0]=50 then output will range 0..49
     function validVox0(vox: TPoint3i): boolean; //returns true if voxel [indexed from 0] is inside volume, e.g. if dim[0]=50 then vox.X must be in range 0..49
     constructor Create;
@@ -160,7 +160,7 @@ begin
    result.Z := round(Zmm*invMat[3,1] + Zmm*invMat[3,2] + Zmm*invMat[3,3] + invMat[3,4]);
 end;
 
-function TNIfTI.mm2intensity( Xmm, Ymm, Zmm: single): single;
+function TNIfTI.mm2intensity( Xmm, Ymm, Zmm: single; isInterpolate: boolean): single;
 var
    Xvox, Yvox, Zvox: single; //voxel coordinates indexed from 0
    Xfrac1, Yfrac1, Zfrac1, Xfrac0, Yfrac0, Zfrac0, Weight : single;
@@ -173,10 +173,15 @@ begin
    Zvox := Zmm*invMat[3,1] + Zmm*invMat[3,2] + Zmm*invMat[3,3] + invMat[3,4];
    if (Xvox < 0) or (Yvox < 0) or (Zvox < 0) then exit;
    if (Xvox >= (hdr.dim[1]-1)) or (Yvox >= (hdr.dim[2]-1)) or (Zvox >= (hdr.dim[3]-1)) then exit;
+   sliceVx := hdr.dim[1] * hdr.dim[2]; //voxels per slice
+   if not isInterpolate then begin
+      vx := round(Xvox) + round(Yvox) * hdr.dim[1] + round(Zvox) * sliceVx;
+      result := img[vx];
+      exit;
+   end;
    Xfrac1 := frac(Xvox);  Yfrac1 := frac(Yvox);  Zfrac1 := frac(Zvox);
    Xfrac0 := 1 - Xfrac1;  Yfrac0 := 1 - Yfrac1;  Zfrac0 := 1 - Zfrac1;
 
-   sliceVx := hdr.dim[1] * hdr.dim[2]; //voxels per slice
    vx := trunc(Xvox) + trunc(Yvox) * hdr.dim[1] + trunc(Zvox) * sliceVx;
 
    weight :=  Xfrac0 * Yfrac0 * Zfrac0  * notZero(img[vx]) +

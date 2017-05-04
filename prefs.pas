@@ -20,9 +20,10 @@ const
 type
   TMRU =  array [1..knMRU] of string;
   TPrefs = record
+    SmoothVoxelwiseData,
     OverlayClip, StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube, MultiSample,
      TracksAreTubes,Colorbar, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,ColorBarPrecedenceTracksNotOverlays,
-     ZDimIsUp, SmoothVoxelwiseData, ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting : boolean;
+     ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting : boolean;
     TrackTubeSlices, ScreenCaptureZoom,
     window_width, window_height, RenderQuality, SaveAsFormat,SaveAsFormatTrack, OcclusionAmount: integer;
     ObjColor,BackColor: TColor;

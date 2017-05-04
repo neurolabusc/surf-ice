@@ -108,7 +108,7 @@ type
     procedure LoadVtk(const FileName: string);
     procedure LoadW(const FileName: string; lOverlayIndex: integer);
     function LoadWfr(const FileName: string): boolean; //EMSE wireframe
-    procedure LoadNii(const FileName: string; lOverlayIndex: integer);
+    procedure LoadNii(const FileName: string; lOverlayIndex: integer; lLoadSmooth: boolean);
     procedure LoadMeshAsOverlay(const FileName: string; lOverlayIndex: integer);
   public
     procedure MakePyramid;
@@ -120,7 +120,7 @@ type
     procedure SwapZY;
     function LoadFromFile(const FileName: string): boolean;
     function LoadEdge(const FileName: string; isEmbeddedEdge: boolean): boolean;
-    function LoadOverlay(const FileName: string): boolean;
+    function LoadOverlay(const FileName: string; lLoadSmooth: boolean): boolean;
     procedure CloseOverlays;
     procedure Close;
     constructor Create;
@@ -204,9 +204,7 @@ var
   rgb, rgb0: TRGBA;
   vRGBA, vRGBAmx :TVertexRGBA;
   vNumNeighbor: array of integer;
-  //vNumColorNeighbor: array of integer;
   vSumRGBBA: array of TPoint4f;
-
   isOverlayPainting : boolean = false;
 begin
   if (length(faces) < 1) or (length(vertices) < 3) then exit;
@@ -245,7 +243,6 @@ begin
           for i := 0 to (length(vertices)-1) do
               vRGBAmx[i] := rgb0;
           for c :=  OpenOverlays downto 1 do begin
-
             if (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) = length(vertices)) then begin
                if overlay[c].LUTvisible <> kLUTopaque then
                   translucent := 2 //if translucent, halve alpha
@@ -288,23 +285,15 @@ begin
                  end; //for i
               end; //if visible
             end;  //for c
-       end;  //if isAdditiveOverlay else
-       if  (length(vertexRGBA) < 1) then begin //feather edges if regions without overlay have alpha = 0
+       end;
+       if  (length(vertexRGBA) < 1) then begin //feather edges of overlay
          setlength(vNumNeighbor, length(vertices));
-         //setlength(vNumColorNeighbor, length(vertices));
          setlength(vSumRGBBA, length(vertices));
-      //for k := 1 to 1 do begin
          for i := 0 to (length(vertices)-1) do begin
              vNumNeighbor[i] := 0;
-             //vNumColorNeighbor[i] := 0;
              vSumRGBBA[i] := pt4f(0,0,0,0);
          end;
          for i := 0 to (length(faces)-1) do begin
-             (*if (vRGBA[faces[i].X].A = 0) or (vRGBA[faces[i].Y].A = 0) or (vRGBA[faces[i].Z].A = 0) then begin
-                inc(vNumZeroNeighbor[faces[i].X]);
-                inc(vNumZeroNeighbor[faces[i].Y]);
-                inc(vNumZeroNeighbor[faces[i].Z]);
-             end;*)
              AddPt4f(vSumRGBBA[faces[i].X], vRGBA[faces[i].X], vRGBA[faces[i].Y], vRGBA[faces[i].Z]);
              AddPt4f(vSumRGBBA[faces[i].Y], vRGBA[faces[i].X], vRGBA[faces[i].Y], vRGBA[faces[i].Z]);
              AddPt4f(vSumRGBBA[faces[i].Z], vRGBA[faces[i].X], vRGBA[faces[i].Y], vRGBA[faces[i].Z]);
@@ -315,46 +304,14 @@ begin
          for i := 0 to (length(vertices)-1) do begin
              if (vNumNeighbor[i] > 0)  then begin //vertex at edge: neighbors both colored and uncolored vertices
                  vRGBA[i].a := round(vSumRGBBA[i].W / vNumNeighbor[i]);
-                 if (vRGBA[i].a < 255) and (vRGBA[i].a > 0) then begin
-                    //mx := 255/vRGBA[i].a;
-
+                 if {(vRGBA[i].a < 255)  and} (vRGBA[i].a > 0) then begin
                     vRGBA[i].r := round( vSumRGBBA[i].X / vNumNeighbor[i]);
                     vRGBA[i].g := round( vSumRGBBA[i].Y / vNumNeighbor[i]);
                     vRGBA[i].b := round( vSumRGBBA[i].Z / vNumNeighbor[i]);
-                    //vRGBA[i].a := 255;
                  end;
              end;
 
          end;
-      //end; //k
-
-        (*for i := 0 to (length(vertices)-1) do begin
-             vNumColorNeighbor[i] := 0;
-             vNumZeroNeighbor[i] := 0;
-             vSumRGBBA[i] := pt4f(0,0,0,0);
-         end;
-         for i := 0 to (length(faces)-1) do begin
-             vSumRGBBA[faces[i].X] := pt4f(vRGBA[faces[i].X].R, vRGBA[faces[i].X].G, vRGBA[faces[i].X].B, vRGBA[faces[i].X].A);
-             vSumRGBBA[faces[i].Y] := pt4f(vRGBA[faces[i].Y].R, vRGBA[faces[i].Y].G, vRGBA[faces[i].Y].B, vRGBA[faces[i].Y].A);
-             vSumRGBBA[faces[i].Z] := pt4f(vRGBA[faces[i].Z].R, vRGBA[faces[i].Z].G, vRGBA[faces[i].Z].B, vRGBA[faces[i].Z].A);
-
-             if (vRGBA[faces[i].X].A <> 0) or (vRGBA[faces[i].Y].A <> 0) or (vRGBA[faces[i].Z].A <> 0) then begin
-                inc(vNumColorNeighbor[faces[i].X]);
-                inc(vNumColorNeighbor[faces[i].Y]);
-                inc(vNumColorNeighbor[faces[i].Z]);
-             end;
-         end;
-         for i := 0 to (length(vertices)-1) do begin
-             if (vNumColorNeighbor[i] > 0)  then begin //vertex at edge: neighbors both colored and uncolored vertices
-                vRGBA[i].r := round(vSumRGBBA[i].X / vNumColorNeighbor[i]);
-                vRGBA[i].g := round(vSumRGBBA[i].Y / vNumColorNeighbor[i]);
-                vRGBA[i].b := round(vSumRGBBA[i].Z / vNumColorNeighbor[i]);
-                vRGBA[i].a := round(vSumRGBBA[i].W / (vNumColorNeighbor[i]+vNumZeroNeighbor[i] ) );
-             end;
-         end;  *)
-
-
-
          vNumNeighbor := nil;
          //vNumColorNeighbor := nil;
          vSumRGBBA := nil;
@@ -4013,11 +3970,13 @@ procedure TMesh.LoadVtk(const FileName: string);
 //n.b. ASCII reading is slow - strlst.DelimitedText much slower than readln!
 label
    666;
+const
+  kBlockSz = 4096;
 var
    f: TFByte;//TextFile;
    strlst: TStringList;
    str: string;
-   i, num_v, num_f, cnt: integer;
+   i, j, num_v, num_f, num_f_allocated, num_strip, cnt: integer;
    nV: LongInt;
    isBinary: boolean = true;
 begin
@@ -4074,8 +4033,56 @@ begin
     showmessage('This is a fiber file: rename with a ".fib" extension and use Tracks/Open to view: '+ str);
     goto 666;
   end;
+  if pos('TRIANGLE_STRIPS', UpperCase(str)) = 1 then begin
+     if isBinary then begin
+        showmessage('Unable to read VTK binary "TRIANGLE_STRIPS"');
+        goto 666;
+     end;
+     strlst.DelimitedText := str;
+     num_strip := StrToIntDef(strlst[1],0);
+     cnt := StrToIntDef(strlst[2],0);
+     num_f_allocated := cnt;
+     setlength(faces, num_f_allocated); //not sure how many triangles, lets guess
+     num_f := 0;
+     for i := 0 to (num_strip -1) do begin
+         ReadLnBin(f, str);
+         strlst.DelimitedText := str;
+         cnt := StrToIntDef(strlst[0],0);
+         if (cnt < 3) then begin
+            setlength(faces,0);
+            num_f := 0;
+            goto 666;
+         end;
+         if ((num_f+cnt) > num_f_allocated) then begin //need to allocate more faces
+            num_f_allocated := num_f_allocated + cnt + kBlockSz;
+            setlength(faces, num_f_allocated);
+         end;
+         faces[num_f].Y := StrToIntDef(strlst[1],0);
+         faces[num_f].X := StrToIntDef(strlst[2],0);
+         faces[num_f].Z := StrToIntDef(strlst[3],0);
+         num_f := num_f + 1;
+         if (cnt > 3) then begin
+            for j := 4 to cnt do begin
+                //http://ogldev.atspace.co.uk/www/tutorial27/tutorial27.html
+                //  winding order is reversed on the odd triangles
+                if odd(j) then begin //ITK snap triangle winding reverses with each new point
+                   faces[num_f].X := StrToIntDef(strlst[j-1],0);
+                   faces[num_f].Y := StrToIntDef(strlst[j-2],0);
+                end else begin
+                  faces[num_f].X := StrToIntDef(strlst[j-2],0);
+                  faces[num_f].Y := StrToIntDef(strlst[j-1],0);
+                end;
+              faces[num_f].Z := StrToIntDef(strlst[j],0);
+                num_f := num_f + 1;
+            end; //for j: each additional strip point
+         end; //cnt > 3
+     end; //for i: each strip
+     setlength(faces, num_f);
+     goto 666;
+
+  end;
   if pos('POLYGONS', UpperCase(str)) <> 1 then begin
-    showmessage('Expected header to report "POLYGONS" not '+ str);
+    showmessage('Expected header to report "TRIANGLE_STRIPS" or "POLYGONS" not '+ str);
     goto 666;
   end;
   strlst.DelimitedText := str;
@@ -4623,18 +4630,21 @@ begin
      strlst.free;
 end;
 
-procedure TMesh.LoadNii(const FileName: string; lOverlayIndex: integer);
+procedure TMesh.LoadNii(const FileName: string; lOverlayIndex: integer; lLoadSmooth: boolean);
 //Load NIfTI image as overlay
 var
    i, num_v: integer;
   nii: TNIFTI;
 begin
    nii := TNIfTI.Create;
-   nii.LoadFromFile(FileName, kNiftiSmoothMaskZero);
+   if lLoadSmooth then
+      nii.LoadFromFile(FileName, kNiftiSmoothMaskZero)
+   else
+       nii.LoadFromFile(FileName, kNiftiSmoothNone);
    num_v := length(vertices);
    setlength(overlay[lOverlayIndex].intensity, num_v);
    for i := 0 to (num_v-1) do
-       overlay[lOverlayIndex].intensity[i] := nii.mm2intensity(vertices[i].X, vertices[i].Y, vertices[i].Z);
+       overlay[lOverlayIndex].intensity[i] := nii.mm2intensity(vertices[i].X, vertices[i].Y, vertices[i].Z, lLoadSmooth);
    nii.free;
 end; // LoadNii()
 
@@ -4764,7 +4774,7 @@ end; // SetOverlayDescriptives()
 
 {$Include cifti.inc}
 
-function TMesh.LoadOverlay(const FileName: string): boolean; //; isSmooth: boolean
+function TMesh.LoadOverlay(const FileName: string; lLoadSmooth: boolean): boolean; //; isSmooth: boolean
 var
    i, nOverlays: integer;
    ext: string;
@@ -4859,7 +4869,7 @@ begin
     {$ELSE}
     if (ext = '.NII') or (ext = '.IMG') or (ext = '.HDR')  or (ext = '.GZ') then
     {$ENDIF}
-       LoadNii(FileName, OpenOverlays);
+       LoadNii(FileName, OpenOverlays, lLoadSmooth);
   end;
   if (length(overlay[OpenOverlays].intensity) < 1 )  then
        LoadW(FileName, OpenOverlays);

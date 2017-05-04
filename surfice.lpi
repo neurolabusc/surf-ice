@@ -99,14 +99,13 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="23">
+    <Units Count="26">
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="-1"/>
         <CursorPos X="61" Y="4"/>
         <UsageCount Value="210"/>
-        <Loaded Value="True"/>
       </Unit0>
       <Unit1>
         <Filename Value="mainunit.pas"/>
@@ -114,8 +113,8 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <TopLine Value="848"/>
-        <CursorPos X="18" Y="854"/>
+        <TopLine Value="2189"/>
+        <CursorPos X="7" Y="2205"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -123,37 +122,36 @@
       <Unit2>
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="3"/>
-        <TopLine Value="20"/>
-        <CursorPos X="17" Y="29"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="519"/>
+        <CursorPos Y="527"/>
         <UsageCount Value="210"/>
-        <Loaded Value="True"/>
       </Unit2>
       <Unit3>
         <Filename Value="nifti_loader.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="45"/>
-        <CursorPos X="75" Y="52"/>
+        <EditorIndex Value="3"/>
+        <TopLine Value="661"/>
+        <CursorPos X="29" Y="680"/>
         <UsageCount Value="210"/>
+        <Loaded Value="True"/>
       </Unit3>
       <Unit4>
         <Filename Value="colorTable.pas"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="120"/>
         <CursorPos X="26" Y="130"/>
         <UsageCount Value="210"/>
-        <Loaded Value="True"/>
       </Unit4>
       <Unit5>
         <Filename Value="track.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="636"/>
-        <CursorPos X="47" Y="648"/>
+        <EditorIndex Value="6"/>
+        <TopLine Value="710"/>
+        <CursorPos X="103" Y="719"/>
         <UsageCount Value="210"/>
+        <Loaded Value="True"/>
       </Unit5>
       <Unit6>
         <Filename Value="scriptengine.pas"/>
@@ -161,25 +159,23 @@
         <ComponentName Value="ScriptForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="7"/>
-        <TopLine Value="194"/>
-        <CursorPos X="29" Y="203"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="5"/>
+        <CursorPos X="22" Y="21"/>
         <UsageCount Value="200"/>
-        <Loaded Value="True"/>
-        <LoadedDesigner Value="True"/>
       </Unit6>
       <Unit7>
         <Filename Value="cifti.inc"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="23"/>
-        <UsageCount Value="28"/>
+        <UsageCount Value="24"/>
       </Unit7>
       <Unit8>
         <Filename Value="mesh.pas"/>
-        <EditorIndex Value="6"/>
-        <TopLine Value="8"/>
-        <CursorPos X="18" Y="18"/>
-        <UsageCount Value="33"/>
+        <EditorIndex Value="5"/>
+        <TopLine Value="4628"/>
+        <CursorPos X="36" Y="4640"/>
+        <UsageCount Value="55"/>
         <Loaded Value="True"/>
       </Unit8>
       <Unit9>
@@ -187,28 +183,27 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="98"/>
         <CursorPos X="48" Y="106"/>
-        <UsageCount Value="28"/>
+        <UsageCount Value="24"/>
       </Unit9>
       <Unit10>
         <Filename Value="gl_2d.pas"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="1162"/>
         <CursorPos X="28" Y="1170"/>
-        <UsageCount Value="26"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="22"/>
       </Unit10>
       <Unit11>
         <Filename Value="shaderu.pas"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="369"/>
         <CursorPos X="7" Y="378"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="8"/>
       </Unit11>
       <Unit12>
         <Filename Value="opts.inc"/>
         <EditorIndex Value="-1"/>
-        <CursorPos X="19" Y="2"/>
-        <UsageCount Value="13"/>
+        <CursorPos X="113" Y="5"/>
+        <UsageCount Value="12"/>
       </Unit12>
       <Unit13>
         <Filename Value="/usr/local/share/fpcsrc/packages/opengl/src/glext.pp"/>
@@ -216,74 +211,96 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="5068"/>
         <CursorPos X="21" Y="5084"/>
-        <UsageCount Value="25"/>
+        <UsageCount Value="21"/>
       </Unit13>
       <Unit14>
         <Filename Value="matmath.pas"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="560"/>
         <CursorPos X="66" Y="573"/>
-        <UsageCount Value="21"/>
+        <UsageCount Value="17"/>
       </Unit14>
       <Unit15>
         <Filename Value="curv.pas"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="89"/>
         <CursorPos X="25" Y="103"/>
-        <UsageCount Value="25"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="21"/>
       </Unit15>
       <Unit16>
         <Filename Value="unused/colorbar2d.pas"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="274"/>
         <CursorPos X="7" Y="288"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="6"/>
       </Unit16>
       <Unit17>
         <Filename Value="/usr/local/share/fpcsrc/rtl/objpas/classes/classesh.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="93"/>
         <CursorPos X="38" Y="102"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="7"/>
       </Unit17>
       <Unit18>
         <Filename Value="userdir.pas"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="222"/>
         <CursorPos X="19" Y="232"/>
-        <UsageCount Value="12"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="11"/>
       </Unit18>
       <Unit19>
         <Filename Value="/usr/local/share/fpcsrc/rtl/objpas/sysutils/finah.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="23"/>
         <CursorPos X="10" Y="44"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="6"/>
       </Unit19>
       <Unit20>
         <Filename Value="commandsu.pas"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="396"/>
-        <CursorPos X="42" Y="398"/>
-        <UsageCount Value="15"/>
+        <TopLine Value="114"/>
+        <CursorPos X="25" Y="126"/>
+        <UsageCount Value="12"/>
       </Unit20>
       <Unit21>
         <Filename Value="/usr/local/share/fpcsrc/rtl/objpas/math.pp"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="1009"/>
         <CursorPos X="83" Y="1011"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="6"/>
       </Unit21>
       <Unit22>
         <Filename Value="shaderui.pas"/>
-        <EditorIndex Value="1"/>
-        <TopLine Value="131"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="133"/>
         <CursorPos X="21" Y="143"/>
-        <UsageCount Value="10"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="9"/>
       </Unit22>
+      <Unit23>
+        <Filename Value="meshify.pas"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="286"/>
+        <CursorPos X="58" Y="295"/>
+        <UsageCount Value="30"/>
+        <Loaded Value="True"/>
+      </Unit23>
+      <Unit24>
+        <Filename Value="clustering.pas"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="168"/>
+        <CursorPos X="8" Y="175"/>
+        <UsageCount Value="29"/>
+        <Loaded Value="True"/>
+      </Unit24>
+      <Unit25>
+        <Filename Value="nifti_types.pas"/>
+        <EditorIndex Value="4"/>
+        <TopLine Value="57"/>
+        <CursorPos X="10" Y="60"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit25>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

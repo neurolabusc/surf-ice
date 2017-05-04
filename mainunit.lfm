@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
-  Left = 698
+  Left = 477
   Height = 755
-  Top = 23
+  Top = 28
   Width = 1003
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -1903,6 +1903,11 @@ object GLForm1: TGLForm1
       object VolumeToMeshMenu: TMenuItem
         Caption = 'Convert voxelwise volume to mesh'
         Hint = 'Convert NIfTI voxel based volume to mesh'
+        OnClick = VolumeToMeshMenuClick
+      end
+      object ConvertAtlas: TMenuItem
+        Tag = 1
+        Caption = 'Convert voxelwise atlas to meshes'
         OnClick = VolumeToMeshMenuClick
       end
       object ResetMenu: TMenuItem

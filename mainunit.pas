@@ -23,6 +23,7 @@ type
     CurvMenu: TMenuItem;
     CurvMenuTemp: TMenuItem;
     GoldColorMenu: TMenuItem;
+    ConvertAtlas: TMenuItem;
     NewWindow1: TMenuItem;
     S1Check: TCheckBox;
     S6Check: TCheckBox;
@@ -412,7 +413,10 @@ begin
   OpenDialog.Filter := kVolFilter;
   OpenDialog.Title := 'Select volume to convert';
   if not OpenDialog.Execute then exit;
-  Nii2Mesh(OpenDialog.FileName);
+  if (sender as TMenuItem).tag = 1 then
+     Atlas2Mesh(OpenDialog.FileName)
+  else
+      Nii2Mesh(OpenDialog.FileName);
 end;
 
 procedure TGLForm1.XRayLabelClick(Sender: TObject);
@@ -516,7 +520,7 @@ begin
    result := false;
    Filename := FindFile(FilenameIn);
    if Filename = '' then exit;
-   if not gMesh.LoadOverlay(FileName) then begin //gPrefs.SmoothVoxelwiseData
+   if not gMesh.LoadOverlay(FileName, gPrefs.SmoothVoxelwiseData) then begin //gPrefs.SmoothVoxelwiseData
      GLBoxRequestUpdate(nil);
      UpdateToolbar;
      exit;
@@ -586,6 +590,8 @@ begin
      BlockRead(f, Str[1],szRead);
      CloseFile(f);
      if (pos('POLYGONS ', Str) > 0) then result := true; //faces
+     if (pos('TRIANGLE_STRIPS ', Str) > 0) then result := true; //faces
+
 end;
 
 function isGiiMesh (filename: string): boolean;
@@ -2325,7 +2331,7 @@ begin
      GLbox.Repaint;
   end;
   origin := GetOrigin(scale);
-  str :=  'Surf Ice '+' 7 February 2017 '
+  str :=  'Surf Ice '+' 5 May 2017 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
@@ -2985,11 +2991,6 @@ begin
   GLBox.ReleaseContext;
   MultiPassRenderingToolsUpdate;
   ShaderDropChange(sender);
-  //AddNodesMenuClick(sender);
-  //AddOverlayMenuClick(sender);
-  //AddTracksMenuClick(sender);
-  //VolumeToMeshMenuClick(sender);
-  //caption := format('%dx%d %dx%d %d', [screen.Height, screen.width, GLForm1.Height, GLForm1.width, Screen.PixelsPerInch]);
 end;
 
 procedure TGLForm1.FormDropFiles(Sender: TObject;

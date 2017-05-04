@@ -17,6 +17,9 @@ You can also build this project from the command line (assuming you have FPC Laz
 
 ##### Recent Versions
 
+5-May-2017
+ - Conversion of images from voxels to mesh now allows the user to specify a minimum cluster size.
+
 7-February-2017
  - Ability to individually adjust translucency of overlays (rather than having one value for all).
  - Looks better on Linux high-DPI screens.
