@@ -237,13 +237,13 @@ end;
  lMesh.Free();
 end;
 
-procedure quickSmooth(xDim,yDim,zDim: integer; img: TImgScaled);
+procedure quickSmooth(xDim,yDim,zDim: integer; var img: TImgScaled);
 var
   nVox, i, xyDim: integer;
   temp: TImgScaled;
 begin
      if (xDim < 3) or (yDim < 3) or (zDim < 3) then exit;
-     nVox := xDim + yDim + zDim;
+     nVox := xDim * yDim * zDim;
      setlength(temp, nVox);
      for i := 0 to (nVox -1) do
          temp[i] := 2 * img[i];
@@ -262,10 +262,6 @@ begin
          temp[i] := temp[i] + img[i+xyDim];
      for i := 0 to (nVox -1) do
          img[i] := temp[i]/8.0;
-
-
-
-
      setlength(temp,0);
 end;
 
@@ -283,8 +279,9 @@ begin
    nii.LoadFromFile(FileName, kNiftiSmoothNone);
    mn := round(nii.minInten + 1);
    mx := round(nii.maxInten);
+   //mn := 4; mx := 4;
    nVox := length(nii.img);
-   if (nVox < 9) or (mn >= mx) or
+   if (nVox < 9) or (mn > mx) or
       ((nii.hdr.datatype <> kDT_UINT8) and (nii.hdr.datatype <> kDT_INT8) and
       (nii.hdr.datatype <> kDT_UINT16) and (nii.hdr.datatype <> kDT_INT16) and
       (nii.hdr.datatype <> kDT_UINT32)) then begin
@@ -302,8 +299,10 @@ begin
            if (nii.img[v] = i) then
               img[v] := 1;
        end;
-       if (isSmooth) then
+       if (isSmooth) then begin
           quickSmooth(nii.hdr.dim[1], nii.hdr.dim[2], nii.hdr.dim[3], img);
+          quickSmooth(nii.hdr.dim[1], nii.hdr.dim[2], nii.hdr.dim[3], img);
+       end;
        vOK := 0;
        for v := 0 to (nVox -1) do
            if (img[v] >= 0.5) then

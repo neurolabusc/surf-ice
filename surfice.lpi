@@ -114,10 +114,9 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <TopLine Value="2189"/>
-        <CursorPos X="7" Y="2205"/>
+        <CursorPos X="51" Y="2195"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
-        <LoadedDesigner Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="prefs.pas"/>
@@ -173,9 +172,9 @@
       <Unit8>
         <Filename Value="mesh.pas"/>
         <EditorIndex Value="5"/>
-        <TopLine Value="4628"/>
-        <CursorPos X="36" Y="4640"/>
-        <UsageCount Value="55"/>
+        <TopLine Value="1567"/>
+        <CursorPos X="2" Y="1568"/>
+        <UsageCount Value="58"/>
         <Loaded Value="True"/>
       </Unit8>
       <Unit9>
@@ -280,9 +279,9 @@
         <Filename Value="meshify.pas"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="286"/>
-        <CursorPos X="58" Y="295"/>
-        <UsageCount Value="30"/>
+        <TopLine Value="275"/>
+        <CursorPos X="6" Y="282"/>
+        <UsageCount Value="33"/>
         <Loaded Value="True"/>
       </Unit23>
       <Unit24>
@@ -290,7 +289,7 @@
         <EditorIndex Value="2"/>
         <TopLine Value="168"/>
         <CursorPos X="8" Y="175"/>
-        <UsageCount Value="29"/>
+        <UsageCount Value="32"/>
         <Loaded Value="True"/>
       </Unit24>
       <Unit25>
@@ -298,7 +297,7 @@
         <EditorIndex Value="4"/>
         <TopLine Value="57"/>
         <CursorPos X="10" Y="60"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="14"/>
         <Loaded Value="True"/>
       </Unit25>
     </Units>

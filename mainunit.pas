@@ -2191,8 +2191,6 @@ begin
   GLBoxRequestUpdate(Sender);
 end;
 
-
-
 procedure TGLForm1.CurvMenuClick(Sender: TObject);
 var
   fnm: string;

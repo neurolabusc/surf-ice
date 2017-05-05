@@ -105,6 +105,7 @@ type
     procedure LoadStl(const FileName: string);
     function LoadSurf(const FileName: string): boolean;
     function LoadSrf(const FileName: string): boolean;
+    function LoadTri(const FileName: string): boolean;
     procedure LoadVtk(const FileName: string);
     procedure LoadW(const FileName: string; lOverlayIndex: integer);
     function LoadWfr(const FileName: string): boolean; //EMSE wireframe
@@ -1512,67 +1513,67 @@ var
    s : string;
    strlst : TStringList;
    i,j, num_v, num_f, new_f: integer;
-   //t: DWord;
 begin
-  //t:= gettickcount;
   if LoadObjMni(Filename) then exit; //MNI format, not Wavefront
-     fsz := FSize (FileName);
-     if fsz < 32 then exit;
-     //init values
-     num_v := 0;
-     num_f := 0;
-     strlst:=TStringList.Create;
-     setlength(vertices, (fsz div 70)+kBlockSize); //guess number of faces based on filesize to reduce reallocation frequencey
-     setlength(faces, (fsz div 35)+kBlockSize); //guess number of vertices based on filesize to reduce reallocation frequencey
-     //load faces and vertices
-     AssignFile(f, FileName);
-     Reset(f);
-     DefaultFormatSettings.DecimalSeparator := '.';
-     while not EOF(f) do begin
-        readln(f,s);
-        if length(s) < 7 then continue;
-        if (s[1] <> 'v') and (s[1] <> 'f') then continue; //only read 'f'ace and 'v'ertex lines
-        if (s[2] = 'p') or (s[2] = 'n') or (s[2] = 't') then continue; //ignore vp/vn/vt data: avoid delimiting text yields 20% faster loads
-        strlst.DelimitedText := s;
-        if (strlst.count > 3) and ( (strlst[0]) = 'f') then begin
-           //warning: need to handle "f v1/vt1/vn1 v2/vt2/vn2 v3/vt3/vn3"
-           //warning: face could be triangle, quad, or more vertices!
-           new_f := strlst.count - 3;
-           if ((num_f+new_f) >= length(faces)) then
-              setlength(faces, length(faces)+new_f+kBlockSize);
-           for i := 1 to (strlst.count-1) do
-               if (pos('/', strlst[i]) > 1) then // "f v1/vt1/vn1 v2/vt2/vn2 v3/vt3/vn3" -> f v1 v2 v3
-                  strlst[i] := Copy(strlst[i], 1, pos('/', strlst[i])-1);
-           for j := 1 to (new_f) do begin
-               faces[num_f].X := strtointDef(strlst[1], 1);
-               faces[num_f].Y := strtointDef(strlst[j+1], 1);
-               faces[num_f].Z := strtointDef(strlst[j+2], 1);
-               if faces[num_f].X < 0 then
-                  faces[num_f].X := 1 + num_v - faces[num_f].X;
-               if faces[num_f].Y < 0 then
-                  faces[num_f].Y := 1 + num_v - faces[num_f].Y;
-               if faces[num_f].Z < 0 then
-                  faces[num_f].Z := 1 + num_v - faces[num_f].Z;
-               faces[num_f] := vectorAdd(faces[num_f],-1);//-1 since "A valid vertex index starts from 1"
-               inc(num_f);
-           end;
-        end;
-        if (strlst.count > 3) and ( (strlst[0]) = 'v') then begin
-           if ((num_v+1) >= length(vertices)) then
-              setlength(vertices, length(vertices)+kBlockSize);
-           vertices[num_v].X := strtofloatDef(strlst[1], 0);
-           vertices[num_v].Y := strtofloatDef(strlst[2], 0);
-           vertices[num_v].Z := strtofloatDef(strlst[3], 0);
-           inc(num_v);
-        end;
-     end;
-     //showmessage(format('%d %g %g %g',[num_v, vertices[num_v-1].X, vertices[num_v-1].Y, vertices[num_v-1].Z]));
-     CloseFile(f);
-     strlst.free;
-     setlength(faces, num_f);
-     setlength(vertices, num_v);
-     if (num_f < 1) and (num_v > 1) then
-        showmessage('Not a face-based OBJ file (perhaps lines, try opening in MeshLab)');
+  fsz := FSize (FileName);
+  if fsz < 32 then exit;
+  //init values
+  num_v := 0;
+  num_f := 0;
+  strlst:=TStringList.Create;
+  setlength(vertices, (fsz div 70)+kBlockSize); //guess number of faces based on filesize to reduce reallocation frequencey
+  setlength(faces, (fsz div 35)+kBlockSize); //guess number of vertices based on filesize to reduce reallocation frequencey
+  //load faces and vertices
+  AssignFile(f, FileName);
+  Reset(f);
+  DefaultFormatSettings.DecimalSeparator := '.';
+  while not EOF(f) do begin
+    readln(f,s);
+    if length(s) < 7 then continue;
+    if (s[1] <> 'v') and (s[1] <> 'f') then continue; //only read 'f'ace and 'v'ertex lines
+    if (s[2] = 'p') or (s[2] = 'n') or (s[2] = 't') then continue; //ignore vp/vn/vt data: avoid delimiting text yields 20% faster loads
+    strlst.DelimitedText := s;
+    if (strlst.count > 3) and ( (strlst[0]) = 'f') then begin
+       //warning: need to handle "f v1/vt1/vn1 v2/vt2/vn2 v3/vt3/vn3"
+       //warning: face could be triangle, quad, or more vertices!
+       new_f := strlst.count - 3;
+       if ((num_f+new_f) >= length(faces)) then
+          setlength(faces, length(faces)+new_f+kBlockSize);
+       for i := 1 to (strlst.count-1) do
+           if (pos('/', strlst[i]) > 1) then // "f v1/vt1/vn1 v2/vt2/vn2 v3/vt3/vn3" -> f v1 v2 v3
+              strlst[i] := Copy(strlst[i], 1, pos('/', strlst[i])-1);
+       for j := 1 to (new_f) do begin
+           faces[num_f].X := strtointDef(strlst[1], 1);
+           faces[num_f].Y := strtointDef(strlst[j+1], 1);
+           faces[num_f].Z := strtointDef(strlst[j+2], 1);
+           if faces[num_f].X < 0 then
+              faces[num_f].X := 1 + num_v - faces[num_f].X;
+           if faces[num_f].Y < 0 then
+              faces[num_f].Y := 1 + num_v - faces[num_f].Y;
+           if faces[num_f].Z < 0 then
+              faces[num_f].Z := 1 + num_v - faces[num_f].Z;
+           faces[num_f] := vectorAdd(faces[num_f],-1);//-1 since "A valid vertex index starts from 1"
+           inc(num_f);
+       end;
+    end;
+    if (strlst.count > 3) and ( (strlst[0]) = 'v') then begin
+       if ((num_v+1) >= length(vertices)) then
+          setlength(vertices, length(vertices)+kBlockSize);
+       vertices[num_v].X := strtofloatDef(strlst[1], 0);
+       vertices[num_v].Y := strtofloatDef(strlst[2], 0);
+       vertices[num_v].Z := strtofloatDef(strlst[3], 0);
+       inc(num_v);
+    end;
+  end;
+  //showmessage(format('%d %g %g %g',[num_v, vertices[num_v-1].X, vertices[num_v-1].Y, vertices[num_v-1].Z]));
+  CloseFile(f);
+  strlst.free;
+  setlength(faces, num_f);
+  setlength(vertices, num_v);
+  if (num_v < 3) then
+     showmessage('Not a Wavefront or MNI format OBJ mesh (perhaps proprietary Mayo Clinic Analyze format)');
+  if (num_f < 1) and (num_v > 1) then
+    showmessage('Not a face-based OBJ file (perhaps lines, try opening in MeshLab)');
   //GLForm1.caption := ('ms '+ inttostr(gettickcount()- t) );
 end; // LoadObj()
 
@@ -3324,6 +3325,63 @@ begin
   closefile(f);
 end;
 
+function TMesh.LoadTri(const FileName: string): boolean;
+//see BrainStorm's in_tess_tri.m
+//     ASCII file with four blocks:
+// - VHeader  : one line ("- nbVertices")
+// - Vertices : nbVertices lines ("x y z x2 y2 z2")
+//     - FHeader  : one line ("- nbFaces nbFaces nbFaces")
+//     - Faces    : nbFaces lines ("vertex1 vertex2 vertex3")
+label 666;
+var
+   strlst: TStringList;
+   s: string;
+   f: TextFile;
+   i, num_v, num_f: integer;
+begin
+  strlst:=TStringList.Create;
+  result := false;
+  AssignFile(f, FileName);
+  Reset(f);
+  Readln(f,s);  //ascii
+  if pos('-', UpperCase(s)) <> 1 then begin
+    showmessage('Not an ASCII TRI BrainVisa file');
+    goto 666;
+  end;
+  s := copy(s, 2, length(s)-1);
+  num_v := strtointdef(s,0);
+  if num_v < 3 then goto 666;
+  setlength(vertices, num_v);
+  for i := 0 to (num_v -1) do begin
+    Readln(f,s);  //ascii
+    strlst.DelimitedText := s;
+    vertices[i].X := strtofloatdef(strlst[0],0);
+    vertices[i].Y := strtofloatdef(strlst[1],0);
+    vertices[i].Z := strtofloatdef(strlst[2],0);
+  end;
+  Readln(f,s);
+  strlst.DelimitedText := s;
+  if (strlst.Count < 4) or (strlst[0] <> '-') then begin
+    showmessage('Fatal error reading TRI');
+    goto 666;
+  end;
+  num_f := strtointdef(strlst[1],0);
+  if num_f < 1 then goto 666;
+  setlength(faces, num_f);
+  for i := 0 to (num_f -1) do begin
+      Readln(f,s);  //ascii
+      strlst.DelimitedText := s;
+      faces[i].X := strtointdef(strlst[2],0);
+      faces[i].Y := strtointdef(strlst[1],0);
+      faces[i].Z := strtointdef(strlst[0],0);
+  end;
+  result := true;
+  666:
+  closefile(f);
+  strlst.free;
+end; //LoadTri()
+
+
 function TMesh.LoadMesh(const FileName: string): boolean;
 // http://brainvisa.info/aimsdata-4.5/user_doc/formats.html
 type
@@ -3379,12 +3437,17 @@ begin
   setlength(vertices, hdr.vertex_number);
   blockread(f, vertices[0],  int64(hdr.vertex_number) * 3 * 4);
   blockread(f, sz, sizeof(uint32));
-  setlength(normals, hdr.vertex_number);
-  blockread(f, normals[0],  int64(hdr.vertex_number) * 3 * 4);
-  setlength(normals, 0);
+  if swapEnd then
+    SwapLongWord(sz);
+  if (sz > 0) then begin
+     setlength(normals, hdr.vertex_number);
+     blockread(f, normals[0],  int64(hdr.vertex_number) * 3 * 4);
+     setlength(normals, 0);
+  end;
   blockread(f, sz, sizeof(uint32));
   blockread(f, faces_number, sizeof(uint32));
   if swapEnd then begin
+    SwapLongWord(sz);
     SwapLongWord(faces_number);
      for i := 0 to high(vertices) do
          swapPt3f(vertices[i]);
@@ -4033,6 +4096,11 @@ begin
     showmessage('This is a fiber file: rename with a ".fib" extension and use Tracks/Open to view: '+ str);
     goto 666;
   end;
+  if pos('METADATA', UpperCase(str)) = 1 then begin //ParaView inserts a metadata block
+    //http://www.vtk.org/doc/nightly/html/IOLegacyInformationFormat.html
+    while (str <> '') and (not EOF(f)) do ReadLnBin(f, str); // The metadata block is terminated by an empty line
+    ReadLnBin(f, str);
+  end;
   if pos('TRIANGLE_STRIPS', UpperCase(str)) = 1 then begin
      if isBinary then begin
         showmessage('Unable to read VTK binary "TRIANGLE_STRIPS"');
@@ -4248,6 +4316,8 @@ begin
      end;
      if (ext = '.SRF') and (not LoadSrf(Filename)) then
         LoadAsc_Srf(Filename);
+     if (ext = '.TRI') then
+        LoadTri(Filename);
      if (ext = '.ASC') then
         LoadAsc_Srf(Filename);
      if (ext = '.OBJ') then
