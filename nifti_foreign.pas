@@ -1155,7 +1155,7 @@ begin
       if (ch = chr($0D)) or (ch = chr($0A)) then break;
       str := str+ch;
     end;
-    if str = '' then break;
+    if str = '' then continue;
     if (isFirstLine) then begin
       if (length(str) <4) or (str[1]<>'N') or (str[2]<>'R') or (str[3]<>'R') or (str[4]<>'D') then
         goto 666;

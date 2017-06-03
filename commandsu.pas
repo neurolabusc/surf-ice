@@ -18,6 +18,7 @@ procedure EDGETHRESH (LO, HI: single);
 procedure ELEVATION (DEG: integer);
 procedure MESHLOAD(lFilename: string);
 procedure MESHCURV;
+procedure MESHOVERLAYORDER (FLIP: boolean);
 procedure NODELOAD(lFilename: string);
 procedure MODALMESSAGE(STR: string);
 procedure MODELESSMESSAGE(STR: string);
@@ -64,7 +65,7 @@ const
                Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
              );
 
-knProc = 48;
+knProc = 49;
   kProcRA : array [1..knProc] of TScriptRec = (
    (Ptr:@AZIMUTH;Decl:'AZIMUTH';Vars:'(DEG: integer)'),
    (Ptr:@AZIMUTHELEVATION;Decl:'AZIMUTHELEVATION';Vars:'(AZI, ELEV: integer)'),
@@ -80,6 +81,7 @@ knProc = 48;
    (Ptr:@EDGELOAD;Decl:'EDGELOAD';Vars:'(lFilename: string)'),
    (Ptr:@MESHCURV;Decl:'MESHCURV';Vars:''),
    (Ptr:@MESHLOAD;Decl:'MESHLOAD';Vars:'(lFilename: string)'),
+   (Ptr:@MESHOVERLAYORDER;Decl:'MESHOVERLAYORDER';Vars:'(FLIP: boolean)'),
    (Ptr:@NODELOAD;Decl:'NODELOAD';Vars:'(lFilename: string)'),
    (Ptr:@MODALMESSAGE;Decl:'MODALMESSAGE';Vars:'(STR: string)'),
    (Ptr:@MODELESSMESSAGE;Decl:'MODELESSMESSAGE';Vars:'(STR: string)'),
@@ -125,6 +127,7 @@ begin
   GLForm1.CloseMenuClick(nil);
   GLForm1.ResetMenuClick(nil);
 end;
+
 function EXISTS(lFilename: string): boolean;
 begin
   result := FileExists(lFilename);
@@ -197,6 +200,11 @@ procedure MESHLOAD(lFilename: string);
 begin
    if not GLForm1.OpenMesh(lFilename) then
       ScriptForm.Memo2.Lines.Add('Unable to load mesh named "'+lFilename+'"');
+end;
+
+procedure MESHOVERLAYORDER (FLIP: boolean);
+begin
+     gPrefs.isFlipMeshOverlay:= FLIP;
 end;
 
 procedure OVERLAYLOAD(lFilename: string);

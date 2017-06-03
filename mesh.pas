@@ -2,7 +2,6 @@ unit mesh;
 {$Include opts.inc}
 {$mode objfpc}{$H+}
 interface
-// added 3do, PLY2, wfr formats
 uses
 
   {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
@@ -113,7 +112,7 @@ type
     procedure LoadMeshAsOverlay(const FileName: string; lOverlayIndex: integer);
   public
     procedure MakePyramid;
-    procedure DrawGL (Clr: TRGBA; clipPlane: TPoint4f);
+    procedure DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean);
     procedure Node2Mesh;
     procedure ReverseFaces;
     procedure CenterOrigin;
@@ -130,7 +129,6 @@ type
     procedure SaveObj(const FileName: string);
     procedure SavePly(const FileName: string);
     procedure SaveOverlay(const FileName: string; OverlayIndex: integer);
-
     destructor  Destroy; override;
   end;
 
@@ -151,44 +149,8 @@ begin
   result.R := round(c1.R*frac1 + c2.R*frac2) ;
   result.G := round(c1.G*frac1 + c2.G*frac2);
   result.B := round(c1.B*frac1 + c2.B*frac2);
-  //if frac1 >= 0.5 then //result.a = max(c1.a, c2.a)
-  //   result.A := c1.A
-  //else
-  //    result.A := c2.A;
 end;
-(*function mixRGBA(c1, c2: TRGBA; frac1: single ): TRGBA;
-var
-  frac2: single;
-begin
-  frac2 := 1 - frac1;
-  result.R := round(c1.R*frac1 + c2.R*frac2) ;
-  result.G := round(c1.G*frac1 + c2.G*frac2);
-  result.B := round(c1.B*frac1 + c2.B*frac2);
-  if frac1 >= 0.5 then //result.a = max(c1.a, c2.a)
-     result.A := c1.A
-  else
-      result.A := c2.A;
-end;  *)
 {$ENDIF}
-
-(*function scaleLUT(colorFromZero: boolean; mn, mx: single; lut: TLUT): TLUT;
-var
-  i, p: integer;
-  f: single;
-begin
-  result := TLUT;
-  if (not colorFromZero) then exit;
-  if (mn < 0) and (mx > 0) then exit;
-  if  (mn < 0) and (mx < 0) then begin
-
-  end else begin
-      if mx <= 0 then exit;
-      f := mn/mx;
-      for i := 0 to 255 do
-          lut[i] :=
-      //lut[round(255*(intensity-mn)/(mx-mn))];
-  end;
-end; *)
 
 procedure AddPt4f(var v: TPoint4f; c1,c2,c3: TRGBA); //create float vector
 begin
@@ -214,7 +176,6 @@ begin
        for c :=  OpenOverlays downto 1 do
            if (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) = length(vertices)) then
               isOverlayPainting := true;
-  //if  (OpenOverlays > 0) or (length(vertexRGBA) = length(vertices)) then begin  // <- works, but slower if all overlays are meshes
   if  (isOverlayPainting) or (length(vertexRGBA) = length(vertices)) then begin
      rgb := RGBA(Clr.R, Clr.G, Clr.B, 0);
      setlength(vRGBA, length(vertices));
@@ -311,13 +272,11 @@ begin
                     vRGBA[i].b := round( vSumRGBBA[i].Z / vNumNeighbor[i]);
                  end;
              end;
-
          end;
          vNumNeighbor := nil;
          //vNumColorNeighbor := nil;
          vSumRGBBA := nil;
        end; //end feather edges
-
        (*if (length(vertexRGBA) < 1) then begin //feather edges if regions without overlay have alpha = 0
          setlength(vZeroNeighbor, length(vertices));
          for i := 0 to (length(vertices)-1) do
@@ -360,7 +319,6 @@ begin
      displayList:= BuildDisplayList(faces, vertices, vRGBA);
      {$ENDIF}
   end;
-  //glEndList();
 end; // BuildList()
 
 procedure TMesh.BuildListOverlay (Clr: TRGBA);
@@ -405,11 +363,10 @@ begin
   {$ENDIF}
 end; // BuildListOverlay()
 
-procedure TMesh.DrawGL (Clr: TRGBA; clipPlane: TPoint4f);
+procedure TMesh.DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean);
 begin
   if (length(faces) < 1) or (length(vertices) < 3) then exit;
   isBusy := true;
-
   if isRebuildList then begin//only if the model has been changed
       isRebuildList := false;
       if isNode then
@@ -434,29 +391,50 @@ begin
       BuildListOverlay (Clr);
   end;
   {$IFDEF COREGL}
-  //RunMeshGLSL (2,0,0,0); //disable clip plane
-
-  if isVisible then begin
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vbo);
-    glDrawElements(GL_TRIANGLES, Length(faces)* 3, GL_UNSIGNED_INT, nil);
-    glBindVertexArray(0);
-  end;
-  if (vaoOverlay <> 0) and (vboOverlay <> 0) and (nFacesOverlay > 0) then begin
-     RunOverlayGLSL(clipPlane);
-     glBindVertexArray(vaoOverlay);
-     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboOverlay);
-     glDrawElements(GL_TRIANGLES, nFacesOverlay * 3, GL_UNSIGNED_INT, nil);
-     glBindVertexArray(0);
-
-
+  if (isFlipMeshOverlay) and true then begin
+      if isVisible then begin
+        glBindVertexArray(vaoOverlay);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboOverlay);
+        glDrawElements(GL_TRIANGLES, nFacesOverlay* 3, GL_UNSIGNED_INT, nil);
+        glBindVertexArray(0);
+      end;
+      if (vaoOverlay <> 0) and (vboOverlay <> 0) and (nFacesOverlay > 0) then begin
+         RunOverlayGLSL(clipPlane);
+         glBindVertexArray(vao);
+         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vbo);
+         glDrawElements(GL_TRIANGLES,  Length(faces)* 3, GL_UNSIGNED_INT, nil);
+         glBindVertexArray(0);
+      end;
+  end else begin
+    if isVisible then begin
+      glBindVertexArray(vao);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vbo);
+      glDrawElements(GL_TRIANGLES, Length(faces)* 3, GL_UNSIGNED_INT, nil);
+      glBindVertexArray(0);
+    end;
+    if (vaoOverlay <> 0) and (vboOverlay <> 0) and (nFacesOverlay > 0) then begin
+       RunOverlayGLSL(clipPlane);
+       glBindVertexArray(vaoOverlay);
+       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboOverlay);
+       glDrawElements(GL_TRIANGLES, nFacesOverlay * 3, GL_UNSIGNED_INT, nil);
+       glBindVertexArray(0);
+    end;
   end;
   {$ELSE}
-  if isVisible then
-     glCallList(displayList);
-  if (displayListOverlay <> 0) then begin
-    RunOverlayGLSL(clipPlane);
-    glCallList(displayListOverlay);
+  if (isFlipMeshOverlay) and (displayListOverlay <> 0) then begin
+      if isVisible then
+         glCallList(displayListOverlay);
+      if (displayListOverlay <> 0) then begin
+        RunOverlayGLSL(clipPlane);
+        glCallList(displayList);
+      end;
+  end else begin
+    if isVisible then
+       glCallList(displayList);
+    if (displayListOverlay <> 0) then begin
+      RunOverlayGLSL(clipPlane);
+      glCallList(displayListOverlay);
+    end;
   end;
   {$ENDIF}
   isBusy := false;
@@ -476,7 +454,7 @@ begin
      end;
      SetDescriptives;
      isRebuildList := true;
-end;
+end; // SwapYZ()
 
 procedure TMesh.SwapZY;
 var
@@ -492,7 +470,7 @@ begin
      end;
      SetDescriptives;
      isRebuildList := true;
-end;
+end; // SwapZY()
 
 procedure TMesh.CenterOrigin;
 var
@@ -528,7 +506,7 @@ begin
   end;
   isRebuildList := true;
   isBusy := false;
-end;
+end; // ReverseFaces()
 
 procedure TMesh.SetDescriptives;
 var
@@ -538,11 +516,6 @@ begin
      if length(vertices) < 1 then exit;
      mx := vertices[0];
      mn := mx;
-     (*for i := 0 to (length(vertices) - 1) do begin
-         vertices[i].X := 10 * vertices[i].X;
-         vertices[i].Y := 10 * vertices[i].Y;
-         vertices[i].Z := 10 * vertices[i].Z;
-     end;*)
      for i := 0 to (length(vertices) - 1) do
          minMax(vertices[i], mn, mx);
      origin.X := (0.5 * (mx.X - mn.X)) + mn.X;
@@ -567,7 +540,7 @@ begin
      result := a;
      vectorAdd(result,b);
      vectorNormalize(result);
-end;
+end; // NormMidPoint()
 
 procedure Subdivide(var verts: TVertices; var faces: TFaces);
 var
@@ -691,7 +664,6 @@ begin
 end;
 {$ENDIF}
 
-
 procedure TMesh.MakePyramid;
 begin
      {$IFDEF SPHERE}
@@ -741,20 +713,17 @@ begin
      nodePrefs.isNodeThresholdBySize := true;
      nodePrefs.NodeLUTindex := 3;
      //nodePrefs.thresholdNodeSize := 0.0;
-
      nodePrefs.edgeLUTindex := 1;
      nodePrefs.isNoLeftNodes:= false;
      nodePrefs.isNoRightNodes:= false;
      nodePrefs.isNoNodeWithoutEdge := false;
      nodePrefs.isNoNegEdge:= false;
      nodePrefs.isNoPosEdge:= false;
-
      nodePrefs.isEdgeShowNeg := true;
      nodePrefs.isEdgeShowPos := true;
      nodePrefs.isEdgeColorVaries := true;
      nodePrefs.isEdgeSizeVaries := true;
      nodePrefs.scaleEdgeSize := 1;
-
      origin := ptf(0,0,0);
      scale := 0;
      //MakePyramid;
@@ -1060,7 +1029,6 @@ begin
 end;
 
 function Value2Frac (val, min, max: single): single;
-
 begin
      if val < min then
         result := 0
@@ -1110,7 +1078,6 @@ begin
      result := true;
 end; //isEdgeSurvives()
 begin
-
      nNode := length(nodes);
      if nNode < 1 then exit;
      //find out which edges survive
@@ -1132,7 +1099,6 @@ begin
                end;
      end;
      //find out which nodes survive
-
      nNodeThresh := 0;
      if nodePrefs.scaleNodeSize > 0 then begin
        for n := 0 to (nNode -1) do
@@ -1140,7 +1106,6 @@ begin
               inc(nNodeThresh);
      end;
      nodeColorVaries := false;
-
      if (nodePrefs.isNodeThresholdBySize) and (nodePrefs.isNodeColorVaries) and (nodePrefs.minNodeSize <> nodePrefs.maxNodeSize) then
         nodeColorVaries := true;
      if (not nodePrefs.isNodeThresholdBySize) and (nodePrefs.isNodeColorVaries) and (nodePrefs.minNodeColor <> nodePrefs.maxNodeColor) then
@@ -1635,7 +1600,6 @@ begin
         isVertexSection := false;
      end;
      //detect "short" or "uint" from "property list uchar uint vertex_indices"
-
      if (isVertexSection) and (pos('PROPERTY', UpperCase(str)) = 1) then begin
         strlst.DelimitedText := str;
         if (strlst.count > 2) and (pos('RED', UpperCase(strlst[2])) = 1) then begin
@@ -1687,14 +1651,12 @@ begin
               indexSectionExtraBytes := indexSectionExtraBytes + 8;
         end;
      end; //face section properties
-
   end;
   if EOF(f) or (num_v < 3) or (num_f < 1) then begin
     showmessage('Not a mesh-based PLY file (perhaps point based, try opening in MeshLab)');
     closefile(f);
     exit;
   end;
-
   setlength(vertices, num_v);
   setlength(faces, num_f);
   if redOffset > 2 then
@@ -1884,9 +1846,9 @@ end;  // KeyStringInt()
 
 function MemoryStreamAsString(vms: TMemoryStream): string;
 //binary contents as ASCII string: http://forum.lazarus.freepascal.org/index.php?topic=15622.5;wap2
-begin { MemoryStreamAsString }
+begin
    SetString(Result, vms.Memory, vms.Size)
-end; { MemoryStreamAsString }
+end; // MemoryStreamAsString()
 
 procedure TMesh.SavePly(const FileName: string);
 const
@@ -1940,7 +1902,7 @@ begin
       end;
   end;
   CloseFile(f);
-end; //SavePly()
+end; // SavePly()
 
 procedure TMesh.SaveObj(const FileName: string);
 //create WaveFront object file
@@ -1980,10 +1942,10 @@ var
   zStream: TGZFileStream;
   FileNameMz3: string;
 begin
-  FileNameMz3 := changeFileExt(FileName, '.mz3');
   nFace := length(Faces);
-  isFace := nFace > 0;
   nVert := length(Vertices);
+  FileNameMz3 := changeFileExt(FileName, '.mz3');
+  isFace := nFace > 0;
   isVert := nVert > 0;
   isRGBA := false;
   if length(vertexRGBA) > 0 then begin
@@ -1995,7 +1957,7 @@ begin
      isScalar := true;
      nVert := length(intensity);
   end;
-  if (nFace = 0) and (nVert = 0)  then exit;
+  if (nFace = 0) and (nVert = 0) then exit;
   magic := kMagic;
   Attr := 0;
   if isFace then Attr := Attr + 1;
@@ -2030,7 +1992,6 @@ var
 begin
   setlength(i,0);
   SaveMz3Core(Filename, Faces,Vertices,vertexRGBA, i);
-
 end;
 
 procedure TMesh.SaveOverlay(const FileName: string; OverlayIndex: integer);
@@ -2171,7 +2132,6 @@ begin
   vStart := vStart + length(key);
   vEnd := posEx('"', Str, vStart+1);
   if vEnd <= vStart then exit;
-  //showmessage( Copy(Str, vStart, vEnd-vStart) );
   result := strToFloatDef(Copy(Str, vStart, vEnd-vStart), 1);
 end;
 
@@ -2302,8 +2262,6 @@ begin
     end;
     if ((isVert) and (isFloat32) and (Dim1 = 3)) or ((lOverlayItem = nOverlays) and (isOverlay) and (isFloat32) and (Dim1 = 1))
       or ((isVertColor) and (isFloat32) and (Dim1 = 3))  or ((isVertColor) and (isInt32) and (Dim1 = 1)) or ((isFace) and (isInt32) and (Dim1 = 3)) then begin
-
-
        if  ((isBase64) or (isBase64Gz))  and (Dim0 > 0) and (ddStart > 6) and (ddEnd > ddStart) then begin
         debase64 :=  DecodeStringBase64(Copy(Str, ddStart, ddEnd-ddStart)); //raw GZ binary, see  http://lazarus-ccr.sourceforge.net/docs/fcl/base64/decodestringbase64.html
         if (Dim1 <> 3) and (isVertColor) and (length(labelTable) < 1) then begin
@@ -2314,8 +2272,7 @@ begin
            showmessage('Impossibly small deflated stream');
            goto 666;
         end;
-        szExpected :=  4 * dim0 * Dim1;
-
+        szExpected :=  4 * Dim0 * Dim1;
         if isBase64Gz then begin
            if (ord(debase64[1]) <> $78) then begin
             showmessage('Deflate compressed stream should begin with 0x78, not '+inttohex(ord(debase64[1]), 2));
@@ -2325,19 +2282,19 @@ begin
           debase64 := ''; // free memory
           gz.Position := 0;
           decomp := Tdecompressionstream.Create(gz);
-          setlength(dat, Dim0 * 3);
+          setlength(dat, Dim0 * Dim1); //check
           szRead := decomp.Read(dat[0], szExpected);
           decomp.Free;
           gz.Clear;
         end else begin
             szRead := length(debase64);
-            setlength(dat,szExpected);
+            setlength(dat,Dim0 * Dim1); //check
             Move(debase64[1], dat[0], szExpected);
         end;
         {$IFDEF ENDIAN_LITTLE}
         if not isLEndian then
            for i := 0 to (dim0 * Dim1) -1 do
-            SwapLongInt(dat[i]);
+               SwapLongInt(dat[i]);
         {$ELSE}
         if not isLEndian then
            for i := 0 to (dim0 * Dim1) -1 do
@@ -2351,6 +2308,9 @@ begin
           end;
           if (isTransposed) and (Dim1 = 3) then
              TransposeDat(dat);
+          (*if isVert then begin
+           showmessage(format('--> %g %g %g',[asSingle(dat[0]), asSingle(dat[1]), asSingle(dat[2])]));
+          end;*)
           if isVertColor then begin
              setlength(vertexRGBA,Dim0);
              if (Dim1 = 3) then begin
@@ -2378,13 +2338,11 @@ begin
                    vertexRGBA[i].B := labelTable[j].B;
                    vertexRGBA[i].A := labelTable[j].A;
                end;
-
              end;
           end else if isOverlay then begin
               setlength(overlay[lOverlayIndex].intensity, length(vertices));
               for i := 0 to (Dim0-1) do
                   overlay[lOverlayIndex].intensity[i] := asSingle(dat[i]);
-              //vxt(dat);
           end
         else if isFace then begin
             if lOverlayIndex > 0 then begin
@@ -2470,7 +2428,6 @@ begin
   {$IFDEF CTM} readCTM(FileName, Faces, Vertices, vertexRGBA); {$ENDIF}
  //readCTM(const FileName: string; var Faces: TFaces;  var Verts: TVertices; var vertexRGBA : TVertexRGBA): boolean;
 end;
-
 
 function LoadMz3Core(const FileName: string; var Faces: TFaces; var Vertices: TVertices; var vertexRGBA: TVertexRGBA; var intensity: TFloats): boolean;
 const
@@ -3387,7 +3344,7 @@ function TMesh.LoadMesh(const FileName: string): boolean;
 type
   THdr = packed record
      sig: array [1..5] of char; //"binar" or "ascii"
-     endian: uint32; //BCBA or ABCD = 1094861636 or 1145258561
+     endian: uint32; //DCBA or ABCD = 1094861636 or 1145258561
      texLen: uint32;
      texTxt: array[1..4] of char; //VOID
      vertex_per_face,
@@ -3423,7 +3380,6 @@ begin
   if (uppercase(hdr.sig) <> 'BINAR') or (uppercase(hdr.texTxt) <> 'VOID') or (hdr.texLen <> 4) or ( (hdr.endian <> kNativeEnd) and (hdr.endian <> kSwapEnd))  then begin
      showmessage(format('sig=%s tex=%s endian=%d',[uppercase(hdr.sig), uppercase(hdr.texTxt), hdr.endian]));
      goto 666;
-
   end;
   swapEnd := hdr.endian = kNativeEnd;
   if swapEnd then begin
@@ -3499,7 +3455,6 @@ type
      pad: array [1..3] of char;
      orientation: array[1..16] of double; //4x4 matrix, affine transformation to world coordinates
   end;
-
 label
    666;
 var
@@ -4481,6 +4436,16 @@ begin
   result := inguy^.rgba;
 end; // asRGBA()
 
+(*function swizzleRGBA(rgba: TRGBA): TRGBA;
+begin
+  result := rgba;
+  if rgba.b > 128 then begin
+     result.r := rgba.b;
+     result.b := rgba.r;
+     result.g := 12;
+  end;
+end;*)
+
 function TMesh.LoadAnnot(const FileName: string): boolean;
 //freesurfer Annotation file provides vertex colors
 //  https://surfer.nmr.mgh.harvard.edu/fswiki/LabelsClutsAnnotationFiles
@@ -4526,6 +4491,7 @@ begin
          goto 666;
       end;
       vertexRGBA[v] := asRGBA(idx[j+1]);
+      //vertexRGBA[v] := swizzleRGBA(vertexRGBA[v]);
       j := j + 2;
   end;
   result := true;

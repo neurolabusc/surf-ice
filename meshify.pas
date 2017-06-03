@@ -96,7 +96,7 @@ begin
     //Smooth
     SmoothCombo:=TComboBox.create(PrefForm);
     SmoothCombo.Left := 8;
-    SmoothCombo.Top := 128;
+    SmoothCombo.Top := 132;
     SmoothCombo.Width := PrefForm.Width -16;
     SmoothCombo.Items.Add('Raw (Jagged)');
     SmoothCombo.Items.Add('Masked smooth (Smooth except at brain mask)');
@@ -107,7 +107,7 @@ begin
     //OK button
     OkBtn:=TButton.create(PrefForm);
     OkBtn.Caption:='OK';
-    OkBtn.Top := 158;
+    OkBtn.Top := 162;
     OkBtn.Width := 128;
     OkBtn.Left := PrefForm.Width - OkBtn.Width - 8;
     OkBtn.Parent:=PrefForm;

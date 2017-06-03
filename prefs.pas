@@ -23,7 +23,7 @@ type
     SmoothVoxelwiseData,
     OverlayClip, StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube, MultiSample,
      TracksAreTubes,Colorbar, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,ColorBarPrecedenceTracksNotOverlays,
-     ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting : boolean;
+     ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting, isFlipMeshOverlay : boolean;
     TrackTubeSlices, ScreenCaptureZoom,
     window_width, window_height, RenderQuality, SaveAsFormat,SaveAsFormatTrack, OcclusionAmount: integer;
     ObjColor,BackColor: TColor;
@@ -32,6 +32,7 @@ type
     PrevTrackname, PrevNodename, PrevOverlayname,PrevScript, InitScript : string;
     TextColor,TextBorder,GridAndBorder: TRGBA;
     ColorBarPos: TUnitRect;
+    ScreenPan: TPoint3f;
   end;
 function IniFile(lRead: boolean; lFilename: string; var lPrefs: TPrefs): boolean;
 procedure IniByte(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lValue: byte);
@@ -114,10 +115,10 @@ begin
   end; //check exisiting MRUs
   lS := TStringList.Create;
   if FindFirst(lSearchPath+'*'+lSearchExt, faAnyFile, lSearchRec) = 0 then
-	 repeat
-      if IsNovel (lSearchPath+lSearchRec.Name, lMRU, lOK) then
-        lS.Add(lSearchPath+lSearchRec.Name) ;
-	 until (FindNext(lSearchRec) <> 0);
+     repeat
+      if (lSearchRec.Name <> '') and (lSearchRec.Name[1] <> '.') and IsNovel (lSearchPath+lSearchRec.Name, lMRU, lOK) then
+         lS.Add(lSearchPath+lSearchRec.Name) ;
+     until (FindNext(lSearchRec) <> 0);
   FindClose(lSearchRec);
   lMax := lS.count;
 
@@ -242,6 +243,7 @@ begin
             TextBorder := RGBA(92,92,132,255);
             GridAndBorder := RGBA(106,106,142,222);
             ColorBarPos:= CreateUnitRect (0.1,0.1,0.9,0.14);
+            ScreenPan.X := 0; ScreenPan.Y := 0; ScreenPan.Z := 0;
             for i := 1 to knMRU do  begin
               PrevFilename[i] := '';
               PrevScriptName[i] := '';
@@ -272,6 +274,7 @@ begin
     Perspective := false;
     AdditiveOverlay := false;
     SkipPrefWriting := false;
+    isFlipMeshOverlay := false;
     OverlayClip := false;
     StartupScript := false;
     ScreenCaptureTransparentBackground := true;

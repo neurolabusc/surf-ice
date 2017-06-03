@@ -107,7 +107,7 @@ const kTrackShaderFrag = 'varying vec3 N;'
 procedure SetLighting (var lPrefs: TPrefs);
 function BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA): GLuint;
 function BuildDisplayListStrip(Indices: TInts; Verts, vNorms: TVertices; vRGBA: TVertexRGBA; LineWidth: integer): GLuint;
-procedure DrawScene(w,h: integer; isOverlayClipped, isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin: TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
+procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped, isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin: TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
 
 implementation
 
@@ -232,16 +232,21 @@ begin
  if isPerspective then
     gluPerspective(40.0, w/h, 0.01, MaxDistance+1)
   else begin
-     if AspectRatio > 1 then //Wide window                                           xxx
-        glOrtho (-ScaleX * AspectRatio, ScaleX * AspectRatio, -ScaleX, ScaleX, 0.0, 2.0) //Left, Right, Bottom, Top
+     (*if AspectRatio > 1 then //Wide window
+        glOrtho ( (-ScaleX * AspectRatio)+lPrefs.ScreenPan.X, (ScaleX * AspectRatio)+lPrefs.ScreenPan.X, -ScaleX+lPrefs.ScreenPan.Y, ScaleX+lPrefs.ScreenPan.Y, 0.0, 2.0) //Left, Right, Bottom, Top
      else //Tall window
-       glOrtho (-ScaleX, ScaleX, -ScaleX/AspectRatio, ScaleX/AspectRatio, 0.0,  2.0); //Left, Right, Bottom, Top
+       glOrtho ((-ScaleX)+lPrefs.ScreenPan.X, ScaleX+lPrefs.ScreenPan.X, (-ScaleX/AspectRatio)+lPrefs.ScreenPan.Y, (ScaleX/AspectRatio)+lPrefs.ScreenPan.Y, 0.0,  2.0); //Left, Right, Bottom, Top
+  *)
+     if AspectRatio > 1 then //Wide window
+        glOrtho ( (-ScaleX * AspectRatio), (ScaleX * AspectRatio), -ScaleX, ScaleX, 0.0, 2.0) //Left, Right, Bottom, Top
+     else //Tall window
+       glOrtho (-ScaleX, ScaleX, (-ScaleX/AspectRatio), (ScaleX/AspectRatio), 0.0,  2.0); //Left, Right, Bottom, Top
 
   end;
 end;
 
 
-procedure DrawScene(w,h: integer; isOverlayClipped, isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin: TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
+procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped, isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin: TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
 var
    clr: TRGBA;
 begin
@@ -261,7 +266,7 @@ begin
  glMatrixMode(GL_PROJECTION);
  glLoadIdentity();
  SetOrtho (w,h,Distance, kMaxDistance, isMultiSample, lPrefs.Perspective);
-
+ glTranslatef(lPrefs.ScreenPan.X, lPrefs.ScreenPan.Y, 0 );
  glMatrixMode (GL_MODELVIEW);
  glLoadIdentity ();
  glLightfv(GL_LIGHT0, GL_POSITION, @gShader.lightpos);
@@ -297,15 +302,16 @@ begin
  end;
  if length(lNode.nodes) > 0 then begin
      RunMeshGLSL (asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W),  lPrefs.ShaderForBackgroundOnly); //disable clip plane
-   lNode.DrawGL(clr, clipPlane);
+   lNode.DrawGL(clr, clipPlane, isFlipMeshOverlay);
  end;
  if  (length(lMesh.faces) > 0) then begin
     lMesh.isVisible := isDrawMesh;
+
     RunMeshGLSL (ClipPlane,  false);
     if not isOverlayClipped then
-       lMesh.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W) )
+       lMesh.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W),isFlipMeshOverlay )
     else
-        lMesh.DrawGL(clr, clipPlane);
+        lMesh.DrawGL(clr, clipPlane, isFlipMeshOverlay);
     lMesh.isVisible := true;
  end;
 end; //DrawScene

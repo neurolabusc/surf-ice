@@ -866,12 +866,23 @@ end;
 procedure TGLForm1.GLboxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
 begin
  if gMouseX < 0 then exit; //mouse is not down
- gElevation := gElevation + (Y - gMouseY);
- gAzimuth := gAzimuth - (X - gMouseX);
- while gAzimuth > 360 do
-       gAzimuth := gAzimuth -360;
- while gAzimuth < -360 do
-       gAzimuth := gAzimuth + 360;
+ if (ssShift in Shift) then begin
+    //Pan image
+    gPrefs.ScreenPan.X := gPrefs.ScreenPan.X + (1/GLBox.Width * (X - gMouseX));
+    if (gPrefs.ScreenPan.X > 1) then gPrefs.ScreenPan.X := 1;
+    if (gPrefs.ScreenPan.X < -1) then gPrefs.ScreenPan.X := -1;
+    gPrefs.ScreenPan.Y := gPrefs.ScreenPan.Y - (1/GLBox.Height * (Y - gMouseY));
+    if (gPrefs.ScreenPan.Y > 1) then gPrefs.ScreenPan.Y := 1;
+    if (gPrefs.ScreenPan.Y < -1) then gPrefs.ScreenPan.Y := -1;
+
+ end else begin
+   gElevation := gElevation + (Y - gMouseY);
+   gAzimuth := gAzimuth - (X - gMouseX);
+   while gAzimuth > 360 do
+         gAzimuth := gAzimuth -360;
+   while gAzimuth < -360 do
+         gAzimuth := gAzimuth + 360;
+ end;
  gMouseX := X;
  gMouseY := Y;
  GLBox.invalidate;//GLBoxRequestUpdate(Sender);
@@ -1230,7 +1241,8 @@ begin
   end;
   Memo1.Lines.Add(format('Light Elevation %d Azimuth %d',[LightElevTrack.position, LightAziTrack.position]));
   ReportUniformChange(Sender);
-  GLboxRequestUpdate(Sender);
+  //GLboxRequestUpdate(Sender); //-- 2017
+  GLbox.Invalidate; //++ 2017
 end;
 
 procedure TGLForm1.StringGrid1DrawCell(Sender: TObject; aCol, aRow: Integer;
@@ -1592,11 +1604,13 @@ procedure TGLForm1.ResetMenuClick(Sender: TObject);
 begin
      gPrefs.BackColor := RGBToColor(255,255,255);
      gPrefs.Colorbar := true;
+     gPrefs.ScreenPan.X := 0; gPrefs.ScreenPan.Y := 0; gPrefs.ScreenPan.Z := 0;
      gDistance := 1;
      gElevation := 20;
      gAzimuth := 250;
      Transparency0.Click;
      gPrefs.ShaderForBackgroundOnly:= false;
+     gPrefs.isFlipMeshOverlay:= false;
      gPrefs.AdditiveOverlay:= false;
      gMesh.isAdditiveOverlay:= gPrefs.AdditiveOverlay;
      AdditiveOverlayMenu.Checked:= gPrefs.AdditiveOverlay;
@@ -1910,10 +1924,11 @@ begin
 
     //first pass: 3D draw all items: framebuffer f1
     isMultiSample := setFrame (w, h, gShader.f1, true );
-    DrawScene(w,h, gPrefs.OverlayClip, true,isMultiSample, gPrefs, origin, ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
+    DrawScene(w,h, gPrefs.isFlipMeshOverlay, gPrefs.OverlayClip, true,isMultiSample, gPrefs, origin, ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
     //second pass: 3D draw overlay items only: framebuffer f2
     isMultiSample := setFrame (w, h, gShader.f2, true );
-    DrawScene(w,h, gPrefs.OverlayClip, false,isMultiSample, gPrefs, origin,  ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
+    //isFlipOverlayBackground := not isFlipOverlayBackground;
+    DrawScene(w,h, gPrefs.isFlipMeshOverlay, gPrefs.OverlayClip, false,isMultiSample, gPrefs, origin,  ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
     if (isToScreen)  then begin
        releaseFrame; //GOOD: multipass, multisampling
        Set2DDraw (w,h, red(gPrefs.BackColor) ,green(gPrefs.BackColor), blue(gPrefs.BackColor));
@@ -1928,7 +1943,7 @@ begin
          releaseFrame;
       //else
       //    setFrame (w, h, gShader.fScreenShot, true ); //SCREENSHOT - supersampled
-      DrawScene(w, h, gPrefs.OverlayClip, true, false, gPrefs, origin, ClipPlane, scale, gDistance, gelevation, gazimuth, gMesh,gNode, gTrack);
+      DrawScene(w, h, gPrefs.isFlipMeshOverlay, gPrefs.OverlayClip, true, false, gPrefs, origin, ClipPlane, scale, gDistance, gelevation, gazimuth, gMesh,gNode, gTrack);
   end;
   if gPrefs.OrientCube then
      DrawCube (w, h,  gAzimuth, gElevation);
@@ -2747,6 +2762,7 @@ var
    i : integer;
    nam: string;
 begin
+  //showmessage(inttostr(gMesh.OpenOverlays)); exit;
   Mesh.SaveMz3(SaveMeshDialog.Filename);
   if not isSaveOverlays then exit;
   for i :=  1 to gMesh.OpenOverlays do begin

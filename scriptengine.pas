@@ -535,9 +535,6 @@ end;
 
 procedure TScriptForm.New1Click(Sender: TObject);
 begin
-  //GLForm1.StopTimers;
-
-   // PSScript1.ToString;
   ScriptForm.Stop1Click(nil);
   if not SaveTest then
     exit;
@@ -562,12 +559,10 @@ begin
     lStr := lS;
 end;
 
-
 function TypeStr (lType: integer): string;
 var
   lTStr,lStr : string;
   i,n,len,lLoop,lT: integer;//1=boolean,2=integer,3=float,4=string[filename]
-
 begin
   result := '';
   if lType = 0 then
@@ -652,7 +647,6 @@ end;
 procedure TScriptForm.Memo1KeyUp(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
-    //
     inherited;
     {$IFNDEF LCLCocoa} ReportCaretPos; {$ENDIF}
 end;

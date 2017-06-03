@@ -12,7 +12,7 @@ uses
 //function BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA): GLuint;
 procedure BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA; var vao, vbo: gluint; Clr: TRGBA);
 //procedure SetLighting (var lPrefs: TPrefs);
-procedure DrawScene(w,h: integer; isOverlayClipped,isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
+procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped,isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
 procedure SetCoreUniforms(lProg: Gluint);
 procedure SetTrackUniforms (lineWidth, ScreenPixelX, ScreenPixelY: integer);
 //procedure BuildDisplayListStrip(Indices: TInts; Verts, vNorms: TVertices; vRGBA: TVertexRGBA; LineWidth: integer; var vao, vbo: gluint);
@@ -742,11 +742,10 @@ begin
         nglOrtho (-ScaleX * AspectRatio, ScaleX * AspectRatio, -ScaleX, ScaleX, 0.0, 2.0) //Left, Right, Bottom, Top
      else //Tall window
        nglOrtho (-ScaleX, ScaleX, -ScaleX/AspectRatio, ScaleX/AspectRatio, 0.0,  2.0); //Left, Right, Bottom, Top
-
   end;
 end;
 
-procedure DrawScene(w,h: integer; isOverlayClipped, isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
+procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped, isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
 //procedure DrawScene(w,h: integer; isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
 var
    clr: TRGBA;
@@ -759,6 +758,8 @@ begin
   nglMatrixMode(nGL_PROJECTION);
   nglLoadIdentity();
   SetOrtho(w, h, Distance, kMaxDistance, isMultiSample, lPrefs.Perspective);
+  nglTranslatef(lPrefs.ScreenPan.X, lPrefs.ScreenPan.Y, 0 );
+
   nglMatrixMode (nGL_MODELVIEW);
   //glDepthRange(0.001, 0.1);
   nglLoadIdentity ();
@@ -794,15 +795,15 @@ begin
  end;
  if length(lNode.nodes) > 0 then begin
      RunMeshGLSL (asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W), lPrefs.ShaderForBackgroundOnly); //disable clip plane
-   lNode.DrawGL(clr, clipPlane);
+   lNode.DrawGL(clr, clipPlane, isFlipMeshOverlay);
  end;
  if  (length(lMesh.faces) > 0) then begin
     lMesh.isVisible := isDrawMesh;
     RunMeshGLSL (clipPlane, false);
     if not isOverlayClipped then
-       lMesh.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W) )
+       lMesh.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W), isFlipMeshOverlay )
     else
-        lMesh.DrawGL(clr, clipPlane);
+        lMesh.DrawGL(clr, clipPlane, isFlipMeshOverlay);
     lMesh.isVisible := true;
  end;
 
