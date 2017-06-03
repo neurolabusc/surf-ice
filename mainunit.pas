@@ -317,6 +317,11 @@ var
 
 implementation
 
+{$IFDEF LCLcarbon}
+ This program does not support Carbon
+  Please choose Project/ProjectOptions, go to the CompilerOptions/Additions&Overrides and set the BuildMode pull-down to "MacOS"
+{$ENDIF}
+
 {$R *.lfm}
 var
   gMesh: TMesh;

@@ -113,8 +113,9 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <TopLine Value="858"/>
-        <CursorPos X="36" Y="861"/>
+        <IsVisibleTab Value="True"/>
+        <TopLine Value="309"/>
+        <CursorPos X="38" Y="321"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -160,8 +161,8 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="346"/>
-        <CursorPos X="10" Y="366"/>
+        <TopLine Value="615"/>
+        <CursorPos X="3" Y="619"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -204,7 +205,6 @@
       </Unit11>
       <Unit12>
         <Filename Value="opts.inc"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="8"/>
         <CursorPos X="3" Y="2"/>
         <UsageCount Value="28"/>
@@ -263,8 +263,8 @@
       <Unit20>
         <Filename Value="commandsu.pas"/>
         <EditorIndex Value="7"/>
-        <TopLine Value="118"/>
-        <CursorPos X="20" Y="128"/>
+        <TopLine Value="124"/>
+        <CursorPos X="76" Y="134"/>
         <UsageCount Value="28"/>
         <Loaded Value="True"/>
       </Unit20>
@@ -306,8 +306,8 @@
       <Unit26>
         <Filename Value="gl_legacy_3d.pas"/>
         <EditorIndex Value="10"/>
-        <TopLine Value="257"/>
-        <CursorPos X="73" Y="268"/>
+        <TopLine Value="258"/>
+        <CursorPos X="31" Y="269"/>
         <UsageCount Value="28"/>
         <Loaded Value="True"/>
       </Unit26>

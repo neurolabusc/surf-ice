@@ -14,7 +14,7 @@ object ScriptForm: TScriptForm
   OnCreate = FormCreate
   OnDeactivate = FormDeactivate
   OnDropFiles = FormDropFiles
-  LCLVersion = '1.7'
+  LCLVersion = '1.9.0.0'
   object Splitter1: TSplitter
     Cursor = crVSplit
     Left = 0
@@ -374,6 +374,12 @@ object ScriptForm: TScriptForm
           Tag = 3
           Caption = 'cameradistance'
           Hint = 'CAMERADISTANCE (Z: single) Sets the viewing distance from the object.'
+          OnClick = InsertCommand
+        end
+        object camerapan1: TMenuItem
+          Tag = 23
+          Caption = 'camerapan'
+          Hint = 'CAMERAPAN (X, Y: single) Translate image horizontally (x) and vertically (y). range -1..+1, where 0 is centered. '
           OnClick = InsertCommand
         end
         object colorbarvisible1: TMenuItem

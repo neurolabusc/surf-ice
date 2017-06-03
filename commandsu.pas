@@ -8,6 +8,7 @@ procedure AZIMUTH (DEG: integer);
 procedure AZIMUTHELEVATION (AZI, ELEV: integer);
 procedure BACKCOLOR (R,G,B: byte);
 procedure CAMERADISTANCE(DISTANCE: single);
+procedure CAMERAPAN(X, Y: single);
 procedure CLIP (DEPTH: single);
 procedure CLIPAZIMUTHELEVATION (DEPTH,AZI,ELEV: single);
 procedure COLORBARVISIBLE (VISIBLE: boolean);
@@ -65,12 +66,13 @@ const
                Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
              );
 
-knProc = 49;
+knProc = 50;
   kProcRA : array [1..knProc] of TScriptRec = (
    (Ptr:@AZIMUTH;Decl:'AZIMUTH';Vars:'(DEG: integer)'),
    (Ptr:@AZIMUTHELEVATION;Decl:'AZIMUTHELEVATION';Vars:'(AZI, ELEV: integer)'),
    (Ptr:@BACKCOLOR;Decl:'BACKCOLOR';Vars:'(R, G, B: byte)'),
    (Ptr:@CAMERADISTANCE;Decl:'CAMERADISTANCE';Vars:'(DISTANCE: single)'),
+   (Ptr:@CAMERAPAN;Decl:'CAMERAPAN';Vars:'(X, Y: single)'),
    (Ptr:@CLIP;Decl:'CLIP';Vars:'(DEPTH: single)'),
    (Ptr:@CLIPAZIMUTHELEVATION;Decl:'CLIPAZIMUTHELEVATION';Vars:'(DEPTH,AZI,ELEV: single)'),
    (Ptr:@COLORBARVISIBLE;Decl:'COLORBARVISIBLE';Vars:'(VISIBLE: boolean)'),
@@ -131,6 +133,17 @@ end;
 function EXISTS(lFilename: string): boolean;
 begin
   result := FileExists(lFilename);
+end;
+
+procedure CAMERAPAN(X, Y: single);
+begin
+  if (X > 1) then X := 1;
+  if (X < -1) then X := -1;
+  if (Y > 1) then Y := 1;
+  if (Y < -1) then Y := -1;
+  gPrefs.ScreenPan.X := X;
+  gPrefs.ScreenPan.Y := Y;
+  GLForm1.GLBox.Invalidate;
 end;
 
 procedure CAMERADISTANCE(DISTANCE: single);
