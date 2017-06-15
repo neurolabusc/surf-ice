@@ -1,12 +1,12 @@
 object GLForm1: TGLForm1
-  Left = 411
-  Height = 687
+  Left = 246
+  Height = 755
   Top = 23
-  Width = 956
+  Width = 960
   AllowDropFiles = True
   Caption = 'Surf Ice'
-  ClientHeight = 687
-  ClientWidth = 956
+  ClientHeight = 755
+  ClientWidth = 960
   Menu = MainMenu1
   OnClose = FormClose
   OnCreate = FormCreate
@@ -15,11 +15,11 @@ object GLForm1: TGLForm1
   LCLVersion = '1.9.0.0'
   object ToolPanel: TPanel
     Left = 0
-    Height = 687
+    Height = 755
     Top = 0
     Width = 272
     Align = alLeft
-    ClientHeight = 687
+    ClientHeight = 755
     ClientWidth = 272
     TabOrder = 1
     object ClipBox: TGroupBox
@@ -98,12 +98,12 @@ object GLForm1: TGLForm1
     end
     object ShaderBox: TGroupBox
       Left = 1
-      Height = 17
+      Height = 85
       Top = 669
       Width = 270
       Align = alClient
       Caption = 'Shader'
-      ClientHeight = 1
+      ClientHeight = 63
       ClientWidth = 262
       ParentFont = False
       TabOrder = 1
@@ -582,7 +582,7 @@ object GLForm1: TGLForm1
       object Memo1: TMemo
         Left = 0
         Height = 50
-        Top = -49
+        Top = 13
         Width = 262
         Align = alBottom
         Lines.Strings = (
@@ -1549,7 +1549,7 @@ object GLForm1: TGLForm1
   end
   object CollapsedToolPanel: TPanel
     Left = 272
-    Height = 687
+    Height = 755
     Top = 0
     Width = 6
     Align = alLeft
@@ -1559,9 +1559,9 @@ object GLForm1: TGLForm1
   end
   object GLBox: TOpenGLControl
     Left = 278
-    Height = 687
+    Height = 755
     Top = 0
-    Width = 678
+    Width = 682
     Align = alClient
     OpenGLMajorVersion = 2
     OpenGLMinorVersion = 1

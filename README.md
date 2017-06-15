@@ -19,6 +19,7 @@ You can also build this project from the command line (assuming you have FPC Laz
 
 5-May-2017
  - Conversion of images from voxels to mesh now allows the user to specify a minimum cluster size.
+ - Pan image by [shift-dragging](https://www.nitrc.org/forum/forum.php?thread_id=7857&forum_id=6713).
 
 7-February-2017
  - Ability to individually adjust translucency of overlays (rather than having one value for all).

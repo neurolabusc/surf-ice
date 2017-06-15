@@ -352,7 +352,7 @@ const
     (16, 3, 2, 17, 15, 16, 31, 32, 42, 33, 44, 40, 19, 22, 35, 33, 47, 39, 49, 26, 25, 12, 24, 11, 0, 0, 0, 0 ),
     (13, 26, 7, 21, 18, 46, 43, 50, 41, 39, 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ),
     (49, 50, 25, 13, 20, 9, 20, 45, 9, 36, 45, 31, 42, 15, 16, 2, 17, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ),
-    (38, 48, 49, 37, 39, 38, 26, 25, 12, 23, 9, 5, 36, 34, 20, 23, 5, 15, 2, 31, 32, 42, 33, 44, 35, 0, 0, 0 ),
+    (38, 48, 49, 37, 39, 38, 26, 25, 12, 23, 9, 5, 36, 34, 20, 23, 5, 15, 2, 31, 32, 42, 33, 45, 36, 0, 0, 0 ),
     (11, 13, 24, 25, 13, 50, 25, 49, 38, 27, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ),
     (16, 4, 2, 19, 15, 16, 31, 32, 42, 33, 44, 40, 19, 22, 35, 33, 47, 39, 49, 26, 25, 12, 22, 8, 14, 22, 19, 4 ),
     (16, 3, 2, 17, 15, 16, 31, 32, 42, 33, 44, 47, 19, 22, 35, 33, 47, 39, 49, 26, 25, 12, 22, 8, 19, 0, 0, 0 ),
@@ -541,7 +541,6 @@ glDepthMask(BYTEBOOL(1)); // enable writes to Z-buffer
 {$ELSE}
 glDepthMask(GL_TRUE); // enable writes to Z-buffer
 {$ENDIF}
-
 glEnable(GL_DEPTH_TEST);
 glDisable(GL_CULL_FACE); // glEnable(GL_CULL_FACE); //check on pyramid
 glEnable(GL_BLEND);
@@ -703,8 +702,6 @@ begin
   //nglTranslatef(0,0,-30);
   {$ELSE}
   //Enter2D(lScrnWid, lScrnHt);
-
-
   glUseProgram(gShader.program2d);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity;
@@ -731,6 +728,15 @@ begin
   MakeCube(sz);
 end;
 
+procedure nglVertex2fr(x,y: single);
+begin
+  nglVertex2f(round(x),round(y));
+end;
+
+procedure nglVertex3fr(x,y,z: single);
+begin
+nglVertex3f(round(x),round(y),round(z));
+end;
 
 procedure PrintXY (Xin,Y,Sz: single; NumStr: string;FontColor: TRGBA);
 //draws numerical strong with 18-pixel tall characters. If Sz=2.0 then characters are 36-pixel tall
@@ -748,7 +754,7 @@ begin
     j := Char2Int(NumStr[i]);
     nglBegin(GL_TRIANGLE_STRIP);
     for k := 1 to kStripCount[j] do
-        nglVertex2f(Sc*kVert[kStripRaw[j,k]].X + X, Sc*kVert[kStripRaw[j,k]].Y +Y);
+        nglVertex2fr(Sc*kVert[kStripRaw[j,k]].X + X, Sc*kVert[kStripRaw[j,k]].Y +Y);
     nglEnd;
     X := X + ((kStripWid[j] + 1)* Sz);
   end;
@@ -762,6 +768,7 @@ var
   lW,lH,lW2,lH2,T: single;
 begin
   if NumStr = '' then exit;
+  //Sz := 3;
   {$IFNDEF COREGL}glLoadIdentity();{$ENDIF}
   lH := PrintHt(Sz);
   lH2 := (lH/2);
@@ -771,32 +778,32 @@ begin
   case Orient of
     1: begin
       nglBegin(GL_TRIANGLE_STRIP);
-        nglVertex3f(X-lH2-lW-3*Sz,Y+LH2+Sz, kZ);
-        nglVertex3f(X-lH2-lW-3*Sz,Y-lH2-Sz, kZ);
-        nglVertex3f(X-lH2,Y+lH2+Sz, kZ);
-        nglVertex3f(X-lH2,Y-lH2-Sz, kZ);
-        nglVertex3f(X,Y, kZ);
+        nglVertex3fr(X-lH2-lW-3*Sz,Y+LH2+Sz, kZ);
+        nglVertex3fr(X-lH2-lW-3*Sz,Y-lH2-Sz, kZ);
+        nglVertex3fr(X-lH2,Y+lH2+Sz, kZ);
+        nglVertex3fr(X-lH2,Y-lH2-Sz, kZ);
+        nglVertex3fr(X,Y, kZ);
       nglEnd;
       PrintXY (X-lW-lH2-1.5*Sz,Y-lH2,Sz, NumStr,FontColor);
     end;
     3: begin
       nglBegin(GL_TRIANGLE_STRIP);
-        nglVertex3f(X+lH2+lW+2*Sz,Y+LH2+Sz, kZ);
-        nglVertex3f(X+lH2+lW+2*Sz,Y-lH2-Sz, kZ);
-        nglVertex3f(X+lH2-Sz,Y+lH2+Sz, kZ);
-        nglVertex3f(X+lH2-Sz,Y-lH2-Sz, kZ);
-        nglVertex3f(X,Y, kZ);
+        nglVertex3fr(X+lH2+lW+2*Sz,Y+LH2+Sz, kZ);
+        nglVertex3fr(X+lH2+lW+2*Sz,Y-lH2-Sz, kZ);
+        nglVertex3fr(X+lH2-Sz,Y+lH2+Sz, kZ);
+        nglVertex3fr(X+lH2-Sz,Y-lH2-Sz, kZ);
+        nglVertex3fr(X,Y, kZ);
       nglEnd;
       PrintXY (X+lH2,Y-lH2,Sz, NumStr,FontColor);
     end;
     4: begin //bottom
     nglBegin(GL_TRIANGLE_STRIP);
-      nglVertex3f(X-lW2-2*Sz,Y-LH-lH2-2*Sz, kZ);//-
-      nglVertex3f(X-lW2-2*Sz,Y-lH2, kZ);
-      nglVertex3f(X+lW2+Sz,Y-LH-lH2-2*Sz, kZ);//-
-      nglVertex3f(X+lW2+Sz,Y-lH2, kZ);
-      nglVertex3f(X-lW2-Sz,Y-lH2, kZ);
-      nglVertex3f(X,Y, kZ);
+      nglVertex3fr(X-lW2-2*Sz,Y-LH-lH2-2*Sz, kZ);//-
+      nglVertex3fr(X-lW2-2*Sz,Y-lH2, kZ);
+      nglVertex3fr(X+lW2+Sz,Y-LH-lH2-2*Sz, kZ);//-
+      nglVertex3fr(X+lW2+Sz,Y-lH2, kZ);
+      nglVertex3fr(X-lW2-Sz,Y-lH2, kZ);
+      nglVertex3fr(X,Y, kZ);
     nglEnd;
     PrintXY (X-lW2-Sz,Y-lH-LH2,Sz, NumStr,FontColor);
     end;
@@ -805,13 +812,19 @@ begin
         T := Y-LH-Sz-lH2
       else
         T := Y;
-    nglBegin(GL_TRIANGLE_STRIP);
-      nglVertex3f(X-lW2-2*Sz,T+LH+2*Sz+lH2, kZ);
-      nglVertex3f(X-lW2-2*Sz,T+lH2, kZ);
-      nglVertex3f(X+lW2+Sz,T+LH+2*Sz+lH2, kZ);
-      nglVertex3f(X+lW2+Sz,T+lH2, kZ);
-      nglVertex3f(X-lW2-Sz,T+lH2, kZ);
-      nglVertex3f(X,T, kZ);
+    nglBegin(GL_TRIANGLE_STRIP); //Text above arrow
+      nglVertex3fr(X-lW2-2*Sz,T+LH+2*Sz+lH2, kZ); //LT
+      nglVertex3fr(X+lW2+Sz,T+LH+2*Sz+lH2, kZ); //RT
+      nglVertex3fr(X-lW2-2*Sz,T+lH2, kZ); //LB
+      nglVertex3fr(X+lW2+Sz,T+lH2, kZ); //RT
+      nglVertex3fr(X,T, kZ);
+
+      (*nglVertex3fr(X-lW2-2*Sz,T+LH+2*Sz+lH2, kZ);
+      nglVertex3fr(X-lW2-2*Sz,T+lH2, kZ);
+      nglVertex3fr(X+lW2+Sz,T+LH+2*Sz+lH2, kZ);
+      nglVertex3fr(X+lW2+Sz,T+lH2, kZ);
+      nglVertex3fr(X-lW2-Sz,T+lH2, kZ);
+      nglVertex3fr(X,T, kZ);*)
     nglEnd;
     PrintXY (X-lW2-Sz,T+lH2+Sz,Sz, NumStr,FontColor);
     end;
@@ -884,10 +897,10 @@ begin
   SetOrder(lU.T,lU.B,lT,lB);
   nglColor4ub(lPrefs.GridAndBorder.r,lPrefs.GridAndBorder.g,lPrefs.GridAndBorder.b,lPrefs.GridAndBorder.a);
   nglBegin(GL_TRIANGLE_STRIP);
-      nglVertex3f((lL-lBorder)*lPrefs.window_width,(lB+lBorder)*lPrefs.window_height, kZ);
-      nglVertex3f((lL-lBorder)*lPrefs.window_width,(lT-lBorder)*lPrefs.window_height, kZ);
-      nglVertex3f((lR+lBorder)*lPrefs.window_width,(lB+lBorder)*lPrefs.window_height, kZ);
-      nglVertex3f((lR+lBorder)*lPrefs.window_width,(lT-lBorder)*lPrefs.window_height, kZ);
+      nglVertex3fr((lL-lBorder)*lPrefs.window_width,(lB+lBorder)*lPrefs.window_height, kZ);
+      nglVertex3fr((lL-lBorder)*lPrefs.window_width,(lT-lBorder)*lPrefs.window_height, kZ);
+      nglVertex3fr((lR+lBorder)*lPrefs.window_width,(lB+lBorder)*lPrefs.window_height, kZ);
+      nglVertex3fr((lR+lBorder)*lPrefs.window_width,(lT-lBorder)*lPrefs.window_height, kZ);
     nglEnd;//GL_TRIANGLE_STRIP
 end;
 

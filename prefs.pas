@@ -23,7 +23,7 @@ type
     SmoothVoxelwiseData,
     OverlayClip, StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube, MultiSample,
      TracksAreTubes,Colorbar, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,ColorBarPrecedenceTracksNotOverlays,
-     ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting, isFlipMeshOverlay : boolean;
+     ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting, isFlipMeshOverlay, RetinaDisplay : boolean;
     TrackTubeSlices, ScreenCaptureZoom,
     window_width, window_height, RenderQuality, SaveAsFormat,SaveAsFormatTrack, OcclusionAmount: integer;
     ObjColor,BackColor: TColor;
@@ -275,6 +275,7 @@ begin
     AdditiveOverlay := false;
     SkipPrefWriting := false;
     isFlipMeshOverlay := false;
+    RetinaDisplay := false;
     OverlayClip := false;
     StartupScript := false;
     ScreenCaptureTransparentBackground := true;
@@ -517,7 +518,9 @@ begin
   IniBool(lRead,lIniFile, 'OrientCube',lPrefs.OrientCube);
   IniBool(lRead,lIniFile, 'Perspective',lPrefs.Perspective);
   IniBool(lRead,lIniFile, 'AdditiveOverlay',lPrefs.AdditiveOverlay);
-   IniBool(lRead,lIniFile, 'StartupScript',lPrefs.StartupScript);
+  IniBool(lRead,lIniFile, 'StartupScript',lPrefs.StartupScript);
+  IniBool(lRead,lIniFile, 'RetinaDisplay',lPrefs.RetinaDisplay);
+
   //IniBool(lRead,lIniFile, 'MultiPassRendering',lPrefs.MultiPassRendering);
   //IniBool(lRead,lIniFile, 'SaveAsObj',lPrefs.SaveAsObj);
   IniBool(lRead,lIniFile, 'TracksAreTubes',lPrefs.TracksAreTubes);

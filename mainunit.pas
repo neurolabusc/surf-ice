@@ -237,15 +237,16 @@ type
     procedure AppDropFiles(Sender: TObject; const FileNames: array of String);
     procedure CreateRender(w,h: integer; isToScreen: boolean);
     procedure GLboxPaint(Sender: TObject);
-    procedure GLboxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
-    procedure GLboxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-    procedure GLboxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+    procedure GLboxMouseMove(Sender: TObject; Shift: TShiftState; lX, lY: Integer);
+    procedure GLboxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; lX, lY: Integer);
+    procedure GLboxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; lX, lY: Integer);
     procedure ObjectColorMenuClick(Sender: TObject);
     procedure OpenMenuClick(Sender: TObject);
     procedure OverlayTimerTimer(Sender: TObject);
     procedure OverlayVisible(lOverlay: integer; lVisible: integer);
     procedure OverlayInvert(lOverlay: integer; lInvert: boolean);
     procedure PrefMenuClick(Sender: TObject);
+    procedure SetRetina;
     procedure QuickColorClick(Sender: TObject);
     procedure ExitMenuClick(Sender: TObject);
     procedure ResetMenuClick(Sender: TObject);
@@ -328,6 +329,7 @@ var
   gNode: TMesh;
   gTrack: TTrack;
   isBusy: boolean = true;
+  gRetinaScale : single = 1;
   gDistance : single = 1;
   gMouseX : integer = -1;
   gMouseY : integer = -1;
@@ -340,6 +342,20 @@ const
   kMin=2;
   kMax=3;
      kTrackFilter = 'Camino, VTK, MRTrix, Quench, TrakVis, DTIstudio|*.Bfloat;*.Bfloat.gz;*.trk.gz;*.trk;*.tck;*.pdb;*.fib;*.vtk;*.dat|Any file|*.*';
+
+{$IFDEF LCLCocoa}
+procedure Mouse2Retina(var X,Y: integer);
+begin
+     if not gPrefs.RetinaDisplay then exit;
+     X := round(X * gRetinaScale);
+     Y := round(Y * gRetinaScale);
+end;
+{$ELSE}
+procedure Mouse2Retina(var X,Y: integer);
+begin
+     //Retina display is MacOS feature
+end;
+{$ENDIF}
 
 function FindFile(Filename: string): string;
 var
@@ -868,15 +884,18 @@ begin
 end;
 
 
-procedure TGLForm1.GLboxMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+procedure TGLForm1.GLboxMouseMove(Sender: TObject; Shift: TShiftState; lX, lY: Integer);
+var
+   X,Y:integer;
 begin
  if gMouseX < 0 then exit; //mouse is not down
+ X := lX; Y := lY; Mouse2Retina(X,Y);
  if (ssShift in Shift) then begin
     //Pan image
-    gPrefs.ScreenPan.X := gPrefs.ScreenPan.X + (1/GLBox.Width * (X - gMouseX));
+    gPrefs.ScreenPan.X := gPrefs.ScreenPan.X + (1/GLBox.BackingWidth * (X - gMouseX));
     if (gPrefs.ScreenPan.X > 1) then gPrefs.ScreenPan.X := 1;
     if (gPrefs.ScreenPan.X < -1) then gPrefs.ScreenPan.X := -1;
-    gPrefs.ScreenPan.Y := gPrefs.ScreenPan.Y - (1/GLBox.Height * (Y - gMouseY));
+    gPrefs.ScreenPan.Y := gPrefs.ScreenPan.Y - (1/GLbox.BackingHeight * (Y - gMouseY));
     if (gPrefs.ScreenPan.Y > 1) then gPrefs.ScreenPan.Y := 1;
     if (gPrefs.ScreenPan.Y < -1) then gPrefs.ScreenPan.Y := -1;
 
@@ -893,13 +912,16 @@ begin
  GLBox.invalidate;//GLBoxRequestUpdate(Sender);
 end;
 
-procedure TGLForm1.GLboxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+procedure TGLForm1.GLboxMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; lX, lY: Integer);
 begin
      gMouseX := -1; //released
 end;
 
-procedure TGLForm1.GLboxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+procedure TGLForm1.GLboxMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; lX, lY: Integer);
+var
+   X,Y: integer;
 begin
+  X := lX; Y := lY; Mouse2Retina(X,Y);
      gMouseX := X;
      gMouseY := Y;
 end;
@@ -1420,18 +1442,30 @@ begin
   OverlayTimerStart;
 end;
 
+{$IFDEF LCLCocoa}
+procedure TGLForm1.SetRetina;
+begin
+  GLBox.WantsBestResolutionOpenGLSurface:=gPrefs.RetinaDisplay;
+  if (GLbox.Height < 1) or (GLBox.BackingHeight <= GLbox.Height) then
+     gRetinaScale := 1
+  else
+      gRetinaScale := GLBox.BackingHeight/GLbox.Height;
+end;
+{$ENDIF}
+
 procedure TGLForm1.PrefMenuClick(Sender: TObject);
 var
   PrefForm: TForm;
   OkBtn, AdvancedBtn: TButton;
-  BitmapAlphaCheck, SmoothVoxelwiseDataCheck, TracksAreTubesCheck: TCheckBox; //MultiPassRenderingCheck
-  //ShaderForBackgroundOnlyCombo,
+  {$IFDEF LCLCocoa} RetinaCheck,{$ENDIF}
+  BitmapAlphaCheck, SmoothVoxelwiseDataCheck, TracksAreTubesCheck: TCheckBox;
+  bmpEdit: TEdit;
     ZDimIsUpCombo, QualityCombo, SaveAsCombo: TComboBox;
-  QualityLabel: TLabel;
-  isAdvancedPrefs: boolean;
+  bmpLabel, QualityLabel: TLabel;
+  isAdvancedPrefs {$IFDEF LCLCocoa}, isRetinaChanged {$ENDIF} : boolean;
 begin
   PrefForm:=TForm.Create(nil);
-  PrefForm.SetBounds(100, 100, 520, 262);
+  PrefForm.SetBounds(100, 100, 520, 322);
   PrefForm.Caption:='Preferences';
   PrefForm.Position := poScreenCenter;
   PrefForm.BorderStyle := bsDialog;
@@ -1522,25 +1556,33 @@ begin
       QualityLabel.Parent:=PrefForm;
   end;
   //SingleShader
- (*   ZDimIsUpCombo := TComboBox.create(PrefForm);
-  ZDimIsUpCombo.Items.Add('Z-dimension is up (Neuroimaging/Talairach)');
-  ZDimIsUpCombo.Items.Add('Y-dimension is up (Blender/OpenGL)');
-  if (gPrefs.ZDimIsUp) then
-     ZDimIsUpCombo.ItemIndex := 0
-  else
-      ZDimIsUpCombo.ItemIndex := 1;
-  ZDimIsUpCombo.Left := 8;
-  ZDimIsUpCombo.Top := 98;
-  ZDimIsUpCombo.Width := PrefForm.Width -16;
-  ZDimIsUpCombo.Style := csDropDownList;
-  ZDimIsUpCombo.Parent:=PrefForm;  *)
-
+  bmpLabel:=TLabel.create(PrefForm);
+  bmpLabel.Left := 8;
+  bmpLabel.Top := 218;
+  bmpLabel.Width := PrefForm.Width - 86;
+  bmpLabel.Caption := 'Bitmap zoom (large values create huge images)';
+  bmpLabel.Parent:=PrefForm;
+  //bmp edit
+  bmpEdit := TEdit.Create(PrefForm);
+  bmpEdit.Left := PrefForm.Width - 76;
+  bmpEdit.Top := 218;
+  bmpEdit.Width := 60;
+  bmpEdit.Text := inttostr(gPrefs.ScreenCaptureZoom);
+  bmpEdit.Parent:=PrefForm;
+  {$IFDEF LCLCocoa}
+  RetinaCheck:=TCheckBox.create(PrefForm);
+  RetinaCheck.Checked := gPrefs.RetinaDisplay;
+  RetinaCheck.Caption:='Retina display (better but slower)';
+  RetinaCheck.Left := 8;
+  RetinaCheck.Top := 248;
+  RetinaCheck.Parent:=PrefForm;
+  {$ENDIF}
   //OK button
   OkBtn:=TButton.create(PrefForm);
   OkBtn.Caption:='OK';
   OkBtn.Left := PrefForm.Width - 128;
   OkBtn.Width:= 100;
-  OkBtn.Top := 228;
+  OkBtn.Top := 288;
   OkBtn.Parent:=PrefForm;
   OkBtn.ModalResult:= mrOK;
 
@@ -1548,7 +1590,7 @@ begin
   AdvancedBtn.Caption:='Advanced';
   AdvancedBtn.Left := PrefForm.Width - 256;
   AdvancedBtn.Width:= 100;
-  AdvancedBtn.Top := 228;
+  AdvancedBtn.Top := 288;
   AdvancedBtn.Parent:=PrefForm;
   AdvancedBtn.ModalResult:= mrYesToAll;
   {$IFNDEF Darwin} ScaleDPIX(PrefForm, 96);  {$ENDIF}
@@ -1557,8 +1599,13 @@ begin
     FreeAndNil(PrefForm);
   	exit; //if user closes window with out pressing "OK"
   end;
+  {$IFDEF LCLCocoa}
+  isRetinaChanged := gPrefs.RetinaDisplay <> RetinaCheck.Checked;
+  gPrefs.RetinaDisplay := RetinaCheck.Checked;
+  {$ENDIF}
   gPrefs.ScreenCaptureTransparentBackground :=  BitmapAlphaCheck.Checked;
   gPrefs.SmoothVoxelwiseData := SmoothVoxelwiseDataCheck.Checked;
+  gPrefs.ScreenCaptureZoom:= strtointdef(bmpEdit.Text,1);
   (*if ShaderForBackgroundOnlyCombo.ItemIndex = 1 then
      gPrefs.ShaderForBackgroundOnly := false
   else
@@ -1585,6 +1632,10 @@ begin
   end;
   isAdvancedPrefs := (PrefForm.ModalResult = mrYesToAll);
   FreeAndNil(PrefForm);
+  {$IFDEF LCLCocoa}
+  if isRetinaChanged then
+    SetRetina;//GLBox.WantsBestResolutionOpenGLSurface:=gPrefs.RetinaDisplay;
+  {$ENDIF}
       GLBoxRequestUpdate(Sender);
   if  isAdvancedPrefs then
      Quit2TextEditor;
@@ -1899,7 +1950,6 @@ begin
   gMesh.Overlay[lOverlay].WindowScaledMin := lMin;
   gMesh.Overlay[lOverlay].WindowScaledMax := lMax;
   UpdateOverlaySpread;
-
 end;
 
 
@@ -1976,7 +2026,7 @@ end;
 
 procedure TGLForm1.GLboxPaint(Sender: TObject);
 begin
- CreateRender(GLBox.Width, GLBox.Height, true);
+ CreateRender(GLBox.BackingWidth, GLbox.BackingHeight, true);
  if UpdateTimer.enabled then
     UpdateTimerTimer(Sender);
 
@@ -1994,11 +2044,11 @@ begin
  GLBox.MakeCurrent;
  glGetIntegerv(GL_MAX_VIEWPORT_DIMS, @maxXY);
  //caption := inttostr(maxXY[0]) +'x'+inttostr(maxXY[1]);
- w := GLbox.Width * gPrefs.ScreenCaptureZoom;
- h := GLbox.Height * gPrefs.ScreenCaptureZoom;
+ w := GLBox.BackingWidth * gPrefs.ScreenCaptureZoom;
+ h := GLbox.BackingHeight * gPrefs.ScreenCaptureZoom;
  if (w > maxXY[0]) or (h > maxXY[1]) or (gPrefs.RenderQuality = kRenderPoor) or (not (gPrefs.SupportBetterRenderQuality)) then begin
-  w := GLbox.Width;
-  h := GLbox.Height;
+  w := GLBox.BackingWidth;
+  h := GLbox.BackingHeight;
   zoom := 1
  end else
      zoom := gPrefs.ScreenCaptureZoom;
@@ -2349,7 +2399,7 @@ begin
      GLbox.Repaint;
   end;
   origin := GetOrigin(scale);
-  str :=  'Surf Ice '+' 5 May 2017 '
+  str :=  'Surf Ice '+' 15 June 2017 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
@@ -2955,7 +3005,7 @@ begin
   {$ENDIF}
   GLbox.AutoResizeViewport:= true;   // http://www.delphigl.com/forum/viewtopic.php?f=10&t=11311
   if gPrefs.MultiSample then
-  GLBox.MultiSampling:= 4;
+     GLBox.MultiSampling:= 4;
   GLBox.OnMouseDown := GLboxMouseDown;
   GLBox.OnMouseMove := GLboxMouseMove;
   GLBox.OnMouseUp := GLboxMouseUp;
@@ -3001,12 +3051,13 @@ begin
   AppleMenu.Visible := false;
   {$ENDIF}
   {$IFDEF COREGL} {$IFDEF LCLCarbon} ERROR - Carbon does not support OpenGL core profile: either switch to Cocoa or comment out "COREGL" in opts.inc{$ENDIF} {$ENDIF}
-  {$IFDEF LCLCocoa}
-  //EditMenu.Visible := false;  //Broken prior to svn 50307
-  {$ENDIF}
+
   OrientCubeMenu.Checked :=  gPrefs.OrientCube;
   GLBox.MakeCurrent(false);
   gPrefs.SupportBetterRenderQuality := InitGLSL(true);
+  {$IFDEF LCLCocoa}
+  SetRetina;//GLBox.WantsBestResolutionOpenGLSurface:=gPrefs.RetinaDisplay;
+  {$ENDIF}
   GLBox.ReleaseContext;
   MultiPassRenderingToolsUpdate;
   ShaderDropChange(sender);
