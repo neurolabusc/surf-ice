@@ -1,8 +1,9 @@
 REM COMPILE Surf Ice
 cd c:\pas\surfice
 
-#copy new version of GLEXT that supports geometry shaders
-copy /Y .\coregl\glext.pp .\glext.pp
+#NO LONGER REQUIRED: we now use glcorearb.pas for OpenGL core
+# copy new version of GLEXT that supports geometry shaders
+#  copy /Y .\coregl\glext.pp .\glext.pp
 
 
 #create core version
