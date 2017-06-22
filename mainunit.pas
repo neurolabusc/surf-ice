@@ -250,7 +250,7 @@ type
     procedure OverlayVisible(lOverlay: integer; lVisible: integer);
     procedure OverlayInvert(lOverlay: integer; lInvert: boolean);
     procedure PrefMenuClick(Sender: TObject);
-    procedure SetRetina;
+    {$IFDEF LCLCocoa}procedure SetRetina;{$ENDIF}
     procedure QuickColorClick(Sender: TObject);
     procedure ExitMenuClick(Sender: TObject);
     procedure ResetMenuClick(Sender: TObject);
