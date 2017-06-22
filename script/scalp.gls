@@ -1,9 +1,0 @@
-BEGIN
- RESETDEFAULTS;
-  COLORBARVISIBLE(false);
- MESHLOAD('scalp.obj');
- OVERLAYLOAD('peak.obj');
- OVERLAYLOAD('surface.obj');
- OVERLAYLOAD('brain.obj');
- SHADERXRAY(1.0, 0.2);
-END.

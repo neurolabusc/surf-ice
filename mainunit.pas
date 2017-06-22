@@ -923,7 +923,6 @@ begin
   GLBoxRequestUpdate(Sender);
 end;
 
-
 procedure TGLForm1.GLboxMouseMove(Sender: TObject; Shift: TShiftState; lX, lY: Integer);
 var
    X,Y:integer;
@@ -2446,7 +2445,7 @@ begin
      GLbox.Repaint;
   end;
   origin := GetOrigin(scale);
-  str :=  'Surf Ice '+' 15 June 2017 '
+  str :=  'Surf Ice '+' 21 June 2017 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
