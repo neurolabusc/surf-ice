@@ -192,6 +192,10 @@ type
     SaveMenu: TMenuItem;
     ObjectColorMenu: TMenuItem;
     OpenMenu: TMenuItem;
+    procedure FormChangeBounds(Sender: TObject);
+    function GLBoxBackingWidth: integer;
+    function GLBoxBackingHeight: integer;
+
     procedure CurvMenuClick(Sender: TObject);
     procedure DepthLabelDblClick(Sender: TObject);
     procedure NewWindow1Click(Sender: TObject);
@@ -324,6 +328,10 @@ implementation
 {$ENDIF}
 
 {$R *.lfm}
+{$IFDEF LCLCocoa}
+uses
+  glcocoanscontext;
+{$ENDIF}
 var
   gMesh: TMesh;
   gNode: TMesh;
@@ -408,6 +416,38 @@ begin
     FindClose(searchResult);
   end;
    result := ''; //failed!
+end;
+
+function TGLForm1.GLBoxBackingWidth: integer;
+begin
+   {$IFDEF LCLCocoa}
+     result := Round(GLBox.Width * LBackingScaleFactor(GLBox.Handle));
+   {$ELSE}
+    result := GLBox.Width;
+   {$ENDIF}
+end;
+
+procedure TGLForm1.FormChangeBounds(Sender: TObject);
+{$IFDEF LCLCocoa} var lprev: single; {$ENDIF}
+begin
+   {$IFDEF LCLCocoa}
+   if (gPrefs.RetinaDisplay)  then begin //detect if window moved between retina and non-retina display
+      lprev := gRetinaScale;
+      SetRetina;
+      if (lprev <> gRetinaScale) then
+        GLForm1.GLBox.Invalidate;
+        //GLboxResize(Sender);
+   end;
+   {$ENDIF}
+end;
+
+function TGLForm1.GLBoxBackingHeight: integer;
+begin
+   {$IFDEF LCLCocoa}
+   result := Round(GLBox.Height * LBackingScaleFactor(GLBox.Handle));
+   {$ELSE}
+    result := GLBox.Height;
+   {$ENDIF}
 end;
 
 procedure TGLForm1.MultiPassRenderingToolsUpdate;
@@ -892,10 +932,10 @@ begin
  X := lX; Y := lY; Mouse2Retina(X,Y);
  if (ssShift in Shift) then begin
     //Pan image
-    gPrefs.ScreenPan.X := gPrefs.ScreenPan.X + (1/GLBox.BackingWidth * (X - gMouseX));
+    gPrefs.ScreenPan.X := gPrefs.ScreenPan.X + (1/GLBoxBackingWidth * (X - gMouseX));
     if (gPrefs.ScreenPan.X > 1) then gPrefs.ScreenPan.X := 1;
     if (gPrefs.ScreenPan.X < -1) then gPrefs.ScreenPan.X := -1;
-    gPrefs.ScreenPan.Y := gPrefs.ScreenPan.Y - (1/GLbox.BackingHeight * (Y - gMouseY));
+    gPrefs.ScreenPan.Y := gPrefs.ScreenPan.Y - (1/GLboxBackingHeight * (Y - gMouseY));
     if (gPrefs.ScreenPan.Y > 1) then gPrefs.ScreenPan.Y := 1;
     if (gPrefs.ScreenPan.Y < -1) then gPrefs.ScreenPan.Y := -1;
 
@@ -1445,11 +1485,18 @@ end;
 {$IFDEF LCLCocoa}
 procedure TGLForm1.SetRetina;
 begin
-  GLBox.WantsBestResolutionOpenGLSurface:=gPrefs.RetinaDisplay;
-  if (GLbox.Height < 1) or (GLBox.BackingHeight <= GLbox.Height) then
+  (*if gPrefs.RetinaDisplay then
+     GLBox.Options := [ocoMacRetinaMode]
+  else
+    GLBox.Options := [];
+  GLBox.MultiSampling:=GLBox.MultiSampling;
+  *)
+  LSetWantsBestResolutionOpenGLSurface(gPrefs.RetinaDisplay, GLBox.Handle);
+  //GLBox.WantsBestResolutionOpenGLSurface:=gPrefs.RetinaDisplay;
+  if (GLbox.Height < 1) or (GLBoxBackingHeight <= GLbox.Height) then
      gRetinaScale := 1
   else
-      gRetinaScale := GLBox.BackingHeight/GLbox.Height;
+      gRetinaScale := GLBoxBackingHeight/GLbox.Height;
 end;
 {$ENDIF}
 
@@ -2026,7 +2073,7 @@ end;
 
 procedure TGLForm1.GLboxPaint(Sender: TObject);
 begin
- CreateRender(GLBox.BackingWidth, GLbox.BackingHeight, true);
+ CreateRender(GLBoxBackingWidth, GLboxBackingHeight, true);
  if UpdateTimer.enabled then
     UpdateTimerTimer(Sender);
 
@@ -2044,11 +2091,11 @@ begin
  GLBox.MakeCurrent;
  glGetIntegerv(GL_MAX_VIEWPORT_DIMS, @maxXY);
  //caption := inttostr(maxXY[0]) +'x'+inttostr(maxXY[1]);
- w := GLBox.BackingWidth * gPrefs.ScreenCaptureZoom;
- h := GLbox.BackingHeight * gPrefs.ScreenCaptureZoom;
+ w := GLBoxBackingWidth * gPrefs.ScreenCaptureZoom;
+ h := GLboxBackingHeight * gPrefs.ScreenCaptureZoom;
  if (w > maxXY[0]) or (h > maxXY[1]) or (gPrefs.RenderQuality = kRenderPoor) or (not (gPrefs.SupportBetterRenderQuality)) then begin
-  w := GLBox.BackingWidth;
-  h := GLbox.BackingHeight;
+  w := GLBoxBackingWidth;
+  h := GLboxBackingHeight;
   zoom := 1
  end else
      zoom := gPrefs.ScreenCaptureZoom;
@@ -3009,6 +3056,9 @@ begin
   GLBox.OnMouseDown := GLboxMouseDown;
   GLBox.OnMouseMove := GLboxMouseMove;
   GLBox.OnMouseUp := GLboxMouseUp;
+  {$IFDEF LCLCocoa}
+  SetRetina;//GLBox.WantsBestResolutionOpenGLSurface:=gPrefs.RetinaDisplay;
+  {$ENDIF}
   //GLBox.OnMouseWheel := GLboxMouseWheel;
   GLBox.OnPaint := GLboxPaint;
   FormCreateShaders;
@@ -3055,9 +3105,7 @@ begin
   OrientCubeMenu.Checked :=  gPrefs.OrientCube;
   GLBox.MakeCurrent(false);
   gPrefs.SupportBetterRenderQuality := InitGLSL(true);
-  {$IFDEF LCLCocoa}
-  SetRetina;//GLBox.WantsBestResolutionOpenGLSurface:=gPrefs.RetinaDisplay;
-  {$ENDIF}
+
   GLBox.ReleaseContext;
   MultiPassRenderingToolsUpdate;
   ShaderDropChange(sender);

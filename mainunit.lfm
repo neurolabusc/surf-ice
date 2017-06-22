@@ -8,6 +8,7 @@ object GLForm1: TGLForm1
   ClientHeight = 755
   ClientWidth = 960
   Menu = MainMenu1
+  OnChangeBounds = FormChangeBounds
   OnClose = FormClose
   OnCreate = FormCreate
   OnDropFiles = FormDropFiles

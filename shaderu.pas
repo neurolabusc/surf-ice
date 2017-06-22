@@ -156,7 +156,6 @@ var
    w,h: integer;
    //drawBuf: GLenum;
    drawBuf: array[0..1] of GLenum;
-
 begin
      w := wid;
      h := ht;

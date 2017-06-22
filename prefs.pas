@@ -275,7 +275,7 @@ begin
     AdditiveOverlay := false;
     SkipPrefWriting := false;
     isFlipMeshOverlay := false;
-    RetinaDisplay := false;
+    RetinaDisplay := true;
     OverlayClip := false;
     StartupScript := false;
     ScreenCaptureTransparentBackground := true;

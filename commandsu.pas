@@ -7,6 +7,7 @@ function EXISTS(lFilename: string): boolean; //function
 procedure AZIMUTH (DEG: integer);
 procedure AZIMUTHELEVATION (AZI, ELEV: integer);
 procedure BACKCOLOR (R,G,B: byte);
+procedure BMPZOOM(Z: byte);
 procedure CAMERADISTANCE(DISTANCE: single);
 procedure CAMERAPAN(X, Y: single);
 procedure CLIP (DEPTH: single);
@@ -66,10 +67,11 @@ const
                Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
              );
 
-knProc = 50;
+knProc = 51;
   kProcRA : array [1..knProc] of TScriptRec = (
    (Ptr:@AZIMUTH;Decl:'AZIMUTH';Vars:'(DEG: integer)'),
    (Ptr:@AZIMUTHELEVATION;Decl:'AZIMUTHELEVATION';Vars:'(AZI, ELEV: integer)'),
+   (Ptr:@BMPZOOM;Decl:'BMPZOOM';Vars:'(Z: byte)'),
    (Ptr:@BACKCOLOR;Decl:'BACKCOLOR';Vars:'(R, G, B: byte)'),
    (Ptr:@CAMERADISTANCE;Decl:'CAMERADISTANCE';Vars:'(DISTANCE: single)'),
    (Ptr:@CAMERAPAN;Decl:'CAMERAPAN';Vars:'(X, Y: single)'),
@@ -123,6 +125,13 @@ knProc = 50;
 implementation
 uses
     mainunit, define_types, shaderui, graphics, LCLintf, Forms, SysUtils, Dialogs, scriptengine, mesh;
+
+procedure BMPZOOM(Z: byte);
+begin
+  if (Z > 10) or (Z < 1) then
+     Z := 1;
+  gPrefs.ScreenCaptureZoom := Z;
+end;
 
 procedure RESETDEFAULTS;
 begin

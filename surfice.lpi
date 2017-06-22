@@ -113,9 +113,8 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
-        <TopLine Value="312"/>
-        <CursorPos X="34" Y="331"/>
+        <TopLine Value="433"/>
+        <CursorPos X="11" Y="439"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -123,9 +122,10 @@
       <Unit2>
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="9"/>
-        <TopLine Value="511"/>
-        <CursorPos X="3" Y="522"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="7"/>
+        <TopLine Value="261"/>
+        <CursorPos X="26" Y="278"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit2>
@@ -148,7 +148,7 @@
       <Unit5>
         <Filename Value="track.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="12"/>
+        <EditorIndex Value="10"/>
         <TopLine Value="710"/>
         <CursorPos X="103" Y="719"/>
         <UsageCount Value="210"/>
@@ -173,23 +173,21 @@
       </Unit7>
       <Unit8>
         <Filename Value="mesh.pas"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="4431"/>
         <CursorPos X="51" Y="4438"/>
         <UsageCount Value="93"/>
-        <Loaded Value="True"/>
       </Unit8>
       <Unit9>
         <Filename Value="define_types.pas"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="25"/>
         <CursorPos X="11" Y="33"/>
         <UsageCount Value="56"/>
-        <Loaded Value="True"/>
       </Unit9>
       <Unit10>
         <Filename Value="gl_2d.pas"/>
-        <EditorIndex Value="1"/>
+        <EditorIndex Value="4"/>
         <TopLine Value="1212"/>
         <CursorPos X="20" Y="1218"/>
         <UsageCount Value="35"/>
@@ -197,14 +195,15 @@
       </Unit10>
       <Unit11>
         <Filename Value="shaderu.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="369"/>
-        <CursorPos X="7" Y="378"/>
-        <UsageCount Value="2"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="212"/>
+        <CursorPos X="45" Y="225"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
       </Unit11>
       <Unit12>
         <Filename Value="opts.inc"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="6"/>
         <CursorPos X="3" Y="2"/>
         <UsageCount Value="44"/>
         <Loaded Value="True"/>
@@ -247,9 +246,9 @@
       </Unit17>
       <Unit18>
         <Filename Value="commandsu.pas"/>
-        <EditorIndex Value="7"/>
-        <TopLine Value="124"/>
-        <CursorPos X="76" Y="134"/>
+        <EditorIndex Value="5"/>
+        <TopLine Value="147"/>
+        <CursorPos X="3" Y="155"/>
         <UsageCount Value="44"/>
         <Loaded Value="True"/>
       </Unit18>
@@ -283,7 +282,7 @@
       </Unit22>
       <Unit23>
         <Filename Value="gl_legacy_3d.pas"/>
-        <EditorIndex Value="10"/>
+        <EditorIndex Value="8"/>
         <TopLine Value="258"/>
         <CursorPos X="31" Y="269"/>
         <UsageCount Value="44"/>
@@ -291,11 +290,10 @@
       </Unit23>
       <Unit24>
         <Filename Value="gl_core_3d.pas"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="715"/>
         <CursorPos Y="725"/>
         <UsageCount Value="42"/>
-        <Loaded Value="True"/>
       </Unit24>
       <Unit25>
         <Filename Value="../MRIcroGL/nifti_foreign.pas"/>
@@ -306,16 +304,15 @@
       </Unit25>
       <Unit26>
         <Filename Value="nifti_foreign.pas"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="1139"/>
         <CursorPos X="9" Y="1140"/>
         <UsageCount Value="42"/>
-        <Loaded Value="True"/>
       </Unit26>
       <Unit27>
         <Filename Value="/usr/local/share/fpcsrc/packages/opengl/src/gl.pp"/>
         <UnitName Value="GL"/>
-        <EditorIndex Value="11"/>
+        <EditorIndex Value="9"/>
         <TopLine Value="1305"/>
         <CursorPos X="3" Y="1317"/>
         <UsageCount Value="27"/>
@@ -323,19 +320,19 @@
       </Unit27>
       <Unit28>
         <Filename Value="gl_core_matrix.pas"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="210"/>
         <CursorPos X="53" Y="232"/>
         <UsageCount Value="27"/>
-        <Loaded Value="True"/>
       </Unit28>
       <Unit29>
         <Filename Value="../../../lazarus/components/opengl/glcocoanscontext.pas"/>
         <UnitName Value="GLCocoaNSContext"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="46"/>
-        <CursorPos X="25" Y="48"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="405"/>
+        <CursorPos X="30" Y="412"/>
         <UsageCount Value="25"/>
+        <Loaded Value="True"/>
       </Unit29>
       <Unit30>
         <Filename Value="/usr/local/share/fpcsrc/packages/cocoaint/src/foundation/NSObjCRuntime.inc"/>
@@ -346,10 +343,11 @@
       <Unit31>
         <Filename Value="../../../lazarus/components/opengl/openglcontext.pas"/>
         <UnitName Value="OpenGLContext"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="171"/>
-        <CursorPos X="49" Y="173"/>
+        <EditorIndex Value="3"/>
+        <TopLine Value="370"/>
+        <CursorPos X="26" Y="382"/>
         <UsageCount Value="10"/>
+        <Loaded Value="True"/>
       </Unit31>
       <Unit32>
         <Filename Value="../../../lazarus/lcl/interfaces/cocoa/cocoagdiobjects.pas"/>
