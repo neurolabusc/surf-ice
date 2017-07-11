@@ -49,18 +49,332 @@ type
 
 var
   gShader: TShader;
+  function  initVertFrag(vert, geom, frag: string): GLuint;
 function LoadShader(lFilename: string; var Shader: TShader): boolean;
 function InitGLSL (isStartUp: boolean): boolean;
 procedure RunOverlayGLSL(clipPlane: TPoint4f);
 procedure RunMeshGLSL (clipPlane: TPoint4f;  UseDefaultShader: boolean);
 procedure RunTrackGLSL (lineWidth, ScreenPixelX, ScreenPixelY: integer);
 procedure RunAoGLSL (var f1, f2 : TFrameBuffer; zoom : integer; alpha1, blend1, fracAO, distance: single);
-function setFrame (wid, ht: integer; var f : TFrameBuffer; isMultiSample: boolean) : boolean; //returns true if multi-sampling
+function setFrame (wid, ht: integer; var f : TFrameBuffer; isMultiSample: boolean; var isOK: boolean) : boolean; //returns true if multi-sampling
+//function setFrameMS (wid, ht: integer; var f : TFrameBuffer; isMultiSample: boolean; var isOK: boolean) : boolean; //returns true if multi-sampling
+procedure initFrame(var f : TFrameBuffer);
 procedure releaseFrame;
+procedure freeFrame (var f : TFrameBuffer);
 //procedure Set2DDraw (w,h: integer; r,g,b: byte);
 
 implementation
-uses mainunit, gl_2d;
+uses mainunit;
+
+{$IFDEF COREGL}
+const kVert2D ='#version 330'
++#10'layout(location = 0) in vec3 Vert;'
++#10'layout(location = 3) in vec4 Clr;'
++#10'out vec4 vClr;'
++#10'uniform mat4 ModelViewProjectionMatrix;'
++#10'void main() {'
++#10'    gl_Position = ModelViewProjectionMatrix * vec4(Vert, 1.0);'
++#10'    //gl_Position.z = gl_Position.z - 0.7;'
++#10'    vClr = Clr;'
++#10'}';
+    const kFrag2D = '#version 330'
++#10'in vec4 vClr;'
++#10'out vec4 color;'
++#10'void main() {'
++#10'    color = vClr;'
++#10'}';
+
+
+
+const kAoShaderVert = '#version 330'
++#10'layout(location = 0) in vec3 Vert;'
++#10'layout(location = 3) in vec2 Coord;'
++#10'smooth out vec2 texCoord;'
++#10'void main () {'
++#10'  gl_Position = vec4 (Vert, 1.0);'
++#10'  texCoord = Coord;'
++#10'}';
+
+
+  {$IFDEF HEMISSAO}
+  //https://gist.github.com/fisch0920/6770363
+     //http://blog.evoserv.at/index.php/2012/12/hemispherical-screen-space-ambient-occlusion-ssao-for-deferred-renderers-using-openglglsl/
+    const kAoShaderFrag = '#version 330'
++#10'uniform sampler2D tex1, tex2, depth_texture1, depth_texture2, norm1;'
++#10'uniform float blend1, alpha1, fracAO, aoRadius;'
++#10'uniform vec2 texture_size;'
++#10'#define PI    3.14159265'
++#10'float width = texture_size.x; //texture width'
++#10'float height = texture_size.y; //texture height'
++#10'smooth in vec2 texCoord;'
++#10'out vec4 color;'
++#10'vec3 viewNormal;'
++#10'//------------------------------------------'
++#10'//general stuff'
++#10'//make sure that these two values are the same for your camera, otherwise distances will be wrong.'
++#10'//user variables'
++#10'int samples = 64; //ao sample count'
++#10'float aoclamp = 0.25; //depth clamp - reduces haloing at screen edges'
++#10'bool noise = true; //use noise instead of pattern for sample dithering'
++#10'float noiseamount = 0.0002; //dithering amount'
++#10'float diffarea = 0.4; //self-shadowing reduction'
++#10'float gdisplace = 0.4; //gauss bell center'
++#10'//float near = 1.0; //Z-near;'
++#10'//float far = 3.0; //Z-far'
++#10'//--------------------------------------------------------'
++#10'vec2 rand(vec2 coord) {'
++#10'	float noiseX = ((fract(1.0-coord.s*(width/2.0))*0.25)+(fract(coord.t*(height/2.0))*0.75))*2.0-1.0;'
++#10'	float noiseY = ((fract(1.0-coord.s*(width/2.0))*0.75)+(fract(coord.t*(height/2.0))*0.25))*2.0-1.0;'
++#10'	if (noise) {'
++#10'	   noiseX = clamp(fract(sin(dot(coord ,vec2(12.9898,78.233))) * 43758.5453),0.0,1.0)*2.0-1.0;'
++#10'	   noiseY = clamp(fract(sin(dot(coord ,vec2(12.9898,78.233)*2.0)) * 43758.5453),0.0,1.0)*2.0-1.0;'
++#10'	}'
++#10'	return vec2(noiseX,noiseY)*noiseamount;'
++#10'}'
++#10'float readDepth(in vec2 coord) {'
++#10'   return texture(depth_texture1, coord).x;'
++#10'}'
++#10'float calAO(float depth, float dw, float dh, float mx) {'
++#10'	//float dd = (1.0-depth)*aoRadius;'
++#10'	float dd = aoRadius;'
++#10'	//float dd = aoRadius * 0.1;'
++#10'	float coordw = texCoord.x + dw*dd;'
++#10'	float coordh = texCoord.y + dh*dd;'
++#10'	float d = readDepth(vec2(coordw, coordh));'
++#10'	//if (d > dd) return 0.0;'
++#10'	vec3 sampleDir = vec3(dw*dd, dh*dd, depth-d);'
++#10'   sampleDir = normalize(sampleDir);'
++#10'   float NdotS = max(dot(viewNormal, sampleDir), 0);'
++#10'   //float rangeCheck  = 1.0 - step(mx, abs(depth-d));'
++#10'	return NdotS;// * rangeCheck;'
++#10'}'
++#10'float getAO(void) {'
++#10'   viewNormal = texture(norm1, texCoord).xyz;'
++#10'	vec2 noise = rand(texCoord); '
++#10'	float depth = readDepth(texCoord);'
++#10'	float w = (1.0 / width)+(noise.x*(1.0-noise.x));'
++#10'	float h = (1.0 / height)+(noise.y*(1.0-noise.y));'
++#10'	float mx = max(w,h) * aoRadius * 4.0;'
++#10'	//float w = (1.0 / width)/clamp(depth,aoclamp,1.0)+(noise.x*(1.0-noise.x));'
++#10'	//float h = (1.0 / height)/clamp(depth,aoclamp,1.0)+(noise.y*(1.0-noise.y));'
++#10'	float pw;'
++#10'	float ph;'
++#10'	float ao = 0.0;'
++#10'	float dl = PI*(3.0-sqrt(5.0));'
++#10'	float dz = 1.0/float(samples);'
++#10'	float l = 0.0;'
++#10'	float z = 1.0 - dz/2.0;'
++#10'	for (int i = 0; i <= samples; i ++) {'
++#10'		float r = sqrt(1.0-z);'
++#10'		pw = cos(l)*r;'
++#10'		ph = sin(l)*r;'
++#10'		ao += calAO(depth,pw*w,ph*h, mx);'
++#10'		z = z - dz;'
++#10'		l = l + dl;'
++#10'	}'
++#10'	ao /= float(samples);'
++#10'   //ao = clamp(ao, 0.0, 1.0);'
++#10'   ao = (clamp(ao, 0.0, 0.7) ) * 1.428; //threshold then LERP 0..1'
++#10'   //ao = pow(ao, 0.2);'
++#10'   ao = smoothstep(0.0, 1.0, ao);'
++#10'   //ao = pow(ao, 0.2);'
++#10'   //ao = (1.0 - ao);// * fracAO;'
++#10'   return ao * fracAO;'
++#10'}'
++#10'void main(void) {'
++#10'  //color = vec4(1.0, 0.0, 0.0, 1.0); return;'
++#10'  vec4 t1 = texture(tex1, texCoord);'
++#10'  if (t1.a == 0.0) discard;'
++#10'  vec4 t2 = texture(tex2, texCoord);'
++#10'  float ao = getAO();'
++#10'  //float ao = fracAO  * getAO();'
++#10'  t1.rgb = clamp(t1.rgb-ao, 0.0, 1.0);'
++#10'  //if (fracAO > 0.0)'
++#10'  //  t1.rgb = clamp(t1.rgb-getAO(), 0.0, 1.0);'
++#10'  t1.rgb = mix(t2.rgb,t1.rgb, alpha1);'
++#10'  float depth = 1.0 - (3.0 * (texture(depth_texture2, texCoord).x - texture(depth_texture1, texCoord).x));'
++#10'  //t2.a *= clamp(depth, 0.0, 1.0);'
++#10'  depth = clamp(depth, 0.0, 1.0);'
++#10'  color = mix(t1, t2, blend1 * depth);'
++#10'  //color.rgb = texture(norm1, texCoord).rgb;'
++#10'  //color.rgb = vec3(1.0 - ao);'
++#10'}';
+
+  {$ELSE}
+    const kAoShaderFrag = '#version 330'
+ +#10'uniform sampler2D tex1, tex2, depth_texture1, depth_texture2;'
++#10'uniform float blend1, alpha1, fracAO, aoRadius;'
++#10'uniform vec2 texture_size;'
++#10'#define PI    3.14159265'
++#10'smooth in vec2 texCoord;'
++#10'out vec4 color;'
++#10'//general stuff'
++#10'int samples = 32; //ao sample count'
++#10'float aoclamp = 0.25; //depth clamp - reduces haloing at screen edges'
++#10'bool noise = true; //use noise instead of pattern for sample dithering'
++#10'float noiseamount = 0.0002; //dithering amount'
++#10'float diffarea = 0.5; //self-shadowing reduction'
++#10'float gdisplace = 0.4; //gauss bell center'
++#10'vec2 rand(vec2 coord) {'
++#10'	float noiseX = ((fract(1.0-coord.s*(texture_size.x/2.0))*0.25)+(fract(coord.t*(texture_size.y/2.0))*0.75))*2.0-1.0;'
++#10'	float noiseY = ((fract(1.0-coord.s*(texture_size.x/2.0))*0.75)+(fract(coord.t*(texture_size.y/2.0))*0.25))*2.0-1.0;'
++#10'	if (noise) {'
++#10'	   noiseX = clamp(fract(sin(dot(coord ,vec2(12.9898,78.233))) * 43758.5453),0.0,1.0)*2.0-1.0;'
++#10'	   noiseY = clamp(fract(sin(dot(coord ,vec2(12.9898,78.233)*2.0)) * 43758.5453),0.0,1.0)*2.0-1.0;'
++#10'	}'
++#10'	return vec2(noiseX,noiseY)*noiseamount;'
++#10'}'
++#10'float readDepth(in vec2 coord) {'
++#10'   return 1.0 -  ((texture(depth_texture1, coord).x + 0.87) * 0.534);'
++#10'}'
++#10'float compareDepths(in float depth1, in float depth2,inout int far) {'
++#10'	float garea = 2.0; //gauss bell width'
++#10'	float diff = (depth1 - depth2)*100.0; //depth difference (0-100)'
++#10'	if (diff<gdisplace) //reduce left bell width to avoid self-shadowing'
++#10'	  garea = diffarea;'
++#10'	else'
++#10'	  far = 1;'
++#10'	float gauss = pow(2.7182,-2.0*(diff-gdisplace)*(diff-gdisplace)/(garea*garea));'
++#10'	return gauss;'
++#10'}'
++#10'float calAO(float depth, vec2 coordwh) {'
++#10'	int far = 0;'
++#10'	float temp = compareDepths(depth, readDepth(texCoord+coordwh),far);'
++#10'	if (far > 0) {'
++#10'		float temp2 = compareDepths(readDepth(texCoord-coordwh),depth,far);'
++#10'		temp += (1.0-temp)*temp2;'
++#10'	}'
++#10'	return temp;'
++#10'}'
++#10'float getAO(void) {'
++#10'	vec2 noise = rand(texCoord);'
++#10'	float depth = readDepth(texCoord);'
++#10'	float dd = (1.0-depth)*aoRadius;'
++#10'	float w = (1.0 / texture_size.x)/clamp(depth,aoclamp,1.0)+(noise.x*(1.0-noise.x));'
++#10'	float h = (1.0 / texture_size.y)/clamp(depth,aoclamp,1.0)+(noise.y*(1.0-noise.y));'
++#10'	float ao = 0.0;'
++#10'	float dl = PI*(3.0-sqrt(5.0));'
++#10'	float dz = 1.0/float(samples);'
++#10'	float l = 0.0;'
++#10'	float z = 1.0 - dz/2.0;'
++#10'	for (int i = 0; i <= samples; i ++) {'
++#10'		float r = sqrt(1.0-z);'
++#10'		ao += calAO(depth, vec2(cos(l)*r*w*dd,sin(l)*r*h*dd));'
++#10'		z = z - dz;'
++#10'		l = l + dl;'
++#10'	}'
++#10'	ao /= float(samples);'
++#10'	ao = clamp(ao, 0.0, 0.4) * 2.5; //threshold then LERP 0..1'
++#10'	ao = smoothstep(0.0, 1.0, ao);'
++#10'	ao = (1.0 - ao) * fracAO;'
++#10'	return ao;'
++#10'}'
++#10'void main(void) {'
++#10'  vec4 t1 = texture(tex1, texCoord);'
++#10'  if (t1.a == 0.0) discard;'
++#10'  vec4 t2 = texture(tex2, texCoord);'
++#10'  //float ao = 1.0 - getAO(); color = vec4(ao, ao, ao, 1.0); return;'
++#10'  if (fracAO > 0.0)'
++#10'    t1.rgb = clamp(t1.rgb-getAO(), 0.0, 1.0);'
++#10'  t1.rgb = mix(t2.rgb,t1.rgb, alpha1);'
++#10'  float depth = 1.0 - (3.0 * (texture(depth_texture2, texCoord).x - texture(depth_texture1, texCoord).x));'
++#10'  depth = clamp(depth, 0.0, 1.0);'
++#10'  color = mix(t1, t2, blend1 * depth);'
++#10'}';
+      {$ENDIF}
+
+ {$ELSE}
+    const kVert2D ='varying vec4 vClr;'
+    +#10'void main() {'
+    +#10'    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;'
+    +#10'    vClr = gl_Color;'
+    +#10'}';
+        const kFrag2D = 'varying vec4 vClr;'
+    +#10'void main() {'
+    +#10'    gl_FragColor = vClr;'
+    +#10'}';
+
+    const kAoShaderFrag = 'uniform sampler2D tex1, tex2, depth_texture1, depth_texture2;'
++#10'uniform float blend1, alpha1, fracAO, aoRadius;'
++#10'uniform vec2 texture_size;'
++#10'#define PI    3.14159265'
++#10'vec2 texCoord = gl_TexCoord[0].xy;'
++#10'//general stuff'
++#10'int samples = 32; //ao sample count'
++#10'float aoclamp = 0.25; //depth clamp - reduces haloing at screen edges'
++#10'bool noise = true; //use noise instead of pattern for sample dithering'
++#10'float noiseamount = 0.0002; //dithering amount'
++#10'float diffarea = 0.5; //self-shadowing reduction'
++#10'float gdisplace = 0.4; //gauss bell center'
++#10'vec2 rand(vec2 coord) {'
++#10'	float noiseX = ((fract(1.0-coord.s*(texture_size.x/2.0))*0.25)+(fract(coord.t*(texture_size.y/2.0))*0.75))*2.0-1.0;'
++#10'	float noiseY = ((fract(1.0-coord.s*(texture_size.x/2.0))*0.75)+(fract(coord.t*(texture_size.y/2.0))*0.25))*2.0-1.0;'
++#10'	if (noise) {'
++#10'	   noiseX = clamp(fract(sin(dot(coord ,vec2(12.9898,78.233))) * 43758.5453),0.0,1.0)*2.0-1.0;'
++#10'	   noiseY = clamp(fract(sin(dot(coord ,vec2(12.9898,78.233)*2.0)) * 43758.5453),0.0,1.0)*2.0-1.0;'
++#10'	}'
++#10'	return vec2(noiseX,noiseY)*noiseamount;'
++#10'}'
++#10'float readDepth(in vec2 coord) {'
++#10'   return 1.0 -  ((texture2D(depth_texture1, coord).x + 0.87) * 0.534);'
++#10'}'
++#10'float compareDepths(in float depth1, in float depth2,inout int far) {'
++#10'	float garea = 2.0; //gauss bell width'
++#10'	float diff = (depth1 - depth2)*100.0; //depth difference (0-100)'
++#10'	if (diff<gdisplace) //reduce left bell width to avoid self-shadowing'
++#10'	  garea = diffarea;'
++#10'	else'
++#10'	  far = 1;'
++#10'	float gauss = pow(2.7182,-2.0*(diff-gdisplace)*(diff-gdisplace)/(garea*garea));'
++#10'	return gauss;'
++#10'}'
++#10'float calAO(float depth, vec2 coordwh) {'
++#10'	int far = 0;'
++#10'	float temp = compareDepths(depth, readDepth(texCoord+coordwh),far);'
++#10'	if (far > 0) {'
++#10'		float temp2 = compareDepths(readDepth(texCoord-coordwh),depth,far);'
++#10'		temp += (1.0-temp)*temp2;'
++#10'	}'
++#10'	return temp;'
++#10'}'
++#10'float getAO(void) {'
++#10'	vec2 noise = rand(texCoord);'
++#10'	float depth = readDepth(texCoord);'
++#10'	float dd = (1.0-depth)*aoRadius;'
++#10'	float w = (1.0 / texture_size.x)/clamp(depth,aoclamp,1.0)+(noise.x*(1.0-noise.x));'
++#10'	float h = (1.0 / texture_size.y)/clamp(depth,aoclamp,1.0)+(noise.y*(1.0-noise.y));'
++#10'	float ao = 0.0;'
++#10'	float dl = PI*(3.0-sqrt(5.0));'
++#10'	float dz = 1.0/float(samples);'
++#10'	float l = 0.0;'
++#10'	float z = 1.0 - dz/2.0;'
++#10'	for (int i = 0; i <= samples; i ++) {'
++#10'		float r = sqrt(1.0-z);'
++#10'		ao += calAO(depth, vec2(cos(l)*r*w*dd,sin(l)*r*h*dd));'
++#10'		z = z - dz;'
++#10'		l = l + dl;'
++#10'	}'
++#10'	ao /= float(samples);'
++#10'	ao = clamp(ao, 0.0, 0.4) * 2.5; //threshold then LERP 0..1'
++#10'	ao = smoothstep(0.0, 1.0, ao);'
++#10'	ao = (1.0 - ao) * fracAO;'
++#10'	return ao;'
++#10'}'
++#10'void main(void) {'
++#10'  vec4 t1 = texture2D(tex1, texCoord);'
++#10'  if (t1.a == 0.0) discard;'
++#10'  vec4 t2 = texture2D(tex2, texCoord);'
++#10'  //float ao = 1.0 - getAO(); gl_FragColor = vec4(ao, ao, ao, 1.0); return;'
++#10'  if (fracAO > 0.0)'
++#10'    t1.rgb = clamp(t1.rgb-getAO(), 0.0, 1.0);'
++#10'  t1.rgb = mix(t2.rgb,t1.rgb, alpha1);'
++#10'  float depth = 1.0 - (3.0 * (texture2D(depth_texture2, texCoord).x - texture2D(depth_texture1, texCoord).x));'
++#10'  depth = clamp(depth, 0.0, 1.0);'
++#10'  gl_FragColor = mix(t1, t2, blend1 * depth);'
++#10'}';
+
+{$ENDIF}
+
 
 (*moved to gl_2d procedure Set2DDraw (w,h: integer; r,g,b: byte);
 begin
@@ -150,15 +464,232 @@ begin
   //Bind 0, which means render to back buffer, as a result, frameBuf is unbound
 end;
 
-function setFrame (wid, ht: integer; var f : TFrameBuffer; isMultiSample: boolean) : boolean; //returns true if multi-sampling
+(*function setFrameMS (wid, ht: integer; var f : TFrameBuffer; isMultiSample: boolean; var isOK: boolean) : boolean; //returns true if multi-sampling
 //http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
+//http://ake.in.th/2013/04/02/offscreening-and-multisampling-with-opengl/
+var
+   w,h,ms: integer;
+   drawBuf: array[0..1] of GLenum;
+   aMultisampleTexture: GLint;
+begin
+  w := wid;
+  h := ht;
+  isOK := true;
+  if isMultiSample then begin
+    w := w * 2;
+    h := h * 2;
+  end;
+  result := isMultiSample;
+  if (w = f.w) and (h = f.h) then begin
+     glBindFramebuffer(GL_FRAMEBUFFER, f.frameBuf);
+     exit;
+  end;
+  freeframe(f);
+  f.w := w;
+  f.h := h;
+  glGenTextures(1, @f.tex);
+  glBindTexture(GL_TEXTURE_2D, f.tex);
+  glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA8, f.w, f.h, 0,GL_RGBA, GL_UNSIGNED_BYTE, nil); //RGBA16 for AO
+  glGenFramebuffers(1, @f.frameBuf);
+  glBindFramebuffer(GL_FRAMEBUFFER, f.frameBuf);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, f.tex, 0);
+  glGenTextures(1, @f.depthBuf);
+  glBindTexture(GL_TEXTURE_2D, f.depthBuf);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, f.w, f.h, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nil);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, f.depthBuf, 0);
+  drawBuf[0] := GL_COLOR_ATTACHMENT0;
+  glDrawBuffers(1, @drawBuf[0]); // draw colors only
+  glEnable( GL_MULTISAMPLE );
+  glEnable( GL_MULTISAMPLE );
+end;
+function setFrameMSX (wid, ht: integer; var f : TFrameBuffer; isMultiSample: boolean; var isOK: boolean) : boolean; //returns true if multi-sampling
+//http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
+//http://ake.in.th/2013/04/02/offscreening-and-multisampling-with-opengl/
+var
+   w,h,ms: integer;
+   drawBuf: array[0..1] of GLenum;
+   aMultisampleTexture: GLint;
+begin
+  w := wid;
+  h := ht;
+  isOK := true;
+  if isMultiSample then begin
+    w := w * 2;
+    h := h * 2;
+  end;
+  result := isMultiSample;
+  if (w = f.w) and (h = f.h) then begin
+     glBindFramebuffer(GL_FRAMEBUFFER, f.frameBuf);
+     exit;
+  end;
+  freeframe(f);
+  f.w := w;
+  f.h := h;
+  ms := 4;
+  if ms > 1 then begin
+     glGenTextures(1, @aMultisampleTexture);
+     glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, aMultisampleTexture);
+     glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, ms, GL_RGBA, f.w, f.h, GL_TRUE);
+  end;
+  // Create and bind the FBO
+  glGenFramebuffers(1, @f.frameBuf);
+  glBindFramebuffer(GL_FRAMEBUFFER, f.frameBuf);
+  // Create color render buffer
+  glGenRenderbuffers(1, @f.tex);
+  glBindRenderbuffer(GL_RENDERBUFFER, f.tex);
+  if ms > 1 then begin
+     glRenderbufferStorageMultisample(GL_RENDERBUFFER, ms, GL_RGBA8, f.w, f.h);
+  end else begin
+      glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, f.w, f.h);
+  end;
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, f.tex);
+  // Create depth render buffer (This is optional)
+  glGenRenderbuffers(1, @f.depthBuf);
+  glBindRenderbuffer(GL_RENDERBUFFER, f.depthBuf);
+  if ms > 1 then
+       glRenderbufferStorageMultisample(GL_RENDERBUFFER, ms, GL_DEPTH24_STENCIL8, f.w, f.h)
+  else
+      glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, f.w, f.h);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, f.depthBuf);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, f.depthBuf);
+
+  //drawBuf[0] := GL_COLOR_ATTACHMENT0;
+  //glDrawBuffers(1, @drawBuf[0]); // draw colors only
+  glEnable( GL_MULTISAMPLE );
+end; //setFrameMS    *)
+
+
+(*function setFrameMS (wid, ht: integer; var f : TFrameBuffer; isMultiSample: boolean; var isOK: boolean) : boolean; //returns true if multi-sampling
+//http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
+//https://stackoverflow.com/questions/33587682/opengl-how-can-i-attach-a-depth-buffer-to-a-framebuffer-using-a-multisampled-2d
+
 var
    w,h: integer;
-   //drawBuf: GLenum;
    drawBuf: array[0..1] of GLenum;
+   i: GLint;
 begin
      w := wid;
      h := ht;
+     isOK := true;
+     if isMultiSample then begin
+        w := w * 2;
+        h := h * 2;
+     end;
+     result := isMultiSample;
+     if (w = f.w) and (h = f.h) then begin
+         glBindFramebuffer(GL_FRAMEBUFFER, f.frameBuf);
+         exit;
+     end;
+     freeframe(f);
+     f.w := w;
+     f.h := h;
+     //https://www.opengl.org/wiki/Framebuffer_Object_Examples#Quick_example.2C_render_to_texture_.282D.29
+     glGenTextures(1, @f.tex);
+     glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, f.tex);
+     glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+     glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+     glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+     glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+     //glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA8, f.w, f.h, 0,GL_RGBA, GL_UNSIGNED_BYTE, nil); //RGBA16 for AO
+     glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGBA8, f.w, f.h, GL_TRUE);
+     glGenFramebuffers(1, @f.frameBuf);
+     glBindFramebuffer(GL_FRAMEBUFFER, f.frameBuf);
+     //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, f.tex, 0);
+     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, f.tex, 0);
+    glGenTextures(1, @f.depthBuf);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, f.depthBuf);
+    glTexParameterf(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, f.w, f.h, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nil);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_DEPTH24_STENCIL8, f.w, f.h, GL_TRUE);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D_MULTISAMPLE, f.depthBuf, 0);
+     drawBuf[0] := GL_COLOR_ATTACHMENT0;
+     drawBuf[1] := GL_COLOR_ATTACHMENT1;
+     glDrawBuffers(1, @drawBuf[0]); // draw colors only
+     glEnable( GL_MULTISAMPLE );
+end;*)
+
+//{$DEFINE MULTISAMPLE}
+{$IFDEF MULTISAMPLE}
+function setFrame (wid, ht: integer; var f : TFrameBuffer; isMultiSample: boolean; var isOK: boolean) : boolean; //returns true if multi-sampling
+//http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
+//https://stackoverflow.com/questions/33587682/opengl-how-can-i-attach-a-depth-buffer-to-a-framebuffer-using-a-multisampled-2d
+
+var
+   w,h: integer;
+   drawBuf: array[0..1] of GLenum;
+begin
+     {$IFNDEF COREGL}
+       error requires core
+     {$ENDIF}
+     w := wid;
+     h := ht;
+     isOK := true;
+     if isMultiSample then begin
+        w := w * 2;
+        h := h * 2;
+     end;
+     result := isMultiSample;
+     if (w = f.w) and (h = f.h) then begin
+         glBindFramebuffer(GL_FRAMEBUFFER, f.frameBuf);
+         exit;
+     end;
+     freeframe(f);
+     f.w := w;
+     f.h := h;
+     //https://www.opengl.org/wiki/Framebuffer_Object_Examples#Quick_example.2C_render_to_texture_.282D.29
+     glGenTextures(1, @f.tex);
+     glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, f.tex);
+     glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+     glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+     glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+     glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+     //glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA8, f.w, f.h, 0,GL_RGBA, GL_UNSIGNED_BYTE, nil); //RGBA16 for AO
+     glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGBA8, f.w, f.h, GL_TRUE);
+
+     glGenFramebuffers(1, @f.frameBuf);
+     glBindFramebuffer(GL_FRAMEBUFFER, f.frameBuf);
+     //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, f.tex, 0);
+     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, f.tex, 0);
+
+
+    (*glGenTextures(1, @f.depthBuf);
+    glBindTexture(GL_RENDERBUFFER, f.depthBuf);
+    glTexParameterf(GL_RENDERBUFFER, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_RENDERBUFFER, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameterf(GL_RENDERBUFFER, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_RENDERBUFFER, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, f.w, f.h, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nil);
+    //glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_DEPTH24_STENCIL8, f.w, f.h, GL_TRUE);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH_COMPONENT24, f.w, f.h);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, f.depthBuf); *)
+    glGenTextures(1, @f.depthBuf);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, f.depthBuf);
+    glTexParameterf(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_DEPTH_COMPONENT, f.w, f.h, GL_TRUE);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D_MULTISAMPLE, f.depthBuf, 0);
+
+    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, f.depthBuf, 0);
+     drawBuf[0] := GL_COLOR_ATTACHMENT0;
+     drawBuf[1] := GL_COLOR_ATTACHMENT1;
+     glDrawBuffers(1, @drawBuf[0]); // draw colors only
+end;
+{$ELSE}
+function setFrame (wid, ht: integer; var f : TFrameBuffer; isMultiSample: boolean; var isOK: boolean) : boolean; //returns true if multi-sampling
+//http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
+var
+   w,h: integer;
+   drawBuf: array[0..1] of GLenum;
+   i: GLint;
+begin
+     w := wid;
+     h := ht;
+     isOK := true;
      if isMultiSample then begin
         w := w * 2;
         h := h * 2;
@@ -177,12 +708,32 @@ begin
      f.h := h;
      //https://www.opengl.org/wiki/Framebuffer_Object_Examples#Quick_example.2C_render_to_texture_.282D.29
      glGenTextures(1, @f.tex);
-     glBindTexture(GL_TEXTURE_2D, f.tex);
-     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-     glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA8, f.w, f.h, 0,GL_RGBA, GL_UNSIGNED_BYTE, nil); //RGBA16 for AO
+     (*if false then begin// not isMultiSample then begin
+       glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, f.tex);
+       glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+       glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+       glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+       glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+       glTexImage2DMultisample( GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGBA8, f.w, f.h, 0);
+       //glTexImage2D(GL_TEXTURE_2D_MULTISAMPLE, 0,GL_RGBA8, f.w, f.h, 0,GL_RGBA, GL_UNSIGNED_BYTE, nil); //RGBA16 for AO
+     end else begin *)
+       glBindTexture(GL_TEXTURE_2D, f.tex);
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+       {$IFDEF COREGL}
+       glTexImage2D(GL_PROXY_TEXTURE_2D, 0,GL_RGBA8, f.w, f.h, 0,GL_RGBA, GL_UNSIGNED_BYTE, nil); //RGBA16 for AO
+       //glTexImage2DMultisample( GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGBA8, f.w, f.h, 0);
+       glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, @i);
+       if i < 1 then begin
+         GLForm1.ShowmessageError(' setFrame error: reduce bitmap zoom');
+         isOK := false;
+          exit;
+       end;
+       {$ENDIF}
+       glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA8, f.w, f.h, 0,GL_RGBA, GL_UNSIGNED_BYTE, nil); //RGBA16 for AO
+     //end;
      {$IFDEF HEMISSAO}
      glGenTextures(1, @f.tex1);
      glBindTexture(GL_TEXTURE_2D, f.tex1);
@@ -197,11 +748,15 @@ begin
      glGenFramebuffers(1, @f.frameBuf);
      glBindFramebuffer(GL_FRAMEBUFFER, f.frameBuf);
      //Attach 2D texture to this FBO
-     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, f.tex, 0);
+     //if not isMultiSample then
+     //   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, f.tex, 0)
+     //else
+         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, f.tex, 0);
 
      {$IFDEF HEMISSAO}glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, f.tex1, 0);{$ENDIF}
 
      {$ELSE}
+
      glGenFramebuffersEXT(1, @f.frameBuf);
      glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, f.frameBuf);
      //Attach 2D texture to this FBO
@@ -218,7 +773,24 @@ begin
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    {$IFDEF COREGL}
+    glTexImage2D(GL_PROXY_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, f.w, f.h, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nil);
+    glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, @i);
+    if i < 1 then begin
+      GLForm1.ShowmessageError(' setFrame error: reduce bitmap zoom');
+      isOK := false;
+       exit;
+    end;
+    {$ENDIF}
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, f.w, f.h, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nil);
+    {$IFDEF COREGL}
+     if  glGetError() <> GL_NO_ERROR  then begin
+       //GLForm1.ShowmessageError('Frame buffer error 0x'+inttohex(glCheckFramebufferStatus(GL_FRAMEBUFFER),4) );
+       GLForm1.ShowmessageError(' setFrame error: reduce bitmap zoom');
+       isOK := false;
+       exit;
+    end;
+    {$ENDIF}
     {$IFDEF COREGL}
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, f.depthBuf, 0);
     {$ELSE}
@@ -240,11 +812,13 @@ begin
      {$IFDEF COREGL}
      if(glCheckFramebufferStatus(GL_FRAMEBUFFER) <> GL_FRAMEBUFFER_COMPLETE) then begin
        GLForm1.ShowmessageError('Frame buffer error 0x'+inttohex(glCheckFramebufferStatus(GL_FRAMEBUFFER),4) );
+       isOK := false;
        exit;
      end;
      {$ENDIF}
+     glEnable( GL_MULTISAMPLE );
 end;
-
+{$ENDIF}
 
 procedure initFrame(var f : TFrameBuffer);
 begin
@@ -286,7 +860,7 @@ begin
     glGetShaderiv(glObjectID, GL_INFO_LOG_LENGTH, @maxLength);
     if (maxLength < 1) then exit; //no info
      setlength(s, maxLength);
-     {$IFDEF DGL} //older DGL
+     {$IFDEF OLDDGL} //older DGL
      glGetShaderInfoLog(glObjectID, maxLength, maxLength, @s[1]);
      {$ELSE}
      glGetShaderInfoLog(glObjectID, maxLength, @maxLength, @s[1]);
@@ -312,7 +886,7 @@ begin
 
   maxLength := 4096;
   setlength(s, maxLength);
-  {$IFDEF DGL}
+  {$IFDEF OLDDGL} //older DGL
   glGetProgramInfoLog(glObjectID, maxLength, maxLength, @s[1]);
   {$ELSE}
   glGetProgramInfoLog(glObjectID, maxLength, @maxLength, @s[1]);
@@ -462,13 +1036,15 @@ begin
              if not  (Load_GL_VERSION_2_1) then begin
              {$ENDIF}
                  //On Ubuntu 14.04 LTS on VirtualBox with Chromium 19 drivers Load_GL_VERSION_2_1 fails but still works...
-                 showmessage(format('Unable to load OpenGL %d.%d found %s. Vendor %s. GLSL %s',[GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion, glGetString(GL_VERSION), glGetString(GL_VENDOR),glGetString(GL_SHADING_LANGUAGE_VERSION)]));
+                 //showmessage(format('Unable to load OpenGL %d.%d found %s. Vendor %s. GLSL %s',[GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion, glGetString(GL_VERSION), glGetString(GL_VENDOR),glGetString(GL_SHADING_LANGUAGE_VERSION)]));
+                 showmessage('Unable to load OpenGL');
                  halt();
              end;
-             if GLVersionError(GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion) then begin
-                showmessage(format('Requires OpenGL %d.%d found %s. Vendor %s. GLSL %s',[GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion, glGetString(GL_VERSION), glGetString(GL_VENDOR),glGetString(GL_SHADING_LANGUAGE_VERSION)]));
-                 halt();
-             end;
+             (*if GLVersionError(GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion) then begin
+                //showmessage(format('Requires OpenGL %d.%d found %s. Vendor %s. GLSL %s',[GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion, glGetString(GL_VERSION), glGetString(GL_VENDOR),glGetString(GL_SHADING_LANGUAGE_VERSION)]));
+               showmessage('Requires more recent OpenGL');
+               halt();
+             end;*)
              {$IFNDEF COREGL}
              Load_GL_EXT_framebuffer_object;
              Load_GL_ARB_framebuffer_object;

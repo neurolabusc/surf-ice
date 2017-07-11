@@ -14,7 +14,7 @@ uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,math,
   ExtCtrls, OpenGLContext, mesh, LCLintf, ComCtrls, Menus, graphtype, curv,
   ClipBrd, shaderui, shaderu, prefs, userdir, LCLtype, Grids, Spin, matmath,
-  colorTable, Track, types,  define_types, meshify,  gl_2d, zstream, gl_core_matrix, Process, meshify_simplify;
+  colorTable, Track, types,  glcube,glclrbar, define_types, meshify,   zstream, gl_core_matrix, Process, meshify_simplify;
 
 type
   { TGLForm1 }
@@ -24,6 +24,13 @@ type
     CurvMenuTemp: TMenuItem;
     GoldColorMenu: TMenuItem;
     ConvertAtlas: TMenuItem;
+    ColorBarMenu: TMenuItem;
+    BlackClrbarMenu: TMenuItem;
+    ColorbarSep: TMenuItem;
+    TransBlackClrbarMenu: TMenuItem;
+    ColorBarVisibleMenu: TMenuItem;
+    WhiteClrbarMenu: TMenuItem;
+    TransWhiteClrBarMenu: TMenuItem;
     NewWindow1: TMenuItem;
     S1Check: TCheckBox;
     S6Check: TCheckBox;
@@ -58,12 +65,10 @@ type
     S5Track: TTrackBar;
     S10Track: TTrackBar;
     TrackScalarRangeBtn: TButton;
-    ColorbarMenu: TMenuItem;
     HelpMenu: TMenuItem;
     DisplaySepMenu: TMenuItem;
     AdvancedMenu: TMenuItem;
     AdditiveOverlayMenu: TMenuItem;
-    GLBox: TOpenGLControl;
     CenterMeshMenu: TMenuItem;
     TrackScalarLUTdrop: TComboBox;
     TrackScalarNameDrop: TComboBox;
@@ -192,10 +197,17 @@ type
     SaveMenu: TMenuItem;
     ObjectColorMenu: TMenuItem;
     OpenMenu: TMenuItem;
+    procedure FormDestroy(Sender: TObject);
+    function UpdateClrbar: integer;
+    procedure ClrbarClr(i: integer);
+    procedure ClrbarMenuClick(Sender: TObject);
+    procedure ColorBarVisibleMenuClick(Sender: TObject);
+    procedure SetColorBarPosition;
     procedure FormChangeBounds(Sender: TObject);
+    procedure FormShow(Sender: TObject);
     function GLBoxBackingWidth: integer;
     function GLBoxBackingHeight: integer;
-
+    procedure GLboxDblClick(Sender: TObject);
     procedure CurvMenuClick(Sender: TObject);
     procedure DepthLabelDblClick(Sender: TObject);
     procedure NewWindow1Click(Sender: TObject);
@@ -222,7 +234,6 @@ type
     procedure CloseOverlaysMenuClick(Sender: TObject);
     procedure CloseTracksMenuClick(Sender: TObject);
     procedure CollapseToolPanelBtnClick(Sender: TObject);
-    procedure ColorBarMenuClick(Sender: TObject);
     procedure CopyMenuClick(Sender: TObject);
     procedure DepthLabelClick(Sender: TObject);
     procedure DisplayMenuClick(Sender: TObject);
@@ -267,6 +278,7 @@ type
     procedure SaveTracksMenuClick(Sender: TObject);
     procedure ScalarDropChange(Sender: TObject);
     function ScreenShot: TBitmap;
+    function ScreenShotX1: TBitmap;
     procedure ScriptMenuClick(Sender: TObject);
     procedure SetOverlayTransparency(Sender: TObject);
     procedure ShaderBoxResize(Sender: TObject);
@@ -316,6 +328,8 @@ type
 
 var
   GLForm1: TGLForm1;
+  gCube : TGLCube;
+  gClrbar: TGLClrbar;
   gPrefs : TPrefs;
     gElevation : integer =20;
   gAzimuth : integer = 250;
@@ -336,6 +350,7 @@ var
   gMesh: TMesh;
   gNode: TMesh;
   gTrack: TTrack;
+  gnLUT: integer = 0;
   isBusy: boolean = true;
   gRetinaScale : single = 1;
   gDistance : single = 1;
@@ -343,6 +358,7 @@ var
   gMouseY : integer = -1;
   GLerror : string = '';
   clipPlane : TPoint4f; //clipping bottom
+  GLbox: TOpenGLControl;
 const
 
   kFname=0;
@@ -435,11 +451,58 @@ begin
       lprev := gRetinaScale;
       SetRetina;
       if (lprev <> gRetinaScale) then
-        GLForm1.GLBox.Invalidate;
+        GLBox.Invalidate;
         //GLboxResize(Sender);
    end;
    {$ENDIF}
 end;
+
+procedure TGLForm1.ClrbarClr(i: integer);
+begin
+ if (i < 1) or (i > 4) then i := 4;
+ gPrefs.ColorbarColor:= i;
+ Case i of
+      1: begin
+        gClrbar.BackColor := (RGBA(255,255,255,255));
+        gClrbar.FontColor := (RGBA(0,0,0,255));
+      end;
+      2: begin
+        gClrbar.BackColor := (RGBA(255,255,255,168));
+        gClrbar.FontColor := (RGBA(0,0,0,255));
+      end;
+      3: begin
+        gClrbar.BackColor := (RGBA(0,0,0,255));
+        gClrbar.FontColor := (RGBA(255,255,255,255));
+      end;
+      else begin
+        gClrbar.BackColor := (RGBA(0,0,0,168));
+        gClrbar.FontColor := (RGBA(255,255,255,255));
+      end;
+ end;
+
+end;
+
+procedure TGLForm1.ClrbarMenuClick(Sender: TObject);
+begin
+     ClrbarClr((sender as TMenuItem).Tag);
+     GLBox.Invalidate;
+end;
+
+procedure TGLForm1.GLboxDblClick(Sender: TObject);
+begin
+     gPrefs.ColorBarPosition := gPrefs.ColorBarPosition + 1;
+     SetColorbarPosition;
+     GLbox.invalidate;
+end;
+
+
+procedure TGLForm1.ColorBarVisibleMenuClick(Sender: TObject);
+begin
+ gPrefs.Colorbar := not gPrefs.Colorbar;
+ ColorBarVisibleMenu.Checked := gPrefs.Colorbar;
+ GLBox.Invalidate;
+end;
+
 
 function TGLForm1.GLBoxBackingHeight: integer;
 begin
@@ -493,6 +556,7 @@ begin
  TrackBox.Visible:= (gTrack.n_count > 0);
  OverlayBox.Visible := (gMesh.OpenOverlays > 0);
  MeshColorBox.Visible := (length(gMesh.vertexRGBA) > 0);
+ gnLUT := -1; //refresh colorbar
  Memo1.Lines.clear;
 end; //UpdateToolbar()
 
@@ -1197,6 +1261,7 @@ begin
   i := TrackScalarLUTdrop.ItemIndex;
   gTrack.scalarLUT := UpdateTransferFunction(i, false);
   gTrack.isRebuildList:= true;
+  gnLUT := -1; //refresh colorbar
   GLBoxRequestUpdate(Sender);
 end;
 
@@ -1278,24 +1343,9 @@ begin
  if (gTrack.scalarSelected < 0) or (gTrack.scalarSelected >= length(gTrack.scalars)) then exit;
  ScalarPref(gTrack.scalars[gTrack.scalarSelected].mnView, gTrack.scalars[gTrack.scalarSelected].mxView, gPrefs.ColorBarPrecedenceTracksNotOverlays);
  gTrack.isRebuildList:= true;
+ gnLUT := -1; //refresh colorbar
  GLBoxRequestUpdate(Sender);
 end;
-
-(*const
-    kTrackFilter  = 'VTK|*.vtk';
-begin
- if (gTrack.n_count < 1) then begin
-   showmessage('Unable to save tracks: no tracks open (use Tracks/AddTracks)');
-   exit;
- end;
- SaveMeshDialog.Filter := kTrackFilter;
- SaveMeshDialog.DefaultExt:= '.vtk';
- SaveMeshDialog.Title := 'Save tracks as VTK';
- SaveMeshDialog.FileName := changeFileExt(gPrefs.PrevTrackname, '.vtk');
- if not SaveMeshDialog.Execute then exit;
- //gTrack.SaveVtk(SaveMeshDialog.Filename);
- gTrack.SaveBfloat(SaveMeshDialog.Filename);
-end;*)
 
 procedure TGLForm1.SurfaceAppearanceChange(Sender: TObject);
 begin
@@ -1506,7 +1556,8 @@ var
   {$IFDEF LCLCocoa} RetinaCheck,{$ENDIF}
   BitmapAlphaCheck, SmoothVoxelwiseDataCheck, TracksAreTubesCheck: TCheckBox;
   bmpEdit: TEdit;
-    ZDimIsUpCombo, QualityCombo, SaveAsCombo: TComboBox;
+  //QualityCombo,
+    ZDimIsUpCombo, QualityCombo : TComboBox;
   bmpLabel, QualityLabel: TLabel;
   isAdvancedPrefs {$IFDEF LCLCocoa}, isRetinaChanged {$ENDIF} : boolean;
 begin
@@ -1562,18 +1613,6 @@ begin
   ZDimIsUpCombo.Width := PrefForm.Width -16;
   ZDimIsUpCombo.Style := csDropDownList;
   ZDimIsUpCombo.Parent:=PrefForm;
-  //SaveAsObj     SaveAsFormat
-  SaveAsCombo :=TComboBox.create(PrefForm);
-  SaveAsCombo.Left := 8;
-  SaveAsCombo.Top := 158;
-  SaveAsCombo.Width := PrefForm.Width -16;
-  SaveAsCombo.Items.Add('OBJ Format: Export to other programs');
-  SaveAsCombo.Items.Add('GII Format: Neuroimaging');
-  SaveAsCombo.Items.Add('MZ3 Format: Fast and small');
-  SaveAsCombo.Items.Add('PLY Format: Export to other programs');
-  SaveAsCombo.ItemIndex:= gPrefs.SaveAsFormat;
-  SaveAsCombo.Style := csDropDownList;
-  SaveAsCombo.Parent:=PrefForm;
   //SinglePass
   (*MultiPassRenderingCheck:=TCheckBox.create(PrefForm);
   MultiPassRenderingCheck.Checked := gPrefs.MultiPassRendering;
@@ -1584,7 +1623,7 @@ begin
   //Smooth
   QualityCombo:=TComboBox.create(PrefForm);
   QualityCombo.Left := 8;
-  QualityCombo.Top := 188;
+  QualityCombo.Top := 158;
   QualityCombo.Width := PrefForm.Width -16;
   QualityCombo.Items.Add('Quality: Poor (old hardware)');
   QualityCombo.Items.Add('Quality: Better');
@@ -1596,7 +1635,7 @@ begin
       QualityCombo.Visible := false;
       QualityLabel:=TLabel.create(PrefForm);
       QualityLabel.Left := 8;
-      QualityLabel.Top := 188;
+      QualityLabel.Top := 158;
       QualityLabel.Width := PrefForm.Width -16;
       QualityLabel.Caption := 'NOTE: Hardware only supports poor rendering.';
       QualityLabel.Parent:=PrefForm;
@@ -1604,17 +1643,30 @@ begin
   //SingleShader
   bmpLabel:=TLabel.create(PrefForm);
   bmpLabel.Left := 8;
-  bmpLabel.Top := 218;
+  bmpLabel.Top := 188;
   bmpLabel.Width := PrefForm.Width - 86;
   bmpLabel.Caption := 'Bitmap zoom (large values create huge images)';
   bmpLabel.Parent:=PrefForm;
   //bmp edit
   bmpEdit := TEdit.Create(PrefForm);
   bmpEdit.Left := PrefForm.Width - 76;
-  bmpEdit.Top := 218;
+  bmpEdit.Top := 188;
   bmpEdit.Width := 60;
   bmpEdit.Text := inttostr(gPrefs.ScreenCaptureZoom);
   bmpEdit.Parent:=PrefForm;
+    //SaveAsObj     SaveAsFormat
+  (*SaveAsCombo :=TComboBox.create(PrefForm);
+  SaveAsCombo.Left := 8;
+  SaveAsCombo.Top := 218;
+  SaveAsCombo.Width := PrefForm.Width -16;
+  SaveAsCombo.Items.Add('OBJ Format: Export to other programs');
+  SaveAsCombo.Items.Add('GII Format: Neuroimaging');
+  SaveAsCombo.Items.Add('MZ3 Format: Fast and small');
+  SaveAsCombo.Items.Add('PLY Format: Export to other programs');
+  SaveAsCombo.ItemIndex:= gPrefs.SaveAsFormat;
+  SaveAsCombo.Style := csDropDownList;
+  SaveAsCombo.Parent:=PrefForm;  *)
+
   {$IFDEF LCLCocoa}
   RetinaCheck:=TCheckBox.create(PrefForm);
   RetinaCheck.Checked := gPrefs.RetinaDisplay;
@@ -1663,8 +1715,7 @@ begin
   gMesh.isZDimIsUp := gPrefs.ZDimIsUp;
   gNode.isZDimIsUp := gPrefs.ZDimIsUp;
 
-  //gPrefs.SaveAsObj := SaveAsObjCheck.Checked;
-  gPrefs.SaveAsFormat := SaveAsCombo.ItemIndex;
+  //gPrefs.SaveAsFormat := SaveAsCombo.ItemIndex;
   if QualityCombo.ItemIndex <> gPrefs.RenderQuality then begin
      gPrefs.RenderQuality := QualityCombo.ItemIndex;
      MultiPassRenderingToolsUpdate;
@@ -1705,7 +1756,8 @@ end;
 procedure TGLForm1.ResetMenuClick(Sender: TObject);
 begin
      gPrefs.BackColor := RGBToColor(255,255,255);
-     gPrefs.Colorbar := true;
+     //gPrefs.Colorbar := true;
+     TransBlackClrbarMenu.Checked:=true;
      gPrefs.ScreenPan.X := 0; gPrefs.ScreenPan.Y := 0; gPrefs.ScreenPan.Z := 0;
      gDistance := 1;
      gElevation := 20;
@@ -1909,6 +1961,19 @@ begin
   //LUTdropLoad(gMesh.Overlay[lOverlay].LUTindex, gMesh.Overlay[lOverlay].LUT, LUTdrop.Items[lLUTindex], gOverlayCLUTrec[lOverlay]);
 end;
 
+procedure TGLForm1.SetColorBarPosition;
+begin
+ if (gPrefs.ColorBarPosition < 1) or (gPrefs.ColorBarPosition > 4) then gPrefs.ColorBarPosition := 1;
+ case gPrefs.ColorBarPosition of
+     3: begin gClrbar.isTopOrRight := true; gClrbar.isVertical:=false; end; //top row
+     4: begin gClrbar.isTopOrRight := true; gClrbar.isVertical:=true; end; //right column
+     1: begin gClrbar.isTopOrRight := false; gClrbar.isVertical:=false; end;//bottom row
+     2: begin gClrbar.isTopOrRight := false; gClrbar.isVertical:=true; end;//left column
+ end;
+ gCube.TopLeft := (gPrefs.ColorBarPosition = 1) or (gPrefs.ColorBarPosition = 2);
+  //gClrbar.isTopOrRight := true; gClrbar.isVertical:=false;
+end;
+
 procedure TGLForm1.StringGrid1SelectCell(Sender: TObject; aCol, aRow: Integer;
   var CanSelect: Boolean);
 var R: TRect;
@@ -1999,10 +2064,103 @@ begin
 end;
 
 
+function TGLForm1.UpdateClrBar: integer;
+var
+  nLUT, lI, lJ: integer;
+  mn, mx:  single;
+begin
+ nLUT := 0;
+ result := 0;
+ if (gTrack.n_count > 0) and (gTrack.scalarSelected >= 0) and (gTrack.scalarSelected < length(gTrack.scalars))  then begin
+    inc(nLUT);
+    lJ := TrackScalarLUTdrop.ItemIndex;
+    gClrbar.SetLUT(nLUT, UpdateTransferFunction(lJ,false), gTrack.scalars[gTrack.scalarSelected].mnView,gTrack.scalars[gTrack.scalarSelected].mxView);
+ end;
+ result := nLUT;
+ if ((gMesh.OpenOverlays < 1) and ((length(gNode.nodes) < 1))) then exit;
+
+ if (gMesh.OpenOverlays > 0) then
+    for lI := 1 to gMesh.OpenOverlays do
+        if (gMesh.overlay[lI].LUTvisible <> kLUTinvisible) and (not isFreeSurferLUT(gMesh.overlay[lI].LUTindex)) then begin
+         inc(nLUT);
+         gClrbar.SetLUT(nLUT, UpdateTransferFunction(gMesh.overlay[lI].LUTindex,false), gMesh.overlay[lI].windowScaledMin,gMesh.overlay[lI].windowScaledMax);
+
+        end;
+ result := nLUT;
+ if (length(gNode.nodes) < 1) then exit;
+ if (gNode.nodePrefs.isNodeColorVaries) then begin
+     if (gNode.nodePrefs.isNodeThresholdBySize) then begin
+        mn := gNode.nodePrefs.minNodeColor;
+        mx := gNode.nodePrefs.maxNodeColor;
+     end else begin
+       mn := gNode.nodePrefs.minNodeThresh;
+       mx := gNode.nodePrefs.maxNodeThresh;
+     end;
+     if mn <> mx then begin
+       nLUT := nLUT + 1;
+       gClrbar.SetLUT(nLUT, UpdateTransferFunction(gNode.nodePrefs.NodeLUTindex,false), mn,mx);
+
+     end;
+ end; //nodes
+ if (gNode.nodePrefs.isEdgeColorVaries) and (gNode.nodePrefs.maxEdge <> gNode.nodePrefs.minEdge) then begin
+   if (gNode.nodePrefs.maxEdge > 0)  and (not gNode.nodePrefs.isNoPosEdge) and (gNode.nodePrefs.minEdgeThresh <> gNode.nodePrefs.maxEdgeThresh) then begin
+      nLUT := nLUT + 1;
+      gClrbar.SetLUT(nLUT, UpdateTransferFunction(gNode.nodePrefs.edgeLUTindex,false), gNode.nodePrefs.minEdgeThresh,gNode.nodePrefs.maxEdgeThresh);
+   end; //positive edges
+   if (gNode.nodePrefs.minEdge < 0)  and (not gNode.nodePrefs.isNoNegEdge) and (gNode.nodePrefs.minEdgeThresh <> gNode.nodePrefs.maxEdgeThresh) then begin
+      nLUT := nLUT + 1;
+      lJ := 1+gNode.nodePrefs.edgeLUTindex;
+      gClrbar.SetLUT(nLUT, UpdateTransferFunction(lJ ,false), -gNode.nodePrefs.minEdgeThresh,-gNode.nodePrefs.maxEdgeThresh);
+   end; //negative edges
+ end;  //edges
+ result := nLUT;
+end;
+
+procedure TGLForm1.FormDestroy(Sender: TObject);
+begin
+   gCube.Free;
+   gClrBar.Free;
+end;
+
+{$IFDEF COREGL}
+procedure Set2DDraw (w,h: integer; r,g,b: byte);
+begin
+  glDepthMask(kGL_TRUE); // enable writes to Z-buffer
+  glEnable(GL_DEPTH_TEST);
+  glDisable(GL_CULL_FACE); // glEnable(GL_CULL_FACE); //check on pyramid
+  glEnable(GL_BLEND);
+  {$IFNDEF COREGL}glEnable(GL_NORMALIZE); {$ENDIF}
+  glClearColor(r/255, g/255, b/255, 0.0); //Set background
+  glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT or GL_STENCIL_BUFFER_BIT);
+  glViewport( 0, 0, w, h); //required when bitmap zoom <> 1
+end;
+{$ELSE}
+procedure Set2DDraw (w,h: integer; r,g,b: byte);
+begin
+glMatrixMode(GL_PROJECTION);
+glLoadIdentity();
+glOrtho (0, 1, 0, 1, -6, 12);
+glMatrixMode (GL_MODELVIEW);
+glLoadIdentity ();
+{$IFDEF DGL}
+glDepthMask(BYTEBOOL(1)); // enable writes to Z-buffer
+{$ELSE}
+glDepthMask(GL_TRUE); // enable writes to Z-buffer
+{$ENDIF}
+glEnable(GL_DEPTH_TEST);
+glDisable(GL_CULL_FACE); // glEnable(GL_CULL_FACE); //check on pyramid
+glEnable(GL_BLEND);
+glEnable(GL_NORMALIZE);
+glClearColor(r/255, g/255, b/255, 0.0); //Set background
+glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT or GL_STENCIL_BUFFER_BIT);
+glViewport( 0, 0, w, h); //required when bitmap zoom <> 1
+end;
+{$ENDIF}
+
 procedure TGLForm1.CreateRender(w,h: integer; isToScreen: boolean);
 var
   origin: TPoint3f;
-  isMultiSample: boolean;
+  isMultiSample, isOK: boolean;
   meshAlpha, meshBlend, ambientOcclusionFrac, scale: single;
 begin
   if (h < 1) or (w < 1) then exit;
@@ -2024,10 +2182,12 @@ begin
     ambientOcclusionFrac := occlusionTrack.Position/occlusionTrack.max;
 
     //first pass: 3D draw all items: framebuffer f1
-    isMultiSample := setFrame (w, h, gShader.f1, true );
+    isMultiSample := setFrame (w, h, gShader.f1, true, isOK);
+    if not isOK then exit;
     DrawScene(w,h, gPrefs.isFlipMeshOverlay, gPrefs.OverlayClip, true,isMultiSample, gPrefs, origin, ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
     //second pass: 3D draw overlay items only: framebuffer f2
-    isMultiSample := setFrame (w, h, gShader.f2, true );
+    isMultiSample := setFrame (w, h, gShader.f2, true, isOK );
+    if not isOK then exit;
     //isFlipOverlayBackground := not isFlipOverlayBackground;
     DrawScene(w,h, gPrefs.isFlipMeshOverlay, gPrefs.OverlayClip, false,isMultiSample, gPrefs, origin,  ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
     if (isToScreen)  then begin
@@ -2035,7 +2195,9 @@ begin
        Set2DDraw (w,h, red(gPrefs.BackColor) ,green(gPrefs.BackColor), blue(gPrefs.BackColor));
        RunAoGLSL( gShader.f1,  gShader.f2, 1,  meshAlpha, meshBlend, ambientOcclusionFrac, gDistance);
     end else begin  //SCREENSHOT - multipass, multisampling, supersampled
-        setFrame (w, h, gShader.fScreenShot, true );
+        //isMultiSample := setFrameMS (w, h, gShader.fScreenShot, false, isOK );
+        isMultiSample := setFrame (w, h, gShader.fScreenShot, false, isOK );
+        if (not isOK)  then exit;
         Set2DDraw (w,h, red(gPrefs.BackColor) ,green(gPrefs.BackColor), blue(gPrefs.BackColor));
         RunAoGLSL( gShader.f1,  gShader.f2, gPrefs.ScreenCaptureZoom,  meshAlpha,meshBlend,ambientOcclusionFrac,gDistance);
     end;
@@ -2046,18 +2208,32 @@ begin
       //    setFrame (w, h, gShader.fScreenShot, true ); //SCREENSHOT - supersampled
       DrawScene(w, h, gPrefs.isFlipMeshOverlay, gPrefs.OverlayClip, true, false, gPrefs, origin, ClipPlane, scale, gDistance, gelevation, gazimuth, gMesh,gNode, gTrack);
   end;
-  if gPrefs.OrientCube then
-     DrawCube (w, h,  gAzimuth, gElevation);
-//glViewport( 0, 0, w, h); //required when bitmap zoom <> 1
-  if (gPrefs.Colorbar)  then begin
+
+  if gPrefs.OrientCube then begin
+     //DrawCube (w, h,  gAzimuth, gElevation);
+     gCube.Azimuth:=gAzimuth;
+     gCube.Elevation:=gElevation;
+     if (gPrefs.ColorbarPosition = 1) or (gPrefs.ColorbarPosition = 2) then
+       gCube.TopLeft:= true
+     else
+          gCube.TopLeft:= false;
+     gCube.Draw(w,h);
+     //DrawCube (w, h,  gAzimuth, gElevation);
+  end;
+
+  if gPrefs.Colorbar  then begin
     //RunOffGLSL; //turn off shading
-    if (gMesh.OpenOverlays > 0) and ((gTrack.n_count < 1) or (not gPrefs.ColorBarPrecedenceTracksNotOverlays)) then
+   if gnLUT < 0 then //refresh
+      gnLUT := UpdateClrBar();
+   if gnLUT > 0 then
+      gClrbar.Draw(gnLUT, w, h);
+    (*vbm if (gMesh.OpenOverlays > 0) and ((gTrack.n_count < 1) or (not gPrefs.ColorBarPrecedenceTracksNotOverlays)) then
        DrawCLUT( gPrefs.ColorBarPos, 0.01, gPrefs, gMesh, w, h) //color bar based on overlays
     else if (gTrack.n_count > 0) and (gTrack.scalarSelected >= 0) and (gTrack.scalarSelected < length(gTrack.scalars))  then
           DrawCLUTtrk(gPrefs.ColorBarPos, 0.01, gTrack.scalars[gTrack.scalarSelected].mnView, gTrack.scalars[gTrack.scalarSelected].mxView, gPrefs, gTrack.scalarLUT, w, h) //color bar based on overlays
           //DrawCLUTtrk ( lU: TUnitRect; lBorder, lMin, lMax: single; var lPrefs: TPrefs; LUT: TLUT;window_width, window_height: integer );
     else
-       DrawCLUT( gPrefs.ColorBarPos, 0.01, gPrefs, gNode, w, h); //color bar based on nodes
+       DrawCLUT( gPrefs.ColorBarPos, 0.01, gPrefs, gNode, w, h); //color bar based on nodes*)
   end;
 
   //if (gTrack.scalarSelected < 0) or (gTrack.scalarSelected >= length(gTrack.scalars)) then exit;
@@ -2065,7 +2241,7 @@ begin
   //TestColorBar(gPrefs, w, h);
   //DrawText (gPrefs, w, h);
   if (isToScreen) then
-             GLbox.SwapBuffers;
+     GLbox.SwapBuffers;
   //nDraw;
     isBusy := false;
 end;
@@ -2075,6 +2251,72 @@ begin
  CreateRender(GLBoxBackingWidth, GLboxBackingHeight, true);
  if UpdateTimer.enabled then
     UpdateTimerTimer(Sender);
+end;
+
+function TGLForm1.ScreenShotX1: TBitmap;
+var
+  RawImage: TRawImage;
+  p: array of byte;
+  w, h, x, y, BytePerPixel: integer;
+  z: int64;
+  DestPtr: PInteger;
+  maxXY : array[0..1] of GLuint;
+begin
+ GLBox.MakeCurrent;
+ glGetIntegerv(GL_MAX_VIEWPORT_DIMS, @maxXY);  //GL_MAX_TEXTURE_SIZE
+ w := GLBoxBackingWidth * gPrefs.ScreenCaptureZoom;
+ h := GLboxBackingHeight * gPrefs.ScreenCaptureZoom;
+ Result:=TBitmap.Create;
+ Result.Width:=w;
+ Result.Height:=h;
+ if gPrefs.ScreenCaptureTransparentBackground then
+   Result.PixelFormat := pf32bit
+ else
+     Result.PixelFormat := pf24bit; //if pf32bit the background color is wrong, e.g. when alpha = 0
+ RawImage := Result.RawImage;
+ BytePerPixel := RawImage.Description.BitsPerPixel div 8;
+ setlength(p, 4*w* h);
+ {$IFDEF Darwin} //http://lists.apple.com/archives/mac-opengl/2006/Nov/msg00196.html
+ glReadPixels(0, 0, w, h, $80E1, $8035, @p[0]); //OSX-Darwin   GL_BGRA = $80E1;  GL_UNSIGNED_INT_8_8_8_8_EXT = $8035;
+ {$ELSE}
+  {$IFDEF Linux}
+    glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, @p[0]); //Linux-Windows   GL_RGBA = $1908; GL_UNSIGNED_BYTE
+  {$ELSE}
+   glReadPixels(0, 0, w, h, $80E1, GL_UNSIGNED_BYTE, @p[0]); //Linux-Windows   GL_RGBA = $1908; GL_UNSIGNED_BYTE
+  {$ENDIF}
+ {$ENDIF}
+ GLbox.ReleaseContext;
+ z := 0;
+ if BytePerPixel <> 4 then begin
+   for y:= h-1 downto 0 do begin
+        DestPtr := PInteger(RawImage.Data);
+        Inc(PByte(DestPtr), y * RawImage.Description.BytesPerLine );
+        for x := 1 to w do begin
+            DestPtr^ := p[z] + (p[z+1] shl 8) + (p[z+2] shl 16);
+            Inc(PByte(DestPtr), BytePerPixel);
+            z := z + 4;
+        end;
+    end; //for y : each line in image
+ end else begin
+     for y:= h-1 downto 0 do begin
+         DestPtr := PInteger(RawImage.Data);
+         Inc(PByte(DestPtr), y * RawImage.Description.BytesPerLine );
+         System.Move(p[z], DestPtr^, w * BytePerPixel );
+         z := z + ( w * 4 );
+   end; //for y : each line in image
+ end;
+ setlength(p, 0);
+ GLbox.ReleaseContext;
+end;
+
+{$IFDEF COREGL}
+function textureSizeOK(w,h: integer): boolean;
+begin
+ glBindTexture(GL_TEXTURE_2D, 0);
+ glTexImage2D(GL_PROXY_TEXTURE_2D, 0,GL_RGBA8, w, h, 0,GL_RGBA, GL_UNSIGNED_BYTE, nil);
+ //glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, @i);
+ //glTexImage2D(GL_PROXY_TEXTURE_2D, 0, 4, mTextureWidth, mTextureHeight, 0, mTexFormat, mTexType, NULL);
+ result := GL_NO_ERROR = glGetError();
 
 end;
 
@@ -2082,22 +2324,32 @@ function TGLForm1.ScreenShot: TBitmap;
 var
   RawImage: TRawImage;
   p: array of byte;
-  zoom, w, h, x, y, BytePerPixel,trackLineWidth: integer;
-  z:longword;
+  isOK: boolean;
+  zoom, w2, h2, w, h, x, y, BytePerPixel,trackLineWidth: integer;
+  z: int64;
   DestPtr: PInteger;
   maxXY : array[0..1] of GLuint;
+  fbo : TFrameBuffer;
 begin
+ if gPrefs.ScreenCaptureZoom < 2 then begin //special case: no super sampling
+    result := ScreenShotX1;
+    exit;
+ end;
  GLBox.MakeCurrent;
- glGetIntegerv(GL_MAX_VIEWPORT_DIMS, @maxXY);
- //caption := inttostr(maxXY[0]) +'x'+inttostr(maxXY[1]);
- w := GLBoxBackingWidth * gPrefs.ScreenCaptureZoom;
- h := GLboxBackingHeight * gPrefs.ScreenCaptureZoom;
- if (w > maxXY[0]) or (h > maxXY[1]) or (gPrefs.RenderQuality = kRenderPoor) or (not (gPrefs.SupportBetterRenderQuality)) then begin
-  w := GLBoxBackingWidth;
-  h := GLboxBackingHeight;
-  zoom := 1
- end else
-     zoom := gPrefs.ScreenCaptureZoom;
+ glGetIntegerv(GL_MAX_VIEWPORT_DIMS, @maxXY);  //GL_MAX_TEXTURE_SIZE
+ zoom := gPrefs.ScreenCaptureZoom;
+ w := GLBox.Width * zoom;
+ h := GLbox.Height * zoom;
+ //w2 := w;
+ //h2 := h;
+ //if not gPrefs.RetinaDisplay then begin
+   w2 := w*2;
+   h2 := h*2;
+ //end;
+ if (w2 > maxXY[0]) or (h2 > maxXY[1]) or (gPrefs.RenderQuality = kRenderPoor) or (not (gPrefs.SupportBetterRenderQuality)) then begin
+  result := ScreenShotX1;
+  exit;
+ end;
  trackLineWidth := gTrack.LineWidth;
  if (gTrack.n_count > 0) and (not gTrack.isTubes) then begin  //tracks are drawn in pixels, so zoom appropriately!
      gTrack.LineWidth := 2 * gTrack.LineWidth * zoom;
@@ -2106,7 +2358,6 @@ begin
   Result:=TBitmap.Create;
   Result.Width:=w;
   Result.Height:=h;
-
   if gPrefs.ScreenCaptureTransparentBackground then
     Result.PixelFormat := pf32bit
   else
@@ -2114,8 +2365,17 @@ begin
   RawImage := Result.RawImage;
   BytePerPixel := RawImage.Description.BitsPerPixel div 8;
   setlength(p, 4*w* h);
-  //GLBox.MakeCurrent;
-  CreateRender(w, h, false); //draw to framebuffer fScreenShot
+  CreateRender(w2, h2, false); //draw to framebuffer fScreenShot
+  //setFrame (w, h, gShader.fScreenShot, false, isOK ); // <- release huge framebuffer
+  //if not isOK then
+  initFrame(fbo);
+  if w2 <> w then begin
+    setFrame (w, h, fbo, false,isOK );
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, gShader.fScreenShot.frameBuf);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo.frameBuf);
+    glBlitFramebuffer(0,0,w2 {x2},h2{x2},0,0,w,h,GL_COLOR_BUFFER_BIT,GL_LINEAR);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo.frameBuf);
+  end;
   {$IFDEF Darwin} //http://lists.apple.com/archives/mac-opengl/2006/Nov/msg00196.html
   glReadPixels(0, 0, w, h, $80E1, $8035, @p[0]); //OSX-Darwin   GL_BGRA = $80E1;  GL_UNSIGNED_INT_8_8_8_8_EXT = $8035;
   {$ELSE}
@@ -2125,7 +2385,8 @@ begin
     glReadPixels(0, 0, w, h, $80E1, GL_UNSIGNED_BYTE, @p[0]); //Linux-Windows   GL_RGBA = $1908; GL_UNSIGNED_BYTE
    {$ENDIF}
   {$ENDIF}
-  setFrame (2, 2, gShader.fScreenShot, false ); // <- release huge framebuffer
+  freeFrame(fbo);
+  setFrame (2, 2, gShader.fScreenShot, false,isOK ); // <- release huge framebuffer
   GLbox.ReleaseContext;
   z := 0;
   if BytePerPixel <> 4 then begin
@@ -2153,7 +2414,87 @@ begin
   end;
   GLboxRequestUpdate(GLForm1);
 end;
-
+{$ELSE}
+function TGLForm1.ScreenShot: TBitmap;
+var
+  RawImage: TRawImage;
+  p: array of byte;
+  isOK: boolean;
+  zoom, w, h, x, y, BytePerPixel,trackLineWidth: integer;
+  z: int64;
+  DestPtr: PInteger;
+  maxXY : array[0..1] of GLuint;
+begin
+ if gPrefs.ScreenCaptureZoom < 2 then begin //special case: no super sampling
+    result := ScreenShotX1;
+    exit;
+ end;
+ GLBox.MakeCurrent;
+ glGetIntegerv(GL_MAX_VIEWPORT_DIMS, @maxXY);  //GL_MAX_TEXTURE_SIZE
+ w := GLBoxBackingWidth * gPrefs.ScreenCaptureZoom;
+ h := GLboxBackingHeight * gPrefs.ScreenCaptureZoom;
+ if (w > maxXY[0]) or (h > maxXY[1]) or (gPrefs.RenderQuality = kRenderPoor) or (not (gPrefs.SupportBetterRenderQuality)) then begin
+  result := ScreenShotX1;
+  exit;
+  (*w := GLBoxBackingWidth;
+    h := GLboxBackingHeight;
+    zoom := 1*)
+ end else
+     zoom := gPrefs.ScreenCaptureZoom;
+ trackLineWidth := gTrack.LineWidth;
+ if (gTrack.n_count > 0) and (not gTrack.isTubes) then begin  //tracks are drawn in pixels, so zoom appropriately!
+     gTrack.LineWidth := 2 * gTrack.LineWidth * zoom;
+     gTrack.isRebuildList:= true;
+  end;
+  Result:=TBitmap.Create;
+  Result.Width:=w;
+  Result.Height:=h;
+  if gPrefs.ScreenCaptureTransparentBackground then
+    Result.PixelFormat := pf32bit
+  else
+      Result.PixelFormat := pf24bit; //if pf32bit the background color is wrong, e.g. when alpha = 0
+  RawImage := Result.RawImage;
+  BytePerPixel := RawImage.Description.BitsPerPixel div 8;
+  setlength(p, 4*w* h);
+  CreateRender(w, h, false); //draw to framebuffer fScreenShot
+  {$IFDEF Darwin} //http://lists.apple.com/archives/mac-opengl/2006/Nov/msg00196.html
+  glReadPixels(0, 0, w, h, $80E1, $8035, @p[0]); //OSX-Darwin   GL_BGRA = $80E1;  GL_UNSIGNED_INT_8_8_8_8_EXT = $8035;
+  {$ELSE}
+   {$IFDEF Linux}
+     glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, @p[0]); //Linux-Windows   GL_RGBA = $1908; GL_UNSIGNED_BYTE
+   {$ELSE}
+    glReadPixels(0, 0, w, h, $80E1, GL_UNSIGNED_BYTE, @p[0]); //Linux-Windows   GL_RGBA = $1908; GL_UNSIGNED_BYTE
+   {$ENDIF}
+  {$ENDIF}
+  setFrame (2, 2, gShader.fScreenShot, false,isOK ); // <- release huge framebuffer
+  GLbox.ReleaseContext;
+  z := 0;
+  if BytePerPixel <> 4 then begin
+    for y:= h-1 downto 0 do begin
+         DestPtr := PInteger(RawImage.Data);
+         Inc(PByte(DestPtr), y * RawImage.Description.BytesPerLine );
+         for x := 1 to w do begin
+             DestPtr^ := p[z] + (p[z+1] shl 8) + (p[z+2] shl 16);
+             Inc(PByte(DestPtr), BytePerPixel);
+             z := z + 4;
+         end;
+     end; //for y : each line in image
+  end else begin
+      for y:= h-1 downto 0 do begin
+          DestPtr := PInteger(RawImage.Data);
+          Inc(PByte(DestPtr), y * RawImage.Description.BytesPerLine );
+          System.Move(p[z], DestPtr^, w * BytePerPixel );
+          z := z + ( w * 4 );
+    end; //for y : each line in image
+  end;
+  setlength(p, 0);
+  if (gTrack.n_count > 0) and (not gTrack.isTubes)  then begin  //reset for un-zoomed tracks
+     gTrack.LineWidth := trackLineWidth;
+     gTrack.isRebuildList:= true;
+  end;
+  GLboxRequestUpdate(GLForm1);
+end;
+{$ENDIF}
 procedure ScreenRes(var lVidX,lVidY: integer);
 {$IFDEF FPC}
 begin
@@ -2570,12 +2911,7 @@ begin
   Self.ActiveControl := nil;
 end;
 
-procedure TGLForm1.ColorBarMenuClick(Sender: TObject);
-begin
-  gPrefs.Colorbar := not gPrefs.Colorbar;
-  ColorBarMenu.Checked := gPrefs.Colorbar;
-  GLBox.Invalidate;
-end;
+
 
 procedure TGLForm1.CopyMenuClick(Sender: TObject);
 var
@@ -2718,6 +3054,7 @@ begin
   Memo1.Lines.Add(format('Edge color table %d',[gNode.nodePrefs.edgeLUTindex]) );
   Memo1.Lines.Add(format('Edge scale %.2g',[gNode.nodePrefs.scaleEdgeSize]) );
   gNode.isRebuildList := true;
+  gnLUT := -1; //refresh colorbar
   GLBoxRequestUpdate(Sender);
 end;
 
@@ -2826,14 +3163,36 @@ begin
      OverlayTimer.Enabled := false;
      gMesh.isRebuildList:= true;
      gMesh.isAdditiveOverlay := gPrefs.AdditiveOverlay;
+     gnLUT := -1; //refresh colorbar
      GLbox.Invalidate;
 end;
+
+{$IFDEF FPC}
+procedure SaveImgAsJPGCore (lImage: TBitmap; lFilename: string);
+var
+  JpegImg : TJpegImage;
+begin
+   JpegImg := TJpegImage.Create;
+   try
+    JpegImg.Assign(lImage) ;
+    JpegImg.SaveToFile(ChangeFileExt(lFilename,'.jpg')) ;
+   finally
+    JpegImg.Free
+   end;
+end;
+{$ELSE}
+procedure SaveImgAsJPGCore (lImage: TBitmap; lFilename: string);
+begin
+  lImage.SaveToFile(ChangeFileExt(lFilename,'.bmp'));
+end;
+{$ENDIF}
+
 
 procedure TGLForm1.SaveBitmap(FilenameIn: string);
  var
     bmp: TBitmap;
     png: TPortableNetworkGraphic;
-    p,n,x,filename: string;
+    p,n,x,ext, filename: string;
  begin
   FilenameParts (FilenameIn,p,n,x);
   if (p ='') or (not directoryexists(p)) then
@@ -2842,7 +3201,14 @@ procedure TGLForm1.SaveBitmap(FilenameIn: string);
   if (x = '') then x := '.png';
   Filename := p+n+x;
   bmp := ScreenShot;
-   png := TPortableNetworkGraphic.Create;
+  //JPEG
+  ext := upcase(x);
+  if (ext = '.JPEG') or (ext = '.JPG') then begin
+     SaveImgAsJPGCore (bmp, Filename);
+     exit;
+  end;
+  //PNG
+  png := TPortableNetworkGraphic.Create;
    try
      png.Assign(bmp);    //Convert data into png
      png.SaveToFile(changefileext(Filename,'.png'));
@@ -2872,6 +3238,31 @@ begin
   end;
 end;
 
+//{$DEFINE XL}
+{$IFDEF XL}
+procedure TGLForm1.SaveMesh(var mesh: TMesh; isSaveOverlays: boolean);
+var
+  xSaveMeshDialog: TSaveDialog;
+begin
+  xSaveMeshDialog := TSaveDialog.Create(self);
+  xSaveMeshDialog.Filter := '';//'gz|*.gz|nii.gz|*.nii.gz|nii|*.nii|roi|*.roi';
+  xSaveMeshDialog.Filename := 'SaveName';
+  //xSaveMeshDialog.FilterIndex:= 2;
+  xSaveMeshDialog.DefaultExt := '';
+  if not xSaveMeshDialog.Execute then exit;
+  Caption := xSaveMeshDialog.Filename;
+  xSaveMeshDialog.Free;
+end;
+(*procedure TGLForm1.SaveMesh(var mesh: TMesh; isSaveOverlays: boolean);
+begin
+  SaveMeshDialog.Filter := 'gz|*.gz|nii.gz|*.nii.gz|nii|*.nii|roi|*.roi';
+  SaveMeshDialog.Filename := 'SaveName';
+  SaveMeshDialog.FilterIndex:= 2;
+  SaveMeshDialog.DefaultExt := '.roi';
+  if not SaveMeshDialog.Execute then exit;
+  Caption := SaveMeshDialog.Filename;
+end; *)
+{$ELSE}
 procedure TGLForm1.SaveMesh(var mesh: TMesh; isSaveOverlays: boolean);
 const
       kMeshFilter = 'OBJ (Widely supported)|*.obj|GIfTI (Neuroimaging)|*.gii|MZ3 (Small and fast)|*.mz3|PLY (Widely supported)|*.ply';
@@ -2894,18 +3285,19 @@ begin
     ext := '.mz3';
   SaveMeshDialog.DefaultExt := ext;
   if (fileexists(gPrefs.PrevFilename[1])) or (not isSaveOverlays) then begin
-
      if isSaveOverlays then
       nam := gPrefs.PrevFilename[1]
     else
       nam := SaveMeshDialog.Filename;
     SaveMeshDialog.InitialDir:= ExtractFileDir(nam);
-    nam := ChangeFileExtX(extractfilename (nam), ext);
+    //nam := ChangeFileExtX(extractfilename (nam), ext);
+    nam := ChangeFileExtX(extractfilename (nam), '');
     SaveMeshDialog.Filename := nam;
   end else
       SaveMeshDialog.Filename := '';
   if not SaveMeshDialog.Execute then exit;
   if length(SaveMeshDialog.Filename) < 1 then exit;
+  //caption := inttostr(SaveMeshDialog.FilterIndex)+' '+SaveMeshDialog.Filename; exit; //666
   x := UpperCase(ExtractFileExt(SaveMeshDialog.Filename));
   if (x <> '.MZ3') and (x <> '.PLY') and (x <> '.OBJ')  and (x <> '.GII') then begin
      x := ext;
@@ -2920,6 +3312,7 @@ begin
   else
       mesh.SaveObj(SaveMeshDialog.Filename);
 end;
+{$ENDIF}
 
 procedure TGLForm1.SaveMeshMenuClick(Sender: TObject);
 begin
@@ -2987,6 +3380,26 @@ end;
 
 //{$DEFINE RELOADTRACK}
 
+procedure TGLForm1.FormShow(Sender: TObject);
+begin
+  //ExitMenu.Visible:= false;
+  //HelpMenu.Visible := false;
+
+
+ GLBox.MakeCurrent(false);
+ gPrefs.SupportBetterRenderQuality := InitGLSL(true);
+ gCube := TGLCube.Create(GLBox);
+ gClrbar:= TGLClrbar.Create(GLBox);
+ ClrbarClr(gPrefs.ColorbarColor);
+ if (gPrefs.ColorbarColor = WhiteClrbarMenu.tag) then WhiteClrbarMenu.checked := true;
+ if (gPrefs.ColorbarColor = TransWhiteClrbarMenu.tag) then TransWhiteClrbarMenu.checked := true;
+ if (gPrefs.ColorbarColor = BlackClrbarMenu.tag) then BlackClrbarMenu.checked := true;
+ if (gPrefs.ColorbarColor = TransBlackClrbarMenu.tag) then TransBlackClrbarMenu.checked := true;
+ SetColorbarPosition;
+ GLBox.ReleaseContext;
+ MultiPassRenderingToolsUpdate;
+ ShaderDropChange(sender);
+end;
 
 procedure TGLForm1.FormCreate(Sender: TObject);
 var
@@ -3014,6 +3427,7 @@ begin
   //writeln('OK'+inttostr(ParamCount)+ ' *' + gPrefs.initScript+'*' );
   //launch program
   CreateMRU;
+  FormCreateShaders;
   gPrefs.RenderQuality:= kRenderBetter;// kRenderPoor; ;
   if (not ResetIniDefaults) and (not forceReset) then
     IniFile(true,IniName,gPrefs)
@@ -3042,7 +3456,32 @@ begin
      gTrack.TrackTubeSlices := gPrefs.TrackTubeSlices;
   gTrack.isTubes := gPrefs.TracksAreTubes;
   Application.ShowButtonGlyphs:= sbgNever;
-  {$IFDEF COREGL}
+  GLbox:= TOpenGLControl.Create(GLForm1);
+   GLBox.Parent := GLForm1;
+
+ {$IFDEF COREGL}
+   GLbox.OpenGLMajorVersion:= 3;
+   GLbox.OpenGLMinorVersion:= 3;
+   {$ELSE}
+   GLbox.OpenGLMajorVersion:= 2;
+   GLbox.OpenGLMinorVersion:= 1;
+   {$ENDIF}
+   GLbox.AutoResizeViewport:= true;   // http://www.delphigl.com/forum/viewtopic.php?f=10&t=11311
+   if gPrefs.MultiSample then
+      GLBox.MultiSampling:= 4;
+   GLBox.OnDblClick :=  GLboxDblClick;
+   GLBox.OnMouseDown := GLboxMouseDown;
+   GLBox.OnMouseMove := GLboxMouseMove;
+   GLBox.OnMouseUp := GLboxMouseUp;
+   GLBox.OnClick:= GLBoxClick;
+  GLBox.OnMouseWheel := GLboxMouseWheel;
+  GLBox.OnPaint := GLboxPaint;
+  GLBox.Align := alClient;
+   {$IFDEF LCLCocoa}
+   SetRetina;//GLBox.WantsBestResolutionOpenGLSurface:=gPrefs.RetinaDisplay;
+   {$ENDIF}
+
+  (*{$IFDEF COREGL}
   GLbox.OpenGLMajorVersion:= 3;
   GLbox.OpenGLMinorVersion:= 3;
   {$ELSE}
@@ -3060,11 +3499,12 @@ begin
   {$ENDIF}
   //GLBox.OnMouseWheel := GLboxMouseWheel;
   GLBox.OnPaint := GLboxPaint;
-  FormCreateShaders;
+  FormCreateShaders;*)
   UpdateMRU;
   if (gPrefs.OcclusionAmount <> occlusionTrack.Position) and (gPrefs.OcclusionAmount >= 0) and (gPrefs.OcclusionAmount <= 100) then
      occlusionTrack.Position:= gPrefs.OcclusionAmount;
-  ColorBarMenu.Checked := gPrefs.Colorbar;
+  ColorBarVisibleMenu.Checked := gPrefs.Colorbar;
+
   AdditiveOverlayMenu.Checked := gPrefs.AdditiveOverlay;
   gMesh.isAdditiveOverlay := gPrefs.AdditiveOverlay;
   if gPrefs.InitScript <> '' then
@@ -3087,27 +3527,24 @@ begin
   OpenMenu.ShortCut :=  ShortCut(Word('O'), [ssMeta]);
   SaveMenu.ShortCut :=  ShortCut(Word('S'), [ssMeta]);
   CopyMenu.ShortCut :=  ShortCut(Word('C'), [ssMeta]);
-  (* //these are now done by pressing single key (e.g. "L" instead of "Ctrl+L")
-  LeftMenu.ShortCut :=  ShortCut(Word('L'), [ssMeta]);
-  RightMenu.ShortCut :=  ShortCut(Word('R'), [ssMeta]);
-  AnteriorMenu.ShortCut :=  ShortCut(Word('A'), [ssMeta]);
-  PosteriorMenu.ShortCut :=  ShortCut(Word('P'), [ssMeta]);
-  InferiorMenu.ShortCut :=  ShortCut(Word('D'), [ssMeta]);
-  SuperiorMenu.ShortCut :=  ShortCut(Word('U'), [ssMeta]);  *)
-  ExitMenu.Visible:= false;
-  HelpMenu.Visible := false;
+  LeftMenu.ShortCut :=  ShortCut(Word('L'), [ssCtrl]);
+  RightMenu.ShortCut :=  ShortCut(Word('R'), [ssCtrl]);
+  AnteriorMenu.ShortCut :=  ShortCut(Word('A'), [ssCtrl]);
+  PosteriorMenu.ShortCut :=  ShortCut(Word('P'), [ssCtrl]);
+  SuperiorMenu.ShortCut :=  ShortCut(Word('S'), [ssCtrl]);
+  InferiorMenu.ShortCut :=  ShortCut(Word('I'), [ssCtrl]);
   {$ELSE}
+  LeftMenu.ShortCut :=  ShortCut(Word('L'), [ssAlt]);
+  RightMenu.ShortCut :=  ShortCut(Word('R'), [ssAlt]);
+  AnteriorMenu.ShortCut :=  ShortCut(Word('A'), [ssAlt]);
+  PosteriorMenu.ShortCut :=  ShortCut(Word('P'), [ssAlt]);
+  SuperiorMenu.ShortCut :=  ShortCut(Word('S'), [ssAlt]);
+  InferiorMenu.ShortCut :=  ShortCut(Word('I'), [ssAlt]);
   AppleMenu.Visible := false;
   {$ENDIF}
   {$IFDEF COREGL} {$IFDEF LCLCarbon} ERROR - Carbon does not support OpenGL core profile: either switch to Cocoa or comment out "COREGL" in opts.inc{$ENDIF} {$ENDIF}
-
   OrientCubeMenu.Checked :=  gPrefs.OrientCube;
-  GLBox.MakeCurrent(false);
-  gPrefs.SupportBetterRenderQuality := InitGLSL(true);
 
-  GLBox.ReleaseContext;
-  MultiPassRenderingToolsUpdate;
-  ShaderDropChange(sender);
 end;
 
 procedure TGLForm1.FormDropFiles(Sender: TObject;

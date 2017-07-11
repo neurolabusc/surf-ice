@@ -22,16 +22,16 @@ type
   TPrefs = record
     SmoothVoxelwiseData,
     OverlayClip, StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube, MultiSample,
-     TracksAreTubes,Colorbar, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,ColorBarPrecedenceTracksNotOverlays,
+     Colorbar,TracksAreTubes, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,ColorBarPrecedenceTracksNotOverlays,
      ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting, isFlipMeshOverlay, RetinaDisplay : boolean;
-    TrackTubeSlices, ScreenCaptureZoom,
+    TrackTubeSlices, ScreenCaptureZoom,ColorbarColor,ColorBarPosition,
     window_width, window_height, RenderQuality, SaveAsFormat,SaveAsFormatTrack, OcclusionAmount: integer;
     ObjColor,BackColor: TColor;
     PrevFilename, PrevScriptName: TMRU;
     //{$IFDEF Darwin}BaseDirname,  {$ENDIF} //OSX Sierra puts application in random directory, so 'Sample' 'BrainNet' folders will be in unknown locations
     PrevTrackname, PrevNodename, PrevOverlayname,PrevScript, InitScript : string;
     TextColor,TextBorder,GridAndBorder: TRGBA;
-    ColorBarPos: TUnitRect;
+    //ColorBarPos: TUnitRect;
     ScreenPan: TPoint3f;
   end;
 function IniFile(lRead: boolean; lFilename: string; var lPrefs: TPrefs): boolean;
@@ -242,7 +242,7 @@ begin
             TextColor := RGBA(255,255,255,255);
             TextBorder := RGBA(92,92,132,255);
             GridAndBorder := RGBA(106,106,142,222);
-            ColorBarPos:= CreateUnitRect (0.1,0.1,0.9,0.14);
+            //ColorBarPos:= CreateUnitRect (0.1,0.1,0.9,0.14);
             ScreenPan.X := 0; ScreenPan.Y := 0; ScreenPan.Z := 0;
             for i := 1 to knMRU do  begin
               PrevFilename[i] := '';
@@ -257,14 +257,16 @@ begin
     RenderQuality := kRenderBetter;
     ColorBarPrecedenceTracksNotOverlays := false;
     SupportBetterRenderQuality := false;
-    Colorbar := false;
+    Colorbar := true;
+    ColorbarColor := 4;
+    ColorBarPosition := 3;
     ZDimIsUp := true;
     ShaderForBackgroundOnly := false;
     CoreTrackDisableDepth := false;
     LoadTrackOnLaunch := false;
     TracksAreTubes := true;
     TrackTubeSlices := 5;
-    ScreenCaptureZoom := 3;
+    ScreenCaptureZoom := 2;
     SaveAsFormat := kSaveAsObj;
     SaveAsFormatTrack := kSaveAsTrackVtk;
     OcclusionAmount := 25;
@@ -542,11 +544,16 @@ begin
   IniRGBA(lRead,lIniFile, 'TextColor',lPrefs.TextColor);
   IniRGBA(lRead,lIniFile, 'TextBorder',lPrefs.TextBorder);
   IniRGBA(lRead,lIniFile, 'GridAndBorder',lPrefs.GridAndBorder);
-  IniUnitRect(lRead,lIniFile, 'ColorBarPos',lPrefs.ColorBarPos);
+  //IniUnitRect(lRead,lIniFile, 'ColorBarPos',lPrefs.ColorBarPos);
   IniInt(lRead,lIniFile,'TrackTubeSlices',lPrefs.TrackTubeSlices);
   IntBound(lPrefs.TrackTubeSlices, 3,13);
   IniInt(lRead,lIniFile,'ScreenCaptureZoom',lPrefs.ScreenCaptureZoom);
   IntBound(lPrefs.ScreenCaptureZoom, 1,7);
+  IniInt(lRead,lIniFile,'ColorbarColor',lPrefs.ColorbarColor);
+  IntBound(lPrefs.ColorbarColor, 0,4);
+  IniInt(lRead,lIniFile,'ColorBarPosition',lPrefs.ColorBarPosition);
+  //IniInt(lRead,lIniFile,'ColorbarPosition',lPrefs.ColorbarPosition);
+  //IntBound(lPrefs.ColorbarPosition, 0,4);
   IniInt(lRead,lIniFile,'RenderQuality',lPrefs.RenderQuality);
   IniInt(lRead,lIniFile,'SaveAsFormat',lPrefs.SaveAsFormat);
   IniInt(lRead,lIniFile,'SaveAsFormatTrack',lPrefs.SaveAsFormatTrack);

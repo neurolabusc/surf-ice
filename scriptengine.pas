@@ -38,6 +38,7 @@ type
     MenuItem1: TMenuItem;
     Close1: TMenuItem;
     camerapan1: TMenuItem;
+    MenuItem2: TMenuItem;
     overlaytranslucent1: TMenuItem;
     meshcurv1: TMenuItem;
     overlayinvert1: TMenuItem;

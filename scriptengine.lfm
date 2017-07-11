@@ -382,6 +382,12 @@ object ScriptForm: TScriptForm
           Hint = 'CAMERAPAN (X, Y: single) Translate image horizontally (x) and vertically (y). range -1..+1, where 0 is centered. '
           OnClick = InsertCommand
         end
+        object MenuItem2: TMenuItem
+          Tag = 2
+          Caption = 'colorbarposition'
+          Hint = 'COLORBARPOSITION (P: integer). Sets the position of the colorbar: 1=bottom, 2=left, 3=top, 4=right.'
+          OnClick = InsertCommand
+        end
         object colorbarvisible1: TMenuItem
           Tag = 1
           Caption = 'colorbarvisible'

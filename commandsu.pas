@@ -12,6 +12,7 @@ procedure CAMERADISTANCE(DISTANCE: single);
 procedure CAMERAPAN(X, Y: single);
 procedure CLIP (DEPTH: single);
 procedure CLIPAZIMUTHELEVATION (DEPTH,AZI,ELEV: single);
+procedure COLORBARPOSITION(P: integer);
 procedure COLORBARVISIBLE (VISIBLE: boolean);
 procedure EDGECOLOR(name: string; varies: boolean);
 procedure EDGELOAD(lFilename: string);
@@ -67,7 +68,7 @@ const
                Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
              );
 
-knProc = 51;
+knProc = 52;
   kProcRA : array [1..knProc] of TScriptRec = (
    (Ptr:@AZIMUTH;Decl:'AZIMUTH';Vars:'(DEG: integer)'),
    (Ptr:@AZIMUTHELEVATION;Decl:'AZIMUTHELEVATION';Vars:'(AZI, ELEV: integer)'),
@@ -77,6 +78,7 @@ knProc = 51;
    (Ptr:@CAMERAPAN;Decl:'CAMERAPAN';Vars:'(X, Y: single)'),
    (Ptr:@CLIP;Decl:'CLIP';Vars:'(DEPTH: single)'),
    (Ptr:@CLIPAZIMUTHELEVATION;Decl:'CLIPAZIMUTHELEVATION';Vars:'(DEPTH,AZI,ELEV: single)'),
+   (Ptr:@COLORBARPOSITION;Decl:'COLORBARPOSITION';Vars:'(P: integer)'),
    (Ptr:@COLORBARVISIBLE;Decl:'COLORBARVISIBLE';Vars:'(VISIBLE: boolean)'),
    (Ptr:@EDGECOLOR;Decl:'EDGECOLOR';Vars:'(name: string; varies: boolean)'),
    (Ptr:@EDGESIZE;Decl:'EDGESIZE';Vars:'(size: single; varies: boolean)'),
@@ -152,7 +154,7 @@ begin
   if (Y < -1) then Y := -1;
   gPrefs.ScreenPan.X := X;
   gPrefs.ScreenPan.Y := Y;
-  GLForm1.GLBox.Invalidate;
+  //GLBox.Invalidate;
 end;
 
 procedure CAMERADISTANCE(DISTANCE: single);
@@ -396,10 +398,18 @@ begin
      GLForm1.ClipElevTrack.position := round(Elev);
 end;
 
+
+procedure COLORBARPOSITION(P: integer);
+begin
+  gPrefs.ColorBarPosition:= P;
+  GLForm1.SetColorBarPosition;
+  GLForm1.GLBoxRequestUpdate(nil);
+end;
+
 procedure COLORBARVISIBLE (VISIBLE: boolean);
 begin
   gPrefs.Colorbar := VISIBLE;
-  GLForm1.ColorBarMenu.Checked := VISIBLE;
+  GLForm1.ColorBarVisibleMenu.Checked := VISIBLE;
   GLForm1.GLBoxRequestUpdate(nil);
 end;
 

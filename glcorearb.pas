@@ -2286,24 +2286,39 @@ var
 
 implementation
 
-{$IFNDEF Windows}
-function wglGetProcAddress(proc: PChar): Pointer;
-begin
-Result := GetProcAddress(LibGL, proc);
-end;
-{$ENDIF}
+{$IFDEF Windows}
+var
+  gLibGL : Pointer = nil;
 
 function getProc(proc: PChar; var OK: boolean): Pointer;
 begin
- result := wglGetProcAddress(proc);
+  if gLibGL <> nil then begin
+     result := GetProcAddress(HMODULE(gLibGL), proc);
+     if result <> nil then
+        exit;
+  end;
+  if Addr(wglGetProcAddress) <> nil then
+     result := wglGetProcAddress(proc);
   if not Assigned(result) then OK := false;
 end;
+{$ELSE}
+function getProc(proc: PChar; var OK: boolean): Pointer;
+begin
+  result := GetProcAddress(LibGL, proc);
+  if not Assigned(result) then OK := false;
+end;
+{$ENDIF}
 
 //317 procedures for GL_VERSION_3_2
 function Load_GL_VERSION_3_2_CORE : boolean;
 var
  OK : boolean = true;
 begin
+ {$IFDEF Windows}  //see gl.pp
+ if gLibGL <> nil then
+   FreeLibrary(HMODULE(gLibGL));
+ gLibGL := Pointer(LoadLibrary(PChar('OpenGL32.dll')));
+ {$ENDIF}
  glCullFace := getProc('glCullFace', OK);
  glFrontFace := getProc('glFrontFace', OK);
  glHint := getProc('glHint', OK);

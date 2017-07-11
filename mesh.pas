@@ -74,42 +74,45 @@ type
     procedure BuildList  (Clr: TRGBA);
     procedure BuildListOverlay (Clr: TRGBA);
     function Load3Do(const FileName: string): boolean;
+    function Load3ds(const FileName: string): boolean;
     function LoadAc(const FileName: string): boolean;
+    function LoadAnnot(const FileName: string): boolean;
     function loadCifti(fnm: string; lOverlayIndex, lSeriesIndex: integer; isLoadCortexLeft: boolean): integer;
     function LoadDae(const FileName: string): boolean; //only subset!
-    function LoadGts(const FileName: string): boolean;
     function LoadDfs(const FileName: string): boolean;
     function LoadDxf(const FileName: string): boolean;
-    function LoadLwo(const FileName: string): boolean;
-    function LoadMs3d(const FileName: string): boolean;
-    function Load3ds(const FileName: string): boolean;
-    function LoadAnnot(const FileName: string): boolean;
     function LoadGcs(const FileName: string): boolean;
     function LoadGii(const FileName: string; lOverlayIndex, lOverlayItem: integer): integer;
+    function LoadGts(const FileName: string): boolean;
+    function LoadJson(const FileName: string): boolean;
+    function LoadLwo(const FileName: string): boolean;
+    function LoadMesh(const FileName: string): boolean;
+    function LoadMeshAscii(const FileName: string): boolean;
+    function LoadMs3d(const FileName: string): boolean;
+    //function LoadVbo(const FileName: string): boolean;
     function LoadMz3(const FileName: string; lOverlayIndex : integer): boolean;
+    function LoadPrwm(const FileName: string): boolean;
+    function LoadObjMni(const FileName: string): boolean;
+    function LoadOff(const FileName: string): boolean;
+    function LoadPly2(const FileName: string): boolean;
+    function LoadSrf(const FileName: string): boolean;
+    function LoadSurf(const FileName: string): boolean;
+    function LoadTri(const FileName: string): boolean;
+    function LoadWfr(const FileName: string): boolean; //EMSE wireframe
     procedure LoadAsc_Srf(const FileName: string);
     procedure LoadCtm(const FileName: string);
     procedure LoadCurv(const FileName: string; lOverlayIndex: integer);
-    function LoadMeshAscii(const FileName: string): boolean;
-    function LoadMesh(const FileName: string): boolean;
+    procedure LoadMeshAsOverlay(const FileName: string; lOverlayIndex: integer);
+    procedure LoadNii(const FileName: string; lOverlayIndex: integer; lLoadSmooth: boolean);
     procedure LoadNode(const FileName: string; out isEmbeddedEdge: boolean);
     procedure LoadNv(const FileName: string);
     procedure LoadObj(const FileName: string);
-    function LoadObjMni(const FileName: string): boolean;
-    function LoadOff(const FileName: string): boolean;
     procedure LoadPial(const FileName: string);
     procedure LoadPly(const FileName: string);
-    function LoadPly2(const FileName: string): boolean;
-    procedure LoadStlAscii(const FileName: string);
     procedure LoadStl(const FileName: string);
-    function LoadSurf(const FileName: string): boolean;
-    function LoadSrf(const FileName: string): boolean;
-    function LoadTri(const FileName: string): boolean;
+    procedure LoadStlAscii(const FileName: string);
     procedure LoadVtk(const FileName: string);
     procedure LoadW(const FileName: string; lOverlayIndex: integer);
-    function LoadWfr(const FileName: string): boolean; //EMSE wireframe
-    procedure LoadNii(const FileName: string; lOverlayIndex: integer; lLoadSmooth: boolean);
-    procedure LoadMeshAsOverlay(const FileName: string; lOverlayIndex: integer);
   public
     procedure MakePyramid;
     procedure DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean);
@@ -1792,6 +1795,106 @@ begin
    strlst.Free;
 end; // LoadPly()
 
+function jsStr(substr, str: string; out nItems: integer): string;
+var
+   s, e, i: integer;
+begin
+  nItems := 0;
+  result := '';
+  s := PosEx(substr,str);
+  if s < 1 then exit; //substr not in str
+  s := PosEx('[',str,s);
+  if s < 1 then exit; //substr not in str
+  e := PosEx(']',str,s);
+  if e < 3 then exit; //substr not in str
+  result := Copy(str, s+1, e-s-1);
+    //count v
+  nItems := 1;
+  for i := 1 to Length(result) do
+    if result[i] = ',' then
+      inc(nItems);
+end;
+
+function TMesh.LoadJson(const FileName: string): boolean;
+//supported, "indices" and "vertices"
+//  https://github.com/kchapelier/PRWM/tree/master/models/json
+//unsupported, "faces" and "vertices": need to handle type bitmask
+//  https://github.com/mrdoob/three.js/wiki/JSON-Model-format-3
+var
+   f: TextFile;
+   s1, s, fstr, vstr: string;
+   i,num_v, num_f: integer;
+begin
+  result := false;
+  fstr := '';
+  vstr := '';
+  AssignFile(f, FileName);
+  Reset(f);
+  s := '';
+  while not EOF(f) do begin
+      Readln(f, s1);
+      if s1 = '' then continue;
+      s := s+' '+s1;
+  end;
+  CloseFile(f);
+  vstr := jsStr('"vertices"', s, num_v);
+  if vstr = '' then begin
+     showmessage('Unable to find "vertices"');
+     exit;
+  end;
+  fstr := jsStr('"indices"', s, num_f);
+  if fstr = '' then begin
+     fstr := jsStr('"faces"', s, num_f);
+     if fstr <> '' then begin
+       showmessage('Wrong JSON format, expected "indices" not "faces"');
+       exit;
+     end;
+     showmessage('Unable to find "indices"');
+     exit;
+  end;
+  if (num_f < 3) or (num_v < 3) then begin
+    showmessage('Expected at leat 3 vertices and 3 indices');
+    exit;
+  end;
+  setlength(vertices, num_v div 3); //this format does not report number of faces/vertices, so we need to guess
+  setlength(faces, num_f div 3);
+  //set v
+  num_v := 0;
+  s := '';
+  for i := 1 to Length(vstr) do begin
+    if (vstr[i] <> ',') then
+        s := s + vstr[i];
+    if (vstr[i] = ',') or (i = Length(vstr)) then begin
+      if num_v mod 3 = 0 then
+         vertices[num_v div 3].X := strtofloatdef(s,0)
+      else if num_v mod 3 = 1 then
+         vertices[num_v div 3].Y := strtofloatdef(s,0)
+      else
+         vertices[num_v div 3].Z := strtofloatdef(s,0);
+      inc(num_v);
+      s := '';
+    end;
+  end;
+  //set f
+  num_f := 0;
+  s := '';
+  for i := 1 to Length(fstr) do begin
+    if (fstr[i] <> ',') then
+       s := s + fstr[i];
+    if (fstr[i] = ',') or (i = Length(fstr)) then begin
+      if num_f mod 3 = 0 then
+         faces[num_f div 3].X := strtointdef(s,0)
+      else if num_f mod 3 = 1 then
+         faces[num_f div 3].Y := strtointdef(s,0)
+      else
+         faces[num_f div 3].Z := strtointdef(s,0);
+      inc(num_f);
+      s := '';
+    end;
+  end;
+  UnifyVertices(faces, vertices); //see faceted-nefertiti.json
+end; // LoadJson()
+
 function TMesh.LoadPly2(const FileName: string): boolean;
 //http://www.riken.jp/brict/Yoshizawa/Research/PLYformat/PLYformat.html
 label
@@ -2428,6 +2531,223 @@ begin
   {$IFDEF CTM} readCTM(FileName, Faces, Vertices, vertexRGBA); {$ENDIF}
  //readCTM(const FileName: string; var Faces: TFaces;  var Verts: TVertices; var vertexRGBA : TVertexRGBA): boolean;
 end;
+
+(*function TMesh.LoadVbo(const FileName: string): boolean;
+//fast native format - very similar to uncompressed mz3
+//https://n-e-r-v-o-u-s.com/blog/?p=2738
+//https://n-e-r-v-o-u-s.com/blog/wp-content/uploads/interstice_s.vbo
+label
+   666;
+type
+Tvbo_vertex = packed record
+      vx, vy, vz, nx, ny, nz: single;
+   end;
+Tvbo_face = packed record
+      v1,v2,v3: uint16;
+   end;
+var
+   f: file;
+   vert: Tvbo_vertex;
+   face: Tvbo_face;
+   szX, sz, i: integer;
+   numVerts, numFaces: int32;
+begin
+  result := false;
+  AssignFile(f, FileName);
+  FileMode := fmOpenRead;
+  Reset(f,1);
+  sz := FileSize(f);
+  if sz < 64 then goto 666;
+  blockread(f, numVerts, SizeOf(numVerts) );
+  blockread(f, numFaces, SizeOf(numFaces) );
+  SwapLongInt(numVerts);
+  SwapLongInt(numFaces);
+  if (numVerts < 3) or (numFaces < 1) then goto 666; //signature incorrect
+  szX := 8+ (numVerts*4*6) + (numFaces * 2 * 3);
+  if sz <> szX then
+     goto 666;
+  setlength(vertices, numVerts);
+  for i := 0 to (numVerts - 1) do begin
+    blockread(f, vert, SizeOf(vert) );
+    vertices[i].X := vert.vx;
+    vertices[i].Y := vert.vy;
+    vertices[i].Z := vert.vz;
+  end;
+  setlength(faces, numFaces);
+  for i := 0 to (numFaces - 1) do begin
+    blockread(f, face, SizeOf(face) );
+    faces[i].X := face.v1;
+    faces[i].Y := face.v2;
+    faces[i].Z := face.v3;
+  end;
+  result := true;
+  666 :
+  CloseFile(f);
+  if not result then showmessage('Unable to decode VBO '+ FileName);
+end; //LoadVbo()  *)
+
+function TMesh.LoadPrwm(const FileName: string): boolean;
+//https://github.com/kchapelier/PRWM/blob/master/specifications/prwm.md
+//https://github.com/mrdoob/three.js/blob/def6a359df36307a6d32596683bfb1511f8ac3b5/examples/js/loaders/PRWMLoader.js
+label
+   666;
+type
+Tui32 = packed record
+      x,y,z: uint32;
+   end;
+Tui16 = packed record
+      x,y,z: uint16;
+   end;
+Tpr_hdr = packed record
+      vers,flags,
+      nVal1,nVal2,nVal3,
+      nIdx1,nIdx2,nIdx3: byte;
+   end;
+var
+   f: file;
+   ui16: Tui16;
+   ui32: Tui32;
+   f32: TPoint3f;
+   pos, sz, a,i, pad, aByteCount: integer;
+   hdr: Tpr_hdr;
+   valuesNumber,indicesNumber,indicesType,numVerts, numFaces: int32;
+   indexedGeometry, bigEndian, swapEndian: boolean;
+   aType, aNormalized, aCardinality, aEncoding, aflag, attributesNumber: byte;
+   ch: char;
+   eStr,attributeName : string;
+function i24to32(v1,v2,v3: byte): integer;
+begin
+  if swapEndian then
+     result := v3 + (v2 shl 8) + (v1 shl 16)
+  else
+     result := v1 + (v2 shl 8) + (v3 shl 16);
+
+end;
+begin
+  result := false;
+  AssignFile(f, FileName);
+  FileMode := fmOpenRead;
+  Reset(f,1);
+  sz := FileSize(f);
+  numVerts := 0;
+  eStr := 'File too small';
+  if sz < 64 then goto 666;
+  blockread(f, hdr, SizeOf(hdr) );
+  indexedGeometry := (hdr.flags and 128) > 0;
+  indicesType := (hdr.flags shr 6) and 1; ;
+  bigEndian := (hdr.flags and 32) > 0;
+  {$IFDEF ENDIAN_LITTLE}
+  swapEndian := bigEndian;
+  {$ELSE}
+  swapEndian := not bigEndian;
+  {$ENDIF}
+  attributesNumber := (hdr.flags and 31);
+  eStr := 'Unupported header';
+  if (hdr.vers <> 1) or (attributesNumber = 0) then goto 666; //signature incorrect
+  valuesNumber := i24to32(hdr.nVal1, hdr.nVal2, hdr.nVal3);
+  indicesNumber := i24to32(hdr.nIdx1, hdr.nIdx2, hdr.nIdx3);
+  if ( not indexedGeometry ) then begin
+     eStr := 'Error with non-indexed geometries';
+  	if ( indicesType <> 0) then
+                goto 666 //( 'PRWM decoder: Indices type must be set to 0 for non-indexed geometries' );
+        else if ( indicesNumber <> 0 ) then
+             goto 666; //( 'PRWM decoder: Number of indices must be set to 0 for non-indexed geometries' );
+  end;
+  //showmessage(format('%d %d %d %d -> %d %d',[x(indexedGeometry), x(indicesType), x(bigEndian), attributesNumber, valuesNumber, indicesNumber]));
+  for a := 1 to attributesNumber do begin
+    attributeName := '';
+    i := 1;
+    pad := 1;
+    while (i = 1) do begin
+          blockread(f, ch, sizeOf(ch), i);
+          pad := pad + 1;
+          if (ch = chr(0)) then break;
+          ch := UpCase(ch);
+          if ch in ['A'..'Z'] then
+             attributeName := attributeName + ch;
+    end;
+    blockread(f, aflag, sizeof(aflag));
+    aType := (aflag shr 7) and 1;
+    aNormalized := (aflag shr 6) and 1;
+    aCardinality := ((aflag shr 4) and 3)+1; //2 bits (0 to 3)
+    aEncoding := (aflag and 15); //4 bits (0 to 15)
+    seek(f, ((filepos(f)+3) div 4) * 4);//pad
+    case aEncoding of
+         1,6,10: aByteCount := 4;
+         3,7: aByteCount := 1;
+         4,8: aByteCount := 2;
+         else aByteCount := 0;
+    end;
+    pos := filepos(f) + (aByteCount * aCardinality * valuesNumber);
+    if (attributeName = 'POSITION') then begin
+      if ((aType = 0) and (aEncoding = 1) and (aCardinality = 3)) then begin
+         numVerts :=valuesNumber;
+         setlength(vertices, numVerts);
+         for i := 0 to (numVerts - 1) do begin
+             blockread(f, f32, SizeOf(f32) );
+             if swapEndian then begin
+                SwapSingle(f32.x);
+                SwapSingle(f32.y);
+                SwapSingle(f32.z);
+             end;
+             vertices[i].X := f32.x;
+             vertices[i].Y := f32.y;
+             vertices[i].Z := f32.z;
+         end;
+      end else begin
+          eStr := format('Unsupported POSITION type %d encoding %d or cardinality %s norm %d ',[aType, aEncoding, aCardinality, aNormalized]);
+          goto 666;
+      end;
+    end;
+    seek(f,pos);
+    seek(f, ((filepos(f)+3) div 4) * 4);//pad
+  end; //for each set of attributes
+  eStr := 'No POSITION attribute';
+  if numVerts < 3 then goto 666;
+  if ( indexedGeometry ) then begin
+     numFaces := indicesNumber div 3;
+     setlength(faces, numFaces);
+     if indicesType = 0 then begin //ui16
+       for i := 0 to (numFaces - 1) do begin
+           blockread(f, ui16, SizeOf(ui16) );
+           if swapEndian then begin
+              ui16.x := Swap(ui16.x);
+              ui16.y := Swap(ui16.y);
+              ui16.z := Swap(ui16.z);
+           end;
+           faces[i].X := ui16.x;
+           faces[i].Y := ui16.y;
+           faces[i].Z := ui16.z;
+       end;
+     end else begin //ui32
+       for i := 0 to (numFaces - 1) do begin
+           blockread(f, ui32, SizeOf(ui32));
+           if swapEndian then begin
+              SwapLongWord(ui32.x);
+              SwapLongWord(ui32.y);
+              SwapLongWord(ui32.z);
+           end;
+           faces[i].X := ui32.x;
+           faces[i].Y := ui32.y;
+           faces[i].Z := ui32.z;
+       end;
+     end;
+  end else begin
+      numFaces := numVerts div 3;
+      setlength(faces, numFaces);
+      a := 0;
+      for i := 0 to (numFaces - 1) do begin
+        faces[i].X := a; inc(a);
+        faces[i].Y := a; inc(a);
+        faces[i].Z := a; inc(a);
+      end;
+      UnifyVertices(faces, vertices);
+  end;
+  result := true;
+  666 :
+  CloseFile(f);
+  if not result then showmessage('Error '+eStr+ ': '+FileName);
+end; //LoadPrwm()
 
 function LoadMz3Core(const FileName: string; var Faces: TFaces; var Vertices: TVertices; var vertexRGBA: TVertexRGBA; var intensity: TFloats): boolean;
 const
@@ -4236,6 +4556,8 @@ begin
         LoadDfs(FileName);
      if (ext = '.DXF') then
         LoadDxf(Filename);
+     if ((ext = '.JS') or (ext = '.JSON')) then
+        LoadJson(Filename);
      if (ext = '.LWO') then
         LoadLwo(Filename);
      if (ext = '.MS3D') then
@@ -4244,6 +4566,8 @@ begin
         Load3ds(Filename);
      if (ext = '.MZ3') then
         LoadMz3(Filename, 0);
+     //if (ext = '.VBO') then
+     //   LoadVbo(Filename);
      if (ext = '.MESH') then
         LoadMesh(Filename);
      if (ext = '.CTM') then
@@ -4256,6 +4580,8 @@ begin
          LoadPly(Filename);
      if (ext = '.PLY2') then
          LoadPly2(Filename);
+     if (ext = '.PRWM') then
+        LoadPrwm(Filename);
      if (ext = '.GII') then
          LoadGii(Filename,0, 1);
      if (ext = '.VTK') then

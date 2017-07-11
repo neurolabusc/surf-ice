@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
-  Left = 246
+  Left = 666
   Height = 755
-  Top = 23
+  Top = 34
   Width = 960
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -11,7 +11,9 @@ object GLForm1: TGLForm1
   OnChangeBounds = FormChangeBounds
   OnClose = FormClose
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   OnDropFiles = FormDropFiles
+  OnShow = FormShow
   Position = poDesktopCenter
   LCLVersion = '1.9.0.0'
   object ToolPanel: TPanel
@@ -1558,17 +1560,6 @@ object GLForm1: TGLForm1
     Visible = False
     OnClick = CollapseToolPanelBtnClick
   end
-  object GLBox: TOpenGLControl
-    Left = 278
-    Height = 755
-    Top = 0
-    Width = 682
-    Align = alClient
-    OpenGLMajorVersion = 2
-    OpenGLMinorVersion = 1
-    OnClick = GLBoxClick
-    OnMouseWheel = GLBoxMouseWheel
-  end
   object ColorDialog1: TColorDialog
     Color = 15119026
     CustomColors.Strings = (
@@ -1797,37 +1788,31 @@ object GLForm1: TGLForm1
       Caption = 'Display'
       object LeftMenu: TMenuItem
         Caption = 'Left'
-        ShortCut = 76
         OnClick = DisplayMenuClick
       end
       object RightMenu: TMenuItem
         Tag = 1
         Caption = 'Right'
-        ShortCut = 82
         OnClick = DisplayMenuClick
       end
       object PosteriorMenu: TMenuItem
         Tag = 2
         Caption = 'Posterior'
-        ShortCut = 80
         OnClick = DisplayMenuClick
       end
       object AnteriorMenu: TMenuItem
         Tag = 3
         Caption = 'Anterior'
-        ShortCut = 65
         OnClick = DisplayMenuClick
       end
       object InferiorMenu: TMenuItem
         Tag = 4
         Caption = 'Inferior'
-        ShortCut = 73
         OnClick = DisplayMenuClick
       end
       object SuperiorMenu: TMenuItem
         Tag = 5
         Caption = 'Superior'
-        ShortCut = 83
         OnClick = DisplayMenuClick
       end
       object DisplaySepMenu: TMenuItem
@@ -1876,9 +1861,51 @@ object GLForm1: TGLForm1
           OnClick = QuickColorClick
         end
       end
-      object ColorbarMenu: TMenuItem
+      object ColorBarMenu: TMenuItem
         Caption = 'Colorbar'
-        OnClick = ColorBarMenuClick
+        object ColorBarVisibleMenu: TMenuItem
+          AutoCheck = True
+          Caption = 'Visible'
+          RadioItem = True
+          OnClick = ColorBarVisibleMenuClick
+        end
+        object ColorbarSep: TMenuItem
+          Caption = '-'
+        end
+        object WhiteClrbarMenu: TMenuItem
+          Tag = 1
+          AutoCheck = True
+          Caption = 'White'
+          GroupIndex = 251
+          RadioItem = True
+          OnClick = ClrbarMenuClick
+        end
+        object TransWhiteClrBarMenu: TMenuItem
+          Tag = 2
+          AutoCheck = True
+          Caption = 'Translucent White'
+          GroupIndex = 251
+          GlyphShowMode = gsmNever
+          RadioItem = True
+          OnClick = ClrbarMenuClick
+        end
+        object BlackClrbarMenu: TMenuItem
+          Tag = 3
+          AutoCheck = True
+          Caption = 'Black'
+          GroupIndex = 251
+          RadioItem = True
+          OnClick = ClrbarMenuClick
+        end
+        object TransBlackClrbarMenu: TMenuItem
+          Tag = 4
+          AutoCheck = True
+          Caption = 'Translucent Black'
+          Checked = True
+          GroupIndex = 251
+          RadioItem = True
+          OnClick = ClrbarMenuClick
+        end
       end
     end
     object AdvancedMenu: TMenuItem
@@ -1951,7 +1978,7 @@ object GLForm1: TGLForm1
   end
   object SaveBitmapDialog: TSaveDialog
     DefaultExt = '.png'
-    Filter = 'PNG Bitmap|*.png'
+    Filter = 'PNG Lossless|*.png|JPEG Lossy|*.jpg'
     left = 352
     top = 80
   end
@@ -1983,10 +2010,6 @@ object GLForm1: TGLForm1
   end
   object SaveMeshDialog: TSaveDialog
     DefaultExt = '.gii'
-    FileName = '/Users/rorden/Desktop/track'
-    FilterIndex = 0
-    InitialDir = '/Users/rorden/Desktop/'
-    Options = [ofOverwritePrompt, ofEnableSizing, ofViewDetail]
     left = 448
     top = 24
   end
