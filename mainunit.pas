@@ -3110,6 +3110,7 @@ begin
  StringGrid1.DefaultRowHeight := LUTdrop.Height+1;
  StringGrid1.DefaultColWidth := (StringGrid1.width div 4)-2;
   {$IFDEF FPC} {$IFNDEF UNIX}
+  //StringGrid1.DefaultRowHeight := LUTdrop.height  + 1;;
  if Screen.PixelsPerInch <> 96 then begin
      StringGrid1.DefaultColWidth := round(StringGrid1.width* (Screen.PixelsPerInch/96) * 0.25) - 2;
  end;
@@ -3163,6 +3164,9 @@ begin
      OverlayTimer.Enabled := false;
      gMesh.isRebuildList:= true;
      gMesh.isAdditiveOverlay := gPrefs.AdditiveOverlay;
+     {$IFDEF FPC}{$IFDEF Windows}
+     StringGrid1.Refresh;
+     {$ENDIF}{$ENDIF}
      gnLUT := -1; //refresh colorbar
      GLbox.Invalidate;
 end;
@@ -3399,6 +3403,7 @@ begin
  GLBox.ReleaseContext;
  MultiPassRenderingToolsUpdate;
  ShaderDropChange(sender);
+ {$IFDEF Windows}UpdateOverlaySpread;{$ENDIF}//July2017 - scripting on High-dpi, reset scaling
 end;
 
 procedure TGLForm1.FormCreate(Sender: TObject);
@@ -3439,9 +3444,9 @@ begin
   DefaultFormatSettings.DecimalSeparator := '.'; //OBJ/GII/Etc write real numbers as 1.23 not 1,23
   OverlayBoxCreate;//after we read defaults
   {$IFDEF Darwin} Application.OnDropFiles:= AppDropFiles; {$ENDIF}
-  {$IFDEF Windows}
-          StringGrid1.DefaultRowHeight := ScaleY(28,96);
-  {$ENDIF}
+  //{$IFDEF Windows} //July 2017  - see overlay box create
+          //StringGrid1.DefaultRowHeight := ScaleY(28,96);
+  //{$ENDIF}
   {$IFDEF LCLCarbon}
   GLForm1.OnDropFiles:= nil; //avoid drop for form and application
   {$ENDIF}

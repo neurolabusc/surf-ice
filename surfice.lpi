@@ -115,8 +115,8 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <IsVisibleTab Value="True"/>
-        <TopLine Value="2118"/>
-        <CursorPos X="17" Y="2121"/>
+        <TopLine Value="3387"/>
+        <CursorPos X="25" Y="3409"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -186,7 +186,7 @@
         <EditorIndex Value="9"/>
         <TopLine Value="44"/>
         <CursorPos X="14" Y="60"/>
-        <UsageCount Value="65"/>
+        <UsageCount Value="66"/>
         <Loaded Value="True"/>
       </Unit9>
       <Unit10>
@@ -201,14 +201,14 @@
         <EditorIndex Value="7"/>
         <TopLine Value="43"/>
         <CursorPos X="13" Y="52"/>
-        <UsageCount Value="28"/>
+        <UsageCount Value="29"/>
         <Loaded Value="True"/>
       </Unit11>
       <Unit12>
         <Filename Value="opts.inc"/>
         <EditorIndex Value="10"/>
         <CursorPos X="3" Y="2"/>
-        <UsageCount Value="62"/>
+        <UsageCount Value="63"/>
         <Loaded Value="True"/>
       </Unit12>
       <Unit13>
@@ -245,7 +245,7 @@
         <EditorIndex Value="2"/>
         <TopLine Value="399"/>
         <CursorPos X="43" Y="412"/>
-        <UsageCount Value="62"/>
+        <UsageCount Value="63"/>
         <Loaded Value="True"/>
       </Unit17>
       <Unit18>
@@ -381,7 +381,7 @@
         <EditorIndex Value="6"/>
         <TopLine Value="394"/>
         <CursorPos X="5" Y="411"/>
-        <UsageCount Value="13"/>
+        <UsageCount Value="14"/>
         <Loaded Value="True"/>
       </Unit36>
       <Unit37>
@@ -389,7 +389,7 @@
         <EditorIndex Value="4"/>
         <TopLine Value="537"/>
         <CursorPos X="18" Y="550"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="13"/>
         <Loaded Value="True"/>
       </Unit37>
       <Unit38>
@@ -397,7 +397,7 @@
         <EditorIndex Value="5"/>
         <TopLine Value="569"/>
         <CursorPos Y="54"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="13"/>
         <Loaded Value="True"/>
       </Unit38>
     </Units>
