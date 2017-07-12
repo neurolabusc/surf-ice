@@ -18,6 +18,7 @@ You can also build this project from the command line (assuming you have FPC Laz
 ##### Recent Versions
 
 21-June-2017
+ - [Smooth](https://github.com/neurolabusc/OpenGLCoreTutorials) numbers in colorbars.
  - Conversion of images from voxels to mesh now allows the user to specify a minimum cluster size.
  - Pan image by [shift-dragging](https://www.nitrc.org/forum/forum.php?thread_id=7857&forum_id=6713).
  - MacOS retina support (better but slower, use Preferences window to disable).
