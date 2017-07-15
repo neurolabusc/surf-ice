@@ -365,7 +365,10 @@ begin
   nglLoadIdentity ();
   nglOrtho (0, ScrnW,0, ScrnH,-10*sz,10*sz);
   nglTranslatef(0,0,sz*8);
-  nglTranslatef(1.8*sz,1.8*sz,0);
+  if isTopLeft then
+      nglTranslatef(ScrnW - (1.8*sz), ScrnH-(1.8*sz),0)
+  else
+      nglTranslatef(1.8*sz,1.8*sz,0);
   nglRotatef(fElevation-90,-1,0,0);
   nglRotatef(-fAzimuth,0,0,1);
   {$ELSE}
@@ -408,7 +411,6 @@ end;
 
 destructor TGLCube.Destroy;
 begin
-  //Txt.Free;
   //call the parent destructor:
   inherited;
 end;

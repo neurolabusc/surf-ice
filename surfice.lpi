@@ -114,9 +114,8 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
-        <TopLine Value="1723"/>
-        <CursorPos X="35" Y="1740"/>
+        <TopLine Value="1561"/>
+        <CursorPos Y="1569"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -125,7 +124,8 @@
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="8"/>
-        <CursorPos X="100" Y="3"/>
+        <TopLine Value="626"/>
+        <CursorPos X="11" Y="633"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit2>
@@ -377,16 +377,17 @@
       <Unit36>
         <Filename Value="glcube.pas"/>
         <EditorIndex Value="6"/>
-        <TopLine Value="394"/>
-        <CursorPos X="5" Y="411"/>
+        <TopLine Value="363"/>
+        <CursorPos X="8" Y="369"/>
         <UsageCount Value="15"/>
         <Loaded Value="True"/>
       </Unit36>
       <Unit37>
         <Filename Value="glclrbar.pas"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="4"/>
-        <TopLine Value="295"/>
-        <CursorPos X="36" Y="302"/>
+        <TopLine Value="286"/>
+        <CursorPos X="43" Y="288"/>
         <UsageCount Value="14"/>
         <Loaded Value="True"/>
       </Unit37>

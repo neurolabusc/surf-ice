@@ -31,6 +31,7 @@ type
     //{$IFDEF Darwin}BaseDirname,  {$ENDIF} //OSX Sierra puts application in random directory, so 'Sample' 'BrainNet' folders will be in unknown locations
     FontName, PrevTrackname, PrevNodename, PrevOverlayname,PrevScript, InitScript : string;
     TextColor,TextBorder,GridAndBorder: TRGBA;
+    ColorbarSize: single;
     //ColorBarPos: TUnitRect;
     ScreenPan: TPoint3f;
   end;
@@ -297,6 +298,7 @@ begin
   if lEverything then begin  //These values are typically not changed...
        with lPrefs do begin
             //CrossHairs := true;
+            ColorbarSize := 0.035;
             ObjColor := RGBToColor(212, 168, 168);
             BackColor := RGBToColor(0, 0, 0);
             TextColor := RGBA(255,255,255,255);
@@ -308,6 +310,7 @@ begin
               PrevFilename[i] := '';
               PrevScriptName[i] := '';
             end;
+
             //lPrefs.BaseDirName := '';
             for i := 1 to kNumDefaultMesh do
                 PrevFilename[i] := DefaultMeshName(i, lPrefs, askUserIfMissing);
@@ -409,8 +412,9 @@ procedure IniStrX(lRead: boolean; lIniFile: TIniFile; lIdent: string; var lValue
 begin
   if not lRead then begin
     if lValue = '' then
-       lValue := '_';
-    lIniFile.WriteString('STR',lIdent,lValue);
+       lIniFile.WriteString('STR',lIdent,'_')
+    else
+        lIniFile.WriteString('STR',lIdent,lValue);
 
     exit;
   end;
@@ -635,6 +639,7 @@ begin
   IniInt(lRead,lIniFile,'SaveAsFormat',lPrefs.SaveAsFormat);
   IniInt(lRead,lIniFile,'SaveAsFormatTrack',lPrefs.SaveAsFormatTrack);
   IniInt(lRead,lIniFile,'OcclusionAmount',lPrefs.OcclusionAmount);
+  IniFloat(lRead,lIniFile,'ColorbarSize',lPrefs.ColorbarSize);
   if (lPrefs.RenderQuality < kRenderPoor) then lPrefs.RenderQuality:= kRenderPoor;
   if (lPrefs.RenderQuality > kRenderBetter) then lPrefs.RenderQuality:= kRenderBetter;
   lIniFile.Free;

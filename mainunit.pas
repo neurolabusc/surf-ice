@@ -1567,6 +1567,9 @@ begin
      end;
      if initialSetup then begin
        gClrbar:= TGLClrbar.Create(p, GLBox);
+       if (gPrefs.ColorbarSize < 0.01) or (gPrefs.ColorbarSize > 0.3) then
+          gPrefs.ColorbarSize := gClrbar.SizeFraction;
+       gClrbar.SizeFraction := gPrefs.ColorbarSize;
      end else begin
          gClrBar.ChangeFontName(p, GLBox);
      end;
@@ -2157,8 +2160,10 @@ end;
 
 procedure TGLForm1.FormDestroy(Sender: TObject);
 begin
-   gCube.Free;
-   gClrBar.Free;
+ //Showmessage(gPrefs.FontName);
+ //IniFile(false,IniName,gPrefs);
+ gCube.Free;
+ gClrBar.Free;
 end;
 
 {$IFDEF COREGL}
@@ -2840,7 +2845,7 @@ begin
      GLbox.Repaint;
   end;
   origin := GetOrigin(scale);
-  str :=  'Surf Ice '+' 21 June 2017 '
+  str :=  'Surf Ice '+' 14 July 2017 '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
