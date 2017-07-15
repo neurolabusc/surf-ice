@@ -50,6 +50,7 @@ type
     function TextWidth(scale: single; s: string): single;
     procedure TextColor(red,green,blue: byte);
     procedure DrawText; //must be called while TOpenGLControl is current context
+    procedure ChangeFontName(fntname: string; Ctx: TOpenGLControl);
     constructor Create(fnm : string; superSample: boolean; out success: boolean; Ctx: TOpenGLControl); //overlod;
     Destructor  Destroy; override;
   end;
@@ -578,6 +579,15 @@ begin
   glCallList(displayLst);
   {$ENDIF}
   glUseProgram(0);
+end;
+
+procedure TGLText.ChangeFontName(fntname: string; Ctx: TOpenGLControl);
+begin
+  Ctx.MakeCurrent();
+  glDeleteTextures(1, @tex);
+   LoadTex(fntname);
+   LoadMetrics(fntname);
+   Ctx.ReleaseContext;
 end;
 
 destructor TGLText.Destroy;

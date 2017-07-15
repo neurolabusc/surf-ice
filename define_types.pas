@@ -52,7 +52,7 @@ type
   TUnitRect = record
      L,T,R,B: single;
   end;
-
+  function ParseFileName(Filename: string): string;
 procedure FilenameParts (lInName: string; out lPath,lName,lExt: string);
 procedure SensibleUnitRect (var U: TUnitRect);
 procedure SortSingle(var lLo,lHi: single);
@@ -193,6 +193,14 @@ begin
   Reset (F);
   result := FileSize(F);
   Close (F);
+end;
+
+function ParseFileName(Filename: string): string;
+var
+  lPath,lName,lExt: string;
+begin
+  FilenameParts (FileName, lPath,lName,lExt);
+  result := (lName);
 end;
 
 function ExtractFileExtGzUpper(FileName: string): string;

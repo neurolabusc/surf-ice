@@ -29,7 +29,7 @@ type
     ObjColor,BackColor: TColor;
     PrevFilename, PrevScriptName: TMRU;
     //{$IFDEF Darwin}BaseDirname,  {$ENDIF} //OSX Sierra puts application in random directory, so 'Sample' 'BrainNet' folders will be in unknown locations
-    PrevTrackname, PrevNodename, PrevOverlayname,PrevScript, InitScript : string;
+    FontName, PrevTrackname, PrevNodename, PrevOverlayname,PrevScript, InitScript : string;
     TextColor,TextBorder,GridAndBorder: TRGBA;
     //ColorBarPos: TUnitRect;
     ScreenPan: TPoint3f;
@@ -39,14 +39,16 @@ procedure IniByte(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lValu
 procedure IniInt(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lValue: integer);
 procedure IniFloat(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lValue: single);
 procedure IniColor(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lValue: TColor);
-procedure SetDefaultPrefs (var lPrefs: TPrefs; lEverything: boolean);
+procedure SetDefaultPrefs (var lPrefs: TPrefs; lEverything, askUserIfMissing: boolean);
 procedure IniRGBA(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lValue: TRGBA);
 procedure FillMRU (var lMRU: TMRU; lSearchPath,lSearchExt: string; lForce: boolean);
 procedure Add2MRU (var lMRU: TMRU;  lNewFilename: string); //add new file to most-recent list
 
 implementation
 
-uses userdir;
+uses
+  {$IFDEF Darwin}mainunit, {$ENDIF}
+  userdir;
 
 function IsNovel (lName: string; var lMRU: TMRU; lnOK: integer):boolean;
 var lI,lN: integer;
@@ -160,27 +162,85 @@ begin
 		lValue := StrToInt(lStr);
 end; //IniFloat
 
+{$IFDEF Darwin}
+function FixName (fnm, fldr: string; var lPrefs: TPrefs): string;
+begin
+ result := fnm;
+ if fileexists(result) then exit;
+ result := ExtractFilePath(gPrefs.PrevFilename[1])+ExtractFileName(fnm);
+ if fileexists(result) then exit;
+ result := ExtractFilePath(lPrefs.PrevFilename[1])+ExtractFileName(fnm);
+ if fileexists(result) then exit;
+ result := ExtractFilePath(extractfiledir(gPrefs.PrevFilename[1]))+fldr+pathdelim+ExtractFileName(fnm);
+ if fileexists(result) then exit;
+ result := ExtractFilePath(extractfiledir(lPrefs.PrevFilename[1]))+fldr+pathdelim+ExtractFileName(fnm);
+ if fileexists(result) then exit;
+ if fileexists(result) then exit;
+ result := fnm;
+end;
+
+//attempt to correct if app is running using Gatekeeper Application Path Randomization
+function DeTranslocate(fnm, fldr: string; var lPrefs: TPrefs): string;
+const
+     kMeshFilter = 'Mesh (mz3)|*.mz3';
+begin
+     result := fnm;
+     if fileexists(result) then exit;
+     result := FixName (fnm, fldr,lPrefs);
+     if fileexists(result) then exit;
+     //if pos('AppTranslocation',paramstr(0)) < 1 then exit;
+     //result := ExtractFilePath(gPrefs.PrevFilename[1])+ExtractFileName(fnm);
+     if fileexists(result) then exit;
+     //showmessage(lPrefs.PrevFilename[1]);
+     showmessage('Please find file '+extractfilename(fnm));
+     GLForm1.OpenDialog.Filter := kMeshFilter;
+     GLForm1.OpenDialog.Title := 'Select '+extractfilename(fnm);
+     if not GLForm1.OpenDialog.Execute then exit;
+     result := GLForm1.OpenDialog.FileName;
+end;
+
+
+{$ENDIF}
+
 const
   kNumDefaultMesh = 6;
-function DefaultMeshName (indx: integer): string;
+function DefaultMeshName (indx: integer; var lPrefs: TPrefs; askUserIfMissing: boolean): string;
   var
-    lPath,lName {$IFDEF Darwin}, lExt {$ENDIF}: string;
+    fldr,lPath,lName: string;
   begin
    lPath := ExtractFileDir(AppDir2());
    lPath := lPath + PathDelim;
-   case indx of
-        2: lName := lPath  +  'BrainNet'+ PathDelim + 'BrainMesh_ICBM152_smoothed.mz3';
-        3: lName := lPath  + 'BrainNet'+ PathDelim + 'BrainMesh_ICBM152Left_smoothed.mz3';
-        4: lName := lPath  +  'BrainNet'+ PathDelim + 'BrainMesh_ICBM152Right_smoothed.mz3';
-        5:  lName := lPath  +  'fs'+ PathDelim + 'lh.inflated';
-        6:  lName := lPath  +  'fs'+ PathDelim + 'lh.pial';
-    else
-          lName := lPath  + 'sample'+ PathDelim + 'mni152_2009.mz3';
-   end;
-   if fileexists(lName) then
-     result := lName
+   if indx = 1 then
+      fldr := 'sample'
+   else if indx < 5 then
+      fldr := 'BrainNet'
    else
-       result := '';
+       fldr := 'fs';
+   case indx of
+        2: lName := lPath  +  fldr+ PathDelim + 'BrainMesh_ICBM152_smoothed.mz3';
+        3: lName := lPath  + fldr+ PathDelim + 'BrainMesh_ICBM152Left_smoothed.mz3';
+        4: lName := lPath  +  fldr+ PathDelim + 'BrainMesh_ICBM152Right_smoothed.mz3';
+        5:  lName := lPath  +  fldr+ PathDelim + 'lh.inflated';
+        6:  lName := lPath  +  fldr+ PathDelim + 'lh.pial';
+    else begin
+          lName := lPath  + 'sample'+ PathDelim + 'mni152_2009.mz3';
+          {$IFDEF Darwin}
+          //lName := FixName (lName, lPrefs);
+          if (indx = 1) and (askUserIfMissing) then  begin
+             lName := DeTranslocate(lName, fldr, lPrefs);
+          end;
+          {$ENDIF}
+
+    end;
+   end;
+   result := lName;
+   if fileexists(lName) then exit; //success
+   {$IFDEF Darwin}
+   //if (indx <> 1)  then
+   result := FixName (result, fldr, lPrefs);
+   if fileexists(result) then exit; //success
+   {$ENDIF}
+   result := ''; //failure!
   end;
 
 (* below: basic outline for OSX Sierra - unused since we now code sign a DMG
@@ -230,7 +290,7 @@ begin
      result := '';
 end; *)
 
-procedure SetDefaultPrefs (var lPrefs: TPrefs; lEverything: boolean);
+procedure SetDefaultPrefs (var lPrefs: TPrefs; lEverything, askUserIfMissing:  boolean);
 var
    i: integer;
 begin
@@ -250,7 +310,8 @@ begin
             end;
             //lPrefs.BaseDirName := '';
             for i := 1 to kNumDefaultMesh do
-                PrevFilename[i] := DefaultMeshName(i);
+                PrevFilename[i] := DefaultMeshName(i, lPrefs, askUserIfMissing);
+            FontName := '';
        end;
   end;
   with lPrefs do begin
@@ -343,6 +404,21 @@ begin
 		lValue := Char2Bool(lStr[1]);
 end; //IniBool
 
+procedure IniStrX(lRead: boolean; lIniFile: TIniFile; lIdent: string; var lValue: string);
+//read or write a string value to the initialization file
+begin
+  if not lRead then begin
+    if lValue = '' then
+       lValue := '_';
+    lIniFile.WriteString('STR',lIdent,lValue);
+
+    exit;
+  end;
+  lValue := lIniFile.ReadString('STR',lIdent, '');
+  if lValue = '_' then
+     lValue := '';
+end; //IniStr
+
 procedure IniStr(lRead: boolean; lIniFile: TIniFile; lIdent: string; var lValue: string);
 //read or write a string value to the initialization file
 begin
@@ -418,7 +494,7 @@ begin
       lI := 0;
       while (lOK < knMRU) and (lI < kNumDefaultMesh) do begin
         lI := lI + 1;
-        lStr := DefaultMeshName(lI);
+        lStr := DefaultMeshName(lI, lPrefs, lOK = 0);
         if (length(lStr) > 0) and (fileexists(lStr)) and (Novel) then begin
 		    inc(lOK);
 		    lMRU[lOK] := lStr;
@@ -511,7 +587,7 @@ var
 begin
   result := false;
   if (lRead) then
-    SetDefaultPrefs (lPrefs, true);
+    SetDefaultPrefs (lPrefs, true, not Fileexists(lFilename));
   if (not lRead) and (lPrefs.SkipPrefWriting) then exit;
   if (lRead) and (not Fileexists(lFilename)) then
         exit;
@@ -539,6 +615,7 @@ begin
   IniStr(lRead, lIniFile, 'PrevNodename', lPrefs.PrevNodename);
   IniStr(lRead, lIniFile, 'PrevOverlayname', lPrefs.PrevOverlayname);
   IniStr(lRead,lIniFile,'PrevScript',lPrefs.PrevScript);
+  IniStrX(lRead,lIniFile,'FontName',lPrefs.FontName);
   IniMRU(lRead,lIniFile,'PrevFilename',lPrefs.PrevFilename, lPrefs);
   //IniMRU(lRead,lIniFile,'PrevScriptName',lPrefs.PrevScriptName);
   IniRGBA(lRead,lIniFile, 'TextColor',lPrefs.TextColor);

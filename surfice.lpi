@@ -115,8 +115,8 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <IsVisibleTab Value="True"/>
-        <TopLine Value="3387"/>
-        <CursorPos X="25" Y="3409"/>
+        <TopLine Value="1723"/>
+        <CursorPos X="35" Y="1740"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -125,8 +125,7 @@
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="8"/>
-        <TopLine Value="536"/>
-        <CursorPos X="10" Y="537"/>
+        <CursorPos X="100" Y="3"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
       </Unit2>
@@ -162,8 +161,7 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <EditorIndex Value="3"/>
-        <TopLine Value="616"/>
-        <CursorPos X="3" Y="620"/>
+        <CursorPos X="48" Y="618"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -184,9 +182,9 @@
       <Unit9>
         <Filename Value="define_types.pas"/>
         <EditorIndex Value="9"/>
-        <TopLine Value="44"/>
-        <CursorPos X="14" Y="60"/>
-        <UsageCount Value="66"/>
+        <TopLine Value="190"/>
+        <CursorPos X="13" Y="203"/>
+        <UsageCount Value="67"/>
         <Loaded Value="True"/>
       </Unit9>
       <Unit10>
@@ -201,14 +199,14 @@
         <EditorIndex Value="7"/>
         <TopLine Value="43"/>
         <CursorPos X="13" Y="52"/>
-        <UsageCount Value="29"/>
+        <UsageCount Value="30"/>
         <Loaded Value="True"/>
       </Unit11>
       <Unit12>
         <Filename Value="opts.inc"/>
         <EditorIndex Value="10"/>
         <CursorPos X="3" Y="2"/>
-        <UsageCount Value="63"/>
+        <UsageCount Value="64"/>
         <Loaded Value="True"/>
       </Unit12>
       <Unit13>
@@ -243,9 +241,9 @@
       <Unit17>
         <Filename Value="commandsu.pas"/>
         <EditorIndex Value="2"/>
-        <TopLine Value="399"/>
-        <CursorPos X="43" Y="412"/>
-        <UsageCount Value="63"/>
+        <TopLine Value="217"/>
+        <CursorPos X="27" Y="225"/>
+        <UsageCount Value="64"/>
         <Loaded Value="True"/>
       </Unit17>
       <Unit18>
@@ -381,23 +379,23 @@
         <EditorIndex Value="6"/>
         <TopLine Value="394"/>
         <CursorPos X="5" Y="411"/>
-        <UsageCount Value="14"/>
+        <UsageCount Value="15"/>
         <Loaded Value="True"/>
       </Unit36>
       <Unit37>
         <Filename Value="glclrbar.pas"/>
         <EditorIndex Value="4"/>
-        <TopLine Value="537"/>
-        <CursorPos X="18" Y="550"/>
-        <UsageCount Value="13"/>
+        <TopLine Value="295"/>
+        <CursorPos X="36" Y="302"/>
+        <UsageCount Value="14"/>
         <Loaded Value="True"/>
       </Unit37>
       <Unit38>
         <Filename Value="gltext.pas"/>
         <EditorIndex Value="5"/>
-        <TopLine Value="569"/>
-        <CursorPos Y="54"/>
-        <UsageCount Value="13"/>
+        <TopLine Value="46"/>
+        <CursorPos X="68" Y="53"/>
+        <UsageCount Value="14"/>
         <Loaded Value="True"/>
       </Unit38>
     </Units>

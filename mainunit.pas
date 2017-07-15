@@ -200,6 +200,7 @@ type
     procedure FormDestroy(Sender: TObject);
     function UpdateClrbar: integer;
     procedure ClrbarClr(i: integer);
+    procedure UpdateFont(initialSetup: boolean);
     procedure ClrbarMenuClick(Sender: TObject);
     procedure ColorBarVisibleMenuClick(Sender: TObject);
     procedure SetColorBarPosition;
@@ -384,15 +385,19 @@ end;
 function FindFile(Filename: string): string;
 var
   p,n,x: string;
+  i : integer;
   searchResult : TSearchRec;
 begin
    result := Filename;
    if FileExists(result) then exit;
    FilenameParts (Filename, p,n,x);
-   //try location of last mesh
-   p := ExtractFilePath(gPrefs.PrevFilename[1]);
-   result := p+n+x;
-   if FileExists(result) then exit;
+   //try location of last meshes
+   for i := 1 to knMRU do begin
+       p := ExtractFilePath(gPrefs.PrevFilename[i]);
+       if p = '' then continue;
+       result := p+n+x;
+       if FileExists(result) then exit;
+   end;
    //try location of last overlay
    p := ExtractFilePath(gPrefs.PrevOverlayname);
    result := p+n+x;
@@ -1549,6 +1554,24 @@ begin
 end;
 {$ENDIF}
 
+procedure TGLForm1.UpdateFont(initialSetup: boolean);
+var
+  p,f: string;
+  OK: boolean;
+begin
+     p := (ClutDir+pathdelim+gPrefs.FontName+'.png');
+     f := (ClutDir+pathdelim+gPrefs.FontName+'.fnt');
+     if (gPrefs.FontName = '') or (not fileexists(p)) or (not fileexists(f)) then begin
+       gPrefs.FontName := '';
+       p := '';
+     end;
+     if initialSetup then begin
+       gClrbar:= TGLClrbar.Create(p, GLBox);
+     end else begin
+         gClrBar.ChangeFontName(p, GLBox);
+     end;
+end;
+
 procedure TGLForm1.PrefMenuClick(Sender: TObject);
 var
   PrefForm: TForm;
@@ -1556,10 +1579,11 @@ var
   {$IFDEF LCLCocoa} RetinaCheck,{$ENDIF}
   BitmapAlphaCheck, SmoothVoxelwiseDataCheck, TracksAreTubesCheck: TCheckBox;
   bmpEdit: TEdit;
-  //QualityCombo,
-    ZDimIsUpCombo, QualityCombo : TComboBox;
+  s: string;
+  searchRec: TSearchRec;
+  FontCombo, ZDimIsUpCombo, QualityCombo : TComboBox;
   bmpLabel, QualityLabel: TLabel;
-  isAdvancedPrefs {$IFDEF LCLCocoa}, isRetinaChanged {$ENDIF} : boolean;
+  isFontChanged, isAdvancedPrefs {$IFDEF LCLCocoa}, isRetinaChanged {$ENDIF} : boolean;
 begin
   PrefForm:=TForm.Create(nil);
   PrefForm.SetBounds(100, 100, 520, 322);
@@ -1654,18 +1678,27 @@ begin
   bmpEdit.Width := 60;
   bmpEdit.Text := inttostr(gPrefs.ScreenCaptureZoom);
   bmpEdit.Parent:=PrefForm;
-    //SaveAsObj     SaveAsFormat
-  (*SaveAsCombo :=TComboBox.create(PrefForm);
-  SaveAsCombo.Left := 8;
-  SaveAsCombo.Top := 218;
-  SaveAsCombo.Width := PrefForm.Width -16;
-  SaveAsCombo.Items.Add('OBJ Format: Export to other programs');
-  SaveAsCombo.Items.Add('GII Format: Neuroimaging');
-  SaveAsCombo.Items.Add('MZ3 Format: Fast and small');
-  SaveAsCombo.Items.Add('PLY Format: Export to other programs');
-  SaveAsCombo.ItemIndex:= gPrefs.SaveAsFormat;
-  SaveAsCombo.Style := csDropDownList;
-  SaveAsCombo.Parent:=PrefForm;  *)
+  //Select Font
+  FontCombo:=TComboBox.create(PrefForm);
+  FontCombo.Left := 8;
+  FontCombo.Top := 218;
+  FontCombo.Width := PrefForm.Width -16;
+  FontCombo.Items.Add('Default Font');
+  FontCombo.ItemIndex:= 0;
+  if FindFirst(ClutDir+pathdelim+'*.fnt', faAnyFile, searchRec) = 0 then begin
+    repeat
+      s :=ParseFileName(ExtractFileName(searchRec.Name));
+      if (length(s) > 1) and (s[1] <> '.') and (fileexists(ClutDir+pathdelim+s+'.png')) then begin
+         FontCombo.Items.Add(s);
+         if (s = gPrefs.FontName) then
+            FontCombo.ItemIndex := FontCombo.Items.Count-1;
+      end;
+    until (FindNext(searchRec) <> 0);
+  end; //find fonts
+  FindClose(searchRec);
+  FontCombo.Style := csDropDownList;
+  FontCombo.Parent:=PrefForm;
+
 
   {$IFDEF LCLCocoa}
   RetinaCheck:=TCheckBox.create(PrefForm);
@@ -1701,6 +1734,11 @@ begin
   isRetinaChanged := gPrefs.RetinaDisplay <> RetinaCheck.Checked;
   gPrefs.RetinaDisplay := RetinaCheck.Checked;
   {$ENDIF}
+  s := '';
+  if FontCombo.ItemIndex > 0 then
+     s := FontCombo.Items[FontCombo.ItemIndex];
+  isFontChanged := (s <> gPrefs.FontName);
+  gPrefs.FontName := s;
   gPrefs.ScreenCaptureTransparentBackground :=  BitmapAlphaCheck.Checked;
   gPrefs.SmoothVoxelwiseData := SmoothVoxelwiseDataCheck.Checked;
   gPrefs.ScreenCaptureZoom:= strtointdef(bmpEdit.Text,1);
@@ -1714,7 +1752,8 @@ begin
       gPrefs.ZDimIsUp := true;
   gMesh.isZDimIsUp := gPrefs.ZDimIsUp;
   gNode.isZDimIsUp := gPrefs.ZDimIsUp;
-
+  if isFontChanged then
+       GLForm1.UpdateFont(false);
   //gPrefs.SaveAsFormat := SaveAsCombo.ItemIndex;
   if QualityCombo.ItemIndex <> gPrefs.RenderQuality then begin
      gPrefs.RenderQuality := QualityCombo.ItemIndex;
@@ -2760,6 +2799,21 @@ begin
 end;
 {$ENDIF}
 
+{$IFDEF Darwin}
+function isExeReadOnly: string;
+var
+  attr : Longint;
+begin
+     result := ' missing';
+     if not fileexists(paramstr(0)) then exit;
+     attr:=FileGetAttr(paramstr(0));
+     If (attr and faReadOnly)<>0 then
+      result := ' read only'
+     else
+         result := ' writeable';
+end;
+{$ENDIF}
+
 procedure TGLForm1.AboutMenuClick(Sender: TObject);
 const
   kSamp = 36;
@@ -2797,9 +2851,11 @@ begin
    {$IFDEF DGL} + ' DGL'{$ENDIF}
    {$IFNDEF COREGL}+' (Legacy OpenGL)'{$ENDIF}
    {$IFDEF Darwin}
-           +LineEnding+' '+ GetOSVersion
+
            +LineEnding+' @: '+ AppDir2
+           +LineEnding+' '+ isExeReadOnly
            +LineEnding+' '+GetHardwareVersion
+           +LineEnding+' '+ GetOSVersion
    {$ENDIF}
    +LineEnding+' www.mricro.com :: BSD 2-Clause License (opensource.org/licenses/BSD-2-Clause)'
    +LineEnding+' FPS ' +inttostr(round( (kSamp*1000)/(gettickcount-s)))
@@ -3386,14 +3442,11 @@ end;
 
 procedure TGLForm1.FormShow(Sender: TObject);
 begin
-  //ExitMenu.Visible:= false;
-  //HelpMenu.Visible := false;
-
-
  GLBox.MakeCurrent(false);
  gPrefs.SupportBetterRenderQuality := InitGLSL(true);
  gCube := TGLCube.Create(GLBox);
- gClrbar:= TGLClrbar.Create(GLBox);
+ //gClrbar:= TGLClrbar.Create(GLBox);
+ UpdateFont(true);
  ClrbarClr(gPrefs.ColorbarColor);
  if (gPrefs.ColorbarColor = WhiteClrbarMenu.tag) then WhiteClrbarMenu.checked := true;
  if (gPrefs.ColorbarColor = TransWhiteClrbarMenu.tag) then TransWhiteClrbarMenu.checked := true;
@@ -3437,7 +3490,7 @@ begin
   if (not ResetIniDefaults) and (not forceReset) then
     IniFile(true,IniName,gPrefs)
   else begin
-    SetDefaultPrefs(gPrefs,true);//reset everything to defaults!
+    SetDefaultPrefs(gPrefs,true, true);//reset everything to defaults!
     if MessageDlg('Use advanced graphics? Press "Yes" for better quality. Press "Cancel" for old hardware.', mtConfirmation, [mbYes, mbCancel], 0) = mrCancel then
       gPrefs.RenderQuality:= kRenderPoor;
   end;

@@ -50,10 +50,11 @@ type
     property SizeFraction : single read SizeFrac write SetSizeFrac;
     procedure Draw(nLUT, Width,Height: integer); //must be called while TOpenGLControl is current context
     procedure SetLUT(index: integer; LUT: TLUT; min,max: single);
-    constructor Create(Ctx: TOpenGLControl);
+    procedure ChangeFontName(fntname: string; Ctx: TOpenGLControl);
+    constructor Create(fntname: string; Ctx: TOpenGLControl);
     Destructor  Destroy; override;
   end;
-  {$IFNDEF COREGL}var GLErrorStr : string = '';{$ENDIF}
+  //{$IFNDEF COREGL}var GLErrorStr : string = '';{$ENDIF}
 
 implementation
 
@@ -288,7 +289,7 @@ begin
      result.a := a;
 end;*)
 
-constructor TGLClrbar.Create(Ctx: TOpenGLControl);
+constructor TGLClrbar.Create(fntname: string; Ctx: TOpenGLControl);
 begin
      scrnH := 0;
      SizeFrac := 0.035; //desired size for bars as fraction of min(scrnW,scrnH)
@@ -299,7 +300,7 @@ begin
      fisTopOrRight := false;
      isRedraw := true;
      //Txt := TGLText.Create('/Users/rorden/Documents/pas/OpenGLCoreTutorials/legacy/numbers.png', true, isText, Ctx);
-     Txt := TGLText.Create('', true, isText, Ctx);
+     Txt := TGLText.Create(fntname, true, isText, Ctx);
      {$IFDEF COREGL}
      vao_point2d := 0;
      vbo_face2d := 0;
@@ -550,6 +551,13 @@ begin
      if isText then
         Txt.DrawText;
 end;
+
+procedure TGLClrbar.ChangeFontName(fntname: string; Ctx: TOpenGLControl);
+begin
+     Txt.ChangeFontName(fntname, Ctx);
+     isRedraw := true;
+end;
+
 
 destructor TGLClrbar.Destroy;
 begin
