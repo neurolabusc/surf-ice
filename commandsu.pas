@@ -19,6 +19,7 @@ procedure EDGELOAD(lFilename: string);
 procedure EDGESIZE(size: single; varies: boolean);
 procedure EDGETHRESH (LO, HI: single);
 procedure ELEVATION (DEG: integer);
+procedure FONTNAME(name: string);
 procedure MESHLOAD(lFilename: string);
 procedure MESHCURV;
 procedure MESHOVERLAYORDER (FLIP: boolean);
@@ -68,7 +69,7 @@ const
                Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
              );
 
-knProc = 52;
+knProc = 53;
   kProcRA : array [1..knProc] of TScriptRec = (
    (Ptr:@AZIMUTH;Decl:'AZIMUTH';Vars:'(DEG: integer)'),
    (Ptr:@AZIMUTHELEVATION;Decl:'AZIMUTHELEVATION';Vars:'(AZI, ELEV: integer)'),
@@ -85,6 +86,7 @@ knProc = 52;
    (Ptr:@EDGETHRESH;Decl:'EDGETHRESH';Vars:'(LO, HI: single)'),
    (Ptr:@ELEVATION;Decl:'ELEVATION';Vars:'(DEG: integer)'),
    (Ptr:@EDGELOAD;Decl:'EDGELOAD';Vars:'(lFilename: string)'),
+   (Ptr:@FONTNAME;Decl:'FONTNAME';Vars:'(name: string)'),
    (Ptr:@MESHCURV;Decl:'MESHCURV';Vars:''),
    (Ptr:@MESHLOAD;Decl:'MESHLOAD';Vars:'(lFilename: string)'),
    (Ptr:@MESHOVERLAYORDER;Decl:'MESHOVERLAYORDER';Vars:'(FLIP: boolean)'),
@@ -205,6 +207,12 @@ begin
     AZIMUTHELEVATION(0,0)
   else
     AZIMUTHELEVATION(180,0);
+end;
+
+procedure FONTNAME(name: string);
+begin
+     gPrefs.FontName:= name;
+     GLForm1.UpdateFont(false);
 end;
 
 procedure VIEWSAGITTAL (STD: boolean);

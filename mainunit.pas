@@ -1560,7 +1560,7 @@ var
   OK: boolean;
 begin
      p := (ClutDir+pathdelim+gPrefs.FontName+'.png');
-     f := (ClutDir+pathdelim+gPrefs.FontName+'.fnt');
+     f := (ClutDir+pathdelim+gPrefs.FontName+'.json');
      if (gPrefs.FontName = '') or (not fileexists(p)) or (not fileexists(f)) then begin
        gPrefs.FontName := '';
        p := '';
@@ -1688,7 +1688,7 @@ begin
   FontCombo.Width := PrefForm.Width -16;
   FontCombo.Items.Add('Default Font');
   FontCombo.ItemIndex:= 0;
-  if FindFirst(ClutDir+pathdelim+'*.fnt', faAnyFile, searchRec) = 0 then begin
+  if FindFirst(ClutDir+pathdelim+'*.json', faAnyFile, searchRec) = 0 then begin
     repeat
       s :=ParseFileName(ExtractFileName(searchRec.Name));
       if (length(s) > 1) and (s[1] <> '.') and (fileexists(ClutDir+pathdelim+s+'.png')) then begin
@@ -2204,7 +2204,7 @@ end;
 procedure TGLForm1.CreateRender(w,h: integer; isToScreen: boolean);
 var
   origin: TPoint3f;
-  isMultiSample, isOK: boolean;
+  isMultiSample, isOK, useMultiSample: boolean;
   meshAlpha, meshBlend, ambientOcclusionFrac, scale: single;
 begin
   if (h < 1) or (w < 1) then exit;
@@ -2226,11 +2226,12 @@ begin
     ambientOcclusionFrac := occlusionTrack.Position/occlusionTrack.max;
 
     //first pass: 3D draw all items: framebuffer f1
-    isMultiSample := setFrame (w, h, gShader.f1, true, isOK);
+    useMultiSample := isToScreen; //the screenshot is explicitly supersampling everything (inlcuding text), the screen just supersamples the objects
+    isMultiSample := setFrame (w, h, gShader.f1, useMultiSample, isOK);
     if not isOK then exit;
     DrawScene(w,h, gPrefs.isFlipMeshOverlay, gPrefs.OverlayClip, true,isMultiSample, gPrefs, origin, ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
     //second pass: 3D draw overlay items only: framebuffer f2
-    isMultiSample := setFrame (w, h, gShader.f2, true, isOK );
+    isMultiSample := setFrame (w, h, gShader.f2, useMultiSample, isOK );
     if not isOK then exit;
     //isFlipOverlayBackground := not isFlipOverlayBackground;
     DrawScene(w,h, gPrefs.isFlipMeshOverlay, gPrefs.OverlayClip, false,isMultiSample, gPrefs, origin,  ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
@@ -2384,12 +2385,8 @@ begin
  zoom := gPrefs.ScreenCaptureZoom;
  w := GLBox.Width * zoom;
  h := GLbox.Height * zoom;
- //w2 := w;
- //h2 := h;
- //if not gPrefs.RetinaDisplay then begin
    w2 := w*2;
    h2 := h*2;
- //end;
  if (w2 > maxXY[0]) or (h2 > maxXY[1]) or (gPrefs.RenderQuality = kRenderPoor) or (not (gPrefs.SupportBetterRenderQuality)) then begin
   result := ScreenShotX1;
   exit;

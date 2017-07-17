@@ -7,7 +7,7 @@ interface
 
 uses
   {$IFDEF COREGL}glcorearb,  gl_core_matrix,  {$ELSE}gl, glext, {$ENDIF}
-  gltext,shaderu,Classes, SysUtils, Graphics, OpenGLContext, math, dialogs, define_types,colorTable;
+  glmtext,shaderu,Classes, SysUtils, Graphics, OpenGLContext, math, dialogs, define_types,colorTable;
 
 type
 (*  TRGBA = packed record //red,green,blue,alpha
@@ -300,7 +300,8 @@ begin
      fisTopOrRight := false;
      isRedraw := true;
      //Txt := TGLText.Create('/Users/rorden/Documents/pas/OpenGLCoreTutorials/legacy/numbers.png', true, isText, Ctx);
-     Txt := TGLText.Create(fntname, true, isText, Ctx);
+     //Txt := TGLText.Create(fntname, true, isText, Ctx); //single-channel
+     Txt := TGLText.Create(fntname, isText, Ctx); //multi-channel
      {$IFDEF COREGL}
      vao_point2d := 0;
      vbo_face2d := 0;
@@ -382,9 +383,9 @@ begin
            St := FloatToStrF(lStep, ffFixed,7,lDecimals);
            StWid := Txt.TextWidth(fntScale, St);
            if not fisVertical then
-              Txt.TextOut(lPosX-(StWid*0.5),BarTop-(BarThick*0.85),fntScale, St)
+              Txt.TextOut(lPosX-(StWid*0.5),BarTop-(BarThick*0.82),fntScale, St)
            else
-               Txt.TextOut(lPosX+(BarThick*0.85),lPosY-(StWid*0.5),fntScale,90, St)
+               Txt.TextOut(lPosX+(BarThick*0.82),lPosY-(StWid*0.5),fntScale,90, St)
         end;
         lStep := lStep + lStepSize;
   until lStep > (mx+(lStepSize*0.01));
@@ -427,7 +428,7 @@ begin
          t := 0;
      fntScale := 0;
      if (BarThick > 9) and (isText) then begin
-        fntScale := (BarThick*0.6)/txt.BaseHeight;
+        fntScale := (BarThick*0.7)/txt.BaseHeight;
         Txt.TextColor(FontClr.R,FontClr.G,FontClr.B);//black
      end;
      {$IFDEF COREGL}
