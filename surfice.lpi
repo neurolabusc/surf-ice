@@ -114,7 +114,8 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <CursorPos X="82" Y="5"/>
+        <TopLine Value="329"/>
+        <CursorPos X="2" Y="341"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -122,10 +123,11 @@
       <Unit2>
         <Filename Value="prefs.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="626"/>
-        <CursorPos X="11" Y="633"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="14"/>
+        <CursorPos X="31" Y="24"/>
         <UsageCount Value="210"/>
+        <Loaded Value="True"/>
       </Unit2>
       <Unit3>
         <Filename Value="nifti_loader.pas"/>
@@ -157,9 +159,12 @@
         <ComponentName Value="ScriptForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="-1"/>
-        <CursorPos X="48" Y="618"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="163"/>
+        <CursorPos X="40" Y="180"/>
         <UsageCount Value="200"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
       </Unit6>
       <Unit7>
         <Filename Value="cifti.inc"/>
@@ -169,14 +174,15 @@
       </Unit7>
       <Unit8>
         <Filename Value="mesh.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="1841"/>
-        <CursorPos X="68" Y="1843"/>
+        <EditorIndex Value="9"/>
+        <TopLine Value="384"/>
+        <CursorPos X="16" Y="393"/>
         <UsageCount Value="100"/>
+        <Loaded Value="True"/>
       </Unit8>
       <Unit9>
         <Filename Value="define_types.pas"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="7"/>
         <TopLine Value="190"/>
         <CursorPos X="13" Y="203"/>
         <UsageCount Value="67"/>
@@ -191,7 +197,7 @@
       </Unit10>
       <Unit11>
         <Filename Value="shaderu.pas"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="6"/>
         <TopLine Value="49"/>
         <CursorPos X="10" Y="59"/>
         <UsageCount Value="30"/>
@@ -199,8 +205,9 @@
       </Unit11>
       <Unit12>
         <Filename Value="opts.inc"/>
-        <EditorIndex Value="6"/>
-        <CursorPos Y="2"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="8"/>
+        <CursorPos X="3" Y="2"/>
         <UsageCount Value="64"/>
         <Loaded Value="True"/>
       </Unit12>
@@ -277,7 +284,7 @@
       </Unit22>
       <Unit23>
         <Filename Value="gl_core_3d.pas"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="5"/>
         <TopLine Value="728"/>
         <CursorPos X="11" Y="747"/>
         <UsageCount Value="42"/>
@@ -378,10 +385,9 @@
       </Unit36>
       <Unit37>
         <Filename Value="glclrbar.pas"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="1"/>
-        <TopLine Value="369"/>
-        <CursorPos X="48" Y="388"/>
+        <EditorIndex Value="3"/>
+        <TopLine Value="445"/>
+        <CursorPos X="51" Y="454"/>
         <UsageCount Value="14"/>
         <Loaded Value="True"/>
       </Unit37>
@@ -394,7 +400,7 @@
       </Unit38>
       <Unit39>
         <Filename Value="glmtext.pas"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="4"/>
         <TopLine Value="87"/>
         <CursorPos X="9" Y="107"/>
         <UsageCount Value="10"/>

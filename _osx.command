@@ -10,7 +10,7 @@ rm -rf lib
 
 
 #the copy of glext that comes with freepascal 3.0 does not support geometry shaders
-cp ./coregl/glext.pp ./glext.pp
+# cp ./coregl/glext.pp ./glext.pp
 
 #compile Surfice as 64-bit Cocoa (OpenGL 4.1 Core)
 cp ./optsCore.inc ./opts.inc
@@ -19,7 +19,9 @@ cp ./optsCore.inc ./opts.inc
 #/Developer/lazarus/lazbuild ./surfice.lpr --cpu=x86_64 --ws=cocoa --compiler="/usr/local/lib/fpc/3.1.1/ppcx64"
 #/Users/rorden/lazarus/lazbuild ./surfice.lpr --cpu=x86_64 --ws=cocoa --compiler="/usr/local/bin/ppcx64"
 
-/Users/rorden/lazarus/lazbuild ./surfice.lpr --cpu=x86_64 --ws=cocoa --compiler="/usr/local/lib/fpc/3.1.1/ppcx64"
+
+#/Users/rorden/lazarus/lazbuild ./surfice.lpr --cpu=x86_64 --ws=cocoa --compiler="/usr/local/lib/fpc/3.1.1/ppcx64"
+lazbuild ./surfice.lpr --cpu=x86_64 --ws=cocoa
 #/Developer/lazarus/lazbuild ./surfice.lpr --ws=cocoa
 strip ./surfice
 cp surfice /Users/rorden/Desktop/Surf_Ice/Surfice/surfice.app/Contents/MacOS/surfice
@@ -33,6 +35,7 @@ strip ./surfice
 cp surfice /Users/rorden/Desktop/Surf_Ice/Surfice/surficeOld.app/Contents/MacOS/surfice
 
 #return to default version
+
 cp ./optsCompat.inc ./opts.inc
 rm ./glext.pp
 

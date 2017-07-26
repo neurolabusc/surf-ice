@@ -1966,6 +1966,7 @@ object GLForm1: TGLForm1
     end
     object HelpMenu: TMenuItem
       Caption = 'Help'
+      Visible = False
       object About2Menu: TMenuItem
         Caption = 'About'
         OnClick = AboutMenuClick

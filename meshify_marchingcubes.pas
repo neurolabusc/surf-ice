@@ -35,7 +35,7 @@ unit meshify_marchingcubes;
 
 interface
 
-uses nifti_loader, matmath, mesh, define_types;
+uses nifti_loader, define_types;
 //uses
 //  GLVectorGeometry, GLVectorTypes;
 

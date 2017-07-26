@@ -8,13 +8,13 @@ uses
   //{$IFDEF SCRIPTING}
   scriptengine,
   //{$ENDIF}
-  {$IFNDEF UNIX} shellapi,  {$ENDIF}
+  {$IFNDEF UNIX} shellapi, {$ELSE}  Process,  {$ENDIF}
   {$IFNDEF Darwin}uscaledpi, {$ENDIF}
   {$IFDEF COREGL} gl_core_3d, {$ELSE}     gl_legacy_3d, {$ENDIF}
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,math,
   ExtCtrls, OpenGLContext, mesh, LCLintf, ComCtrls, Menus, graphtype, curv,
   ClipBrd, shaderui, shaderu, prefs, userdir, LCLtype, Grids, Spin, matmath,
-  colorTable, Track, types,  glcube,glclrbar, define_types, meshify,   zstream, gl_core_matrix, Process, meshify_simplify;
+  colorTable, Track, types,  glcube,glclrbar, define_types, meshify,   zstream, gl_core_matrix, meshify_simplify;
 
 type
   { TGLForm1 }
@@ -353,7 +353,7 @@ var
   gTrack: TTrack;
   gnLUT: integer = 0;
   isBusy: boolean = true;
-  gRetinaScale : single = 1;
+  {$IFDEF Darwin}gRetinaScale : single = 1;{$ENDIF}
   gDistance : single = 1;
   gMouseX : integer = -1;
   gMouseY : integer = -1;
@@ -1557,7 +1557,6 @@ end;
 procedure TGLForm1.UpdateFont(initialSetup: boolean);
 var
   p,f: string;
-  OK: boolean;
 begin
      p := (ClutDir+pathdelim+gPrefs.FontName+'.png');
      f := (ClutDir+pathdelim+gPrefs.FontName+'.json');
@@ -3459,6 +3458,7 @@ begin
  MultiPassRenderingToolsUpdate;
  ShaderDropChange(sender);
  {$IFDEF Windows}UpdateOverlaySpread;{$ENDIF}//July2017 - scripting on High-dpi, reset scaling
+ ScriptForm.OpenStartupScript;
 end;
 
 procedure TGLForm1.FormCreate(Sender: TObject);
@@ -3593,7 +3593,9 @@ begin
   PosteriorMenu.ShortCut :=  ShortCut(Word('P'), [ssCtrl]);
   SuperiorMenu.ShortCut :=  ShortCut(Word('S'), [ssCtrl]);
   InferiorMenu.ShortCut :=  ShortCut(Word('I'), [ssCtrl]);
+  //HelpMenu.Visible := false;  //bizarre Cocoa behavior: crash with overlay box changes?!?
   {$ELSE}
+  HelpMenu.Visible := true;
   LeftMenu.ShortCut :=  ShortCut(Word('L'), [ssAlt]);
   RightMenu.ShortCut :=  ShortCut(Word('R'), [ssAlt]);
   AnteriorMenu.ShortCut :=  ShortCut(Word('A'), [ssAlt]);

@@ -6,7 +6,7 @@ interface
 
 uses
  {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
-    prefs, math, Classes, SysUtils, mesh, colorTable, matMath, Graphics, define_types, track;
+    prefs, math, Classes, SysUtils, mesh, matMath, Graphics, define_types, track;
 
 const
   kPrimitiveRestart = 2147483647;

@@ -71,8 +71,8 @@ type
     procedure MinMaxPct(lOverlayIndex, num_v: integer; var mx, mn: single; isExcludeZero: boolean);
     procedure SetDescriptives;
     procedure MakeSphere;
-    procedure BuildList  (Clr: TRGBA);
-    procedure BuildListOverlay (Clr: TRGBA);
+    procedure BuildList(Clr: TRGBA);
+    procedure BuildListOverlay(Clr: TRGBA);
     function Load3Do(const FileName: string): boolean;
     function Load3ds(const FileName: string): boolean;
     function LoadAc(const FileName: string): boolean;
@@ -324,7 +324,7 @@ begin
   end;
 end; // BuildList()
 
-procedure TMesh.BuildListOverlay (Clr: TRGBA);
+procedure TMesh.BuildListOverlay(Clr: TRGBA);
 var
   c, i, nVert, nFace, sumFace, sumVert, nMeshOverlay: integer;
   oFaces: TFaces;
@@ -390,8 +390,8 @@ begin
       glDeleteLists(displayListOverlay, 1);
       displayListOverlay := 0;
       {$ENDIF}
-      BuildList (Clr); //upload geometry as a display list: http://www.songho.ca/opengl/gl_displaylist.html
-      BuildListOverlay (Clr);
+      BuildList(Clr); //upload geometry as a display list: http://www.songho.ca/opengl/gl_displaylist.html
+      BuildListOverlay(Clr);
   end;
   {$IFDEF COREGL}
   if (isFlipMeshOverlay) and true then begin
@@ -3544,11 +3544,9 @@ end; //ReadNum()
 function TMesh.LoadMeshAscii(const FileName: string): boolean;
 label 666;
 var
-   strlst: TStringList;
    s: string;
    f: TextFile;
    i, num_v, num_f, num_n: integer;
-
 begin
   result := false;
   AssignFile(f, FileName);
@@ -4837,7 +4835,6 @@ var
    i, sz: integer;
    num_v, num_f, ValsPerVertex : LongWord;
    sig : array [1..3] of byte;
-   mn, mx: single;
 begin
      AssignFile(f, FileName);
      FileMode := fmOpenRead;

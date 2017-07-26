@@ -138,7 +138,7 @@ type
     procedure SaveAs1Click(Sender: TObject);
     function OpenScript(lFilename: string): boolean;
     //function OpenParamScript: boolean;
-    function OpenStartupScript: boolean;
+    //function OpenStartupScript: boolean;
     procedure Memo1Change(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure Shaders1Click(Sender: TObject);
@@ -156,6 +156,7 @@ type
     procedure Paste1Click(Sender: TObject);
     procedure DemoProgram;
     procedure ToPascal(s: string);
+    procedure OpenStartupScript;
   private
     fn: string;
     gchanged: Boolean;
@@ -176,6 +177,24 @@ uses
 {$IFNDEF FPC}
 {$R *.DFM}
 {$ENDIF}
+procedure TScriptForm.OpenStartupScript;
+//do this after clrbar and gltext are created
+begin
+ if gPrefs.initScript = '' then begin
+   OpenSMRU(nil);
+   if gPrefs.StartupScript then Compile1Click(nil);
+ end
+ else begin
+     gPrefs.PrevScript := gPrefs.InitScript;
+   Memo1.Lines.Clear;
+   if FileExists(gPrefs.initScript) then
+     Memo1.Lines.LoadFromFile(gPrefs.initScript)
+   else
+       ToPascal(gPrefs.initScript);//Memo1.Lines.Add(gPrefs.initScript);
+   Compile1Click(nil);
+ end;
+end; //RunStartUpScripts()
+
 procedure TScriptForm.DemoProgram;
 begin
 Memo1.lines.clear;
@@ -386,19 +405,6 @@ begin
       File1.Items[lPos+6].ShortCut := ShortCut(Word('1')+ord(lPos), [ssCtrl]);
       {$ENDIF}
  end;
- if gPrefs.initScript = '' then begin
-   OpenSMRU(nil);
-   if gPrefs.StartupScript then Compile1Click(nil);
- end
- else begin
-     gPrefs.PrevScript := gPrefs.InitScript;
-   Memo1.Lines.Clear;
-   if FileExists(gPrefs.initScript) then
-     Memo1.Lines.LoadFromFile(gPrefs.initScript)
-   else
-       ToPascal(gPrefs.initScript);//Memo1.Lines.Add(gPrefs.initScript);
-   Compile1Click(nil);
- end;
 end;
 
 function TScriptForm.SaveTest: Boolean;
@@ -455,7 +461,7 @@ begin
        result := OpenScript(lF);
 end; *)
 
-function TScriptForm.OpenStartupScript: boolean;
+(*function TScriptForm.OpenStartupScript: boolean;
 var
   lF: string;
 begin
@@ -465,7 +471,7 @@ begin
     result := OpenScript(lF);
   //if result then
   //  Compile1Click(nil);
-end;
+end;  *)
 
 
 procedure TScriptForm.Open1Click(Sender: TObject);
