@@ -39,6 +39,7 @@ type
     Close1: TMenuItem;
     camerapan1: TMenuItem;
     MenuItem2: TMenuItem;
+    overlaysmoothvoxelwisedata1: TMenuItem;
     overlaytranslucent1: TMenuItem;
     meshcurv1: TMenuItem;
     overlayinvert1: TMenuItem;
@@ -128,6 +129,7 @@ type
     procedure FormActivate(Sender: TObject);
     procedure FormDeactivate(Sender: TObject);
     procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
+    procedure FormHide(Sender: TObject);
     procedure Memo1DragDrop(Sender, Source: TObject; X, Y: Integer);
     procedure ReportCaretPos;
     procedure FormCreate(Sender: TObject);
@@ -319,6 +321,11 @@ procedure TScriptForm.FormDropFiles(Sender: TObject;
   const FileNames: array of String);
 begin
   //caption := Filenames[1];
+end;
+
+procedure TScriptForm.FormHide(Sender: TObject);
+begin
+    {$IFDEF Darwin}Application.MainForm.SetFocus;{$ENDIF}
 end;
 
 procedure TScriptForm.Memo1DragDrop(Sender, Source: TObject; X, Y: Integer);

@@ -42,6 +42,7 @@ procedure OVERLAYTRANSPARENCYONBACKGROUND(lPct: integer);
 procedure OVERLAYVISIBLE(lOverlay: integer; VISIBLE: boolean);
 procedure OVERLAYTRANSLUCENT(lOverlay: integer; TRANSLUCENT: boolean);
 procedure OVERLAYINVERT(lOverlay: integer; INVERT: boolean);
+procedure OVERLAYSMOOTHVOXELWISEDATA (SMOOTH: boolean);
 procedure QUIT;
 procedure RESETDEFAULTS;
 procedure SAVEBMP(lFilename: string);
@@ -69,7 +70,7 @@ const
                Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
              );
 
-knProc = 53;
+knProc = 54;
   kProcRA : array [1..knProc] of TScriptRec = (
    (Ptr:@AZIMUTH;Decl:'AZIMUTH';Vars:'(DEG: integer)'),
    (Ptr:@AZIMUTHELEVATION;Decl:'AZIMUTHELEVATION';Vars:'(AZI, ELEV: integer)'),
@@ -109,6 +110,7 @@ knProc = 53;
    (Ptr:@OVERLAYVISIBLE;Decl:'OVERLAYVISIBLE';Vars:'(lOverlay: integer; VISIBLE: boolean)'),
    (Ptr:@OVERLAYTRANSLUCENT;Decl:'OVERLAYTRANSLUCENT';Vars:'(lOverlay: integer; TRANSLUCENT: boolean)'),
    (Ptr:@OVERLAYINVERT;Decl:'OVERLAYINVERT';Vars:'(lOverlay: integer; INVERT: boolean)'),
+   (Ptr:@OVERLAYSMOOTHVOXELWISEDATA;Decl:'OVERLAYSMOOTHVOXELWISEDATA';Vars:'(SMOOTH: boolean)'),
    (Ptr:@QUIT;Decl:'QUIT';Vars:''),
    (Ptr:@RESETDEFAULTS;Decl:'RESETDEFAULTS';Vars:''),
    (Ptr:@SAVEBMP;Decl:'SAVEBMP';Vars:'(lFilename: string)'),
@@ -447,6 +449,11 @@ end;
 procedure OVERLAYINVERT(lOverlay: integer; INVERT: boolean);
 begin
      GLForm1.OverlayInvert(lOverlay, INVERT);
+end;
+
+procedure OVERLAYSMOOTHVOXELWISEDATA (SMOOTH: boolean);
+begin
+     gPrefs.SmoothVoxelwiseData:= SMOOTH;
 end;
 
 procedure OVERLAYTRANSLUCENT(lOverlay: integer; TRANSLUCENT: boolean);

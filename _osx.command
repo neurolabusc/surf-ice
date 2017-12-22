@@ -21,7 +21,7 @@ cp ./optsCore.inc ./opts.inc
 
 
 #/Users/rorden/lazarus/lazbuild ./surfice.lpr --cpu=x86_64 --ws=cocoa --compiler="/usr/local/lib/fpc/3.1.1/ppcx64"
-lazbuild ./surfice.lpr --cpu=x86_64 --ws=cocoa
+~/Lazarus/lazbuild ./surfice.lpr --cpu=x86_64 --ws=cocoa
 #/Developer/lazarus/lazbuild ./surfice.lpr --ws=cocoa
 strip ./surfice
 cp surfice /Users/rorden/Desktop/Surf_Ice/Surfice/surfice.app/Contents/MacOS/surfice
@@ -29,8 +29,8 @@ cp surfice /Users/rorden/Desktop/Surf_Ice/Surfice/surfice.app/Contents/MacOS/sur
 #2.) build OpenGL legacy version with geomtery shaders
 
 #compile Surfice as 32-bit Carbon: OSX 10.6 OpenGL support (OpenGL2.1)
-cp ./optsCompatGeom.inc ./opts.inc
-/Developer/lazarus/lazbuild -B ./surfice.lpr
+cp ./optsCompat.inc ./opts.inc
+~/Lazarus//lazbuild -B ./surfice.lpr --ws=cocoa
 strip ./surfice
 cp surfice /Users/rorden/Desktop/Surf_Ice/Surfice/surficeOld.app/Contents/MacOS/surfice
 

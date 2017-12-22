@@ -14,6 +14,7 @@ object ScriptForm: TScriptForm
   OnCreate = FormCreate
   OnDeactivate = FormDeactivate
   OnDropFiles = FormDropFiles
+  OnHide = FormHide
   LCLVersion = '1.9.0.0'
   object Splitter1: TSplitter
     Cursor = crVSplit
@@ -214,6 +215,12 @@ object ScriptForm: TScriptForm
           Tag = 1211
           Caption = 'overlayinvert'
           Hint = 'OVERLAYINVERT(OVERLAY: integer; INVERT: boolean) toggle whether overlay color scheme is inverted.'
+          OnClick = InsertCommand
+        end
+        object overlaysmoothvoxelwisedata1: TMenuItem
+          Tag = 1
+          Caption = 'overlaysmoothvoxelwisedata'
+          Hint = 'OVERLAYSMOOTHVOXELWISEDATA(smooth: boolean) Determines if overlays are loaded using interpolation (smooth) or nearest neighbor (un-smoothed) interpolation.'
           OnClick = InsertCommand
         end
       end

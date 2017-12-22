@@ -215,7 +215,7 @@ begin
   end;
   {$IFNDEF CIFTI_DEBUG}
   if bm.SurfaceNumberOfVertices <> length(vertices) then begin
-     showmessage(format('Expected %d vertices, but CIFTI has %d',[length(vertices), bm.SurfaceNumberOfVertices]));
+     showmessage(format('Expected %d vertices, but CIFTI has %d (load *.surf.gii BEFORE %s)',[length(vertices), bm.SurfaceNumberOfVertices, extractfilename(fnm)]));
      exit;
   end;
   {$ENDIF CIFTI_DEBUG}

@@ -135,88 +135,6 @@ begin
 end;
 {$ENDIF} // BINARYMETRICS
 
-(*function LoadMetricsAsci(fnm: string; out fnt: TMetrics): boolean;
-var
-   flst, strlst : TStringList;
-   r: TLResource;
-   s: string;
-   fLine,id, pages: integer;
-function GetFntVal(key: string): single;
-var
-   i,p: integer;
-begin
-  result := 0;
-  for i := 1 to (strlst.Count-1) do begin
-        if pos(key,strlst[i]) <> 1 then continue;
-        p :=  length(key)+2;
-        result := strtofloatdef(copy(strlst[i],p,length(strlst[i])-p+1 ),0);
-        break;
-  end;
-end;
-begin
-  result := false;
-  for id := 0 to 255 do begin
-      fnt.M[id].x := 0;
-      fnt.M[id].y := 0;
-      fnt.M[id].xEnd := 0;
-      fnt.M[id].yEnd := 0;
-      fnt.M[id].w := 0;
-      fnt.M[id].h := 0;
-      fnt.M[id].xo := 0;
-      fnt.M[id].yo := 0;
-      fnt.M[id].xadv := 0; //critical to set: fnt format omits non-graphical characters (e.g. DEL): we skip characters whete X-advance = 0
-  end;
-  fLst := TStringList.Create;
-  if fnm = '' then begin
-    r:=LazarusResources.Find('fnt');
-    if r=nil then raise Exception.Create('resource fnt is missing');
-    fLst.StrictDelimiter := true;
-    fLst.Delimiter := chr(10);
-    fLst.DelimitedText:=r.Value;
-  end else
-      fLst.LoadFromFile(fnm);
-  if fLst.Count < 2 then exit;
-
-  strlst:=TStringList.Create;
-  for fLine := 0 to fLst.Count-1 do begin
-        s := fLst[fLine]; //make sure to run CheckMesh after this, as these are indexed from 1!
-        if (length(s) < 1) or (s[1] = '#') then continue;
-        strlst.DelimitedText := s;
-        if strlst.Count < 7 then continue;
-        if (strlst[0] = 'common') then begin
-           fnt.lineHeight := GetFntVal('lineHeight');
-           fnt.base := GetFntVal('base');
-           fnt.scaleW := GetFntVal('scaleW');
-           fnt.scaleH := GetFntVal('scaleH');
-           pages := round(GetFntVal('pages'));
-           if (pages <> 1) then begin
-              showmessage('Only able to read single page fonts');
-              exit;
-           end;
-        end;
-        if (strlst[0] <> 'char') then continue;
-        id := round(GetFntVal('id'));
-        if (id < 0) or (id > 255) then continue;
-        fnt.M[id].x:=GetFntVal('x');
-        fnt.M[id].y:=GetFntVal('y');
-        fnt.M[id].w:=GetFntVal('width');
-        fnt.M[id].h:=GetFntVal('height');
-        fnt.M[id].xo:=GetFntVal('xoffset');
-        fnt.M[id].yo:=GetFntVal('yoffset');
-        fnt.M[id].xadv:=GetFntVal('xadvance');
-  end;
-  fLst.free;
-  strlst.free;
-  if (fnt.scaleW < 1) or (fnt.scaleH < 1) then exit;
-  for id := 0 to 255 do begin //normalize from pixels to 0..1
-      fnt.M[id].yo := fnt.base - (fnt.M[id].h + fnt.M[id].yo);
-      fnt.M[id].x:=fnt.M[id].x/fnt.scaleW;
-      fnt.M[id].y:=fnt.M[id].y/fnt.scaleH;
-      fnt.M[id].xEnd := fnt.M[id].x + (fnt.M[id].w/fnt.scaleW);
-      fnt.M[id].yEnd := fnt.M[id].y + (fnt.M[id].h/fnt.scaleH);
-  end;
-  result := true;
-end;  *)
 function LoadMetricsJson(fnm: string; out fnt: TMetrics): boolean;
 //load JSON format created by
 // https://github.com/Jam3/msdf-bmfont
@@ -227,7 +145,12 @@ var
    pages, id, strBlockStart, strBlockEnd: integer;
    str: string;
    f: textfile;
+   {$IFDEF FPC}
    r: TLResource;
+   {$ELSE}
+   r : TResourceStream;
+   fLst: TStringList;
+   {$ENDIF}
 function GetFntVal(key: string): single;
 var
    p, pComma: integer;
@@ -254,9 +177,18 @@ begin
       fnt.M[id].xadv := 0; //critical to set: fnt format omits non-graphical characters (e.g. DEL): we skip characters whete X-advance = 0
   end;
   if fnm = '' then begin
+    {$IFDEF FPC}
     r:=LazarusResources.Find('jsn');
     if r=nil then raise Exception.Create('resource jsn is missing');
     str:=r.Value;
+    {$ELSE}
+     r := TResourceStream.Create(hInstance,'JSN',RT_RCDATA);
+     fLst := TStringList.Create;
+     fLst.LoadFromStream(r);
+     str := fLst[0];
+     fLst.Free;
+     r.free;
+    {$ENDIF}
   end else begin
     if not fileexists(fnm) then begin
        showmessage('Unable to find '+fnm);
@@ -305,18 +237,14 @@ begin
   until strBlockStart < 1;
   if (fnt.scaleW < 1) or (fnt.scaleH < 1) then exit;
   for id := 0 to 255 do begin //normalize from pixels to 0..1
-      //these next lines seem arbitrary, but they seem to compensate for vertical/horizontal offset vs Hiero
-      //fnt.M[id].yo := fnt.base - (fnt.M[id].h + fnt.M[id].yo); //<- Hiero
-      fnt.M[id].yo := (0.17*fnt.base)-(fnt.M[id].h + fnt.M[id].yo); //<- msdf-bmfont
-      fnt.M[id].xo := fnt.M[id].xo- (0.17*fnt.base);// <-msdf-bmfont
-      fnt.M[id].x:=fnt.M[id].x/fnt.scaleW+1/fnt.scaleW ; //+1/scaleW : indexed from 1 not 0?
-      fnt.M[id].y:=fnt.M[id].y/fnt.scaleH+1/fnt.scaleH; //+1/scaleH : indexed from 1 not 0?
-      fnt.M[id].xEnd := fnt.M[id].x + (fnt.M[id].w/fnt.scaleW)-2/fnt.scaleW;
-      fnt.M[id].yEnd := fnt.M[id].y + (fnt.M[id].h/fnt.scaleH)-2/fnt.scaleH;
+    fnt.M[id].yo := fnt.base - (fnt.M[id].h + fnt.M[id].yo);
+    fnt.M[id].x:=fnt.M[id].x/fnt.scaleW;
+    fnt.M[id].y:=fnt.M[id].y/fnt.scaleH;
+    fnt.M[id].xEnd := fnt.M[id].x + (fnt.M[id].w/fnt.scaleW);
+    fnt.M[id].yEnd := fnt.M[id].y + (fnt.M[id].h/fnt.scaleH);
   end;
   result := true;
 end; //LoadMetricsJson()
-
 
 procedure Rot(xK,yK, x,y: single; r: TRotMat; out Xout, Yout: single);
 // rotate points x,y and add to constant offset xK,yK

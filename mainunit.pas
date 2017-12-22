@@ -4,7 +4,7 @@ unit mainunit;
 interface
 uses
   {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
-
+  fphttpclient, strutils,
   //{$IFDEF SCRIPTING}
   scriptengine,
   //{$ENDIF}
@@ -223,6 +223,7 @@ type
     function OpenOverlay(FilenameIn: string): boolean;
     function OpenEdge(FilenameIn: string): boolean;
     function OpenMesh(FilenameIn: string): boolean;
+    procedure CheckForUpdates(Sender: TObject);
     procedure AboutMenuClick(Sender: TObject);
     procedure AddNodesMenuClick(Sender: TObject);
     procedure AddOverlayMenuClick(Sender: TObject);
@@ -332,15 +333,16 @@ var
   gCube : TGLCube;
   gClrbar: TGLClrbar;
   gPrefs : TPrefs;
-    gElevation : integer =20;
+  gElevation : integer =20;
   gAzimuth : integer = 250;
 
 implementation
-
+//{$IFDEF COREGL}
 {$IFDEF LCLcarbon}
  This program does not support Carbon
   Please choose Project/ProjectOptions, go to the CompilerOptions/Additions&Overrides and set the BuildMode pull-down to "MacOS"
 {$ENDIF}
+//{$ENDIF}
 
 {$R *.lfm}
 {$IFDEF LCLCocoa}
@@ -1574,10 +1576,82 @@ begin
      end;
 end;
 
+{$IFDEF FPC}
+function latestGitRelease(url: string): string;
+//Returns string for latest release (error will return empty string)
+//example
+// latestGitRelease('https://api.github.com/repos/rordenlab/dcm2niix/releases/latest');
+//will return
+// "v1.0.20171204"
+const
+     key = '"tag_name":"';
+var
+  s, e: integer;
+  cli: TFPHTTPClient;  //uses fphttpclient
+begin
+  result := '';
+  cli := TFPHTTPClient.Create(nil);
+  cli.AddHeader('User-Agent','Mozilla/5.0 (compatible; fpweb)');
+  try
+    try
+      result := Cli.Get(url);
+    except
+      result := '';
+    end;
+  finally
+    cli.free
+  end;
+  if length(result) < 1 then exit;
+  s := posex(key, result);
+  if s < 1 then begin
+     result := '';
+     exit;
+  end;
+  s := s+length(key);
+  e:= posex('"', result, s);
+  if e < 1 then begin
+     result := '';
+     exit;
+  end;
+  result := copy(result, s, e-s);
+end;
+
+procedure TGLForm1.CheckForUpdates(Sender: TObject);
+const
+     kBase = '/neurolabusc/surf-ice/releases/latest';
+     kUrl = 'https://github.com' + kBase;
+     kApi = 'https://api.github.com/repos' + kBase;
+var
+  s: string;
+  latest, current: integer;
+begin
+     s := latestGitRelease(kApi);
+     if length(s) < 8 then begin  //last 8 digits are date: v.1.0.20170101
+        showmessage('Unable to detect latest version: are you connected to the web? '+kApi);
+        exit;
+     end;
+     if CompareText(s, kVers) = 0 then begin
+        showmessage('You are running the latest release '+kVers);
+        exit;
+     end;
+     latest := strtointdef(RightStr(s,8),0);
+     current := strtointdef(RightStr(kVers,8),0);
+     if current > latest then
+        showmessage('You are running a beta release '+kVers+', the latest stable release is '+s)
+     else
+         showmessage('You are running an old release '+kVers+', the latest stable release is '+s+'. Visit '+kUrl );
+end;
+{$ELSE}
+procedure TGLForm1.CheckForUpdates(Sender: TObject);
+begin
+    //not used in Windows
+end;
+{$ENDIF}
+
 procedure TGLForm1.PrefMenuClick(Sender: TObject);
 var
   PrefForm: TForm;
-  OkBtn, AdvancedBtn: TButton;
+  UpdateBtn, OkBtn, AdvancedBtn: TButton;
   {$IFDEF LCLCocoa} RetinaCheck,{$ENDIF}
   BitmapAlphaCheck, SmoothVoxelwiseDataCheck, TracksAreTubesCheck: TCheckBox;
   bmpEdit: TEdit;
@@ -1709,6 +1783,16 @@ begin
   RetinaCheck.Left := 8;
   RetinaCheck.Top := 248;
   RetinaCheck.Parent:=PrefForm;
+  {$ENDIF}
+  //UpdateBtn
+  {$IFDEF FPC}
+  UpdateBtn:=TButton.create(PrefForm);
+  UpdateBtn.Caption:='Check for updates';
+  UpdateBtn.Left := 28;
+  UpdateBtn.Width:= 168;
+  UpdateBtn.Top := 288;
+  UpdateBtn.Parent:=PrefForm;
+  UpdateBtn.OnClick:= GLForm1.CheckForUpdates;
   {$ENDIF}
   //OK button
   OkBtn:=TButton.create(PrefForm);
@@ -2841,7 +2925,7 @@ begin
      GLbox.Repaint;
   end;
   origin := GetOrigin(scale);
-  str :=  'Surf Ice '+' 14 July 2017 '
+  str :=  'Surf Ice '+kVers+' '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}

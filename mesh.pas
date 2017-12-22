@@ -4597,7 +4597,7 @@ begin
         LoadAsc_Srf(Filename);
      if (ext = '.TRI') then
         LoadTri(Filename);
-     if (ext = '.ASC') then
+     if (ext = '.ASC') or (ext = '.DPV') then  //https://brainder.org/category/neuroinformatics/file-types/
         LoadAsc_Srf(Filename);
      if (ext = '.OBJ') then
          LoadObj(Filename);
