@@ -802,7 +802,7 @@ begin
   end;
 
   //ext := UpperCase(ExtractFileExt(Filename));
-  if (ext = '.NII') or (ext = '.HDR')  or (ext = '.NII.GZ') or (ext = '.ANNOT') or (ext = '.W') or (ext = '.CURV')  then begin
+  if (ext = '.NII') or (ext = '.HDR')  or (ext = '.NII.GZ') or (ext = '.DPV') or (ext = '.ANNOT') or (ext = '.W') or (ext = '.CURV')  then begin
     OpenOverlay(Filename);
     exit;
   end else if (ext = '.VTK') and (not isVtkMesh (Filename)) then begin

@@ -114,9 +114,8 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
-        <TopLine Value="2917"/>
-        <CursorPos X="30" Y="2928"/>
+        <TopLine Value="786"/>
+        <CursorPos X="76" Y="805"/>
         <UsageCount Value="210"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -141,10 +140,11 @@
       <Unit4>
         <Filename Value="colorTable.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="11"/>
-        <CursorPos X="10" Y="21"/>
+        <EditorIndex Value="5"/>
+        <TopLine Value="18"/>
+        <CursorPos X="25" Y="36"/>
         <UsageCount Value="210"/>
+        <Loaded Value="True"/>
       </Unit4>
       <Unit5>
         <Filename Value="track.pas"/>
@@ -160,7 +160,7 @@
         <ComponentName Value="ScriptForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="7"/>
+        <EditorIndex Value="8"/>
         <TopLine Value="628"/>
         <CursorPos X="10" Y="633"/>
         <UsageCount Value="200"/>
@@ -169,17 +169,18 @@
       </Unit6>
       <Unit7>
         <Filename Value="cifti.inc"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="6"/>
         <TopLine Value="200"/>
         <CursorPos X="82" Y="218"/>
-        <UsageCount Value="18"/>
+        <UsageCount Value="19"/>
         <Loaded Value="True"/>
       </Unit7>
       <Unit8>
         <Filename Value="mesh.pas"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="4"/>
-        <TopLine Value="4594"/>
-        <CursorPos X="19" Y="4596"/>
+        <TopLine Value="5219"/>
+        <CursorPos X="7" Y="5231"/>
         <UsageCount Value="100"/>
         <Loaded Value="True"/>
       </Unit8>
@@ -187,7 +188,7 @@
         <Filename Value="define_types.pas"/>
         <EditorIndex Value="1"/>
         <CursorPos X="8" Y="7"/>
-        <UsageCount Value="68"/>
+        <UsageCount Value="69"/>
         <Loaded Value="True"/>
       </Unit9>
       <Unit10>
@@ -208,7 +209,7 @@
         <Filename Value="opts.inc"/>
         <EditorIndex Value="3"/>
         <CursorPos X="3" Y="2"/>
-        <UsageCount Value="66"/>
+        <UsageCount Value="67"/>
         <Loaded Value="True"/>
       </Unit12>
       <Unit13>
@@ -242,10 +243,10 @@
       </Unit16>
       <Unit17>
         <Filename Value="commandsu.pas"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="7"/>
         <TopLine Value="31"/>
         <CursorPos X="20" Y="44"/>
-        <UsageCount Value="65"/>
+        <UsageCount Value="66"/>
         <Loaded Value="True"/>
       </Unit17>
       <Unit18>

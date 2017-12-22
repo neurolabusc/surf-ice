@@ -101,6 +101,7 @@ type
     function LoadWfr(const FileName: string): boolean; //EMSE wireframe
     procedure LoadAsc_Srf(const FileName: string);
     procedure LoadCtm(const FileName: string);
+    function LoadDpv(const FileName: string; lOverlayIndex: integer): boolean;
     procedure LoadCurv(const FileName: string; lOverlayIndex: integer);
     procedure LoadMeshAsOverlay(const FileName: string; lOverlayIndex: integer);
     procedure LoadNii(const FileName: string; lOverlayIndex: integer; lLoadSmooth: boolean);
@@ -4597,7 +4598,7 @@ begin
         LoadAsc_Srf(Filename);
      if (ext = '.TRI') then
         LoadTri(Filename);
-     if (ext = '.ASC') or (ext = '.DPV') then  //https://brainder.org/category/neuroinformatics/file-types/
+     if (ext = '.ASC') then  //https://brainder.org/category/neuroinformatics/file-types/
         LoadAsc_Srf(Filename);
      if (ext = '.OBJ') then
          LoadObj(Filename);
@@ -4825,6 +4826,48 @@ begin
    CloseFile(f);
  setlength(vertexRGBA, 0);
 end; // LoadAnnot()
+
+function TMesh.LoadDpv(const FileName: string; lOverlayIndex: integer): boolean;
+label
+   666;
+var
+   num_v: integer;
+   f: TextFile;
+   idxf, v1, v2, v3, inten: single;
+   idx: integer;
+begin
+     result := false;
+     if (lOverlayIndex < kMinOverlayIndex) or (lOverlayIndex > kMaxOverlays) then exit;
+     num_v := length(vertices);
+     setlength(overlay[lOverlayIndex].intensity, num_v); //vertices = zeros(num_f, 9);
+     AssignFile(f, FileName);
+     Reset(f);
+     idx := 0;
+     while not EOF(f) do begin
+         try
+            ReadLn(f, idxf, v1, v2, v3, inten);
+         except
+           continue;
+         end;
+         idx := round(idxf);
+         if (idx < 1) or (idx > num_v) then begin
+           showmessage('DPV file does not appear to match background mesh: expected indices 1..'+inttostr(num_v)+' not '+inttostr(idx));
+           goto 666;
+         end;
+         overlay[lOverlayIndex].intensity[idx-1] := inten;
+
+     end;
+     result := true;
+   666:
+     CloseFile(f);
+
+(*if (num_v <> length(vertices)) or (num_f <> length(faces)) or (sz < (filepos(f)+(num_v*4))) then begin
+   showmessage('File corrupted: overlay does not match background mesh: '+inttostr(num_v)+' vertices and '+inttostr(num_f)+' triangles');
+   CloseFile(f);
+   exit;
+end;*)
+
+end;
 
 procedure TMesh.LoadCurv(const FileName: string; lOverlayIndex: integer);
 //simple format used by Freesurfer  BIG-ENDIAN
@@ -5161,7 +5204,7 @@ begin
      if LoadAnnot(FileName) then begin
         result := true;
         isRebuildList := true;
-        exit; //not supported - but inform user
+        exit;
      end;
   if (ext = '.GCS') then
      if LoadGcs(FileName) then exit; //not supported - but inform user
@@ -5178,6 +5221,12 @@ begin
      if not LoadMz3(FileName, OpenOverlays) then begin //unable to open as an overlay - perhaps vertex colors?
         OpenOverlays := OpenOverlays - 1;
         exit;
+     end;
+  end;
+  if (ext = '.DPV') then begin
+     if not LoadDPV(FileName, OpenOverlays) then begin
+       OpenOverlays := OpenOverlays - 1;
+       exit;
      end;
   end;
   if (ext = '.GII') or isCiftiNii then begin
