@@ -17,6 +17,9 @@ You can also build this project from the command line (assuming you have FPC Laz
 
 ##### Recent Versions
 
+20-December-2017 (v1.0.20171220)
+ - Support [PALM](https://github.com/andersonwinkler/PALM) format [DPV](https://brainder.org/2011/09/25/braindering-with-ascii-files/).
+
 21-June-2017
  - [Smooth](https://github.com/neurolabusc/OpenGLCoreTutorials) numbers in colorbars.
  - Conversion of images from voxels to mesh now allows the user to specify a minimum cluster size.

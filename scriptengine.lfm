@@ -31,14 +31,16 @@ object ScriptForm: TScriptForm
     Top = 0
     Width = 420
     Align = alClient
+    Constraints.MinHeight = 3
     OnChange = Memo1Change
     OnClick = Memo1Click
     OnDragDrop = Memo1DragDrop
     OnKeyUp = Memo1KeyUp
     ParentFont = False
-    ScrollBars = ssAutoHorizontal
+    ScrollBars = ssAutoBoth
     TabOrder = 0
     WantTabs = True
+    WordWrap = False
   end
   object Memo2: TMemo
     Left = 0
@@ -46,6 +48,7 @@ object ScriptForm: TScriptForm
     Top = 272
     Width = 420
     Align = alBottom
+    Constraints.MinHeight = 3
     ParentFont = False
     ReadOnly = True
     ScrollBars = ssVertical

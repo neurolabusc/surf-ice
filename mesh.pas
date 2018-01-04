@@ -4965,7 +4965,7 @@ begin
          end;
          blockread(f,s, 4);
          {$IFDEF ENDIAN_LITTLE}
-         SwapSingle(s); //Curv files are ALWAYS big endian
+         SwapSingle(s); //W files are ALWAYS big endian
          {$ENDIF}
          overlay[lOverlayIndex].intensity[idx] := s;
      end;

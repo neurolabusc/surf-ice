@@ -47,6 +47,7 @@ rm -rf backup
 
 #remove Cocoa as widgetset
 awk '{gsub(/Active="MacOS"/,"");}1' surfice.lpi > surfice.tmp && mv surfice.tmp surfice.lpi
+awk '{gsub(/Active="MacOS"/,"Active=\"Default\"");}1' surfice.lps > surfice.tmp && mv surfice.tmp surfice.lps
 
 
 cd /Users/rorden/Documents/pas/

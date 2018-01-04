@@ -1,24 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectOptions>
-    <Version Value="10"/>
+    <Version Value="11"/>
     <General>
-      <Flags>
-        <SaveJumpHistory Value="False"/>
-        <SaveFoldState Value="False"/>
-      </Flags>
+      <SessionStorage Value="InProjectDir"/>
       <MainUnit Value="0"/>
       <Title Value="Surf Ice"/>
+      <ResourceType Value="res"/>
       <UseXPManifest Value="True"/>
       <XPManifest>
         <DpiAware Value="True"/>
       </XPManifest>
       <Icon Value="0"/>
     </General>
-    <i18n>
-      <EnableI18N LFM="False"/>
-    </i18n>
-    <BuildModes Count="2" >
+    <BuildModes Count="2">
       <Item1 Name="Default" Default="True"/>
       <Item2 Name="MacOS">
         <MacroValues Count="1">
@@ -31,63 +26,34 @@
           </Target>
           <SearchPaths>
             <IncludeFiles Value="$(ProjOutDir)"/>
-            <OtherUnitFiles Value="lzma"/>
             <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
           </SearchPaths>
-          <Conditionals Value="//if TargetOS='linux' then
-//   UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src;/usr/lib/fpc/3.0.0/source/packages/opengl/src';
-//if TargetOS='linux' then
-//  UnitPath += ';$(FPCSrcDir)/packages/opengl/src';
-//if TargetOS='linux' then
-//  UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src;/usr/lib/fpc/3.0.0/source/packages/opengl/src';
-//CentOS/NeuroDebian /usr/share/fpcsrc/3.0.0/packages/opengl/src;
-//Gentoo /usr/lib/fpc/3.0.0/source/packages/opengl/src/glext.pp
-// example for adding linker options on Mac OS X
-//if TargetOS='darwin' then
-//  LinkerOptions := ' -framework OpenGL';
-
-// example for adding a unit and include path on Windows
-//if SrcOS='win' then begin
-//  UnitPath += ';win';
-//  IncPath += ';win';
-//end;"/>
-          <CodeGeneration>
-            <SmartLinkUnit Value="True"/>
-            <TargetCPU Value="x86_64"/>
-            <Optimizations>
-              <OptimizationLevel Value="3"/>
-            </Optimizations>
-          </CodeGeneration>
+          <Parsing>
+            <SyntaxOptions>
+              <SyntaxMode Value="Delphi"/>
+            </SyntaxOptions>
+          </Parsing>
           <Linking>
-            <Debugging>
-              <GenerateDebugInfo Value="False"/>
-              <StripSymbols Value="True"/>
-            </Debugging>
-            <LinkSmart Value="True"/>
             <Options>
               <Win32>
                 <GraphicApplication Value="True"/>
               </Win32>
             </Options>
           </Linking>
-          <Other>
-            <CompilerMessages>
-              <IgnoredMessages idx5057="True"/>
-            </CompilerMessages>
-          </Other>
         </CompilerOptions>
       </Item2>
       <SharedMatrixOptions Count="1">
-        <Item1 ID="021889034240" Modes="MacOS" Type="IDEMacro" MacroName="LCLWidgetType" Value="cocoa"/>
+        <Item1 ID="383516712532" Modes="MacOS" Type="IDEMacro" MacroName="LCLWidgetType" Value="cocoa"/>
       </SharedMatrixOptions>
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
     </PublishOptions>
     <RunParams>
-      <local>
-        <FormatVersion Value="1"/>
-      </local>
+      <FormatVersion Value="2"/>
+      <Modes Count="1">
+        <Mode0 Name="default"/>
+      </Modes>
     </RunParams>
     <RequiredPackages Count="3">
       <Item1>
@@ -100,13 +66,10 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="41">
+    <Units Count="3">
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <CursorPos X="61" Y="4"/>
-        <UsageCount Value="210"/>
       </Unit0>
       <Unit1>
         <Filename Value="mainunit.pas"/>
@@ -114,304 +77,14 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <TopLine Value="786"/>
-        <CursorPos X="76" Y="805"/>
-        <UsageCount Value="210"/>
-        <Loaded Value="True"/>
-        <LoadedDesigner Value="True"/>
       </Unit1>
       <Unit2>
-        <Filename Value="prefs.pas"/>
-        <IsPartOfProject Value="True"/>
-        <EditorIndex Value="2"/>
-        <TopLine Value="14"/>
-        <CursorPos X="24" Y="23"/>
-        <UsageCount Value="210"/>
-        <Loaded Value="True"/>
-      </Unit2>
-      <Unit3>
-        <Filename Value="nifti_loader.pas"/>
-        <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="661"/>
-        <CursorPos X="29" Y="680"/>
-        <UsageCount Value="210"/>
-      </Unit3>
-      <Unit4>
-        <Filename Value="colorTable.pas"/>
-        <IsPartOfProject Value="True"/>
-        <EditorIndex Value="5"/>
-        <TopLine Value="18"/>
-        <CursorPos X="25" Y="36"/>
-        <UsageCount Value="210"/>
-        <Loaded Value="True"/>
-      </Unit4>
-      <Unit5>
-        <Filename Value="track.pas"/>
-        <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="710"/>
-        <CursorPos X="103" Y="719"/>
-        <UsageCount Value="210"/>
-      </Unit5>
-      <Unit6>
         <Filename Value="scriptengine.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="ScriptForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <EditorIndex Value="8"/>
-        <TopLine Value="628"/>
-        <CursorPos X="10" Y="633"/>
-        <UsageCount Value="200"/>
-        <Loaded Value="True"/>
-        <LoadedDesigner Value="True"/>
-      </Unit6>
-      <Unit7>
-        <Filename Value="cifti.inc"/>
-        <EditorIndex Value="6"/>
-        <TopLine Value="200"/>
-        <CursorPos X="82" Y="218"/>
-        <UsageCount Value="19"/>
-        <Loaded Value="True"/>
-      </Unit7>
-      <Unit8>
-        <Filename Value="mesh.pas"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="4"/>
-        <TopLine Value="5219"/>
-        <CursorPos X="7" Y="5231"/>
-        <UsageCount Value="100"/>
-        <Loaded Value="True"/>
-      </Unit8>
-      <Unit9>
-        <Filename Value="define_types.pas"/>
-        <EditorIndex Value="1"/>
-        <CursorPos X="8" Y="7"/>
-        <UsageCount Value="69"/>
-        <Loaded Value="True"/>
-      </Unit9>
-      <Unit10>
-        <Filename Value="gl_2d.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="508"/>
-        <CursorPos X="26" Y="508"/>
-        <UsageCount Value="48"/>
-      </Unit10>
-      <Unit11>
-        <Filename Value="shaderu.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="796"/>
-        <CursorPos X="25" Y="808"/>
-        <UsageCount Value="31"/>
-      </Unit11>
-      <Unit12>
-        <Filename Value="opts.inc"/>
-        <EditorIndex Value="3"/>
-        <CursorPos X="3" Y="2"/>
-        <UsageCount Value="67"/>
-        <Loaded Value="True"/>
-      </Unit12>
-      <Unit13>
-        <Filename Value="/usr/local/share/fpcsrc/packages/opengl/src/glext.pp"/>
-        <UnitName Value="GLext"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="5075"/>
-        <CursorPos X="90" Y="5084"/>
-        <UsageCount Value="29"/>
-      </Unit13>
-      <Unit14>
-        <Filename Value="matmath.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="560"/>
-        <CursorPos X="66" Y="573"/>
-        <UsageCount Value="10"/>
-      </Unit14>
-      <Unit15>
-        <Filename Value="curv.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="89"/>
-        <CursorPos X="25" Y="103"/>
-        <UsageCount Value="14"/>
-      </Unit15>
-      <Unit16>
-        <Filename Value="userdir.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="222"/>
-        <CursorPos X="19" Y="232"/>
-        <UsageCount Value="4"/>
-      </Unit16>
-      <Unit17>
-        <Filename Value="commandsu.pas"/>
-        <EditorIndex Value="7"/>
-        <TopLine Value="31"/>
-        <CursorPos X="20" Y="44"/>
-        <UsageCount Value="66"/>
-        <Loaded Value="True"/>
-      </Unit17>
-      <Unit18>
-        <Filename Value="shaderui.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="133"/>
-        <CursorPos X="21" Y="143"/>
-        <UsageCount Value="2"/>
-      </Unit18>
-      <Unit19>
-        <Filename Value="meshify.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="112"/>
-        <CursorPos X="26" Y="114"/>
-        <UsageCount Value="28"/>
-      </Unit19>
-      <Unit20>
-        <Filename Value="clustering.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="168"/>
-        <CursorPos X="8" Y="175"/>
-        <UsageCount Value="27"/>
-      </Unit20>
-      <Unit21>
-        <Filename Value="nifti_types.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="57"/>
-        <CursorPos X="22" Y="62"/>
-        <UsageCount Value="9"/>
-      </Unit21>
-      <Unit22>
-        <Filename Value="gl_legacy_3d.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="259"/>
-        <CursorPos X="31" Y="269"/>
-        <UsageCount Value="43"/>
-      </Unit22>
-      <Unit23>
-        <Filename Value="gl_core_3d.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="730"/>
-        <CursorPos X="15" Y="737"/>
-        <UsageCount Value="43"/>
-      </Unit23>
-      <Unit24>
-        <Filename Value="../MRIcroGL/nifti_foreign.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="2047"/>
-        <CursorPos X="3" Y="2057"/>
-        <UsageCount Value="3"/>
-      </Unit24>
-      <Unit25>
-        <Filename Value="nifti_foreign.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="1139"/>
-        <CursorPos X="9" Y="1140"/>
-        <UsageCount Value="41"/>
-      </Unit25>
-      <Unit26>
-        <Filename Value="/usr/local/share/fpcsrc/packages/opengl/src/gl.pp"/>
-        <UnitName Value="GL"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="1305"/>
-        <CursorPos X="3" Y="1317"/>
-        <UsageCount Value="26"/>
-      </Unit26>
-      <Unit27>
-        <Filename Value="gl_core_matrix.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="210"/>
-        <CursorPos X="53" Y="232"/>
-        <UsageCount Value="26"/>
-      </Unit27>
-      <Unit28>
-        <Filename Value="../../../lazarus/components/opengl/glcocoanscontext.pas"/>
-        <UnitName Value="GLCocoaNSContext"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="405"/>
-        <CursorPos X="30" Y="412"/>
-        <UsageCount Value="24"/>
-      </Unit28>
-      <Unit29>
-        <Filename Value="/usr/local/share/fpcsrc/packages/cocoaint/src/foundation/NSObjCRuntime.inc"/>
-        <EditorIndex Value="-1"/>
-        <CursorPos X="32"/>
-        <UsageCount Value="24"/>
-      </Unit29>
-      <Unit30>
-        <Filename Value="../../../lazarus/components/opengl/openglcontext.pas"/>
-        <UnitName Value="OpenGLContext"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="630"/>
-        <CursorPos X="18" Y="630"/>
-        <UsageCount Value="26"/>
-      </Unit30>
-      <Unit31>
-        <Filename Value="../../../lazarus/lcl/interfaces/cocoa/cocoagdiobjects.pas"/>
-        <UnitName Value="CocoaGDIObjects"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="682"/>
-        <CursorPos X="5" Y="691"/>
-        <UsageCount Value="9"/>
-      </Unit31>
-      <Unit32>
-        <Filename Value="dglOpenGL.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="166"/>
-        <CursorPos X="9" Y="173"/>
-        <UsageCount Value="9"/>
-      </Unit32>
-      <Unit33>
-        <Filename Value="/usr/local/share/fpcsrc/rtl/inc/typshrdh.inc"/>
-        <EditorIndex Value="-1"/>
-        <CursorPos X="3" Y="101"/>
-        <UsageCount Value="9"/>
-      </Unit33>
-      <Unit34>
-        <Filename Value="glcorearb.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="1872"/>
-        <CursorPos X="2" Y="1883"/>
-        <UsageCount Value="24"/>
-      </Unit34>
-      <Unit35>
-        <Filename Value="/usr/local/share/fpcsrc/rtl/inc/systemh.inc"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="771"/>
-        <CursorPos X="10" Y="783"/>
-        <UsageCount Value="13"/>
-      </Unit35>
-      <Unit36>
-        <Filename Value="glcube.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="363"/>
-        <CursorPos X="8" Y="369"/>
-        <UsageCount Value="15"/>
-      </Unit36>
-      <Unit37>
-        <Filename Value="glclrbar.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="503"/>
-        <CursorPos X="35" Y="510"/>
-        <UsageCount Value="15"/>
-      </Unit37>
-      <Unit38>
-        <Filename Value="gltext.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="47"/>
-        <CursorPos X="68" Y="53"/>
-        <UsageCount Value="14"/>
-      </Unit38>
-      <Unit39>
-        <Filename Value="glmtext.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="226"/>
-        <CursorPos Y="248"/>
-        <UsageCount Value="11"/>
-      </Unit39>
-      <Unit40>
-        <Filename Value="../../../lazarus/lcl/graphtype.pp"/>
-        <UnitName Value="GraphType"/>
-        <EditorIndex Value="-1"/>
-        <CursorPos X="15" Y="19"/>
-        <UsageCount Value="10"/>
-      </Unit40>
+      </Unit2>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -424,46 +97,18 @@
       <OtherUnitFiles Value="lzma"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
-    <Conditionals Value="//if TargetOS='linux' then
-//   UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src;/usr/lib/fpc/3.0.0/source/packages/opengl/src';
-//if TargetOS='linux' then
-//  UnitPath += ';$(FPCSrcDir)/packages/opengl/src';
-//if TargetOS='linux' then
-//  UnitPath += ';/usr/share/fpcsrc/3.0.0/packages/opengl/src;/usr/lib/fpc/3.0.0/source/packages/opengl/src';
-//CentOS/NeuroDebian /usr/share/fpcsrc/3.0.0/packages/opengl/src;
-//Gentoo /usr/lib/fpc/3.0.0/source/packages/opengl/src/glext.pp
-// example for adding linker options on Mac OS X
-//if TargetOS='darwin' then
-//  LinkerOptions := ' -framework OpenGL';
-
-// example for adding a unit and include path on Windows
-//if SrcOS='win' then begin
-//  UnitPath += ';win';
-//  IncPath += ';win';
-//end;"/>
-    <CodeGeneration>
-      <SmartLinkUnit Value="True"/>
-      <Optimizations>
-        <OptimizationLevel Value="3"/>
-      </Optimizations>
-    </CodeGeneration>
+    <Parsing>
+      <SyntaxOptions>
+        <SyntaxMode Value="Delphi"/>
+      </SyntaxOptions>
+    </Parsing>
     <Linking>
-      <Debugging>
-        <GenerateDebugInfo Value="False"/>
-        <StripSymbols Value="True"/>
-      </Debugging>
-      <LinkSmart Value="True"/>
       <Options>
         <Win32>
           <GraphicApplication Value="True"/>
         </Win32>
       </Options>
     </Linking>
-    <Other>
-      <CompilerMessages>
-        <IgnoredMessages idx5057="True"/>
-      </CompilerMessages>
-    </Other>
   </CompilerOptions>
   <Debugging>
     <Exceptions Count="3">

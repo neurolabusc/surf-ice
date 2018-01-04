@@ -663,7 +663,9 @@ procedure TScriptForm.Memo1KeyUp(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
     inherited;
-    {$IFNDEF LCLCocoa} ReportCaretPos; {$ENDIF}
+    //{$IFNDEF LCLCocoa}
+    ReportCaretPos;
+    //{$ENDIF}
 end;
 
 procedure TScriptForm.Copy1Click(Sender: TObject);

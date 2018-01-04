@@ -1627,7 +1627,7 @@ var
 begin
      s := latestGitRelease(kApi);
      if length(s) < 8 then begin  //last 8 digits are date: v.1.0.20170101
-        showmessage('Unable to detect latest version: are you connected to the web? '+kApi);
+        showmessage('Unable to detect latest version: are you connected to the web and do you have libssl installed? '+kApi);
         exit;
      end;
      if CompareText(s, kVers) = 0 then begin
@@ -1774,8 +1774,6 @@ begin
   FindClose(searchRec);
   FontCombo.Style := csDropDownList;
   FontCombo.Parent:=PrefForm;
-
-
   {$IFDEF LCLCocoa}
   RetinaCheck:=TCheckBox.create(PrefForm);
   RetinaCheck.Checked := gPrefs.RetinaDisplay;
@@ -2130,7 +2128,6 @@ begin
       Tag := ARow;
       SetFocus;
       ItemIndex := Items.IndexOf(GLForm1.StringGrid1.Cells[ACol, ARow]);
-
       exit;
     end;
   end else begin
