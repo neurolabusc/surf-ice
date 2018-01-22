@@ -1,8 +1,8 @@
 object ScriptForm: TScriptForm
   Tag = 2
-  Left = 648
+  Left = 1030
   Height = 380
-  Top = 207
+  Top = 193
   Width = 420
   ActiveControl = Memo1
   Caption = 'ScriptForm'
@@ -15,7 +15,7 @@ object ScriptForm: TScriptForm
   OnDeactivate = FormDeactivate
   OnDropFiles = FormDropFiles
   OnHide = FormHide
-  LCLVersion = '1.9.0.0'
+  LCLVersion = '1.8.0.6'
   object Splitter1: TSplitter
     Cursor = crVSplit
     Left = 0

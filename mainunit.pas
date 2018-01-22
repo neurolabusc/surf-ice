@@ -198,6 +198,8 @@ type
     ObjectColorMenu: TMenuItem;
     OpenMenu: TMenuItem;
     procedure FormDestroy(Sender: TObject);
+    procedure StringGrid1MouseMove(Sender: TObject; Shift: TShiftState; X,
+      Y: Integer);
     function UpdateClrbar: integer;
     procedure ClrbarClr(i: integer);
     procedure UpdateFont(initialSetup: boolean);
@@ -1392,7 +1394,13 @@ begin
  end;
  //make rows of invisible overlays red
  TStringGrid(Sender).Canvas.Font.Color := clRed;*)
- TStringGrid(Sender).Canvas.TextOut(aRect.Left+2,aRect.Top+2, TStringGrid(Sender).Cells[ACol, ARow]);
+ // TH fixed on Jan 22,2018
+ //TStringGrid(Sender).Canvas.TextOut(aRect.Left+2,aRect.Top+2, TStringGrid(Sender).Cells[ACol, ARow]);
+ //TStringGrid(Sender).Canvas.TextOut(aRect.Left,aRect.Top, TStringGrid(Sender).Cells[ACol, ARow]);
+ TStringGrid(Sender).Canvas.Brush.Color := clWindow;
+ TStringGrid(Sender).Canvas.FillRect(aRect);
+ InflateRect(aRect, -2, -2);
+ TStringGrid(Sender).Canvas.TextRect(aRect,aRect.Left,aRect.Top, stringgrid1.Cells[aCol,aRow]);
 end;
 
 procedure TGLForm1.StringGrid1Exit(Sender: TObject);
@@ -1994,9 +2002,10 @@ begin
   Row := GLForm1.StringGrid1.DefaultRowHeight div 2;
   Row := round((Y-Row)/GLForm1.StringGrid1.DefaultRowHeight);
   if (Row > 0) and (Row <= gMesh.OpenOverlays) then
-      StringGrid1.Hint := 'Click on name to hide, control+click to reverse palette for '+GLForm1.StringGrid1.Cells[0, Row]
+     // TH needs to hide hint here to cells can have their own hints
+      //StringGrid1.Hint := 'Click on name to hide, control+click to reverse palette for '+GLForm1.StringGrid1.Cells[0, Row]
   else begin
-       StringGrid1.Hint := 'Click on name to hide, control+click to reverse palette';
+       //StringGrid1.Hint := 'Click on name to hide, control+click to reverse palette';
        exit;
   end;
      //StringGrid1.Hint := format('%s %g..%g',[GLForm1.StringGrid1.Cells[0, Row], gMesh.overlay[Row].minIntensity, gMesh.overlay[Row].maxIntensity]);
@@ -2244,6 +2253,15 @@ begin
  //IniFile(false,IniName,gPrefs);
  gCube.Free;
  gClrBar.Free;
+end;
+
+procedure TGLForm1.StringGrid1MouseMove(Sender: TObject; Shift: TShiftState; X,
+  Y: Integer);
+var
+  ACol, ARow : integer;
+begin
+ StringGrid1.MouseToCell(X, Y, ACol, ARow);
+ StringGrid1.hint := stringgrid1.Cells[0, ARow];
 end;
 
 {$IFDEF COREGL}

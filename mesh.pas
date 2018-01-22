@@ -12,7 +12,7 @@ uses
 
 const
   kMinOverlayIndex = 1;
-  kMaxOverlays = 32;
+  kMaxOverlays = 256;
   kLUTinvisible = 0;
   kLUTtranslucent = 1;
   kLUTopaque = 2;
