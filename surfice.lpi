@@ -13,6 +13,10 @@
       </XPManifest>
       <Icon Value="0"/>
     </General>
+    <VersionInfo>
+      <Language Value=""/>
+      <CharSet Value=""/>
+    </VersionInfo>
     <BuildModes Count="2">
       <Item1 Name="Default" Default="True"/>
       <Item2 Name="MacOS">
@@ -26,13 +30,9 @@
           </Target>
           <SearchPaths>
             <IncludeFiles Value="$(ProjOutDir)"/>
+            <OtherUnitFiles Value="lzma"/>
             <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
           </SearchPaths>
-          <Parsing>
-            <SyntaxOptions>
-              <SyntaxMode Value="Delphi"/>
-            </SyntaxOptions>
-          </Parsing>
           <Linking>
             <Options>
               <Win32>
