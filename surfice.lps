@@ -1,26 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectSession>
-<<<<<<< Updated upstream
-    <Version Value="10"/>
-    <BuildModes Active="Default"/>
-    <Units Count="42">
-=======
     <Version Value="11"/>
     <BuildModes Active="MacOS"/>
     <Units Count="40">
->>>>>>> Stashed changes
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="1"/>
-        <CursorPos X="10" Y="10"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="57" Y="16"/>
         <UsageCount Value="212"/>
-<<<<<<< Updated upstream
-        <Loaded Value="True"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
-=======
->>>>>>> Stashed changes
       </Unit0>
       <Unit1>
         <Filename Value="mainunit.pas"/>
@@ -28,14 +17,8 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
-<<<<<<< Updated upstream
-        <TopLine Value="1381"/>
-        <CursorPos X="4" Y="1400"/>
-=======
-        <TopLine Value="1378"/>
-        <CursorPos X="7" Y="1395"/>
->>>>>>> Stashed changes
+        <TopLine Value="1618"/>
+        <CursorPos X="116" Y="1630"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -46,20 +29,12 @@
         <ComponentName Value="ScriptForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-<<<<<<< Updated upstream
-        <EditorIndex Value="-1"/>
-        <TopLine Value="656"/>
-        <CursorPos X="7" Y="668"/>
-        <UsageCount Value="24"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
-=======
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="3"/>
         <TopLine Value="656"/>
         <CursorPos X="7" Y="668"/>
         <UsageCount Value="20"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
->>>>>>> Stashed changes
       </Unit2>
       <Unit3>
         <Filename Value="prefs.pas"/>
@@ -132,14 +107,9 @@
       </Unit12>
       <Unit13>
         <Filename Value="mesh.pas"/>
-<<<<<<< Updated upstream
-        <EditorIndex Value="4"/>
-        <CursorPos X="24" Y="14"/>
-=======
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="5"/>
         <TopLine Value="40"/>
         <CursorPos X="5" Y="50"/>
->>>>>>> Stashed changes
         <UsageCount Value="101"/>
         <Loaded Value="True"/>
       </Unit13>
@@ -166,11 +136,7 @@
       </Unit16>
       <Unit17>
         <Filename Value="define_types.pas"/>
-<<<<<<< Updated upstream
         <EditorIndex Value="6"/>
-=======
-        <EditorIndex Value="9"/>
->>>>>>> Stashed changes
         <TopLine Value="19"/>
         <CursorPos X="22" Y="38"/>
         <UsageCount Value="115"/>
@@ -228,22 +194,14 @@
       </Unit24>
       <Unit25>
         <Filename Value="opts.inc"/>
-<<<<<<< Updated upstream
-        <EditorIndex Value="3"/>
-=======
-        <EditorIndex Value="6"/>
->>>>>>> Stashed changes
+        <EditorIndex Value="4"/>
         <CursorPos Y="2"/>
         <UsageCount Value="104"/>
         <Loaded Value="True"/>
       </Unit25>
       <Unit26>
         <Filename Value="gl_legacy_3d.pas"/>
-<<<<<<< Updated upstream
         <EditorIndex Value="2"/>
-=======
-        <EditorIndex Value="4"/>
->>>>>>> Stashed changes
         <TopLine Value="293"/>
         <CursorPos X="20" Y="293"/>
         <UsageCount Value="107"/>
@@ -258,27 +216,19 @@
       </Unit27>
       <Unit28>
         <Filename Value="gl_core_3d.pas"/>
-<<<<<<< Updated upstream
-        <EditorIndex Value="-1"/>
-        <TopLine Value="789"/>
-        <CursorPos X="20" Y="813"/>
-        <UsageCount Value="100"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
-=======
-        <EditorIndex Value="3"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
         <TopLine Value="789"/>
         <CursorPos X="20" Y="813"/>
         <UsageCount Value="100"/>
         <Loaded Value="True"/>
->>>>>>> Stashed changes
       </Unit28>
       <Unit29>
         <Filename Value="ctm_loader.pas"/>
-        <EditorIndex Value="7"/>
-        <TopLine Value="29"/>
-        <CursorPos X="48" Y="37"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="246"/>
+        <CursorPos X="115" Y="246"/>
         <UsageCount Value="46"/>
-        <Loaded Value="True"/>
       </Unit29>
       <Unit30>
         <Filename Value="lzma/URangeDecoder.pas"/>
@@ -328,13 +278,12 @@
         <UsageCount Value="5"/>
       </Unit36>
       <Unit37>
-        <Filename Value="/lazarus/lcl/interfaces/carbon/carbonproc.pp"/>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonproc.pp"/>
         <UnitName Value="CarbonProc"/>
-        <EditorIndex Value="1"/>
-        <TopLine Value="135"/>
-        <CursorPos X="40" Y="145"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="552"/>
+        <CursorPos X="13" Y="563"/>
         <UsageCount Value="10"/>
-        <Loaded Value="True"/>
       </Unit37>
       <Unit38>
         <Filename Value="scriptengine.lfm"/>
@@ -343,274 +292,139 @@
         <DefaultSyntaxHighlighter Value="LFM"/>
       </Unit38>
       <Unit39>
-        <Filename Value="/lazarus/lcl/controls.pp"/>
+        <Filename Value="../../../lazarus/lcl/controls.pp"/>
         <UnitName Value="Controls"/>
-<<<<<<< Updated upstream
         <EditorIndex Value="-1"/>
-=======
-        <EditorIndex Value="2"/>
->>>>>>> Stashed changes
         <TopLine Value="2270"/>
-        <CursorPos X="55" Y="2282"/>
+        <CursorPos X="15" Y="2280"/>
         <UsageCount Value="10"/>
       </Unit39>
-      <Unit40>
-        <Filename Value="/usr/lib/lazarus/1.6/ide/lazarus.pp"/>
-        <UnitName Value="Lazarus"/>
-        <EditorIndex Value="-1"/>
-        <UsageCount Value="10"/>
-      </Unit40>
-      <Unit41>
-        <Filename Value="/usr/share/lazarus/1.8.0/lcl/grids.pas"/>
-        <UnitName Value="Grids"/>
-        <EditorIndex Value="5"/>
-        <TopLine Value="9613"/>
-        <CursorPos Y="9628"/>
-        <UsageCount Value="11"/>
-        <Loaded Value="True"/>
-      </Unit41>
     </Units>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="mainunit.pas"/>
-<<<<<<< Updated upstream
-        <Caret Line="1765" Column="7" TopLine="1745"/>
+        <Filename Value="scriptengine.pas"/>
+        <Caret Line="2" Column="38"/>
       </Position1>
       <Position2>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="1766" Column="36" TopLine="1745"/>
+        <Filename Value="scriptengine.pas"/>
+        <Caret Line="662" Column="21" TopLine="656"/>
       </Position2>
       <Position3>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="1767" Column="7" TopLine="1745"/>
+        <Filename Value="scriptengine.pas"/>
+        <Caret Line="666" Column="22" TopLine="656"/>
       </Position3>
       <Position4>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="1772" Column="14" TopLine="1748"/>
+        <Caret Line="1376" Column="52" TopLine="1371"/>
       </Position4>
       <Position5>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="1773" Column="29" TopLine="1749"/>
+        <Caret Line="1565" Column="17" TopLine="1554"/>
       </Position5>
       <Position6>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="1774" Column="40" TopLine="1750"/>
+        <Caret Line="1655" Column="19" TopLine="1645"/>
       </Position6>
       <Position7>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="1777" Column="19" TopLine="1753"/>
+        <Caret Line="1662" Column="50" TopLine="1645"/>
       </Position7>
       <Position8>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="1779" Column="7" TopLine="1755"/>
+        <Caret Line="1777" Column="19" TopLine="1770"/>
       </Position8>
       <Position9>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="1780" Column="7" TopLine="1756"/>
+        <Caret Line="1825" Column="19" TopLine="1806"/>
       </Position9>
       <Position10>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="1826" Column="10" TopLine="1808"/>
+        <Caret Line="1862" Column="19" TopLine="1843"/>
       </Position10>
       <Position11>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="1827" Column="31" TopLine="1808"/>
+        <Caret Line="2130" Column="73" TopLine="2118"/>
       </Position11>
       <Position12>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="1828" Column="37" TopLine="1808"/>
+        <Caret Line="2946" Column="20" TopLine="2927"/>
       </Position12>
       <Position13>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="1829" Column="14" TopLine="1808"/>
+        <Caret Line="3623" Column="20" TopLine="3605"/>
       </Position13>
       <Position14>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="1843" Column="12" TopLine="1819"/>
+        <Caret Line="3648" Column="19" TopLine="3629"/>
       </Position14>
       <Position15>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="1844" Column="26" TopLine="1820"/>
+        <Caret Line="266" Column="21" TopLine="257"/>
       </Position15>
       <Position16>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="2248" Column="27" TopLine="2224"/>
+        <Caret Line="80" Column="9" TopLine="69"/>
       </Position16>
       <Position17>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="3561" Column="12" TopLine="3546"/>
+        <Caret Line="304" Column="19" TopLine="285"/>
       </Position17>
       <Position18>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="207" Column="25" TopLine="193"/>
+        <Caret Line="1972" Column="24" TopLine="1952"/>
       </Position18>
       <Position19>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="2252" Column="5" TopLine="2266"/>
+        <Caret Line="1975" Column="16" TopLine="1955"/>
       </Position19>
       <Position20>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="195" Column="66" TopLine="187"/>
-      </Position20>
-      <Position21>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="298" Column="34" TopLine="274"/>
-      </Position21>
-      <Position22>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="1397" Column="28" TopLine="1377"/>
-      </Position22>
-      <Position23>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="1392" Column="26" TopLine="1373"/>
-      </Position23>
-      <Position24>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="1997" Column="3" TopLine="2024"/>
-      </Position24>
-      <Position25>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="1443" Column="2" TopLine="1430"/>
-      </Position25>
-      <Position26>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="1433" Column="6" TopLine="1423"/>
-      </Position26>
-      <Position27>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="1373" Column="39" TopLine="1367"/>
-      </Position27>
-      <Position28>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="298" Column="34" TopLine="284"/>
-      </Position28>
-      <Position29>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="1400" Column="19" TopLine="1373"/>
-      </Position29>
-      <Position30>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="1401" Column="52" TopLine="1384"/>
-=======
-        <Caret Line="1975" Column="16" TopLine="1955"/>
-      </Position1>
-      <Position2>
         <Filename Value="mainunit.pas"/>
         <Caret Line="1977" Column="16" TopLine="1957"/>
-      </Position2>
-      <Position3>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="2376" Column="9" TopLine="2360"/>
-      </Position3>
-      <Position4>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="269" Column="33" TopLine="256"/>
-      </Position4>
-      <Position5>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="2334" Column="13" TopLine="2329"/>
-      </Position5>
-      <Position6>
-        <Filename Value="gl_legacy_3d.pas"/>
-        <Caret Line="110" Column="20" TopLine="98"/>
-      </Position6>
-      <Position7>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="2334" Column="13" TopLine="2329"/>
-      </Position7>
-      <Position8>
-        <Filename Value="gl_core_3d.pas"/>
-        <Caret Line="33" Column="11" TopLine="9"/>
-      </Position8>
-      <Position9>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="2334" Column="13" TopLine="2329"/>
-      </Position9>
-      <Position10>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="2922" Column="19" TopLine="2914"/>
-      </Position10>
-      <Position11>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="2949" Column="14" TopLine="2926"/>
-      </Position11>
-      <Position12>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="1630" Column="116" TopLine="1618"/>
-      </Position12>
-      <Position13>
-        <Filename Value="opts.inc"/>
-        <Caret Line="2"/>
-      </Position13>
-      <Position14>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="1627" Column="43" TopLine="1618"/>
-      </Position14>
-      <Position15>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="1907" Column="16" TopLine="1894"/>
-      </Position15>
-      <Position16>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="2306" Column="63" TopLine="2293"/>
-      </Position16>
-      <Position17>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="3645" Column="43" TopLine="3632"/>
-      </Position17>
-      <Position18>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="3646" Column="16" TopLine="3633"/>
-      </Position18>
-      <Position19>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="85" Column="29" TopLine="83"/>
-      </Position19>
-      <Position20>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="90" Column="19" TopLine="83"/>
       </Position20>
       <Position21>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="529" Column="17" TopLine="515"/>
+        <Caret Line="2376" Column="9" TopLine="2360"/>
       </Position21>
       <Position22>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="1361" Column="20" TopLine="1347"/>
+        <Caret Line="269" Column="33" TopLine="256"/>
       </Position22>
       <Position23>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="1362" Column="67" TopLine="1348"/>
+        <Caret Line="2334" Column="13" TopLine="2329"/>
       </Position23>
       <Position24>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="1907" Column="20" TopLine="1894"/>
+        <Filename Value="gl_legacy_3d.pas"/>
+        <Caret Line="110" Column="20" TopLine="98"/>
       </Position24>
       <Position25>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="2306" Column="67" TopLine="2293"/>
+        <Caret Line="2334" Column="13" TopLine="2329"/>
       </Position25>
       <Position26>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="3645" Column="47" TopLine="3632"/>
+        <Filename Value="gl_core_3d.pas"/>
+        <Caret Line="33" Column="11" TopLine="9"/>
       </Position26>
       <Position27>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="3646" Column="20" TopLine="3633"/>
+        <Caret Line="2334" Column="13" TopLine="2329"/>
       </Position27>
       <Position28>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="90" Column="19" TopLine="83"/>
+        <Caret Line="2922" Column="19" TopLine="2914"/>
       </Position28>
       <Position29>
-        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonproc.pp"/>
-        <Caret Line="563" Column="13" TopLine="555"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="2949" Column="14" TopLine="2926"/>
       </Position29>
       <Position30>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="2191" Column="15" TopLine="2186"/>
->>>>>>> Stashed changes
+        <Caret Line="1630" Column="116" TopLine="1618"/>
       </Position30>
     </JumpHistory>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes Count="0" ActiveMode="default"/>
+    </RunParams>
   </ProjectSession>
 </CONFIG>
