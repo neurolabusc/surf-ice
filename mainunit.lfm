@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
-  Left = 396
+  Left = 271
   Height = 755
-  Top = 91
+  Top = 23
   Width = 960
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -15,7 +15,7 @@ object GLForm1: TGLForm1
   OnDropFiles = FormDropFiles
   OnShow = FormShow
   Position = poDesktopCenter
-  LCLVersion = '1.8.0.6'
+  LCLVersion = '1.9.0.0'
   object ToolPanel: TPanel
     Left = 0
     Height = 755
@@ -32,34 +32,34 @@ object GLForm1: TGLForm1
       Width = 270
       Align = alTop
       Caption = 'Clipping'
-      ClientHeight = 91
-      ClientWidth = 266
+      ClientHeight = 88
+      ClientWidth = 256
       ParentFont = False
       TabOrder = 0
       OnDblClick = DepthLabelDblClick
       object DepthLabel: TLabel
         Left = 4
-        Height = 17
+        Height = 16
         Top = 2
-        Width = 43
+        Width = 37
         Caption = 'Depth'
         ParentColor = False
         OnClick = DepthLabelClick
       end
       object AzimuthLabel: TLabel
         Left = 4
-        Height = 17
+        Height = 16
         Top = 32
-        Width = 58
+        Width = 50
         Caption = 'Azimuth'
         ParentColor = False
         OnClick = AzimuthLabelClick
       end
       object ElevationLabel: TLabel
         Left = 4
-        Height = 17
+        Height = 16
         Top = 62
-        Width = 65
+        Width = 55
         Caption = 'Elevation'
         ParentColor = False
         OnClick = ElevationLabelClick
@@ -106,17 +106,17 @@ object GLForm1: TGLForm1
       Width = 270
       Align = alClient
       Caption = 'Shader'
-      ClientHeight = 66
-      ClientWidth = 266
+      ClientHeight = 63
+      ClientWidth = 256
       ParentFont = False
       TabOrder = 1
       OnResize = ShaderBoxResize
       object Label2: TLabel
         Left = 4
-        Height = 17
+        Height = 16
         Hint = 'Set the elevation and azimuth of the illumination'
         Top = 64
-        Width = 36
+        Width = 31
         Caption = 'Light'
         ParentColor = False
         ParentShowHint = False
@@ -124,14 +124,15 @@ object GLForm1: TGLForm1
       end
       object ShaderDrop: TComboBox
         Left = 2
-        Height = 31
+        Height = 26
         Top = 0
         Width = 127
         DropDownCount = 24
-        ItemHeight = 0
+        ItemHeight = 26
         OnChange = ShaderDropChange
         Style = csDropDownList
         TabOrder = 0
+        Text = '0'
       end
       object LightElevTrack: TTrackBar
         Left = 52
@@ -173,10 +174,10 @@ object GLForm1: TGLForm1
       end
       object XRayLabel: TLabel
         Left = 4
-        Height = 17
+        Height = 16
         Hint = 'These sliders control transparency of background image (left) and enhance occluded overlay/tracks/nodes (right).  Easter egg: click this button to toggle whether shader is applied to overlays/tracks/nodes'
         Top = 36
-        Width = 33
+        Width = 31
         Caption = 'XRay'
         ParentColor = False
         ParentShowHint = False
@@ -213,10 +214,10 @@ object GLForm1: TGLForm1
       end
       object AOLabel: TLabel
         Left = 138
-        Height = 17
+        Height = 16
         Hint = 'Ambient occlusion makes sucli and other crevices darker'
         Top = 6
-        Width = 22
+        Width = 18
         Caption = 'AO'
         ParentColor = False
         ParentShowHint = False
@@ -237,9 +238,9 @@ object GLForm1: TGLForm1
       object S1Label: TLabel
         Tag = 1
         Left = 4
-        Height = 17
+        Height = 16
         Top = 92
-        Width = 16
+        Width = 14
         Caption = 'S1'
         ParentColor = False
         ParentShowHint = False
@@ -247,10 +248,10 @@ object GLForm1: TGLForm1
       object S1Check: TCheckBox
         Tag = 1
         Left = 141
-        Height = 24
+        Height = 18
         Hint = 'If checked, edge color varies'
         Top = 92
-        Width = 24
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentShowHint = False
@@ -261,7 +262,7 @@ object GLForm1: TGLForm1
       object S2Label: TLabel
         Tag = 2
         Left = 4
-        Height = 17
+        Height = 16
         Top = 122
         Width = 16
         Caption = 'S2'
@@ -271,10 +272,10 @@ object GLForm1: TGLForm1
       object S2Check: TCheckBox
         Tag = 2
         Left = 141
-        Height = 24
+        Height = 18
         Hint = 'If checked, edge color varies'
         Top = 122
-        Width = 24
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentShowHint = False
@@ -309,10 +310,10 @@ object GLForm1: TGLForm1
       object S3Check: TCheckBox
         Tag = 3
         Left = 141
-        Height = 24
+        Height = 18
         Hint = 'If checked, edge color varies'
         Top = 152
-        Width = 24
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentShowHint = False
@@ -323,7 +324,7 @@ object GLForm1: TGLForm1
       object S3Label: TLabel
         Tag = 3
         Left = 4
-        Height = 17
+        Height = 16
         Top = 152
         Width = 16
         Caption = 'S3'
@@ -333,9 +334,9 @@ object GLForm1: TGLForm1
       object S4Label: TLabel
         Tag = 4
         Left = 4
-        Height = 17
+        Height = 16
         Top = 182
-        Width = 16
+        Width = 17
         Caption = 'S4'
         ParentColor = False
         ParentShowHint = False
@@ -343,10 +344,10 @@ object GLForm1: TGLForm1
       object S4Check: TCheckBox
         Tag = 4
         Left = 141
-        Height = 24
+        Height = 18
         Hint = 'If checked, edge color varies'
         Top = 182
-        Width = 24
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentShowHint = False
@@ -369,7 +370,7 @@ object GLForm1: TGLForm1
       object S5Label: TLabel
         Tag = 5
         Left = 4
-        Height = 17
+        Height = 16
         Top = 212
         Width = 16
         Caption = 'S5'
@@ -379,10 +380,10 @@ object GLForm1: TGLForm1
       object S5Check: TCheckBox
         Tag = 5
         Left = 141
-        Height = 24
+        Height = 18
         Hint = 'If checked, edge color varies'
         Top = 212
-        Width = 24
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentShowHint = False
@@ -405,9 +406,9 @@ object GLForm1: TGLForm1
       object S6Label: TLabel
         Tag = 6
         Left = 4
-        Height = 17
+        Height = 16
         Top = 242
-        Width = 16
+        Width = 17
         Caption = 'S6'
         ParentColor = False
         ParentShowHint = False
@@ -415,7 +416,7 @@ object GLForm1: TGLForm1
       object S7Label: TLabel
         Tag = 7
         Left = 4
-        Height = 17
+        Height = 16
         Top = 272
         Width = 16
         Caption = 'S7'
@@ -425,9 +426,9 @@ object GLForm1: TGLForm1
       object S8Label: TLabel
         Tag = 8
         Left = 4
-        Height = 17
+        Height = 16
         Top = 302
-        Width = 16
+        Width = 17
         Caption = 'S8'
         ParentColor = False
         ParentShowHint = False
@@ -435,9 +436,9 @@ object GLForm1: TGLForm1
       object S9Label: TLabel
         Tag = 9
         Left = 4
-        Height = 17
+        Height = 16
         Top = 332
-        Width = 16
+        Width = 17
         Caption = 'S9'
         ParentColor = False
         ParentShowHint = False
@@ -445,9 +446,9 @@ object GLForm1: TGLForm1
       object S10Label: TLabel
         Tag = 10
         Left = 4
-        Height = 17
+        Height = 16
         Top = 362
-        Width = 24
+        Width = 23
         Caption = 'S10'
         ParentColor = False
         ParentShowHint = False
@@ -455,10 +456,10 @@ object GLForm1: TGLForm1
       object S6Check: TCheckBox
         Tag = 6
         Left = 141
-        Height = 24
+        Height = 18
         Hint = 'If checked, edge color varies'
         Top = 242
-        Width = 24
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentShowHint = False
@@ -469,10 +470,10 @@ object GLForm1: TGLForm1
       object S7Check: TCheckBox
         Tag = 7
         Left = 141
-        Height = 24
+        Height = 18
         Hint = 'If checked, edge color varies'
         Top = 272
-        Width = 24
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentShowHint = False
@@ -483,10 +484,10 @@ object GLForm1: TGLForm1
       object S8Check: TCheckBox
         Tag = 8
         Left = 141
-        Height = 24
+        Height = 18
         Hint = 'If checked, edge color varies'
         Top = 302
-        Width = 24
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentShowHint = False
@@ -497,10 +498,10 @@ object GLForm1: TGLForm1
       object S9Check: TCheckBox
         Tag = 9
         Left = 141
-        Height = 24
+        Height = 18
         Hint = 'If checked, edge color varies'
         Top = 332
-        Width = 24
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentShowHint = False
@@ -511,10 +512,10 @@ object GLForm1: TGLForm1
       object S10Check: TCheckBox
         Tag = 10
         Left = 141
-        Height = 24
+        Height = 18
         Hint = 'If checked, edge color varies'
         Top = 362
-        Width = 24
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentShowHint = False
@@ -585,8 +586,8 @@ object GLForm1: TGLForm1
       object Memo1: TMemo
         Left = 0
         Height = 50
-        Top = 16
-        Width = 266
+        Top = 13
+        Width = 256
         Align = alBottom
         Lines.Strings = (
           'Memo1'
@@ -1053,16 +1054,16 @@ object GLForm1: TGLForm1
       Width = 270
       Align = alTop
       Caption = 'Tracks'
-      ClientHeight = 116
-      ClientWidth = 266
+      ClientHeight = 113
+      ClientWidth = 256
       ParentFont = False
       TabOrder = 2
       Visible = False
       object TrackLengthLabel: TLabel
         Left = 4
-        Height = 17
+        Height = 16
         Top = 2
-        Width = 49
+        Width = 42
         Caption = 'Length'
         ParentColor = False
       end
@@ -1091,9 +1092,9 @@ object GLForm1: TGLForm1
       end
       object TrackWidthLabel: TLabel
         Left = 4
-        Height = 17
+        Height = 16
         Top = 32
-        Width = 42
+        Width = 36
         Caption = 'Width'
         ParentColor = False
       end
@@ -1109,19 +1110,19 @@ object GLForm1: TGLForm1
       end
       object TrackDitherLabel: TLabel
         Left = 4
-        Height = 17
+        Height = 16
         Top = 62
-        Width = 44
+        Width = 37
         Caption = 'Dither'
         ParentColor = False
       end
       object TrackScalarLUTdrop: TComboBox
         Left = 116
-        Height = 31
+        Height = 26
         Top = 90
         Width = 108
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         Items.Strings = (
           'a'
           'b'
@@ -1135,14 +1136,15 @@ object GLForm1: TGLForm1
         ParentFont = False
         Style = csDropDownList
         TabOrder = 3
+        Text = '0'
       end
       object TrackScalarNameDrop: TComboBox
         Left = 4
-        Height = 27
+        Height = 26
         Top = 90
         Width = 108
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         ItemIndex = 0
         Items.Strings = (
           'Direction'
@@ -1171,8 +1173,8 @@ object GLForm1: TGLForm1
       Width = 270
       Align = alTop
       Caption = 'Overlays'
-      ClientHeight = 63
-      ClientWidth = 266
+      ClientHeight = 60
+      ClientWidth = 256
       Constraints.MaxHeight = 240
       Constraints.MinHeight = 82
       ParentShowHint = False
@@ -1181,10 +1183,10 @@ object GLForm1: TGLForm1
       Visible = False
       object StringGrid1: TStringGrid
         Left = 0
-        Height = 63
+        Height = 60
         Hint = 'Click on name to hide, control+click to reverse palette'
         Top = 0
-        Width = 266
+        Width = 256
         Align = alClient
         BorderStyle = bsNone
         ColCount = 4
@@ -1208,11 +1210,11 @@ object GLForm1: TGLForm1
       end
       object LUTdrop: TComboBox
         Left = 88
-        Height = 31
+        Height = 26
         Top = 40
         Width = 73
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         Items.Strings = (
           'a'
           'b'
@@ -1226,6 +1228,7 @@ object GLForm1: TGLForm1
         ParentFont = False
         Style = csDropDownList
         TabOrder = 1
+        Text = '0'
         Visible = False
       end
     end
@@ -1237,26 +1240,26 @@ object GLForm1: TGLForm1
       Width = 270
       Align = alTop
       Caption = 'Nodes'
-      ClientHeight = 121
-      ClientWidth = 266
+      ClientHeight = 118
+      ClientWidth = 256
       ParentFont = False
       TabOrder = 5
       Visible = False
       object TrackWidthLabel1: TLabel
         Left = 0
-        Height = 17
+        Height = 16
         Top = 90
-        Width = 37
+        Width = 33
         Caption = 'Color'
         ParentColor = False
       end
       object LUTdropNode: TComboBox
         Left = 97
-        Height = 31
+        Height = 26
         Top = 88
         Width = 161
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         Items.Strings = (
           'a'
           'b'
@@ -1270,13 +1273,14 @@ object GLForm1: TGLForm1
         ParentFont = False
         Style = csDropDownList
         TabOrder = 0
+        Text = '0'
       end
       object NodeColorVariesCheck: TCheckBox
         Left = 58
-        Height = 24
+        Height = 18
         Hint = 'If checked, node color varies'
         Top = 90
-        Width = 24
+        Width = 22
         Checked = True
         OnChange = NodePrefChange
         ParentShowHint = False
@@ -1297,20 +1301,20 @@ object GLForm1: TGLForm1
       end
       object NodeScaleLabel: TLabel
         Left = 4
-        Height = 17
+        Height = 16
         Top = 2
-        Width = 27
+        Width = 26
         Alignment = taRightJustify
         Caption = 'Size'
         ParentColor = False
       end
       object NodeThreshDrop: TComboBox
         Left = 15
-        Height = 27
+        Height = 26
         Top = 64
         Width = 242
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         ItemIndex = 0
         Items.Strings = (
           'Threshold based on size'
@@ -1324,7 +1328,7 @@ object GLForm1: TGLForm1
       end
       object NodeMinEdit: TFloatSpinEdit
         Left = 58
-        Height = 27
+        Height = 21
         Top = 40
         Width = 90
         Increment = 1
@@ -1336,15 +1340,15 @@ object GLForm1: TGLForm1
       end
       object EdgeMinLabel1: TLabel
         Left = 4
-        Height = 17
+        Height = 16
         Top = 40
-        Width = 47
+        Width = 43
         Caption = 'Thresh'
         ParentColor = False
       end
       object NodeMaxEdit: TFloatSpinEdit
         Left = 162
-        Height = 27
+        Height = 21
         Top = 40
         Width = 90
         Increment = 1
@@ -1356,10 +1360,10 @@ object GLForm1: TGLForm1
       end
       object NodeSizeVariesCheck: TCheckBox
         Left = 58
-        Height = 24
+        Height = 18
         Hint = 'If checked, node size varies'
         Top = 2
-        Width = 24
+        Width = 22
         Checked = True
         OnChange = NodePrefChange
         ParentShowHint = False
@@ -1377,26 +1381,26 @@ object GLForm1: TGLForm1
       Width = 270
       Align = alTop
       Caption = 'Edges'
-      ClientHeight = 96
-      ClientWidth = 266
+      ClientHeight = 93
+      ClientWidth = 256
       ParentFont = False
       TabOrder = 6
       Visible = False
       object TrackWidthLabel2: TLabel
         Left = 2
-        Height = 17
+        Height = 16
         Top = 66
-        Width = 37
+        Width = 33
         Caption = 'Color'
         ParentColor = False
       end
       object LUTdropEdge: TComboBox
         Left = 99
-        Height = 31
+        Height = 26
         Top = 64
         Width = 161
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         Items.Strings = (
           'a'
           'b'
@@ -1410,13 +1414,14 @@ object GLForm1: TGLForm1
         ParentFont = False
         Style = csDropDownList
         TabOrder = 0
+        Text = '0'
       end
       object EdgeColorVariesCheck: TCheckBox
         Left = 58
-        Height = 24
+        Height = 18
         Hint = 'If checked, edge color varies'
         Top = 66
-        Width = 24
+        Width = 22
         Checked = True
         OnChange = NodePrefChange
         ParentShowHint = False
@@ -1426,15 +1431,15 @@ object GLForm1: TGLForm1
       end
       object EdgeMinLabel: TLabel
         Left = 4
-        Height = 17
+        Height = 16
         Top = 40
-        Width = 47
+        Width = 43
         Caption = 'Thresh'
         ParentColor = False
       end
       object EdgeMinEdit: TFloatSpinEdit
         Left = 58
-        Height = 27
+        Height = 21
         Top = 40
         Width = 90
         Increment = 1
@@ -1446,7 +1451,7 @@ object GLForm1: TGLForm1
       end
       object EdgeMaxEdit: TFloatSpinEdit
         Left = 162
-        Height = 27
+        Height = 21
         Top = 40
         Width = 90
         Increment = 1
@@ -1463,24 +1468,24 @@ object GLForm1: TGLForm1
         Width = 162
         Max = 100
         OnChange = NodePrefChange
-        Position = 20
+        Position = 37
         TickStyle = tsNone
         TabOrder = 4
       end
       object NodeScaleLabel1: TLabel
         Left = 4
-        Height = 17
+        Height = 16
         Top = 2
-        Width = 27
+        Width = 26
         Caption = 'Size'
         ParentColor = False
       end
       object EdgeSizeVariesCheck: TCheckBox
         Left = 58
-        Height = 24
+        Height = 18
         Hint = 'If checked, edge size varies'
         Top = 2
-        Width = 24
+        Width = 22
         Checked = True
         OnChange = NodePrefChange
         ParentShowHint = False
@@ -1497,16 +1502,16 @@ object GLForm1: TGLForm1
       Width = 270
       Align = alTop
       Caption = 'Mesh Color'
-      ClientHeight = 67
-      ClientWidth = 266
+      ClientHeight = 64
+      ClientWidth = 256
       ParentFont = False
       TabOrder = 7
       Visible = False
       object TrackLengthLabel1: TLabel
         Left = 4
-        Height = 17
+        Height = 16
         Top = 2
-        Width = 73
+        Width = 63
         Caption = 'Saturation'
         ParentColor = False
       end
@@ -1534,9 +1539,9 @@ object GLForm1: TGLForm1
       end
       object TrackWidthLabel3: TLabel
         Left = 4
-        Height = 17
+        Height = 16
         Top = 32
-        Width = 91
+        Width = 83
         Caption = 'Transparency'
         ParentColor = False
       end
@@ -2010,7 +2015,7 @@ object GLForm1: TGLForm1
     Interval = 200
     OnTimer = OverlayTimerTimer
     left = 352
-    top = 248
+    top = 256
   end
   object SaveMeshDialog: TSaveDialog
     DefaultExt = '.gii'

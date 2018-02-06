@@ -502,6 +502,7 @@ begin
      gPrefs.ColorBarPosition := gPrefs.ColorBarPosition + 1;
      SetColorbarPosition;
      GLbox.invalidate;
+     //caption := 'doubleclick'+inttostr(random(888)); //1/2018: Cocoa generates dblClicks for single clicks
 end;
 
 
@@ -1366,8 +1367,9 @@ begin
   end;
   Memo1.Lines.Add(format('Light Elevation %d Azimuth %d',[LightElevTrack.position, LightAziTrack.position]));
   ReportUniformChange(Sender);
-  //GLboxRequestUpdate(Sender); //-- 2017
-  GLbox.Invalidate; //++ 2017
+  GLboxRequestUpdate(Sender); //++ 2018 : required for dynamic light position change
+  //GLbox.Invalidate; //-- 2017
+
 end;
 
 procedure TGLForm1.StringGrid1DrawCell(Sender: TObject; aCol, aRow: Integer;
@@ -1665,12 +1667,12 @@ var
   bmpEdit: TEdit;
   s: string;
   searchRec: TSearchRec;
-  FontCombo, ZDimIsUpCombo, QualityCombo : TComboBox;
+  FontCombo, ZDimIsUpCombo, QualityCombo, SaveAsFormatCombo: TComboBox;
   bmpLabel, QualityLabel: TLabel;
   isFontChanged, isAdvancedPrefs {$IFDEF LCLCocoa}, isRetinaChanged {$ENDIF} : boolean;
 begin
   PrefForm:=TForm.Create(nil);
-  PrefForm.SetBounds(100, 100, 520, 322);
+  PrefForm.SetBounds(100, 100, 520, 362);
   PrefForm.Caption:='Preferences';
   PrefForm.Position := poScreenCenter;
   PrefForm.BorderStyle := bsDialog;
@@ -1782,12 +1784,25 @@ begin
   FindClose(searchRec);
   FontCombo.Style := csDropDownList;
   FontCombo.Parent:=PrefForm;
+  //SaveAsFormatCombo
+  SaveAsFormatCombo:=TComboBox.create(PrefForm);
+  SaveAsFormatCombo.Left := 8;
+  SaveAsFormatCombo.Top := 248;
+  SaveAsFormatCombo.Width := PrefForm.Width -16;
+  SaveAsFormatCombo.Items.Add('Save mesh as: OBJ (Widely supported)');
+  SaveAsFormatCombo.Items.Add('Save mesh as: GIfTI (Neuroimaging)');
+  SaveAsFormatCombo.Items.Add('MZ3 (Small and fast)');
+  SaveAsFormatCombo.Items.Add('PLY (Widely supported)');
+  //QualityCombo.Items.Add('Quality: Best');
+  SaveAsFormatCombo.ItemIndex:= gPrefs.SaveAsFormat;
+  SaveAsFormatCombo.Style := csDropDownList;
+  SaveAsFormatCombo.Parent:=PrefForm;
   {$IFDEF LCLCocoa}
   RetinaCheck:=TCheckBox.create(PrefForm);
   RetinaCheck.Checked := gPrefs.RetinaDisplay;
   RetinaCheck.Caption:='Retina display (better but slower)';
   RetinaCheck.Left := 8;
-  RetinaCheck.Top := 248;
+  RetinaCheck.Top := 278;
   RetinaCheck.Parent:=PrefForm;
   {$ENDIF}
   //UpdateBtn
@@ -1796,7 +1811,7 @@ begin
   UpdateBtn.Caption:='Check for updates';
   UpdateBtn.Left := 28;
   UpdateBtn.Width:= 168;
-  UpdateBtn.Top := 288;
+  UpdateBtn.Top := 318;
   UpdateBtn.Parent:=PrefForm;
   UpdateBtn.OnClick:= GLForm1.CheckForUpdates;
   {$ENDIF}
@@ -1805,7 +1820,7 @@ begin
   OkBtn.Caption:='OK';
   OkBtn.Left := PrefForm.Width - 128;
   OkBtn.Width:= 100;
-  OkBtn.Top := 288;
+  OkBtn.Top := 318;
   OkBtn.Parent:=PrefForm;
   OkBtn.ModalResult:= mrOK;
 
@@ -1813,7 +1828,7 @@ begin
   AdvancedBtn.Caption:='Advanced';
   AdvancedBtn.Left := PrefForm.Width - 256;
   AdvancedBtn.Width:= 100;
-  AdvancedBtn.Top := 288;
+  AdvancedBtn.Top := 318;
   AdvancedBtn.Parent:=PrefForm;
   AdvancedBtn.ModalResult:= mrYesToAll;
   {$IFNDEF Darwin} ScaleDPIX(PrefForm, 96);  {$ENDIF}
@@ -1847,6 +1862,7 @@ begin
   if isFontChanged then
        GLForm1.UpdateFont(false);
   //gPrefs.SaveAsFormat := SaveAsCombo.ItemIndex;
+  gPrefs.SaveAsFormat := SaveAsFormatCombo.ItemIndex;
   if QualityCombo.ItemIndex <> gPrefs.RenderQuality then begin
      gPrefs.RenderQuality := QualityCombo.ItemIndex;
      MultiPassRenderingToolsUpdate;

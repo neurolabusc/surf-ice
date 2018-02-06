@@ -102,6 +102,7 @@ type
     procedure LoadAsc_Srf(const FileName: string);
     procedure LoadCtm(const FileName: string);
     function LoadDpv(const FileName: string; lOverlayIndex: integer): boolean;
+    function LoadRox(const FileName: string; lOverlayIndex: integer): boolean;
     procedure LoadCurv(const FileName: string; lOverlayIndex: integer);
     procedure LoadMeshAsOverlay(const FileName: string; lOverlayIndex: integer);
     procedure LoadNii(const FileName: string; lOverlayIndex: integer; lLoadSmooth: boolean);
@@ -327,10 +328,12 @@ end; // BuildList()
 
 procedure TMesh.BuildListOverlay(Clr: TRGBA);
 var
-  c, i, nVert, nFace, sumFace, sumVert, nMeshOverlay: integer;
+  c, i, nVert, nFace, nInten, sumFace, sumVert, nMeshOverlay: integer;
+  mn, mx: single;
   oFaces: TFaces;
   oVerts: TVertices;
   vRGBA: TVertexRGBA;
+  rgb: TRGBA;
 begin
   if (length(faces) < 1) or (length(vertices) < 3) or (OpenOverlays < 1) then
      exit;
@@ -345,6 +348,8 @@ begin
   for c := 1 to OpenOverlays do begin
       nVert := length(overlay[c].vertices);
       nFace := length(overlay[c].faces);
+      nInten := length(overlay[c].intensity);
+      if (nInten <> nVert) then nInten := 0;
       if (overlay[c].LUTvisible <> kLUTinvisible) and (nVert > 2) and (nFace > 0) then begin
             setlength(oFaces, sumFace + nFace);
             for i := 0 to (nFace -1) do
@@ -355,6 +360,23 @@ begin
         setlength(vRGBA, sumVert + nVert);
         for i := 0 to (nVert -1) do
             vRGBA[i+sumVert] := overlay[c].LUT[192];
+        if nInten > 0 then begin
+          //for i := 0 to (nVert -1) do
+          //  vRGBA[i+sumVert] := overlay[c].LUT[192];
+          if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
+             mn := overlay[c].windowScaledMin;
+             mx := overlay[c].windowScaledMax;
+          end else begin
+              mx := overlay[c].windowScaledMin;
+              mn := overlay[c].windowScaledMax;
+          end;
+           for i := 0 to (nVert -1) do begin
+               rgb := inten2rgb(overlay[c].intensity[i], mn, mx, overlay[c].LUT);
+               vRGBA[i+sumVert].r := rgb.r;
+               vRGBA[i+sumVert].g := rgb.g;
+               vRGBA[i+sumVert].b := rgb.b;
+           end;
+         end;
          sumVert := sumVert + nVert;
          sumFace := sumFace + nFace;
       end;
@@ -2103,17 +2125,18 @@ var
   f: TFaces;
   v: TVertices;
   c: TVertexRGBA;
-  i: TFloats;
+  //i: TFloats;
 begin
   if OverlayIndex > OpenOverlays then exit;
-  setlength(f,0);
-  setlength(v,0);
+  //setlength(i,0);
   setlength(c,0);
-  setlength(i,0);
   if (length(overlay[OverlayIndex].faces) > 0) and (length(overlay[OverlayIndex].vertices) > 0) then
-     SaveMz3Core(Filename, overlay[OverlayIndex].Faces, overlay[OverlayIndex].Vertices,c,i)
-  else if length(overlay[OverlayIndex].intensity) > 1 then
+     SaveMz3Core(Filename, overlay[OverlayIndex].Faces, overlay[OverlayIndex].Vertices, c,overlay[OverlayIndex].intensity)
+  else if length(overlay[OverlayIndex].intensity) > 1 then begin
+     setlength(f,0);
+     setlength(v,0);
      SaveMz3Core(Filename, f,v,c, overlay[OverlayIndex].intensity);
+  end;
 end;
 
 procedure TMesh.SaveGii(const FileName: string);
@@ -2836,7 +2859,7 @@ begin
   result := LoadMz3Core(Filename, Overlay[lOverlayIndex].Faces,Overlay[lOverlayIndex].Vertices,vtxRGBA,Overlay[lOverlayIndex].intensity);
   setlength(vtxRGBA,0);
   if not result then exit;
-  if (length(Overlay[lOverlayIndex].intensity) > 0) and (length(overlay[lOverlayIndex].intensity)  <> length(Vertices)) then begin
+  if (length(Overlay[lOverlayIndex].Vertices) < 3) and (length(Overlay[lOverlayIndex].intensity) > 0) and (length(overlay[lOverlayIndex].intensity)  <> length(Vertices)) then begin
      showmessage(format('This overlay has a different number of vertices (%d) than the background mesh (%d)', [length(overlay[lOverlayIndex].intensity), length(Vertices) ]));
      setlength(overlay[lOverlayIndex].intensity, 0);
      result := false;
@@ -4827,6 +4850,150 @@ begin
  setlength(vertexRGBA, 0);
 end; // LoadAnnot()
 
+procedure RemoveNaNs(var intensity: TFloats; var faces : TFaces; var vertices: TVertices; kUndefined: single);
+//remove all faces and vertices where intensity = kUndefined
+var
+   i, num_v, num_ok: integer;
+   outFace: TPoint3i;
+   outIdx: TInts;
+   inIntensity: TFloats;
+   inFaces : TFaces;
+   inVertices: TVertices;
+begin
+ num_v := length(vertices);
+ if (num_v < 3) or (length(intensity) <> num_v) then exit;
+ num_ok := 0;
+ setlength(outIdx, num_v);
+ //showmessage(inttostr(faces[0].X)+'xxx');
+ for i := 0 to (num_v -1) do begin
+     outIdx[i] := -1;
+     if intensity[i] = kUndefined then continue;
+     outIdx[i] := num_ok;
+     num_ok := num_ok + 1;
+ end;
+ if num_ok = 0 then begin
+    setlength(outIdx, 0);
+    exit;
+ end;
+ inFaces := Copy(faces, 0, MaxInt);
+ inVertices := Copy(vertices, 0, MaxInt);
+ inIntensity := Copy(intensity, 0, MaxInt);
+ setlength(intensity, num_ok);
+ setlength(vertices, num_ok);
+ num_ok := 0;
+ //collapse vertices and scalar intensity
+ for i := 0 to (num_v -1) do begin
+     if outIdx[i] < 0 then continue;
+     vertices[num_ok] := inVertices[i];
+     intensity[num_ok] := inIntensity[i];
+     num_ok := num_ok + 1;
+ end;
+ //collapse faces
+ num_ok := 0;
+ for i := 0 to (length(faces) -1) do begin
+     outFace.x := outIdx[inFaces[i].X];
+     outFace.y := outIdx[inFaces[i].Y];
+     outFace.z := outIdx[inFaces[i].Z];
+     if (outFace.x < 0) or (outFace.y < 0) or (outFace.z < 0)  then continue;
+     faces[num_ok] := outFace;
+     num_ok := num_ok + 1;
+ end;
+ setlength(faces, num_ok);
+ setlength(inFaces, 0);
+ setlength(inVertices, 0);
+ setlength(inIntensity, 0);
+ //showmessage(inttostr(num_ok));
+ setlength(outIdx, 0);
+end;
+
+
+function TMesh.LoadRox(const FileName: string; lOverlayIndex: integer): boolean;
+label
+   666;
+const
+  kUndefined : single = 1/0; //NaN
+var
+   intensityLUT : array of single;
+   maxROI, num_v, i, idx : integer;
+   f: TextFile;
+   inten,minInten, maxInten: single;
+   str: string;
+   strlst : TStringList;
+   ok : boolean = false;
+   isAlphaVaries : boolean = false;
+begin
+     result := false;
+     num_v := length(vertices);
+     if (num_v < 3) or (length(vertexRGBA) <> num_v) then begin
+        showmessage('ROX format requires labelled mesh.');
+        exit;
+     end;
+     maxROI := 0;
+     for i := 0 to (num_v -1) do begin
+         if (vertexRGBA[i].A > 0)  and  (vertexRGBA[i].A <> maxROI) then
+            isAlphaVaries := true;
+         if vertexRGBA[i].A > maxROI then
+            maxROI := vertexRGBA[i].A;
+     end;
+     if (not isAlphaVaries) then begin
+        showmessage('ROX format requires labelled mesh with varying indices.');
+        exit;
+     end;
+     setlength(intensityLUT, maxROI+1);
+     strlst:=TStringList.Create;
+     for i := 0 to maxROI do
+         intensityLUT[i] := kUndefined;
+     //if (lOverlayIndex < kMinOverlayIndex) or (lOverlayIndex > kMaxOverlays) then exit;
+     AssignFile(f, FileName);
+     Reset(f);
+     while (not EOF(f)) do begin
+           ReadLn(f, str); //make sure to run CheckMesh after this, as these are indexed from 1!
+           if (length(str) > 0) and (str[1] <> '#') then begin
+              strlst.DelimitedText := str;
+              if (strlst.count > 1) then begin
+                 i := strtointdef(strlst[0],-1);
+                 inten := strtofloatdef(strlst[1],0);
+         		if (i < 0) or (i > maxROI) then begin
+         			showmessage('ROX file does not appear to match background mesh: expected indices 1..'+inttostr(maxROI)+' not '+inttostr(i));
+         			goto 666;
+         		end;
+         		intensityLUT[i] := inten;
+         		ok := true;
+              end;
+           end;
+     end;
+     if not ok then
+        goto 666;
+     num_v := length(vertices);
+     setlength(overlay[lOverlayIndex].intensity, num_v); //vertices = zeros(num_f, 9);
+     minInten := 0;
+     maxInten := 0;
+     for i := 0 to (num_v -1) do begin
+         idx :=  vertexRGBA[i].A;
+         if (idx > maxROI) then
+            inten := kUndefined
+         else
+             inten := intensityLUT[idx];
+         if inten < minInten then minInten := inten;
+         if inten > maxInten then maxInten := inten;
+         overlay[lOverlayIndex].intensity[i] := inten;
+     end;
+     //optional - create mesh overlay rather than scalars
+     overlay[lOverlayIndex].faces := Copy(faces, 0, MaxInt);
+     overlay[lOverlayIndex].vertices := Copy(vertices, 0, MaxInt);
+     overlay[lOverlayIndex].minIntensity := minInten;
+     overlay[lOverlayIndex].maxIntensity := maxInten;
+     overlay[lOverlayIndex].windowScaledMin:= minInten;
+     overlay[lOverlayIndex].windowScaledMax := maxInten;
+     RemoveNaNs(overlay[lOverlayIndex].intensity, overlay[lOverlayIndex].faces, overlay[lOverlayIndex].vertices, kUndefined);
+     //end optional
+     result := true;
+   666:
+     CloseFile(f);
+     intensityLUT := nil;
+     strlst.free;
+end;
+
 function TMesh.LoadDpv(const FileName: string; lOverlayIndex: integer): boolean;
 label
    666;
@@ -5217,6 +5384,13 @@ begin
   else
       Overlay[OpenOverlays].LUTindex := OpenOverlays;
   Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex, Overlay[OpenOverlays].LUTinvert);
+  if (ext = '.ROX') then begin
+     if not LoadROX(FileName, OpenOverlays) then begin
+       OpenOverlays := OpenOverlays - 1;
+       exit;
+     end;
+
+  end;
   if (ext = '.MZ3') then begin
      if not LoadMz3(FileName, OpenOverlays) then begin //unable to open as an overlay - perhaps vertex colors?
         OpenOverlays := OpenOverlays - 1;
