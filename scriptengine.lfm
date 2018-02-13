@@ -1,8 +1,8 @@
 object ScriptForm: TScriptForm
   Tag = 2
-  Left = 1030
+  Left = 493
   Height = 380
-  Top = 193
+  Top = 167
   Width = 420
   ActiveControl = Memo1
   Caption = 'ScriptForm'
@@ -15,7 +15,7 @@ object ScriptForm: TScriptForm
   OnDeactivate = FormDeactivate
   OnDropFiles = FormDropFiles
   OnHide = FormHide
-  LCLVersion = '1.8.0.6'
+  LCLVersion = '1.9.0.0'
   object Splitter1: TSplitter
     Cursor = crVSplit
     Left = 0
@@ -32,6 +32,7 @@ object ScriptForm: TScriptForm
     Width = 420
     Align = alClient
     Constraints.MinHeight = 3
+    Lines.Strings = (    )
     OnChange = Memo1Change
     OnClick = Memo1Click
     OnDragDrop = Memo1DragDrop
@@ -49,8 +50,8 @@ object ScriptForm: TScriptForm
     Width = 420
     Align = alBottom
     Constraints.MinHeight = 3
+    Lines.Strings = (    )
     ParentFont = False
-    ReadOnly = True
     ScrollBars = ssVertical
     TabOrder = 1
   end

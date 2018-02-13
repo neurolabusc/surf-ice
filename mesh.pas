@@ -8,7 +8,7 @@ uses
   {$IFDEF CTM} ctm_loader, {$ENDIF}
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, strutils,
   base64, zstream, LcLIntf, nifti_loader, colorTable, matmath, math,
-  define_types, nifti_types;
+  define_types, nifti_types, fileutil;
 
 const
   kMinOverlayIndex = 1;
@@ -64,6 +64,10 @@ type
     faces : array of TPoint3i;
     vertices: array of TPoint3f;
     vertexRGBA : array of TRGBA;
+    vertexAtlas: array of integer; //what atlss regions does this vertex belong to, e.g. [7, 8, 17...] the 3rd vertex belongs to region 17
+    AtlasFilter: array of integer; //only show these atlas regions, e.g. if [7, 8, 22] then only regions 7,8 and 22 will be visible
+    tempIntensityLUT : TFloats; //only used to load without external files - flushed after LoadOverlay
+    errorString: string;
     //overlay: array of single;
   private
     function CheckMesh: boolean;
@@ -71,7 +75,10 @@ type
     procedure MinMaxPct(lOverlayIndex, num_v: integer; var mx, mn: single; isExcludeZero: boolean);
     procedure SetDescriptives;
     procedure MakeSphere;
+    procedure BuildListCore(Clr: TRGBA; var f: TFaces; var v: TVertices; var vtxRGBA: TVertexRGBA);
+    procedure BuildListPartialAtlas(Clr: TRGBA);
     procedure BuildList(Clr: TRGBA);
+    procedure FilterOverlay(c: integer; var f: TFaces; var v: TVertices; var vRGBA: TVertexRGBA);
     procedure BuildListOverlay(Clr: TRGBA);
     function Load3Do(const FileName: string): boolean;
     function Load3ds(const FileName: string): boolean;
@@ -102,7 +109,8 @@ type
     procedure LoadAsc_Srf(const FileName: string);
     procedure LoadCtm(const FileName: string);
     function LoadDpv(const FileName: string; lOverlayIndex: integer): boolean;
-    function LoadRox(const FileName: string; lOverlayIndex: integer): boolean;
+    function LoadAtlasMapCore(lOverlayIndex: integer; intensityLUT: TFloats): string;
+    function LoadAtlasMap(const FileName: string; lOverlayIndex: integer): boolean;
     procedure LoadCurv(const FileName: string; lOverlayIndex: integer);
     procedure LoadMeshAsOverlay(const FileName: string; lOverlayIndex: integer);
     procedure LoadNii(const FileName: string; lOverlayIndex: integer; lLoadSmooth: boolean);
@@ -117,6 +125,8 @@ type
     procedure LoadW(const FileName: string; lOverlayIndex: integer);
   public
     procedure MakePyramid;
+    //function AtlasStatMapCore(AtlasName, StatName: string; Indices: TInts; Intensities: TFloats): string;
+    function MaxAtlasRegion: integer;
     procedure DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean);
     procedure Node2Mesh;
     procedure ReverseFaces;
@@ -141,7 +151,7 @@ implementation
 
 
 uses
-  //mainunit,
+  mainunit,
   meshify_simplify,shaderu, {$IFDEF COREGL} gl_core_3d {$ELSE} gl_legacy_3d {$ENDIF};
 
 {$IFDEF COREGL}
@@ -165,7 +175,268 @@ begin
      v.W := v.W + c1.a+ c2.a+ c3.a;
 end;
 
+procedure TMesh.BuildListCore(Clr: TRGBA; var f: TFaces; var v: TVertices; var vtxRGBA: TVertexRGBA);
+var
+  i,c, translucent: integer;
+  mn, mx: single;
+  rgb, rgb0: TRGBA;
+  vRGBA, vRGBAmx :TVertexRGBA;
+  vNumNeighbor: array of integer;
+  vSumRGBBA: array of TPoint4f;
+  isOverlayPainting : boolean = false;
+begin
+  if (length(f) < 1) or (length(v) < 3) then exit;
+  isOverlayPainting := false;
+  if  (OpenOverlays > 0)  then  //ignore overlays if they are all meshes rather than vertex colors
+       for c :=  OpenOverlays downto 1 do
+           if (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) = length(v)) then
+              isOverlayPainting := true;
+  if  (isOverlayPainting) or (length(vtxRGBA) = length(v)) then begin
+     rgb := RGBA(Clr.R, Clr.G, Clr.B, 0);
+     setlength(vRGBA, length(v));
+     if (length(vtxRGBA) = length(v)) then begin
+       c := round(vertexRgbaAlpha * 255);
+        if vertexRgbaSaturation >= 1 then begin
+          for i := 0 to (length(v)-1) do begin
+                vRGBA[i].r := vtxRGBA[i].r; vRGBA[i].g := vtxRGBA[i].g;  vRGBA[i].b := vtxRGBA[i].b;  vRGBA[i].a := c;
+          end;
+        end else begin
+            for i := 0 to (length(v)-1) do
+               vRGBA[i] := desaturateRGBA ( vtxRGBA[i], vertexRgbaSaturation, C);
+        end;
+        {$IFDEF COREGL}
+        if (vertexRGBAAlpha < 1.0) then
+          for i := 0 to (length(v)-1) do
+              vRGBA[i] := mixRGBA( Clr, vRGBA[i], vertexRGBAAlpha);
+        {$ENDIF}
+     end else begin
+         for i := 0 to (length(v)-1) do
+             vRGBA[i] := rgb;
+     end;
+     if  (OpenOverlays > 0) then begin
+        if isAdditiveOverlay then begin
+          setlength(vRGBAmx, length(v));
+          rgb0 := RGBA(0,0,0,0);
+          for i := 0 to (length(v)-1) do
+              vRGBAmx[i] := rgb0;
+          for c :=  OpenOverlays downto 1 do begin
+            if (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) = length(v)) then begin
+               if overlay[c].LUTvisible <> kLUTopaque then
+                  translucent := 2 //if translucent, halve alpha
+               else
+                   translucent := 1;
+               if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
+                  mn := overlay[c].windowScaledMin;
+                  mx := overlay[c].windowScaledMax;
+               end else begin
+                   mx := overlay[c].windowScaledMin;
+                   mn := overlay[c].windowScaledMax;
+               end;
+               for i := 0 to (length(v)-1) do begin
+                   rgb := inten2rgb(overlay[c].intensity[i], mn, mx, overlay[c].LUT);
+                   rgb.A := rgb.A div translucent;
+                   vRGBAmx[i] := maxRGBA(vRGBAmx[i], rgb);
+               end; //for i
+            end; //if visible
+          end; //for c
+          for i := 0 to (length(v)-1) do
+              vRGBA[i] := blendRGBA(vRGBA[i],vRGBAmx[i]);
+        end else begin
+            for c :=  OpenOverlays downto 1 do begin
+              if (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) = length(v)) then begin
+                 if overlay[c].LUTvisible <> kLUTopaque then
+                    translucent := 2 //if translucent, halve alpha
+                 else
+                     translucent := 1;
+                 if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
+                    mn := overlay[c].windowScaledMin;
+                    mx := overlay[c].windowScaledMax;
+                 end else begin
+                     mx := overlay[c].windowScaledMin;
+                     mn := overlay[c].windowScaledMax;
+                 end;
+                 for i := 0 to (length(v)-1) do begin
+                     rgb := inten2rgb(overlay[c].intensity[i], mn, mx, overlay[c].LUT);
+                     rgb.A := rgb.A div translucent;
+                     vRGBA[i] := blendRGBA(vRGBA[i], rgb);
+                 end; //for i
+              end; //if visible
+            end;  //for c
+       end;
+       if  (length(vtxRGBA) < 1) then begin //feather edges of overlay
+         setlength(vNumNeighbor, length(v));
+         setlength(vSumRGBBA, length(v));
+         for i := 0 to (length(v)-1) do begin
+             vNumNeighbor[i] := 0;
+             vSumRGBBA[i] := pt4f(0,0,0,0);
+         end;
+         for i := 0 to (length(f)-1) do begin
+             AddPt4f(vSumRGBBA[f[i].X], vRGBA[f[i].X], vRGBA[f[i].Y], vRGBA[f[i].Z]);
+             AddPt4f(vSumRGBBA[f[i].Y], vRGBA[f[i].X], vRGBA[f[i].Y], vRGBA[f[i].Z]);
+             AddPt4f(vSumRGBBA[f[i].Z], vRGBA[f[i].X], vRGBA[f[i].Y], vRGBA[f[i].Z]);
+             inc(vNumNeighbor[f[i].X],3);
+             inc(vNumNeighbor[f[i].Y],3);
+             inc(vNumNeighbor[f[i].Z],3);
+         end;
+         for i := 0 to (length(v)-1) do begin
+             if (vNumNeighbor[i] > 0)  then begin //vertex at edge: neighbors both colored and uncolored v
+                 vRGBA[i].a := round(vSumRGBBA[i].W / vNumNeighbor[i]);
+                 if {(vRGBA[i].a < 255)  and} (vRGBA[i].a > 0) then begin
+                    vRGBA[i].r := round( vSumRGBBA[i].X / vNumNeighbor[i]);
+                    vRGBA[i].g := round( vSumRGBBA[i].Y / vNumNeighbor[i]);
+                    vRGBA[i].b := round( vSumRGBBA[i].Z / vNumNeighbor[i]);
+                 end;
+             end;
+         end;
+         vNumNeighbor := nil;
+         //vNumColorNeighbor := nil;
+         vSumRGBBA := nil;
+       end; //end feather edges
+       (*if (length(vtxRGBA) < 1) then begin //feather edges if regions without overlay have alpha = 0
+         setlength(vZeroNeighbor, length(v));
+         for i := 0 to (length(v)-1) do
+             vZeroNeighbor[i] := false;
+         for i := 0 to (length(f)-1) do begin
+             if (vRGBA[f[i].X].A = 0) or (vRGBA[f[i].Y].A = 0) or (vRGBA[f[i].Z].A = 0) then begin
+                vZeroNeighbor[f[i].X] := true;
+                vZeroNeighbor[f[i].Y] := true;
+                vZeroNeighbor[f[i].Z] := true;
+             end;
+         end;
+         for i := 0 to (length(v)-1) do
+             if(vZeroNeighbor[i]) then
+                 vRGBA[i].a :=   vRGBA[i].a shr 1; //make edges more transparent
+       end; //end feather edges
+       *)
+       {$IFDEF COREGL} //with new openGL we mix here
+       mx := 1.0 - OverlayTransparency/100;
+       if mx < 0 then mx := 0;
+       if mx > 1 then mx := 1;
+       //if (OverlayTransparency > 0 ) and (OverlayTransparency <= 100) then
+       for i := 0 to (length(v)-1) do
+              vRGBA[i] := mixRGBA( Clr, vRGBA[i], mx);
+       {$ELSE}  //with old GLSL we mix in the shader
+       if (OverlayTransparency > 0 ) and (OverlayTransparency <= 100) then
+          for i := 0 to (length(v)-1) do
+              vRGBA[i].a := round( vRGBA[i].a * (1 - (OverlayTransparency /100)) );
+       {$ENDIF}
+     end; // if OpenOverlays > 0
+     {$IFDEF COREGL}
+     BuildDisplayList(f, v, vRGBA, vao, vbo, Clr);
+     {$ELSE}
+     displayList:= BuildDisplayList(f, v, vRGBA);
+     {$ENDIF}
+  end else begin
+     setLength(vRGBA,0);
+     {$IFDEF COREGL}
+     BuildDisplayList(f, v, vRGBA,vao, vbo, Clr);
+     {$ELSE}
+     displayList:= BuildDisplayList(f, v, vRGBA);
+     {$ENDIF}
+  end;
+end; // BuildListCore()
+
+procedure TMesh.BuildListPartialAtlas(Clr: TRGBA);
+//this function is used when the user only want to show some of the brain regions in a region of interest atlas/template
+// it filters the background image in a way similar to how we can filter the overlays
+var
+     i, j, nfOK, nvOK, nFace, nVert, maxROI: integer;
+     vOK: array of integer;
+     filterLUT: array of boolean;
+     fOK: array of boolean;
+     f: TFaces;
+     v: TVertices;
+     vRGBA: TVertexRGBA;
+begin
+    setlength(v,0);
+    setlength(f,0);
+    nVert := length(vertices);
+    nFace := length(faces);
+    if (nVert < 3) or (nFace < 1) or (length(vertexAtlas) <>  nVert) or (length(AtlasFilter) < 1) then exit;
+    //set up lookup table - list of regions that survive
+    maxROI := 0;
+    for i := 0 to (nVert -1) do
+        if vertexAtlas[i] > maxROI then maxROI := vertexAtlas[i]; //does not survive
+    if maxROI < 1 then exit;
+    setlength(filterLUT, maxROI+1);
+    for i := 0 to maxROI do
+        filterLUT[i] := false; //assume we will not filter these regions
+    for i := 0 to (length(AtlasFilter) - 1) do
+        if (AtlasFilter[i] > 0) and (AtlasFilter[i] <= maxROI) then
+           filterLUT[AtlasFilter[i]] := true; //filter the specified region
+    //mark surviving vertices
+    setlength(vOK, nVert);
+    for i := 0 to (nVert -1) do
+        vOK[i] := -1; //does not survive
+    nvOK := 0;
+    for i := 0 to (nVert -1) do
+        if (vertexAtlas[i] > 0) and (not filterLUT[vertexAtlas[i]]) then begin
+             vOK[i] := nvOK;
+             nvOK := nvOK + 1;
+        end;
+    setlength(filterLUT, 0);
+    //conditionals for unusual situations
+    if nvOK = 0 then begin //nothing survives
+      setlength(vOK,0);
+      exit;
+    end;
+    if (nvOK = nVert) then begin //everything survives
+       setlength(vOK,0);
+       BuildListCore(Clr, faces, vertices, vertexRGBA); //show complete array
+       exit;
+    end;
+    //see how many faces survive
+    setlength(fOK,nFace);
+    for i := 0 to (nFace -1) do
+        fOK[i] := (vOK[faces[i].X] >= 0) and (vOK[faces[i].Y] >= 0) and (vOK[faces[i].Z] >= 0);
+    nfOK := 0;
+    for i := 0 to (nFace -1) do
+        if fOK[i] then nfOK := nfOK + 1;
+    //copy surviving vertices
+    setlength(v,nvOK);
+    for i := 0 to (nVert -1) do
+        if (vOK[i] >= 0) then
+          v[vOK[i]] := vertices[i];
+    //copy surviving vertices
+    setlength(f,nfOK);
+    j := 0;
+    for i := 0 to (nFace -1) do
+        if fOK[i] then begin
+          f[j].X := vOK[faces[i].X];
+          f[j].Y := vOK[faces[i].Y];
+          f[j].Z := vOK[faces[i].Z];
+          j := j + 1;
+        end;
+    //set vertex colors (if loaded)
+    setlength(vRGBA, 0);
+    if length(vertexRGBA) = nVert then begin
+      setlength(vRGBA, nvOK);
+      j := 0;
+      for i := 0 to (nVert -1) do begin
+          if vOK[i] >= 0 then begin
+            vRGBA[j] := vertexRGBA[i];
+             j := j + 1;
+          end; //if vertex survives
+       end; //for each vertex
+    end; //if vertices are colored (vertexRGBA)
+    setlength(vOK,0);
+    setlength(fOK,0);
+    BuildListCore(Clr, f, v, vRGBA);
+    //release filtered faces, vertices and colors
+    setlength(f,0);
+    setlength(v,0);
+    setlength(vRGBA,0);
+end;
+
 procedure TMesh.BuildList (Clr: TRGBA);
+begin
+  if (length(faces) < 1) or (length(vertices) < 3) then exit;
+  if (length(AtlasFilter) > 0) and (length(vertexAtlas) =  length(vertices)) then
+       BuildListPartialAtlas(Clr)
+  else
+	BuildListCore(Clr, faces, vertices, vertexRGBA)
+end;
+(*procedure TMesh.BuildList (Clr: TRGBA);
 var
   i,c, translucent: integer;
   mn, mx: single;
@@ -176,12 +447,15 @@ var
   isOverlayPainting : boolean = false;
 begin
   if (length(faces) < 1) or (length(vertices) < 3) then exit;
+
   isOverlayPainting := false;
   if  (OpenOverlays > 0)  then  //ignore overlays if they are all meshes rather than vertex colors
        for c :=  OpenOverlays downto 1 do
            if (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) = length(vertices)) then
               isOverlayPainting := true;
   if  (isOverlayPainting) or (length(vertexRGBA) = length(vertices)) then begin
+  	ifaces := @faces;
+  	ivertices := @vertices;
      rgb := RGBA(Clr.R, Clr.G, Clr.B, 0);
      setlength(vRGBA, length(vertices));
      if (length(vertexRGBA) = length(vertices)) then begin
@@ -325,15 +599,124 @@ begin
      {$ENDIF}
   end;
 end; // BuildList()
+*)
+procedure TMesh.FilterOverlay(c: integer; var f: TFaces; var v: TVertices; var vRGBA: TVertexRGBA);
+//given an overlay where each vertex is a scalar intensity, only preserve vertices that exceed threshold
+var
+   mn, mx: single;
+   i, j, nfOK, nvOK, nFace, nVert: integer;
+   vOK: array of integer;
+   fOK: array of boolean;
+   rgb, rgba192: TRGBA;
+begin
+  setlength(v,0);
+  setlength(f,0);
+  nVert := length(overlay[c].vertices);
+  nFace := length(overlay[c].faces);
+  if (overlay[c].LUTvisible = kLUTinvisible) or (nVert < 3) or (nFace < 1) then exit;
+  if length(overlay[c].intensity) <> nVert then exit; //requires intensity values
+  if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
+     mn := overlay[c].windowScaledMin;
+     mx := overlay[c].windowScaledMax;
+  end else begin
+      mx := overlay[c].windowScaledMin;
+      mn := overlay[c].windowScaledMax;
+  end;
+  setlength(vOK, nVert);
+  for i := 0 to (nVert -1) do
+      vOK[i] := -1; //does not survive
+  nvOK := 0;
+  if (mn >= 0) then begin
+    for i := 0 to (nVert -1) do
+        if (overlay[c].intensity[i] >= mn) then begin
+           vOK[i] := nvOK;
+           nvOK := nvOK + 1;
+        end;
+  end else if (mx < 0) then begin
+    for i := 0 to (nVert -1) do
+        if (overlay[c].intensity[i] <= mx) then begin
+           vOK[i] := nvOK;
+           nvOK := nvOK + 1;
+        end;
+  end else //e.g. range -1..+3
+      nvOK := nVert;
+
+  if nvOK = 0 then begin //nothing survives
+    setlength(vOK,0);
+    exit;
+  end;
+  if (nvOK = nVert) then begin //everything survives
+     setlength(vOK,0);
+     setlength(v,nVert);
+     setlength(f,nFace);
+     v := overlay[c].vertices;
+     f := overlay[c].faces;
+     setlength(vRGBA, nvOK);
+     rgba192 := overlay[c].LUT[192];
+     for i := 0 to (nvOK -1) do begin
+          rgb := inten2rgb(overlay[c].intensity[i], mn, mx, overlay[c].LUT);
+          vRGBA[i].r := rgb.r;
+          vRGBA[i].g := rgb.g;
+          vRGBA[i].b := rgb.b;
+          vRGBA[i].a := rgba192.a;
+     end;
+
+     exit;
+  end;
+  //see how many faces survive
+  setlength(fOK,nFace);
+  for i := 0 to (nFace -1) do
+      fOK[i] := (vOK[overlay[c].faces[i].X] >= 0) and (vOK[overlay[c].faces[i].Y] >= 0) and (vOK[overlay[c].faces[i].Z] >= 0);
+  nfOK := 0;
+  for i := 0 to (nFace -1) do
+      if fOK[i] then nfOK := nfOK + 1;
+  //copy surviving vertices
+  setlength(v,nvOK);
+  for i := 0 to (nVert -1) do
+      if (vOK[i] >= 0) then
+        v[vOK[i]] := overlay[c].vertices[i];
+  //copy surviving vertices
+  setlength(f,nfOK);
+  j := 0;
+  for i := 0 to (nFace -1) do
+      if fOK[i] then begin
+        f[j].X := vOK[overlay[c].faces[i].X];
+        f[j].Y := vOK[overlay[c].faces[i].Y];
+        f[j].Z := vOK[overlay[c].faces[i].Z];
+        j := j + 1;
+      end;
+  //set RGBA
+  setlength(vRGBA, nvOK);
+  rgba192 := overlay[c].LUT[192];
+  //for i := 0 to (nvOK -1) do
+  //    vRGBA[i] := rgba192;
+  j := 0;
+  for i := 0 to (nVert -1) do begin
+      if vOK[i] >= 0 then begin
+         rgb := inten2rgb(overlay[c].intensity[i], mn, mx, overlay[c].LUT);
+         vRGBA[j].r := rgb.r;
+         vRGBA[j].g := rgb.g;
+         vRGBA[j].b := rgb.b;
+         vRGBA[j].a := rgba192.a;
+         j := j + 1;
+      end;
+   end;
+
+  setlength(vOK,0);
+  setlength(fOK,0);
+
+end;
 
 procedure TMesh.BuildListOverlay(Clr: TRGBA);
 var
-  c, i, nVert, nFace, nInten, sumFace, sumVert, nMeshOverlay: integer;
-  mn, mx: single;
-  oFaces: TFaces;
-  oVerts: TVertices;
-  vRGBA: TVertexRGBA;
-  rgb: TRGBA;
+  c, i, nVert, nFace, sumFace, sumVert, nMeshOverlay: integer;
+  isIntensityColored : boolean;
+  //mn, mx: single;
+  oFaces, sFaces: TFaces;
+  oVerts, sVerts: TVertices;
+  vRGBA, sRGBA: TVertexRGBA;
+  //sFaces, sVerts, sRGBA
+  //rgb: TRGBA;
 begin
   if (length(faces) < 1) or (length(vertices) < 3) or (OpenOverlays < 1) then
      exit;
@@ -348,21 +731,19 @@ begin
   for c := 1 to OpenOverlays do begin
       nVert := length(overlay[c].vertices);
       nFace := length(overlay[c].faces);
-      nInten := length(overlay[c].intensity);
-      if (nInten <> nVert) then nInten := 0;
-      if (overlay[c].LUTvisible <> kLUTinvisible) and (nVert > 2) and (nFace > 0) then begin
-            setlength(oFaces, sumFace + nFace);
-            for i := 0 to (nFace -1) do
-                oFaces[i+sumFace] := vectorAdd(overlay[c].faces[i], sumVert);
-            setlength(oVerts, sumVert + nVert);
-            for i := 0 to (nVert -1) do
-                oVerts[i+sumVert] := overlay[c].vertices[i];
+      if (overlay[c].LUTvisible = kLUTinvisible) or (nVert < 3) or (nFace < 1) then continue;
+      isIntensityColored := length(overlay[c].intensity) = nVert;
+      if (not isIntensityColored) then begin
+        setlength(oFaces, sumFace + nFace);
+        for i := 0 to (nFace -1) do
+            oFaces[i+sumFace] := vectorAdd(overlay[c].faces[i], sumVert);
+        setlength(oVerts, sumVert + nVert);
+        for i := 0 to (nVert -1) do
+            oVerts[i+sumVert] := overlay[c].vertices[i];
         setlength(vRGBA, sumVert + nVert);
         for i := 0 to (nVert -1) do
             vRGBA[i+sumVert] := overlay[c].LUT[192];
-        if nInten > 0 then begin
-          //for i := 0 to (nVert -1) do
-          //  vRGBA[i+sumVert] := overlay[c].LUT[192];
+        (*if isIntensityColored then begin
           if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
              mn := overlay[c].windowScaledMin;
              mx := overlay[c].windowScaledMax;
@@ -370,16 +751,42 @@ begin
               mx := overlay[c].windowScaledMin;
               mn := overlay[c].windowScaledMax;
           end;
-           for i := 0 to (nVert -1) do begin
+          for i := 0 to (nVert -1) do begin
                rgb := inten2rgb(overlay[c].intensity[i], mn, mx, overlay[c].LUT);
                vRGBA[i+sumVert].r := rgb.r;
                vRGBA[i+sumVert].g := rgb.g;
                vRGBA[i+sumVert].b := rgb.b;
            end;
-         end;
+         end;*) //isIntensityColored > 0
          sumVert := sumVert + nVert;
          sumFace := sumFace + nFace;
+         continue;
+      end; // not isIntensityColored
+      //intensity colored follows
+      // we will hide vertices below threshold....
+      FilterOverlay(c, sFaces, sVerts, sRGBA);
+      nFace := length(sFaces);
+      nVert := length(sVerts);
+      //GLForm1.Caption := 'x'+inttostr(nVert)+'y'+inttostr(nFace)+'z'+inttostr(length(sRGBA));
+      if (nFace < 3) or (nVert < 1) or (length(sRGBA) <> nVert) then begin
+        setlength(sFaces, 0);
+        setlength(sVerts, 0);
+        setlength(sRGBA, 0);
+        continue;
       end;
+      //GLForm1.Caption := 'xx'+inttostr(nVert)+'y'+inttostr(nFace)+'z'+inttostr(length(sRGBA));
+
+      setlength(oFaces, sumFace + nFace);
+      for i := 0 to (nFace -1) do
+          oFaces[i+sumFace] := vectorAdd(sFaces[i], sumVert);
+      setlength(oVerts, sumVert + nVert);
+      for i := 0 to (nVert -1) do
+          oVerts[i+sumVert] := sVerts[i];
+      setlength(vRGBA, sumVert + nVert);
+      for i := 0 to (nVert -1) do
+          vRGBA[i+sumVert] := sRGBA[i];
+      sumVert := sumVert + nVert;
+      sumFace := sumFace + nFace;
   end; //for each overlay
   {$IFDEF COREGL}
   nFacesOverlay := length(oFaces);
@@ -710,6 +1117,22 @@ begin
      SetDescriptives;
 end; // MakePyramid()
 
+
+function TMesh.MaxAtlasRegion: integer; //returns maximim atlas region, e.g. JHU has 192 regions labelled 1..192, so 192 - returns 0 if not an atlas
+var
+   num_v, i: integer;
+begin
+  result := 0;
+  num_v := length(vertices);
+  if  (num_v < 3) or (length(vertexAtlas) <>  num_v) then exit;
+  result := vertexAtlas[0];
+  for i := 0 to (num_v -1) do
+      if vertexAtlas[i] > result then
+         result := vertexAtlas[i];
+  if (result < 0) then
+     result := 0;
+end;
+
 constructor TMesh.Create;
 begin
      {$IFDEF COREGL}
@@ -731,6 +1154,10 @@ begin
      setlength(nodes, 0);
      setlength(edges,0,0);
      setlength(vertexRGBA,0);
+     setlength(vertexAtlas,0);
+     setlength(AtlasFilter,0);
+     setlength(tempIntensityLUT,0);
+     errorString := '';
      isFreeSurferMesh := false;
      vertexRgbaSaturation := 1;
      vertexRgbaAlpha := 1;
@@ -1328,7 +1755,7 @@ var
 begin
   result := false;
   setlength(edges,0,0);
-  if not FileExists(FileName) then exit;
+  if not FileExistsF(FileName) then exit;
   if (length(nodes) < 2) then begin
        showmessage('You must load a NODE file before loading your EDGE file.');
        exit;
@@ -1985,11 +2412,16 @@ var
    f: file;
    byt: byte;
    w: array[0..2] of word;
+   FileNamePly: string;
 begin
   if (length(faces) < 1) or (length(vertices) < 3) then begin
         showmessage('You need to open a mesh before you can save it');
         exit;
   end;
+  FileNamePly := changeFileExt(FileName, '.ply');
+  {$IFDEF UNIX}
+  FileNamePly := ExpandUNCFileNameUTF8(FileNamePly);
+  {$ENDIF}
   if length(faces) < 32767 then
      s := 'property list uchar short vertex_indices'
   else
@@ -2008,7 +2440,7 @@ begin
        +'element face '+inttostr(length(faces))+kEOLN
        +s+kEOLN
        +'end_header'+kEOLN;
-  AssignFile(f, FileName);
+  AssignFile(f, FileNamePly);
   ReWrite(f, 1);
   BlockWrite(f, s[1], length(s));
   BlockWrite(f, vertices[0], 3 * 4 * length(vertices));
@@ -2044,6 +2476,9 @@ begin
   end;
   if not CheckMesh then exit;
   FileNameObj := changeFileExt(FileName, '.obj');
+  {$IFDEF UNIX}
+  FileNameObj := ExpandUNCFileNameUTF8(FileNameObj); // ~/tst.pl -> /Users/rorden/home/tst.ply
+  {$ENDIF}
   AssignFile(f, FileNameObj);
   ReWrite(f);
   WriteLn(f, '# WaveFront Object format image created with Surf Ice');
@@ -2071,6 +2506,9 @@ begin
   nFace := length(Faces);
   nVert := length(Vertices);
   FileNameMz3 := changeFileExt(FileName, '.mz3');
+  {$IFDEF UNIX}
+  FileNameMz3 := ExpandUNCFileNameUTF8(FilenameMz3);
+  {$ENDIF}
   isFace := nFace > 0;
   isVert := nVert > 0;
   isRGBA := false;
@@ -2125,17 +2563,18 @@ var
   f: TFaces;
   v: TVertices;
   c: TVertexRGBA;
-  //i: TFloats;
+  fnm: string;
 begin
   if OverlayIndex > OpenOverlays then exit;
+  fnm := DefaultToHomeDir(FileName);
   //setlength(i,0);
   setlength(c,0);
   if (length(overlay[OverlayIndex].faces) > 0) and (length(overlay[OverlayIndex].vertices) > 0) then
-     SaveMz3Core(Filename, overlay[OverlayIndex].Faces, overlay[OverlayIndex].Vertices, c,overlay[OverlayIndex].intensity)
+     SaveMz3Core(fnm, overlay[OverlayIndex].Faces, overlay[OverlayIndex].Vertices, c,overlay[OverlayIndex].intensity)
   else if length(overlay[OverlayIndex].intensity) > 1 then begin
      setlength(f,0);
      setlength(v,0);
-     SaveMz3Core(Filename, f,v,c, overlay[OverlayIndex].intensity);
+     SaveMz3Core(fnm, f,v,c, overlay[OverlayIndex].intensity);
   end;
 end;
 
@@ -2149,6 +2588,9 @@ var
    base64: string;
 begin
   FileNameGii := changeFileExt(FileName, '.gii');
+  {$IFDEF UNIX}
+  FileNameGii := ExpandUNCFileNameUTF8(FilenameGii);
+  {$ENDIF}
   if (length(faces) < 1) or (length(vertices) < 3) then begin
      showmessage('You need to open a mesh before you can save it');
      exit;
@@ -2156,7 +2598,7 @@ begin
   if not CheckMesh then exit;
   AssignFile(f, FileNameGii);
   ReWrite(f);
-  WriteLn(f, '<?xml version="1.0" encoding="UTF-8"?>');
+  WriteLn(f, '<?xml="1.0" encoding="UTF-8"?>');
   WriteLn(f, '<!DOCTYPE GIFTI SYSTEM "http://www.nitrc.org/frs/download.php/115/gifti.dtd">');
   WriteLn(f, '<GIFTI Version="1.0"  NumberOfDataArrays="2">');
   WriteLn(f, '   <MetaData/>');
@@ -2792,7 +3234,7 @@ begin
      setlength(Vertices,0);
      setlength(vertexRGBA,0);
      setlength(intensity,0);
-     if not fileexists(Filename) then exit;
+     if not fileexistsF(Filename) then exit;
      mStream := TMemoryStream.Create;
      zStream := TGZFileStream.create(FileName, gzopenread);
      setlength(bytes, kChunkSize);
@@ -2847,11 +3289,23 @@ function TMesh.LoadMz3(const FileName: string; lOverlayIndex : integer): boolean
 var
   floats: TFloats;
   vtxRGBA: TVertexRGBA;
+  i: integer;
 begin
   if lOverlayIndex < 1 then begin //save main image
      result := LoadMz3Core(Filename, Faces,Vertices,vertexRGBA,floats);
+     if not result then exit;
+     if (length(Vertices) > 0) and (length(vertexRGBA) > 0) and (length(floats) = length(Vertices)) then begin
+        //if both vertexRBA and scalar floats are loaded, assume scalar floats indicate ROI index
+        setlength(vertexAtlas, length(floats));
+        for i := 0 to (length(floats)-1) do
+            vertexAtlas[i] := round(floats[i]);
+
+     end;
+     if (length(vertexRGBA) < 1) and (length(Faces) > 0) and (length(floats) > 0) then
+        Showmessage('Scalar meshes are usually overlays, not background images (hint use Overlay/Add to load this image again).');
+
      if (length(Faces) < 1) and (length(floats) > 0) then
-        Showmessage('Please load mesh (using File/Open) BEFORE loading the overlay (using Overlay/Add)');
+        Showmessage('Please load mesh (using File/Open) BEFORE loading the overlay (using Overlay/Add).');
      setlength(floats,0);
      exit;
   end;
@@ -2860,7 +3314,7 @@ begin
   setlength(vtxRGBA,0);
   if not result then exit;
   if (length(Overlay[lOverlayIndex].Vertices) < 3) and (length(Overlay[lOverlayIndex].intensity) > 0) and (length(overlay[lOverlayIndex].intensity)  <> length(Vertices)) then begin
-     showmessage(format('This overlay has a different number of vertices (%d) than the background mesh (%d)', [length(overlay[lOverlayIndex].intensity), length(Vertices) ]));
+     showmessage(format('This overlay has a different number of vertices (%d) than the background mesh (%d).', [length(overlay[lOverlayIndex].intensity), length(Vertices) ]));
      setlength(overlay[lOverlayIndex].intensity, 0);
      result := false;
   end;
@@ -4557,7 +5011,7 @@ var
 begin
   result := false;
   isEmbeddedEdge := false;
-     if not FileExists(FileName) then exit;
+     if not FileExistsF(FileName) then exit;
      isBusy := true;
      isNode := false;
      isFreeSurferMesh := false;
@@ -4906,44 +5360,71 @@ begin
  setlength(outIdx, 0);
 end;
 
+const
+  kUndefined : single = 1/0; //NaN - used to indicate unused region - faces connected to these vertices will be discarded
 
-function TMesh.LoadRox(const FileName: string; lOverlayIndex: integer): boolean;
+function TMesh.LoadAtlasMapCore(lOverlayIndex: integer; intensityLUT: TFloats): string;
+var
+   maxROI, num_v, i, idx : integer;
+   inten,minInten, maxInten: single;
+begin
+     num_v := length(vertices);
+     maxROI := length(intensityLUT) - 1; // 0..maxROI
+     if (num_v < 3) or (lOverlayIndex < kMinOverlayIndex) or (lOverlayIndex > kMaxOverlays) or (maxROI < 1) then exit;
+     setlength(overlay[lOverlayIndex].intensity, num_v); //vertices = zeros(num_f, 9);
+     minInten := 0;
+     maxInten := 0;
+     for i := 0 to (num_v -1) do begin
+         idx :=  vertexAtlas[i];
+         if (idx > maxROI) then
+            inten := kUndefined
+         else
+             inten := intensityLUT[idx];
+         if inten < minInten then minInten := inten;
+         if inten > maxInten then maxInten := inten;
+         overlay[lOverlayIndex].intensity[i] := inten;
+     end;
+     //optional - create mesh overlay rather than scalars
+     overlay[lOverlayIndex].faces := Copy(faces, 0, MaxInt);
+     overlay[lOverlayIndex].vertices := Copy(vertices, 0, MaxInt);
+     overlay[lOverlayIndex].minIntensity := minInten;
+     overlay[lOverlayIndex].maxIntensity := maxInten;
+     overlay[lOverlayIndex].windowScaledMin:= minInten;
+     overlay[lOverlayIndex].windowScaledMax := maxInten;
+     RemoveNaNs(overlay[lOverlayIndex].intensity, overlay[lOverlayIndex].faces, overlay[lOverlayIndex].vertices, kUndefined);
+     //end optional
+     result := '';
+end;
+
+function TMesh.LoadAtlasMap(const FileName: string; lOverlayIndex: integer): boolean;
+//function TMesh.LoadAltasMap(const FileName: string; lOverlayIndex: integer): boolean;
 label
    666;
-const
-  kUndefined : single = 1/0; //NaN
 var
-   intensityLUT : array of single;
-   maxROI, num_v, i, idx : integer;
+   intensityLUT : TFloats;
+   maxROI, num_v, i: integer;
    f: TextFile;
-   inten,minInten, maxInten: single;
+   inten: single;
    str: string;
    strlst : TStringList;
    ok : boolean = false;
-   isAlphaVaries : boolean = false;
 begin
      result := false;
      num_v := length(vertices);
-     if (num_v < 3) or (length(vertexRGBA) <> num_v) then begin
+     if (num_v < 3) or (length(vertexAtlas) <> num_v) then begin
         showmessage('ROX format requires labelled mesh.');
         exit;
      end;
-     maxROI := 0;
-     for i := 0 to (num_v -1) do begin
-         if (vertexRGBA[i].A > 0)  and  (vertexRGBA[i].A <> maxROI) then
-            isAlphaVaries := true;
-         if vertexRGBA[i].A > maxROI then
-            maxROI := vertexRGBA[i].A;
-     end;
-     if (not isAlphaVaries) then begin
+     maxROI := MaxAtlasRegion;
+     if (maxROI < 1) then begin
         showmessage('ROX format requires labelled mesh with varying indices.');
         exit;
      end;
      setlength(intensityLUT, maxROI+1);
-     strlst:=TStringList.Create;
      for i := 0 to maxROI do
          intensityLUT[i] := kUndefined;
      //if (lOverlayIndex < kMinOverlayIndex) or (lOverlayIndex > kMaxOverlays) then exit;
+     strlst:=TStringList.Create;
      AssignFile(f, FileName);
      Reset(f);
      while (not EOF(f)) do begin
@@ -4964,33 +5445,14 @@ begin
      end;
      if not ok then
         goto 666;
-     num_v := length(vertices);
-     setlength(overlay[lOverlayIndex].intensity, num_v); //vertices = zeros(num_f, 9);
-     minInten := 0;
-     maxInten := 0;
-     for i := 0 to (num_v -1) do begin
-         idx :=  vertexRGBA[i].A;
-         if (idx > maxROI) then
-            inten := kUndefined
-         else
-             inten := intensityLUT[idx];
-         if inten < minInten then minInten := inten;
-         if inten > maxInten then maxInten := inten;
-         overlay[lOverlayIndex].intensity[i] := inten;
-     end;
-     //optional - create mesh overlay rather than scalars
-     overlay[lOverlayIndex].faces := Copy(faces, 0, MaxInt);
-     overlay[lOverlayIndex].vertices := Copy(vertices, 0, MaxInt);
-     overlay[lOverlayIndex].minIntensity := minInten;
-     overlay[lOverlayIndex].maxIntensity := maxInten;
-     overlay[lOverlayIndex].windowScaledMin:= minInten;
-     overlay[lOverlayIndex].windowScaledMax := maxInten;
-     RemoveNaNs(overlay[lOverlayIndex].intensity, overlay[lOverlayIndex].faces, overlay[lOverlayIndex].vertices, kUndefined);
-     //end optional
-     result := true;
+     LoadAtlasMapCore(lOverlayIndex, intensityLUT);
+     if (length(overlay[lOverlayIndex].vertices) < 3) then
+        showmessage('Unable to find any matching indices in atlas')
+     else
+         result := true;
    666:
      CloseFile(f);
-     intensityLUT := nil;
+     setlength(intensityLUT,0);
      strlst.free;
 end;
 
@@ -5027,13 +5489,6 @@ begin
      result := true;
    666:
      CloseFile(f);
-
-(*if (num_v <> length(vertices)) or (num_f <> length(faces)) or (sz < (filepos(f)+(num_v*4))) then begin
-   showmessage('File corrupted: overlay does not match background mesh: '+inttostr(num_v)+' vertices and '+inttostr(num_f)+' triangles');
-   CloseFile(f);
-   exit;
-end;*)
-
 end;
 
 procedure TMesh.LoadCurv(const FileName: string; lOverlayIndex: integer);
@@ -5333,11 +5788,11 @@ begin
       overlay[lOverlayIndex].windowScaledMin:= roundto(mn,lLog10);
       overlay[lOverlayIndex].windowScaledMax := roundto(mx,lLog10);
   end;
-  if (mn = mx) then begin
+  (*if (mn = mx) then begin
      showmessage('Error: no variability in overlay '+floattostr(mn));
      overlay[lOverlayIndex].intensity := nil; //release
      exit;
-  end;
+  end;*)
   //showmessage('overlay'+floattostr(mn)+'  '+floattostr(mx));
 end; // SetOverlayDescriptives()
 
@@ -5350,7 +5805,7 @@ var
    isCiftiNii: boolean;
 begin
   result := false;
-  if not FileExists(FileName) then exit;
+  if (not FileExistsF(FileName)) and (length(tempIntensityLUT) < 1) then exit;
   nOverlays := 1;
   isCiftiNii := false;
   ext := UpperCase(ExtractFileExt(Filename));
@@ -5384,8 +5839,18 @@ begin
   else
       Overlay[OpenOverlays].LUTindex := OpenOverlays;
   Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex, Overlay[OpenOverlays].LUTinvert);
+  if (Filename = '') and (length(tempIntensityLUT) > 0) then begin
+     errorString := LoadAtlasMapCore(OpenOverlays, tempIntensityLUT);
+     if (errorString <> '') then begin
+       OpenOverlays := OpenOverlays - 1;
+       setlength(tempIntensityLUT,0);
+       exit;
+     end;
+    setlength(tempIntensityLUT,0);
+    Overlay[OpenOverlays].filename:= 'AtlasMap';
+  end;
   if (ext = '.ROX') then begin
-     if not LoadROX(FileName, OpenOverlays) then begin
+     if not LoadAtlasMap(FileName, OpenOverlays) then begin
        OpenOverlays := OpenOverlays - 1;
        exit;
      end;

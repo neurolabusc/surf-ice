@@ -3,7 +3,9 @@ unit commandsu;
 interface
 
 function EXISTS(lFilename: string): boolean; //function
-
+procedure ATLASSTATMAP(ATLASNAME, STATNAME: string; const Indices: array of integer; const Intensities: array of single);
+procedure ATLASSATURATIONALPHA(lSaturation, lTransparency: single);
+procedure ATLASFILTER(const Filt: array of integer);
 procedure AZIMUTH (DEG: integer);
 procedure AZIMUTHELEVATION (AZI, ELEV: integer);
 procedure BACKCOLOR (R,G,B: byte);
@@ -70,8 +72,12 @@ const
                Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
              );
 
-knProc = 54;
+knProc = 57;
   kProcRA : array [1..knProc] of TScriptRec = (
+
+  (Ptr:@ATLASSTATMAP;Decl:'ATLASSTATMAP';Vars:'(ATLASNAME, STATNAME: string; const Intensities: array of integer; const Intensities: array of single)'),
+  (Ptr:@ATLASSATURATIONALPHA;Decl:'ATLASSATURATIONALPHA';Vars:'(lSaturation, lTransparency: single)'),
+  (Ptr:@ATLASFILTER;Decl:'ATLASFILTER';Vars:'(const Filt: array of integer)'),
    (Ptr:@AZIMUTH;Decl:'AZIMUTH';Vars:'(DEG: integer)'),
    (Ptr:@AZIMUTHELEVATION;Decl:'AZIMUTHELEVATION';Vars:'(AZI, ELEV: integer)'),
    (Ptr:@BMPZOOM;Decl:'BMPZOOM';Vars:'(Z: byte)'),
@@ -139,6 +145,72 @@ begin
   gPrefs.ScreenCaptureZoom := Z;
 end;
 
+procedure ATLASSTATMAP(ATLASNAME, STATNAME: string; const Indices: array of integer; const Intensities: array of single);
+label
+  123;
+const
+  kUndefined : single = 1/0; //NaN - used to indicate unused region - faces connected to these vertices will be discarded
+var
+  i, idx, num_idx, num_inten, maxROI: integer;
+  ok: boolean;
+  err: string;
+begin
+  err := '';
+  num_idx := length(Indices);
+  num_inten := length(Intensities);
+  if (num_inten < 1) then begin
+     err := 'No intensities specified';
+     goto 123;
+  end;
+  if (num_idx > 1) and (num_idx <> num_inten) then begin
+     err := 'Number of indices ('+inttostr(num_idx)+') does not match number of intensities ('+inttostr(num_inten)+')';
+     goto 123;
+  end;
+  //ignore: preserve previous filter setlength(gMesh.AtlasFilter, 0); //show all regions - we might need some for parsing
+  if not GLForm1.OpenMesh(ATLASNAME) then  begin
+     err := 'Unable to load mesh named "'+ATLASNAME+'"';
+     goto 123;
+  end;
+  maxROI := gMesh.MaxAtlasRegion;
+  if maxROI < 1 then  begin
+     err := 'This mesh not an Atlas "'+ATLASNAME+'"';
+     goto 123;
+  end;
+  if (num_idx = 0) and (maxROI <> num_inten) then begin
+    err := 'Expected precisely '+inttostr(maxROI)+' intensities, not '+inttostr(num_inten);
+    goto 123;
+  end;
+  //create temporary data - no need to save a file
+  setlength(gMesh.tempIntensityLUT, maxROI+1);
+  for i := 0 to maxROI do
+      gMesh.tempIntensityLUT[i] := kUndefined;
+  if (length(Indices) < 1) then begin //no indices - precise mapping
+     for i := 1 to maxROI do
+         gMesh.tempIntensityLUT[i] := Intensities[i-1]; //e.g. first intensity is indexed from 0
+  end else begin //indexed mapping - only specified regions are used
+    for i := 0 to  (length(Indices) - 1) do begin
+      idx := Indices[i];
+      if (idx < 0) or (idx > maxROI) then continue;
+      gMesh.tempIntensityLUT[idx] := Intensities[i];
+    end;
+  end;
+  //load temporary file
+  ok := gMesh.LoadOverlay('',false);
+  err := gMesh.errorString;
+  if not ok then goto 123;
+  if STATNAME <> '' then
+    gMesh.SaveOverlay(STATNAME, gMesh.OpenOverlays);
+  //err := gMesh.AtlasStatMapCore(AtlasName, StatName, idxs, intens);
+  123:
+  if err <> '' then //report error
+     ScriptForm.Memo2.Lines.Add('ATLASSTATMAP: '+err);
+  GLForm1.GLboxRequestUpdate(nil);
+  GLForm1.UpdateToolbar;
+  GLForm1.StringGrid1.RowCount := gMesh.OpenOverlays+1;
+  GLForm1.UpdateOverlaySpread;
+
+end;
+
 procedure RESETDEFAULTS;
 begin
   GLForm1.CloseMenuClick(nil);
@@ -164,6 +236,23 @@ end;
 procedure CAMERADISTANCE(DISTANCE: single);
 begin
      GLForm1.SetDistance(DISTANCE);
+end;
+
+procedure ATLASFILTER(const Filt: array of integer);
+// http://rvelthuis.de/articles/articles-openarr.html
+// ATLASFILTER([]);
+// ATLASFILTER([17, 22, 32]);
+var
+  i: integer;
+begin
+  setlength(gMesh.AtlasFilter, length(Filt));
+  if length(Filt) < 1 then begin //release filter
+    GLForm1.GLboxRequestUpdate(nil);
+    exit;
+  end;
+  for i := Low(Filt) to High(Filt) do
+     gMesh.AtlasFilter[i] := Filt[i];//ScriptForm.Memo2.Lines.Add('F= '+inttostr(Filt[i]));
+  GLForm1.GLboxRequestUpdate(nil);
 end;
 
 procedure AZIMUTH (DEG: integer);
@@ -232,8 +321,9 @@ end;
 
 procedure MESHLOAD(lFilename: string);
 begin
-   if not GLForm1.OpenMesh(lFilename) then
-      ScriptForm.Memo2.Lines.Add('Unable to load mesh named "'+lFilename+'"');
+  if not GLForm1.OpenMesh(lFilename) then begin
+     ScriptForm.Memo2.Lines.Add('Unable to load mesh named "'+lFilename+'"');
+   end;
 end;
 
 procedure MESHOVERLAYORDER (FLIP: boolean);
@@ -288,6 +378,15 @@ begin
    GLForm1.LightElevTrack.Position := Elev;
    GLForm1.LightAziTrack.Position := Azi;
    GLForm1.SurfaceAppearanceChange(nil);
+end;
+
+procedure ATLASSATURATIONALPHA(lSaturation, lTransparency: single);
+begin
+  GLForm1.meshTransparencyTrack.Position := round(lTransparency * GLForm1.meshAlphaTrack.Max);
+  GLForm1.MeshSaturationTrack.Position := round(lSaturation * GLForm1.MeshSaturationTrack.Max);
+  //gMesh.isRebuildList:= true;
+  //GLBoxRequestUpdate(nil);
+
 end;
 
 procedure SHADERXRAY(lObject, lOverlay: single);

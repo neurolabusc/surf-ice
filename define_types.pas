@@ -72,10 +72,12 @@ function asSingle(b0,b1,b2,b3: byte): single; overload;
 function asInt(s : single): longint;
 function specialsingle (var s:single): boolean; //isFinite
 function ExtractFileExtGzUpper(FileName: string): string;
+function FileExistsF(fnm: string): boolean; //returns false if file exists but is directory
 function FSize (lFName: String): longint;
 function ChangeFileExtX( lFilename: string; lExt: string): string;
 function ReadNumBin(var f: TFByte): string; //read next ASCII number in binary file
 function float2str(Avalue:double; ADigits:integer):string; //e.g x:single=2.6; floattostrf(x,8,4);
+function DefaultToHomeDir(FileName: string): string; //set path to home if not provided
 {$ifdef isTerminalApp}
 function RGBToColor(R, G, B: Byte): TColor;
 procedure ShowMessage(msg: string);
@@ -88,7 +90,45 @@ function asRGBA(clr: TColor): TRGBA;
 
 implementation
 
-uses sysutils, math;//, dialogs;
+uses
+  {$IFNDEF UNIX} windows, {$ENDIF}
+  sysutils, math;//, dialogs;
+
+function FileExistsF(fnm: string): boolean; //returns false if file exists but is directory
+begin
+     result := FileExists(fnm);
+     if result = false then exit;
+     result := not DirectoryExists(fnm);
+end;
+
+function DefaultToHomeDir(FileName: string): string; //set path to home if not provided
+{$IFDEF UNIX}
+var
+   p,n,x: string;
+begin
+   result := FileName;
+   FilenameParts (Filename, p,n,x);
+   if (p <> '') and (DirectoryExists(p)) then exit;
+   p := expandfilename('~/');
+   result := p+n+x;
+end;
+{$ELSE}
+var
+   p,n,x: string;
+var
+    PIDL : PItemIDList;
+    Folder : array[0..MAX_PATH] of Char;
+    const CSIDL_PERSONAL = $0005;
+begin
+   result := FileName;
+   FilenameParts (Filename, p,n,x);
+   if (p <> '') and (DirectoryExists(p)) then exit;
+   SHGetSpecialFolderLocation(0, CSIDL_PERSONAL, PIDL);
+   SHGetPathFromIDList(PIDL, Folder);
+   p := Folder+pathdelim;
+   result := p+n+x;
+end;
+{$ENDIF}
 
 {$IFDEF oldFloat2Str}
 function float2str(Avalue:double; ADigits:integer):string; //e.g x:single=2.6; floattostrf(x,8,4);

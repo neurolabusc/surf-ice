@@ -1,13 +1,23 @@
 BEGIN
+	//setup
+	WRITELN('OVERLAYTRANSLUCENT(), OVERLAYINVERT() and MESHCURV added in 2017');
 	RESETDEFAULTS;
 	MESHCOLOR(210, 148, 148);
 	AZIMUTHELEVATION(100, 15);
 	MESHLOAD('BrainMesh_ICBM152Right.mz3');
-	OVERLAYLOAD('motor_4t95vol.nii.gz');
-	OVERLAYCOLORNAME(1,'Kelvin')
-	OVERLAYMINMAX(1,2,7);
-	WRITELN('OVERLAYINVERT() and MESHCURV added in 2017');
-	OVERLAYINVERT(1,true);
+	
+	//show curvature as first overlay
 	MESHCURV;
-	OVERLAYMINMAX(2,0.1,1);
+	OVERLAYMINMAX(1,-1,1);
+	OVERLAYCOLORNAME(1,'Surface');
+	OVERLAYINVERT(1,true);
+	OVERLAYTRANSLUCENT(1, true);
+
+	//show statistical map as 2nd overlay
+	OVERLAYLOAD('motor_4t95vol.nii.gz');
+	OVERLAYCOLORNAME(2,'Kelvin')
+	OVERLAYMINMAX(2,2,7);
+
+
 END.
+

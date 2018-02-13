@@ -1,0 +1,10 @@
+BEGIN
+	RESETDEFAULTS;
+	//assign intensities to superior frontal regions (AICHA regions 4..6)
+	// save as file named 'surficeTemp.mz3' in our home directory
+	ATLASSTATMAP('AICHAhr_left.mz3','surficeTemp.mz3',[4,5,6],[7,3,4]);
+	MESHLOAD('lh.pial');
+	OVERLAYLOAD('surficeTemp.mz3');
+	SHADERXRAY(1.0, 0.3);
+END.
+

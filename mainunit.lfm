@@ -1,5 +1,5 @@
 object GLForm1: TGLForm1
-  Left = 271
+  Left = 320
   Height = 755
   Top = 23
   Width = 960
@@ -136,7 +136,7 @@ object GLForm1: TGLForm1
       end
       object LightElevTrack: TTrackBar
         Left = 52
-        Height = 46
+        Height = 30
         Top = 60
         Width = 92
         Max = 90
@@ -148,7 +148,7 @@ object GLForm1: TGLForm1
       end
       object LightAziTrack: TTrackBar
         Left = 170
-        Height = 46
+        Height = 30
         Top = 60
         Width = 92
         Max = 90
@@ -160,7 +160,7 @@ object GLForm1: TGLForm1
       end
       object meshAlphaTrack: TTrackBar
         Left = 52
-        Height = 46
+        Height = 30
         Hint = 'Adjust main mesh transparency'
         Top = 30
         Width = 92
@@ -186,7 +186,7 @@ object GLForm1: TGLForm1
       end
       object MeshBlendTrack: TTrackBar
         Left = 170
-        Height = 46
+        Height = 30
         Hint = 'XRay: make internal overlays, tracks and nodes visible'
         Top = 30
         Width = 92
@@ -200,7 +200,7 @@ object GLForm1: TGLForm1
       end
       object occlusionTrack: TTrackBar
         Left = 170
-        Height = 46
+        Height = 30
         Hint = 'Ambient Occlusion: make sulci and other crevices darker'
         Top = 0
         Width = 92
@@ -1104,7 +1104,7 @@ object GLForm1: TGLForm1
         Top = 60
         Width = 162
         OnChange = TrackBoxChange
-        Position = 3
+        Position = 5
         TickStyle = tsNone
         TabOrder = 2
       end
@@ -1931,6 +1931,10 @@ object GLForm1: TGLForm1
         Caption = 'Center mesh'
         Hint = 'Set origin to center of object'
         OnClick = CenterMeshMenuClick
+      end
+      object ROImeshMenu: TMenuItem
+        Caption = 'Create region of interest mesh'
+        OnClick = ROImeshMenuClick
       end
       object ReverseFacesMenu: TMenuItem
         Caption = 'Reverse faces'

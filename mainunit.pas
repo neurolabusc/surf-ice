@@ -27,6 +27,7 @@ type
     ColorBarMenu: TMenuItem;
     BlackClrbarMenu: TMenuItem;
     ColorbarSep: TMenuItem;
+    ROImeshMenu: TMenuItem;
     TransBlackClrbarMenu: TMenuItem;
     ColorBarVisibleMenu: TMenuItem;
     WhiteClrbarMenu: TMenuItem;
@@ -198,6 +199,7 @@ type
     ObjectColorMenu: TMenuItem;
     OpenMenu: TMenuItem;
     procedure FormDestroy(Sender: TObject);
+    procedure ROImeshMenuClick(Sender: TObject);
     procedure StringGrid1MouseMove(Sender: TObject; Shift: TShiftState; X,
       Y: Integer);
     function UpdateClrbar: integer;
@@ -337,7 +339,7 @@ var
   gPrefs : TPrefs;
   gElevation : integer =20;
   gAzimuth : integer = 250;
-
+  gMesh: TMesh;
 implementation
 //{$IFDEF COREGL}
 {$IFDEF LCLcarbon}
@@ -352,7 +354,6 @@ uses
   glcocoanscontext;
 {$ENDIF}
 var
-  gMesh: TMesh;
   gNode: TMesh;
   gTrack: TTrack;
   gnLUT: integer = 0;
@@ -365,13 +366,11 @@ var
   clipPlane : TPoint4f; //clipping bottom
   GLbox: TOpenGLControl;
 const
-
   kFname=0;
   kLUT=1;
   kMin=2;
   kMax=3;
-     kTrackFilter = 'Camino, VTK, MRTrix, Quench, TrakVis, DTIstudio|*.Bfloat;*.Bfloat.gz;*.trk.gz;*.trk;*.tck;*.pdb;*.fib;*.vtk;*.dat|Any file|*.*';
-
+  kTrackFilter = 'Camino, VTK, MRTrix, Quench, TrakVis, DTIstudio|*.Bfloat;*.Bfloat.gz;*.trk.gz;*.trk;*.tck;*.pdb;*.fib;*.vtk;*.dat|Any file|*.*';
 {$IFDEF LCLCocoa}
 procedure Mouse2Retina(var X,Y: integer);
 begin
@@ -386,43 +385,44 @@ begin
 end;
 {$ENDIF}
 
-function FindFile(Filename: string): string;
+function FindFileExt(Filename: string): string;
 var
   p,n,x: string;
   i : integer;
   searchResult : TSearchRec;
 begin
    result := Filename;
-   if FileExists(result) then exit;
+   if FileExistsF(result) then exit;
    FilenameParts (Filename, p,n,x);
    //try location of last meshes
    for i := 1 to knMRU do begin
        p := ExtractFilePath(gPrefs.PrevFilename[i]);
        if p = '' then continue;
        result := p+n+x;
-       if FileExists(result) then exit;
+       if FileExistsF(result) then exit;
    end;
    //try location of last overlay
    p := ExtractFilePath(gPrefs.PrevOverlayname);
    result := p+n+x;
-   if FileExists(result) then exit;
+   if FileExistsF(result) then exit;
    //try location of last track
    p := ExtractFilePath(gPrefs.PrevTrackname);
    result := p+n+x;
-   if FileExists(result) then exit;
+   if FileExistsF(result) then exit;
    //try location of last node
    p := ExtractFilePath(gPrefs.PrevNodename);
    result := p+n+x;
-   if FileExists(result) then exit;
+   if FileExistsF(result) then exit;
    //try location of last script
    p := ExtractFilePath(gPrefs.PrevScript);
    result := p+n+x;
-   if FileExists(result) then exit;
-
+   if FileExistsF(result) then exit;
    //try application directory
    p := AppDir2;
    result := p+n+x;
-   if FileExists(result) then exit;
+   if FileExistsF(result) then exit;
+   result := DefaultToHomeDir(n+x); //set path to home if not provided
+   if FileExistsF(result) then exit;
    SetCurrentDir(p);
    if findfirst('*', faDirectory, searchResult) = 0 then begin
     repeat
@@ -430,17 +430,34 @@ begin
       if (searchResult.attr and faDirectory) = faDirectory then begin
        //ShowMessage('Directory = '+searchResult.Name);
        result := p+ searchResult.Name + pathdelim+n+x;
-       if FileExists(result) then begin
+       if FileExistsF(result) then begin
           FindClose(searchResult);
           exit;
        end;
       end;
     until FindNext(searchResult) <> 0;
-
     // Must free up resources used by these successful finds
     FindClose(searchResult);
   end;
    result := ''; //failed!
+end;
+
+function FindFile(Filename: string): string;
+var
+  p,n,x: string;
+begin
+   result := FindFileExt(Filename);
+   if result <> '' then exit;
+   FilenameParts (Filename, p,n,x);  // if user selects 'jhu' then open 'jhu.mz3'
+   if x <> '' then exit;
+   result :=  FindFileExt(ChangeFileExt(Filename,'.mz3'));
+   if result <> '' then exit;
+   result :=  FindFileExt(ChangeFileExt(Filename,'.gii'));
+   if result <> '' then exit;
+   result :=  FindFileExt(ChangeFileExt(Filename,'.ply'));
+   if result <> '' then exit;
+   result :=  FindFileExt(ChangeFileExt(Filename,'.obj'));
+   //if result <> '' then exit;*)
 end;
 
 function TGLForm1.GLBoxBackingWidth: integer;
@@ -716,7 +733,7 @@ var
       szRead: integer;
 begin
      result := false;
-     if not fileexists(filename) then exit;
+     if not fileexistsF(filename) then exit;
      AssignFile(f, FileName);
      Reset(f,1);
      FileMode := fmOpenRead;
@@ -737,7 +754,7 @@ var
       szRead: integer;
 begin
      result := false;
-     if not fileexists(filename) then exit;
+     if not fileexistsF(filename) then exit;
      result := true;
      AssignFile(f, FileName);
      Reset(f,1);
@@ -767,7 +784,7 @@ var
   bytes : array of byte;
 begin
      result := false;
-     if not fileexists(Filename) then exit;
+     if not fileexistsF(Filename) then exit;
      mStream := TMemoryStream.Create;
      zStream := TGZFileStream.create(FileName, gzopenread);
      setlength(bytes, kChunkSize);
@@ -844,7 +861,7 @@ begin
   AddMRU(Filename);
   //if gMesh.isFreeSurferMesh then begin
      curvname := changefileext(Filename, '.curv');
-     if fileexists(curvname) then
+     if fileexistsF(curvname) then
         OpenOverlay(curvname);
   //end;
   GLBoxRequestUpdate(nil);
@@ -1572,7 +1589,7 @@ var
 begin
      p := (ClutDir+pathdelim+gPrefs.FontName+'.png');
      f := (ClutDir+pathdelim+gPrefs.FontName+'.json');
-     if (gPrefs.FontName = '') or (not fileexists(p)) or (not fileexists(f)) then begin
+     if (gPrefs.FontName = '') or (not fileexistsf(p)) or (not fileexistsf(f)) then begin
        gPrefs.FontName := '';
        p := '';
      end;
@@ -1914,6 +1931,7 @@ begin
      gPrefs.isFlipMeshOverlay:= false;
      gPrefs.AdditiveOverlay:= false;
      gMesh.isAdditiveOverlay:= gPrefs.AdditiveOverlay;
+     setlength(gMesh.AtlasFilter,0);
      AdditiveOverlayMenu.Checked:= gPrefs.AdditiveOverlay;
      gPrefs.ObjColor:= RGBToColor(192,192,192);
      //set tracks
@@ -2269,6 +2287,45 @@ begin
  //IniFile(false,IniName,gPrefs);
  gCube.Free;
  gClrBar.Free;
+end;
+
+procedure TGLForm1.ROImeshMenuClick(Sender: TObject);
+const
+ kRoiIntensityFilter = 'ROX Intensities|*.rox';
+ kAtlasFilter = 'mz3 Atlas|*.mz3';
+ kMeshFilter = 'mz3 Mesh|*.mz3';
+label
+  123;
+var
+  lMesh: TMesh;
+  lRoiIntensityFilename: string;
+begin
+  showmessage('You will be asked to select a *.rox file. Next you will select a *.mz3 template. Finally, provide the name for your mesh. Each line of the rox file lists the region number followed by the region intensity. An example of a ROX file with two regions would be:'+kCR+'17 0.5'+kCR+'32 1.5');
+  OpenDialog.Filter := kRoiIntensityFilter;
+  OpenDialog.Title := 'Select ROX intensities';
+  if not OpenDialog.Execute then exit;
+  lRoiIntensityFilename := OpenDialog.FileName;
+  OpenDialog.Filter := kAtlasFilter;
+  OpenDialog.Title := 'Select Atlas Template';
+  if not OpenDialog.Execute then exit;
+  SaveMeshDialog.Filter := kMeshFilter;
+  if not SaveMeshDialog.execute then exit;
+  //convert
+  lMesh := TMesh.Create;
+  if not lMesh.LoadFromFile(OpenDialog.Filename) then
+    goto 123;
+  if (lMesh.MaxAtlasRegion < 1) then begin
+     showmessage('This is not a template '+OpenDialog.Filename);
+     goto 123;
+  end;
+  if not lMesh.LoadOverlay(lRoiIntensityFilename, false) then
+    goto 123;
+  if lMesh.OpenOverlays < 1 then
+    goto 123;
+  lMesh.SaveOverlay(SaveMeshDialog.Filename, 1);
+  123:
+  lMesh.Free;
+
 end;
 
 procedure TGLForm1.StringGrid1MouseMove(Sender: TObject; Shift: TShiftState; X,
@@ -2934,7 +2991,7 @@ procedure TGLForm1.AboutMenuClick(Sender: TObject);
 const
   kSamp = 36;
 var
-  TrackStr, MeshStr, str: string;
+  isAtlasStr, TrackStr, MeshStr, str: string;
   s: dword;
   i: integer;
   scale: single;
@@ -2956,6 +3013,8 @@ begin
      GLbox.Repaint;
   end;
   origin := GetOrigin(scale);
+  isAtlasStr := '';
+  if (length(gMesh.vertexAtlas) > 0) then isAtlasStr := ' Indexed Atlas ';
   str :=  'Surf Ice '+kVers+' '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
@@ -2978,6 +3037,7 @@ begin
    +LineEnding+format(' Scale %.4f',[scale])
    +LineEnding+format(' Origin %.4fx%.4fx%.4f',[origin.X, origin.Y, origin.Z])
    +LineEnding+' Mesh Vertices '+inttostr(length(gMesh.vertices))+' Faces '+  inttostr(length(gMesh.faces)) +' Colors '+  inttostr(length(gMesh.vertexRGBA))
+   +isAtlasStr
    +MeshStr
    +LineEnding+' Track Vertices '+inttostr(gTrack.n_vertices)+' Faces '+  inttostr(gTrack.n_faces) +' Count ' +inttostr(gTrack.n_count)
    +TrackStr
@@ -2985,6 +3045,7 @@ begin
    +LineEnding+' GPU '+gShader.Vendor
    +LineEnding+'Press "Abort" to quit and open settings '+ininame;
   ClipBoard.AsText:= str;
+  //str := DefaultToHomeDir('mega');
   i := MessageDlg(str,mtInformation,[mbAbort, mbOK],0);
   if i  = mrAbort then Quit2TextEditor;
 end;

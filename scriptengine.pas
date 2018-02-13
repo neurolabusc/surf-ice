@@ -189,7 +189,7 @@ begin
  else begin
      gPrefs.PrevScript := gPrefs.InitScript;
    Memo1.Lines.Clear;
-   if FileExists(gPrefs.initScript) then
+   if FileExistsF(gPrefs.initScript) then
      Memo1.Lines.LoadFromFile(gPrefs.initScript)
    else
        ToPascal(gPrefs.initScript);//Memo1.Lines.Add(gPrefs.initScript);
@@ -238,7 +238,7 @@ procedure TScriptForm.OpenSMRU(Sender: TObject);//open template or MRU
 //Templates have tag set to 0, Most-Recently-Used items have tag set to position in gMRUstr
 begin
   if Sender = nil then begin
-    if (gPrefs.PrevScriptName[1] <> '') and (Fileexists(gPrefs.PrevScriptName[1])) then
+    if (gPrefs.PrevScriptName[1] <> '') and (FileexistsF(gPrefs.PrevScriptName[1])) then
       OpenScript (gPrefs.PrevScriptName[1]);
   end else begin
     OpenScript (gPrefs.PrevScriptName[(Sender as TMenuItem).tag]);
@@ -310,6 +310,7 @@ end;
 procedure TScriptForm.FormActivate(Sender: TObject);
 begin
   GLForm1.DisplayMenu.Enabled:= false;
+  // obsolete{ $IFDEF LCLCocoa} Memo2.ReadOnly:=false; {$ENDIF} //https://bugs.freepascal.org/view.php?id=33153
 end;
 
 procedure TScriptForm.FormDeactivate(Sender: TObject);
@@ -401,7 +402,6 @@ begin
         Cut1.ShortCut := ShortCut(Word('X'), [ssMeta]);
         Copy1.ShortCut := ShortCut(Word('C'), [ssMeta]);
         Paste1.ShortCut := ShortCut(Word('V'), [ssMeta]);
-
         Stop1.ShortCut := ShortCut(Word('H'), [ssMeta]);
          Compile1.ShortCut := ShortCut(Word('R'), [ssMeta]);
  {$ENDIF}
@@ -441,7 +441,7 @@ begin
   result := false;
   //GLForm1.StopTimers;
   ScriptForm.Stop1Click(nil);
-  if not fileexists (lFilename) then begin
+  if not fileexistsf (lFilename) then begin
     Showmessage('Can not find '+lFilename);
     exit;
   end;

@@ -17,16 +17,21 @@ BEGIN
 	NODECOLOR('RED',TRUE);
 	NODETHRESH(1.0,1.0);
 	EDGETHRESH(0.5,1.0);
-	FOR i := 1 to kFramesPerRotation * 3 DO BEGIN
+	FOR i := 1 to kFramesPerRotation * 5 DO BEGIN
 		s := 0.5 + (i+0.0)/72;
 		IF s <= 1 THEN
 			CAMERADISTANCE(s);
 		IF (i MOD kFramesPerRotation) = 0 THEN BEGIN
 			CASE (i DIV kFramesPerRotation) OF
 				1:  SHADERNAME('metal');
-				2:  begin
+				2: SHADERNAME('wireframe');
+				3:  begin
 					SHADERNAME('toon');
 					SHADERAMBIENTOCCLUSION(0);
+				   end;
+				4:  begin
+					SHADERNAME('wire');
+				SHADERFORBACKGROUNDONLY(true);
 				   end;
 			END;
 		END;

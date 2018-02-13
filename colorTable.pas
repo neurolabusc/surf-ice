@@ -81,9 +81,12 @@ begin
   end else begin
      if (intensity <= mn) and (intensity <> 0) and (LUT[0].A <> 0) then
         result := lut[1]
-     else if intensity <= mn then
+     else if intensity < mn then
         result := lut[0]
-     else if intensity >= mx then
+     else if intensity = mn then begin
+        result := lut[0];
+        result.A := lut[1].A;
+     end else if intensity >= mx then
         result := lut[255]
      else
           result := lut[round(255*(intensity-mn)/(mx-mn))];
