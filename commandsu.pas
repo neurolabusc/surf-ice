@@ -5,7 +5,8 @@ interface
 function EXISTS(lFilename: string): boolean; //function
 procedure ATLASSTATMAP(ATLASNAME, STATNAME: string; const Indices: array of integer; const Intensities: array of single);
 procedure ATLASSATURATIONALPHA(lSaturation, lTransparency: single);
-procedure ATLASFILTER(const Filt: array of integer);
+procedure ATLASHIDE(const Filt: array of integer);
+procedure ATLASGRAY(const Filt: array of integer);
 procedure AZIMUTH (DEG: integer);
 procedure AZIMUTHELEVATION (AZI, ELEV: integer);
 procedure BACKCOLOR (R,G,B: byte);
@@ -72,12 +73,13 @@ const
                Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
              );
 
-knProc = 57;
+knProc = 58;
   kProcRA : array [1..knProc] of TScriptRec = (
 
   (Ptr:@ATLASSTATMAP;Decl:'ATLASSTATMAP';Vars:'(ATLASNAME, STATNAME: string; const Intensities: array of integer; const Intensities: array of single)'),
   (Ptr:@ATLASSATURATIONALPHA;Decl:'ATLASSATURATIONALPHA';Vars:'(lSaturation, lTransparency: single)'),
-  (Ptr:@ATLASFILTER;Decl:'ATLASFILTER';Vars:'(const Filt: array of integer)'),
+  (Ptr:@ATLASHIDE;Decl:'ATLASHIDE';Vars:'(const Filt: array of integer)'),
+  (Ptr:@ATLASGRAY;Decl:'ATLASGRAY';Vars:'(const Filt: array of integer)'),
    (Ptr:@AZIMUTH;Decl:'AZIMUTH';Vars:'(DEG: integer)'),
    (Ptr:@AZIMUTHELEVATION;Decl:'AZIMUTHELEVATION';Vars:'(AZI, ELEV: integer)'),
    (Ptr:@BMPZOOM;Decl:'BMPZOOM';Vars:'(Z: byte)'),
@@ -166,7 +168,7 @@ begin
      err := 'Number of indices ('+inttostr(num_idx)+') does not match number of intensities ('+inttostr(num_inten)+')';
      goto 123;
   end;
-  //ignore: preserve previous filter setlength(gMesh.AtlasFilter, 0); //show all regions - we might need some for parsing
+  //ignore: preserve previous filter setlength(gMesh.AtlasHide, 0); //show all regions - we might need some for parsing
   if not GLForm1.OpenMesh(ATLASNAME) then  begin
      err := 'Unable to load mesh named "'+ATLASNAME+'"';
      goto 123;
@@ -238,20 +240,43 @@ begin
      GLForm1.SetDistance(DISTANCE);
 end;
 
-procedure ATLASFILTER(const Filt: array of integer);
+procedure ATLASHIDE(const Filt: array of integer);
 // http://rvelthuis.de/articles/articles-openarr.html
-// ATLASFILTER([]);
-// ATLASFILTER([17, 22, 32]);
+// ATLASHIDE([]);
+// ATLASHIDE([17, 22, 32]);
 var
   i: integer;
 begin
-  setlength(gMesh.AtlasFilter, length(Filt));
+  setlength(gMesh.atlasHideFilter, length(Filt));
   if length(Filt) < 1 then begin //release filter
     GLForm1.GLboxRequestUpdate(nil);
     exit;
   end;
   for i := Low(Filt) to High(Filt) do
-     gMesh.AtlasFilter[i] := Filt[i];//ScriptForm.Memo2.Lines.Add('F= '+inttostr(Filt[i]));
+     gMesh.atlasHideFilter[i] := Filt[i];//ScriptForm.Memo2.Lines.Add('F= '+inttostr(Filt[i]));
+  gMesh.isRebuildList:= true;
+  GLForm1.GLboxRequestUpdate(nil);
+end;
+
+procedure ATLASGRAY(const Filt: array of integer);
+// ATLASTRANSPARENT([]);
+// ATLASTRANSPARENT([17, 22, 32]);
+var
+  i, maxROI: integer;
+begin
+  maxROI := gMesh.MaxAtlasRegion;
+  setlength(gMesh.atlasTransparentFilter,0); //release
+  if (length(Filt) < 1) or (maxROI < 1) then begin
+     GLForm1.GLboxRequestUpdate(nil);
+     exit;
+  end;
+  setlength(gMesh.atlasTransparentFilter,maxROI+1);
+  for i := 0 to maxROI do
+      gMesh.atlasTransparentFilter[i] := false;
+  for i := Low(Filt) to High(Filt) do
+      if (Filt[i] > 0) and (Filt[i] <= maxROI) then
+         gMesh.atlasTransparentFilter[Filt[i]] := true;
+  gMesh.isRebuildList:= true;
   GLForm1.GLboxRequestUpdate(nil);
 end;
 
@@ -621,6 +646,7 @@ begin
 //MemoryStatus.dwLength := SizeOf(MemoryStatus) ;
 //  GlobalMemoryStatus(MemoryStatus) ;
 //GLForm1.Caption := IntToStr(MemoryStatus.dwMemoryLoad) +' Available bytes in paging file';
+  GLForm1.GLInvalidate;
   if MSEC < 0 then exit;
   {$IFDEF FPC} lEND := GetTickCount64+DWord(MSEC);{$ELSE}lEND := GetTickCount+DWord(MSEC);{$ENDIF}
   //FinishRender;//June 09

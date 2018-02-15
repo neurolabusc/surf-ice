@@ -326,6 +326,7 @@ type
     procedure MultiPassRenderingToolsUpdate;
     procedure VolumeToMeshMenuClick(Sender: TObject);
     procedure XRayLabelClick(Sender: TObject);
+    procedure GLInvalidate;
   private
     { private declarations }
   public
@@ -458,6 +459,11 @@ begin
    if result <> '' then exit;
    result :=  FindFileExt(ChangeFileExt(Filename,'.obj'));
    //if result <> '' then exit;*)
+end;
+
+procedure TGLForm1.GLInvalidate;
+begin
+   GLBox.Invalidate;
 end;
 
 function TGLForm1.GLBoxBackingWidth: integer;
@@ -820,7 +826,6 @@ begin
        ScriptForm.Compile1Click(nil);
      exit;
   end;
-
   //ext := UpperCase(ExtractFileExt(Filename));
   if (ext = '.NII') or (ext = '.HDR')  or (ext = '.NII.GZ') or (ext = '.DPV') or (ext = '.ANNOT') or (ext = '.W') or (ext = '.CURV')  then begin
     OpenOverlay(Filename);
@@ -1004,7 +1009,11 @@ begin
         exit;
      end;
      //result := ( GetKeyState(VK_MENU)<> 0) or (GetKeyState(VK_LWIN) <> 0) or (GetKeyState(VK_CONTROL) <> 0)  or (ssShift in KeyDataToShiftState(VK_SHIFT)) ;
+     {$IFDEF Windows}
+     result := (ssShift in KeyDataToShiftState(VK_SHIFT)) ;
+     {$ELSE}
      result := ( GetKeyState(VK_MENU)<> 0) or (GetKeyState(VK_LWIN) <> 0)  or (ssShift in KeyDataToShiftState(VK_SHIFT)) ;
+     {$ENDIF}
 end;
 
 procedure TGLForm1.ShaderDropChange(Sender: TObject);
@@ -1911,9 +1920,9 @@ begin
        4: gPrefs.ObjColor:= RGBToColor(226,171,0); //gold
        else gPrefs.ObjColor:= RGBToColor(192,192,192); //gray
   end;
-  {$IFDEF COREGL}
+  //{$IFDEF COREGL}
   gMesh.isRebuildList := true;
-  {$ENDIF}
+  //{$ENDIF}
   GLBoxRequestUpdate(Sender);
 end;
 
@@ -1931,7 +1940,8 @@ begin
      gPrefs.isFlipMeshOverlay:= false;
      gPrefs.AdditiveOverlay:= false;
      gMesh.isAdditiveOverlay:= gPrefs.AdditiveOverlay;
-     setlength(gMesh.AtlasFilter,0);
+     setlength(gMesh.atlasHideFilter,0);
+     setlength(gMesh.atlasTransparentFilter,0);
      AdditiveOverlayMenu.Checked:= gPrefs.AdditiveOverlay;
      gPrefs.ObjColor:= RGBToColor(192,192,192);
      //set tracks
@@ -3611,7 +3621,6 @@ procedure TGLForm1.UpdateTimerTimer(Sender: TObject);
 begin
   if isBusy or gMesh.isBusy then exit; //defer
   Updatetimer.enabled := false;
-
   GLbox.Invalidate;
 end;
 
@@ -3759,7 +3768,9 @@ begin
   CurvMenuTemp.ShortCut:= ShortCut(Word('K'), [ssMeta]); ;
   CloseMenu.ShortCut :=  ShortCut(Word('W'), [ssMeta]);
   SwapYZMenu.ShortCut :=  ShortCut(Word('X'), [ssMeta]);
-  ScriptMenu.ShortCut :=  ShortCut(Word('Z'), [ssMeta]);
+  //ScriptMenu.ShortCut :=  ShortCut(Word('Z'), [ssMeta]);
+  ScriptMenu.ShortCut :=  ShortCut(Word('J'), [ssMeta]);
+
   OpenMenu.ShortCut :=  ShortCut(Word('O'), [ssMeta]);
   SaveMenu.ShortCut :=  ShortCut(Word('S'), [ssMeta]);
   CopyMenu.ShortCut :=  ShortCut(Word('C'), [ssMeta]);

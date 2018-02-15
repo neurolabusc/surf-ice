@@ -1,0 +1,22 @@
+CONST
+  kN = 192;
+var
+  i,j: integer;
+  msk: array of integer;
+BEGIN
+	RESETDEFAULTS;
+	AZIMUTHELEVATION(240, 15);
+	MESHLOAD('AICHAhr_left.mz3');
+	for i := kN downto 1 do begin
+		setlength(msk, i);
+		for j := 1 to i do
+			msk[j-1] := j;
+		ATLASHIDE(msk);
+		wait(30);
+	end;
+	ATLASHIDE([]); //show everything
+
+END.
+
+
+

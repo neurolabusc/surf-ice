@@ -9,7 +9,6 @@ uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, strutils,
   base64, zstream, LcLIntf, nifti_loader, colorTable, matmath, math,
   define_types, nifti_types, fileutil;
-
 const
   kMinOverlayIndex = 1;
   kMaxOverlays = 256;
@@ -65,7 +64,8 @@ type
     vertices: array of TPoint3f;
     vertexRGBA : array of TRGBA;
     vertexAtlas: array of integer; //what atlss regions does this vertex belong to, e.g. [7, 8, 17...] the 3rd vertex belongs to region 17
-    AtlasFilter: array of integer; //only show these atlas regions, e.g. if [7, 8, 22] then only regions 7,8 and 22 will be visible
+    atlasTransparentFilter: array of boolean;
+    atlasHideFilter: array of integer; //only show these atlas regions, e.g. if [7, 8, 22] then only regions 7,8 and 22 will be visible
     tempIntensityLUT : TFloats; //only used to load without external files - flushed after LoadOverlay
     errorString: string;
     //overlay: array of single;
@@ -76,7 +76,7 @@ type
     procedure SetDescriptives;
     procedure MakeSphere;
     procedure BuildListCore(Clr: TRGBA; var f: TFaces; var v: TVertices; var vtxRGBA: TVertexRGBA);
-    procedure BuildListPartialAtlas(Clr: TRGBA);
+    procedure BuildListPartialAtlas(Clr: TRGBA; vtxRGBA: TVertexRGBA);
     procedure BuildList(Clr: TRGBA);
     procedure FilterOverlay(c: integer; var f: TFaces; var v: TVertices; var vRGBA: TVertexRGBA);
     procedure BuildListOverlay(Clr: TRGBA);
@@ -336,7 +336,7 @@ begin
   end;
 end; // BuildListCore()
 
-procedure TMesh.BuildListPartialAtlas(Clr: TRGBA);
+procedure TMesh.BuildListPartialAtlas(Clr: TRGBA; vtxRGBA: TVertexRGBA);
 //this function is used when the user only want to show some of the brain regions in a region of interest atlas/template
 // it filters the background image in a way similar to how we can filter the overlays
 var
@@ -352,18 +352,19 @@ begin
     setlength(f,0);
     nVert := length(vertices);
     nFace := length(faces);
-    if (nVert < 3) or (nFace < 1) or (length(vertexAtlas) <>  nVert) or (length(AtlasFilter) < 1) then exit;
+    if (nVert < 3) or (nFace < 1) or (length(vertexAtlas) <>  nVert) or (length(atlasHideFilter) < 1) then exit;
     //set up lookup table - list of regions that survive
-    maxROI := 0;
+    maxROI := MaxAtlasRegion;
+    (*maxROI := 0;
     for i := 0 to (nVert -1) do
-        if vertexAtlas[i] > maxROI then maxROI := vertexAtlas[i]; //does not survive
+        if vertexAtlas[i] > maxROI then maxROI := vertexAtlas[i]; //does not survive *)
     if maxROI < 1 then exit;
     setlength(filterLUT, maxROI+1);
     for i := 0 to maxROI do
         filterLUT[i] := false; //assume we will not filter these regions
-    for i := 0 to (length(AtlasFilter) - 1) do
-        if (AtlasFilter[i] > 0) and (AtlasFilter[i] <= maxROI) then
-           filterLUT[AtlasFilter[i]] := true; //filter the specified region
+    for i := 0 to (length(atlasHideFilter) - 1) do
+        if (atlasHideFilter[i] > 0) and (atlasHideFilter[i] <= maxROI) then
+           filterLUT[atlasHideFilter[i]] := true; //filter the specified region
     //mark surviving vertices
     setlength(vOK, nVert);
     for i := 0 to (nVert -1) do
@@ -382,7 +383,7 @@ begin
     end;
     if (nvOK = nVert) then begin //everything survives
        setlength(vOK,0);
-       BuildListCore(Clr, faces, vertices, vertexRGBA); //show complete array
+       BuildListCore(Clr, faces, vertices, vtxRGBA); //show complete array
        exit;
     end;
     //see how many faces survive
@@ -409,16 +410,16 @@ begin
         end;
     //set vertex colors (if loaded)
     setlength(vRGBA, 0);
-    if length(vertexRGBA) = nVert then begin
+    if length(vtxRGBA) = nVert then begin
       setlength(vRGBA, nvOK);
       j := 0;
       for i := 0 to (nVert -1) do begin
           if vOK[i] >= 0 then begin
-            vRGBA[j] := vertexRGBA[i];
+            vRGBA[j] := vtxRGBA[i];
              j := j + 1;
           end; //if vertex survives
        end; //for each vertex
-    end; //if vertices are colored (vertexRGBA)
+    end; //if vertices are colored (vtxRGBA)
     setlength(vOK,0);
     setlength(fOK,0);
     BuildListCore(Clr, f, v, vRGBA);
@@ -429,10 +430,29 @@ begin
 end;
 
 procedure TMesh.BuildList (Clr: TRGBA);
+var
+     vtxRGBA: TVertexRGBA;
+     i,idx: integer;
 begin
   if (length(faces) < 1) or (length(vertices) < 3) then exit;
-  if (length(AtlasFilter) > 0) and (length(vertexAtlas) =  length(vertices)) then
-       BuildListPartialAtlas(Clr)
+  if (length(atlasTransparentFilter) > 0) and (MaxAtlasRegion > 0) and (length(vertexAtlas) =  length(vertices)) then begin
+     setlength(vtxRGBA, length(vertexRGBA));
+     vtxRGBA := Copy(vertexRGBA,0,length(vertexRGBA));
+     for i := 0 to (length(vertices)-1) do begin
+         idx := vertexAtlas[i];
+         if (idx < 1) or (idx >= length(atlasTransparentFilter)) then continue;
+         if atlasTransparentFilter[idx] then
+            vtxRGBA[i] := Clr;
+     end;
+     if (length(atlasHideFilter) > 0) and (length(vertexAtlas) =  length(vertices)) then
+        BuildListPartialAtlas(Clr, vtxRGBA)
+     else
+       	BuildListCore(Clr, faces, vertices, vtxRGBA);
+     setlength(vtxRGBA,0);
+     exit;
+  end;
+  if (length(atlasHideFilter) > 0) and (length(vertexAtlas) =  length(vertices)) then
+       BuildListPartialAtlas(Clr, vertexRGBA)
   else
 	BuildListCore(Clr, faces, vertices, vertexRGBA)
 end;
@@ -1155,7 +1175,8 @@ begin
      setlength(edges,0,0);
      setlength(vertexRGBA,0);
      setlength(vertexAtlas,0);
-     setlength(AtlasFilter,0);
+     setlength(atlasHideFilter,0);
+     setlength(atlasTransparentFilter,0);
      setlength(tempIntensityLUT,0);
      errorString := '';
      isFreeSurferMesh := false;
@@ -5011,6 +5032,7 @@ var
 begin
   result := false;
   isEmbeddedEdge := false;
+
      if not FileExistsF(FileName) then exit;
      isBusy := true;
      isNode := false;
@@ -5018,8 +5040,10 @@ begin
      ext := UpperCase(ExtractFileExt(Filename));
      isRebuildList := true;
      CloseOverlays;
-     setlength(faces, 0);
-     setlength(vertices, 0);
+     (*setlength(faces, 0);
+     setlength(vertices, 0);*)
+     self.Close;
+
      if (ext = '.3DO') then
         Load3Do(Filename);
      if (ext = '.AC') then
@@ -5854,7 +5878,6 @@ begin
        OpenOverlays := OpenOverlays - 1;
        exit;
      end;
-
   end;
   if (ext = '.MZ3') then begin
      if not LoadMz3(FileName, OpenOverlays) then begin //unable to open as an overlay - perhaps vertex colors?
@@ -5955,6 +5978,9 @@ begin
      OpenOverlays := 0;
      setlength(vertexRGBA,0);
      isRebuildList := true;
+     //setlength(atlasHideFilter,0);
+     //setlength(tempIntensityLUT,0); //only used to load without external files - flushed after LoadOverlay
+
 end; // CloseOverlays()
 
 procedure TMesh.Close;
@@ -5965,6 +5991,11 @@ begin
   setlength(vertices, 0);
   setlength(nodes,0);
   setlength(edges,0);
+  setlength(vertexRGBA,0);
+  setlength(vertexAtlas,0);
+  setlength(atlasHideFilter,0);
+  setlength(atlasTransparentFilter,0);
+  setlength(tempIntensityLUT,0); //only used to load without external files - flushed after LoadOverlay
 end; // Close()
 
 destructor TMesh.Destroy;
