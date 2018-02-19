@@ -11,10 +11,11 @@ uses
   {$IFNDEF UNIX} shellapi, {$ELSE}  Process,  {$ENDIF}
   {$IFNDEF Darwin}uscaledpi, {$ENDIF}
   {$IFDEF COREGL} gl_core_3d, {$ELSE}     gl_legacy_3d, {$ENDIF}
-  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,math,
-  ExtCtrls, OpenGLContext, mesh, LCLintf, ComCtrls, Menus, graphtype, curv,
-  ClipBrd, shaderui, shaderu, prefs, userdir, LCLtype, Grids, Spin, matmath,
-  colorTable, Track, types,  glcube,glclrbar, define_types, meshify,   zstream, gl_core_matrix, meshify_simplify;
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
+  math, ExtCtrls, OpenGLContext, mesh, LCLintf, ComCtrls, Menus, graphtype,
+  curv, ClipBrd, shaderui, shaderu, prefs, userdir, LCLtype, Grids, Spin,
+  Buttons, matmath, colorTable, Track, types, glcube, glclrbar, define_types,
+  meshify, zstream, gl_core_matrix, meshify_simplify;
 
 type
   { TGLForm1 }
@@ -28,6 +29,7 @@ type
     BlackClrbarMenu: TMenuItem;
     ColorbarSep: TMenuItem;
     ROImeshMenu: TMenuItem;
+    XRayBtn: TSpeedButton;
     TransBlackClrbarMenu: TMenuItem;
     ColorBarVisibleMenu: TMenuItem;
     WhiteClrbarMenu: TMenuItem;
@@ -85,7 +87,6 @@ type
     OrientCubeMenu: TMenuItem;
     Pref2Menu: TMenuItem;
     About2Menu: TMenuItem;
-    XRayLabel: TLabel;
     EdgeSizeVariesCheck: TCheckBox;
     FileSepMenu: TMenuItem;
     occlusionTrack: TTrackBar;
@@ -528,14 +529,12 @@ begin
      //caption := 'doubleclick'+inttostr(random(888)); //1/2018: Cocoa generates dblClicks for single clicks
 end;
 
-
 procedure TGLForm1.ColorBarVisibleMenuClick(Sender: TObject);
 begin
  gPrefs.Colorbar := not gPrefs.Colorbar;
  ColorBarVisibleMenu.Checked := gPrefs.Colorbar;
  GLBox.Invalidate;
 end;
-
 
 function TGLForm1.GLBoxBackingHeight: integer;
 begin
@@ -553,7 +552,7 @@ begin
   lBetter := (gPrefs.RenderQuality <> kRenderPoor) and (gPrefs.SupportBetterRenderQuality);
   AOLabel.Visible:= lBetter;
   occlusionTrack.Visible:= lBetter;
-  XRayLabel.Visible:= lBetter;
+  XRayBtn.Visible:= lBetter;
   MeshBlendTrack.Visible:= lBetter;
   meshAlphaTrack.visible :=  lBetter;
 end;
@@ -579,6 +578,7 @@ end;
 procedure TGLForm1.XRayLabelClick(Sender: TObject);
 begin
   gPrefs.ShaderForBackgroundOnly := not gPrefs.ShaderForBackgroundOnly;
+  XRayBtn.Down := gPrefs.ShaderForBackgroundOnly ;
    GLBoxRequestUpdate(nil);
 end;
 
@@ -980,8 +980,6 @@ begin
   OverlayTimerStart;
 end;
 
-
-
 procedure TGLForm1.ShaderBoxResize(Sender: TObject);
 const
 kMinMemoSz= 32;
@@ -992,15 +990,18 @@ begin
   lDesiredControlSz := ShaderPanelHeight;
   if ShaderBox.ClientHeight > (lDesiredControlSz+kMinMemoSz) then begin
     //if ShaderBox.Height > (lDesiredControlSz+kMinMemoSz) then begin
-    Memo1.Height := ShaderBox.Height - lDesiredControlSz;
+    //Memo1.Height := ShaderBox.Height - lDesiredControlSz;
     Memo1.Height := ShaderBox.ClientHeight - lDesiredControlSz;
+    {$IFDEF LCLCocoa}
+    //Memo1.Height := ShaderBox.ClientHeight - lDesiredControlSz + 22;
+
+    {$ENDIF}
     Memo1.visible := true;
   end
   else
      Memo1.visible := false;
   ShaderBox.Refresh;
 end;
-
 
 function ResetIniDefaults : boolean;
 begin
@@ -1200,53 +1201,52 @@ var
     TolLabel, minLengthLabel: TLabel;
     TolEdit, minLengthEdit: TEdit;
 begin
-     Tol := 0.5;
-     minLength := 10;
-    PrefForm:=TForm.Create(nil);
-    PrefForm.SetBounds(100, 100, 520, 112);
-    PrefForm.Caption:='Track simplification preferences';
-    PrefForm.Position := poScreenCenter;
-    PrefForm.BorderStyle := bsDialog;
-    //Tolerance
-    TolLabel:=TLabel.create(PrefForm);
-    TolLabel.Caption:= 'Tolerance ("1" will allow track to deviate 1mm from original)';
-    TolLabel.Left := 8;
-    TolLabel.Top := 12;
-    TolLabel.Parent:=PrefForm;
-    TolEdit:=TEdit.create(PrefForm);
-    TolEdit.Caption := FloatToStrF(Tol, ffGeneral, 8, 4);
-    TolEdit.Top := 12;
-    TolEdit.Width := 92;
-    TolEdit.Left := PrefForm.Width - TolEdit.Width - 8;
-    TolEdit.Parent:=PrefForm;
-    //minLength
-    minLengthLabel:=TLabel.create(PrefForm);
-    minLengthLabel.Caption:= 'Enter minimum fiber length';
-    minLengthLabel.Left := 8;
-    minLengthLabel.Top := 42;
-    minLengthLabel.Parent:=PrefForm;
-    minLengthEdit:=TEdit.create(PrefForm);
-    minLengthEdit.Caption := FloatToStr(minLength);
-    minLengthEdit.Top := 42;
-    minLengthEdit.Width := 92;
-    minLengthEdit.Left := PrefForm.Width - minLengthEdit.Width - 8;
-    minLengthEdit.Parent:=PrefForm;
-    //OK button
-    OkBtn:=TButton.create(PrefForm);
-    OkBtn.Caption:='OK';
-    OkBtn.Top := 72;
-    OkBtn.Width := 128;
-    OkBtn.Left := PrefForm.Width - OkBtn.Width - 8;
-    OkBtn.Parent:=PrefForm;
-    OkBtn.ModalResult:= mrOK;
-    {$IFNDEF Darwin} ScaleDPIX(PrefForm, 96);{$ENDIF}
-    PrefForm.ShowModal;
-    Tol := StrToFloatDef(TolEdit.Caption, Tol);
-    minLength := StrToFloatDef(minLengthEdit.Caption, minLength);
-    result :=  PrefForm.ModalResult = mrOK;
-    FreeAndNil(PrefForm);
-  end;
-
+	Tol := 0.5;
+	minLength := 10;
+	PrefForm:=TForm.Create(nil);
+	PrefForm.SetBounds(100, 100, 520, 112);
+	PrefForm.Caption:='Track simplification preferences';
+	PrefForm.Position := poScreenCenter;
+	PrefForm.BorderStyle := bsDialog;
+	//Tolerance
+	TolLabel:=TLabel.create(PrefForm);
+	TolLabel.Caption:= 'Tolerance ("1" will allow track to deviate 1mm from original)';
+	TolLabel.Left := 8;
+	TolLabel.Top := 12;
+	TolLabel.Parent:=PrefForm;
+	TolEdit:=TEdit.create(PrefForm);
+	TolEdit.Caption := FloatToStrF(Tol, ffGeneral, 8, 4);
+	TolEdit.Top := 12;
+	TolEdit.Width := 92;
+	TolEdit.Left := PrefForm.Width - TolEdit.Width - 8;
+	TolEdit.Parent:=PrefForm;
+	//minLength
+	minLengthLabel:=TLabel.create(PrefForm);
+	minLengthLabel.Caption:= 'Enter minimum fiber length';
+	minLengthLabel.Left := 8;
+	minLengthLabel.Top := 42;
+	minLengthLabel.Parent:=PrefForm;
+	minLengthEdit:=TEdit.create(PrefForm);
+	minLengthEdit.Caption := FloatToStr(minLength);
+	minLengthEdit.Top := 42;
+	minLengthEdit.Width := 92;
+	minLengthEdit.Left := PrefForm.Width - minLengthEdit.Width - 8;
+	minLengthEdit.Parent:=PrefForm;
+	//OK button
+	OkBtn:=TButton.create(PrefForm);
+	OkBtn.Caption:='OK';
+	OkBtn.Top := 72;
+	OkBtn.Width := 128;
+	OkBtn.Left := PrefForm.Width - OkBtn.Width - 8;
+	OkBtn.Parent:=PrefForm;
+	OkBtn.ModalResult:= mrOK;
+	{$IFNDEF Darwin} ScaleDPIX(PrefForm, 96);{$ENDIF}
+	PrefForm.ShowModal;
+	Tol := StrToFloatDef(TolEdit.Caption, Tol);
+	minLength := StrToFloatDef(minLengthEdit.Caption, minLength);
+	result :=  PrefForm.ModalResult = mrOK;
+	FreeAndNil(PrefForm);
+end;
 
 procedure TGLForm1.SimplifyTracksMenuClick(Sender: TObject);
 var
@@ -1467,7 +1467,6 @@ begin
      //StringGrid1.Cells[ACol,ARow] := '';
 end;
 
-
 procedure TGLForm1.StringGrid1EditingDone(Sender: TObject);
 var
     lIndex: integer;
@@ -1546,6 +1545,8 @@ begin
  for lIndex := 1 to gMesh.OpenOverlays do begin
    GLForm1.StringGrid1.Cells[kFName, lIndex] := gMesh.Overlay[lIndex].FileName;
     GLForm1.StringGrid1.Cells[kLUT, lIndex] := GLForm1.LutDrop.Items[gMesh.Overlay[lIndex].LUTindex];
+    if (length(gMesh.Overlay[lIndex].vertexRGBA) .MaxValue> 0) then
+       GLForm1.StringGrid1.Cells[kLUT, lIndex] := 'Atlas';
     OverlayBox.Height :=  2+ ( (2+gMesh.OpenOverlays)*(StringGrid1.DefaultRowHeight+1));
     StringGrid1.Cells[kMin,lIndex] := float2str(gMesh.Overlay[lIndex].WindowScaledMin,3);//FloatToStrF(gMesh.Overlay[lIndex].WindowScaledMin, ffGeneral, 8, 4);
     StringGrid1.Cells[kMax,lIndex] := float2str(gMesh.Overlay[lIndex].WindowScaledMax,3);//FloatToStrF(gMesh.Overlay[lIndex].WindowScaledMax, ffGeneral, 8, 4);
@@ -1692,6 +1693,7 @@ var
   BitmapAlphaCheck, SmoothVoxelwiseDataCheck, TracksAreTubesCheck: TCheckBox;
   bmpEdit: TEdit;
   s: string;
+  Quality: integer;
   searchRec: TSearchRec;
   FontCombo, ZDimIsUpCombo, QualityCombo, SaveAsFormatCombo: TComboBox;
   bmpLabel, QualityLabel: TLabel;
@@ -1757,14 +1759,18 @@ begin
   MultiPassRenderingCheck.Top := 128;
   MultiPassRenderingCheck.Parent:=PrefForm; *)
   //Smooth
+  Quality := gPrefs.RenderQuality;
+  if (Quality = kRenderBetter) and (gPrefs.OcclusionAmount > 0) then
+     Quality := Quality + 1; //0=Poor, 1=Better, 2=Better+Occlusion
   QualityCombo:=TComboBox.create(PrefForm);
   QualityCombo.Left := 8;
   QualityCombo.Top := 158;
   QualityCombo.Width := PrefForm.Width -16;
   QualityCombo.Items.Add('Quality: Poor (old hardware)');
+  QualityCombo.Items.Add('Quality: Fair (no ambient occlusion by default)');
   QualityCombo.Items.Add('Quality: Better');
   //QualityCombo.Items.Add('Quality: Best');
-  QualityCombo.ItemIndex:= gPrefs.RenderQuality;
+  QualityCombo.ItemIndex:= Quality;
   QualityCombo.Style := csDropDownList;
   QualityCombo.Parent:=PrefForm;
   if not gPrefs.SupportBetterRenderQuality then begin
@@ -1889,9 +1895,17 @@ begin
        GLForm1.UpdateFont(false);
   //gPrefs.SaveAsFormat := SaveAsCombo.ItemIndex;
   gPrefs.SaveAsFormat := SaveAsFormatCombo.ItemIndex;
-  if QualityCombo.ItemIndex <> gPrefs.RenderQuality then begin
-     gPrefs.RenderQuality := QualityCombo.ItemIndex;
+  if (QualityCombo.ItemIndex) <> Quality then begin
+     if QualityCombo.ItemIndex = 0 then
+        gPrefs.RenderQuality := kRenderPoor
+     else
+        gPrefs.RenderQuality := kRenderBetter;
+     if QualityCombo.ItemIndex = 2 then //only for best quality
+        gPrefs.OcclusionAmount := 25
+     else
+         gPrefs.OcclusionAmount := 0;
      MultiPassRenderingToolsUpdate;
+     GLForm1.ResetMenuClick(nil);
      GLBoxRequestUpdate(Sender);
   end;
   if (gPrefs.TracksAreTubes <> TracksAreTubesCheck.Checked) then begin
@@ -1956,7 +1970,7 @@ begin
      ClipAziTrack.Position := 180;
      ClipElevTrack.Position := 0;
      //set shaders
-     OcclusionTrack.Position := 25;
+     OcclusionTrack.Position := gPrefs.OcclusionAmount;
      MeshAlphaTrack.Position := 100;
      MeshBlendTrack.Position:= 0;
      LightElevTrack.Position:= 25;
@@ -2131,6 +2145,8 @@ begin
     gMesh.Overlay[lOverlay].LUTindex:= lLUTIndex;
   if lChangeDrop then begin
     StringGrid1.Cells[kLUT, lOverlay] := LUTdrop.Items[gMesh.Overlay[lOverlay].LUTindex];
+    if length(gMesh.Overlay[lOverlay].vertexRGBA) > 0 then
+       StringGrid1.Cells[kLUT, lOverlay] := 'Atlas';
     //LUTdrop.ItemIndex := gOverlayImg[lOverlay].LUTindex;
   end;
   gMesh.overlay[lOverlay].LUT := UpdateTransferFunction (gMesh.Overlay[lOverlay].LUTindex, gMesh.Overlay[lOverlay].LUTinvert);
@@ -2204,8 +2220,6 @@ begin
   GLBoxRequestUpdate(Sender);
 end;
 
-
-
 procedure TGLForm1.ReadCell (ACol,ARow: integer; Update: boolean);
 var
   lF: single;
@@ -2238,7 +2252,6 @@ begin
   UpdateOverlaySpread;
 end;
 
-
 function TGLForm1.UpdateClrBar: integer;
 var
   nLUT, lI, lJ: integer;
@@ -2256,7 +2269,7 @@ begin
 
  if (gMesh.OpenOverlays > 0) then
     for lI := 1 to gMesh.OpenOverlays do
-        if (gMesh.overlay[lI].LUTvisible <> kLUTinvisible) and (not isFreeSurferLUT(gMesh.overlay[lI].LUTindex)) then begin
+        if (length(gMesh.overlay[lI].intensity) > 0) and(gMesh.overlay[lI].LUTvisible <> kLUTinvisible) and (not isFreeSurferLUT(gMesh.overlay[lI].LUTindex)) then begin
          inc(nLUT);
          gClrbar.SetLUT(nLUT, UpdateTransferFunction(gMesh.overlay[lI].LUTindex,false), gMesh.overlay[lI].windowScaledMin,gMesh.overlay[lI].windowScaledMax);
 
@@ -2324,7 +2337,7 @@ begin
   lMesh := TMesh.Create;
   if not lMesh.LoadFromFile(OpenDialog.Filename) then
     goto 123;
-  if (lMesh.MaxAtlasRegion < 1) then begin
+  if (lMesh.AtlasMaxIndex < 1) then begin
      showmessage('This is not a template '+OpenDialog.Filename);
      goto 123;
   end;
@@ -2385,7 +2398,7 @@ end;
 procedure TGLForm1.CreateRender(w,h: integer; isToScreen: boolean);
 var
   origin: TPoint3f;
-  isMultiSample, isOK, useMultiSample: boolean;
+  isMultiPass, isMultiSample, isOK, useMultiSample: boolean;
   meshAlpha, meshBlend, ambientOcclusionFrac, scale: single;
 begin
   if (h < 1) or (w < 1) then exit;
@@ -2400,12 +2413,15 @@ begin
   {$IFNDEF COREGL}
   SetLighting(gPrefs);
   {$ENDIF}
+  isMultiPass := true;
+  if (gPrefs.RenderQuality = kRenderPoor) then isMultiPass := false;
+  if not (gPrefs.SupportBetterRenderQuality) then isMultiPass := false;
+  if (gPrefs.OcclusionAmount = 0) and (occlusionTrack.Position = 0) and (meshAlphaTrack.position = meshAlphaTrack.max ) and (MeshBlendTrack.position = 0) then isMultiPass := false;
   //nDrawScene(w, h, true, false, gPrefs, origin, lightPos, ClipPlane, scale, gShader.Distance, gelevation, gazimuth, gMesh,gNode, gTrack);
-  if (gPrefs.RenderQuality <> kRenderPoor) and (gPrefs.SupportBetterRenderQuality)  then begin;
+  if (isMultiPass)  then begin
     meshAlpha := meshAlphaTrack.position/meshAlphaTrack.max;
     meshBlend := MeshBlendTrack.position/MeshBlendTrack.max;
     ambientOcclusionFrac := occlusionTrack.Position/occlusionTrack.max;
-
     //first pass: 3D draw all items: framebuffer f1
     useMultiSample := isToScreen; //the screenshot is explicitly supersampling everything (inlcuding text), the screen just supersamples the objects
     isMultiSample := setFrame (w, h, gShader.f1, useMultiSample, isOK);
@@ -2929,7 +2945,6 @@ begin
 end;
 {$ENDIF}
 
-
 procedure TGLForm1.CenterMeshMenuClick(Sender: TObject);
 begin
  gMesh.CenterOrigin;
@@ -3153,8 +3168,6 @@ begin
   CollapsedToolPanel.Visible := not CollapsedToolPanel.Visible;
   Self.ActiveControl := nil;
 end;
-
-
 
 procedure TGLForm1.CopyMenuClick(Sender: TObject);
 var
@@ -3433,7 +3446,6 @@ begin
   lImage.SaveToFile(ChangeFileExt(lFilename,'.bmp'));
 end;
 {$ENDIF}
-
 
 procedure TGLForm1.SaveBitmap(FilenameIn: string);
  var

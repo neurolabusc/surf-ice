@@ -3,6 +3,7 @@ unit commandsu;
 interface
 
 function EXISTS(lFilename: string): boolean; //function
+function ATLASMAXINDEX: integer;
 procedure ATLASSTATMAP(ATLASNAME, STATNAME: string; const Indices: array of integer; const Intensities: array of single);
 procedure ATLASSATURATIONALPHA(lSaturation, lTransparency: single);
 procedure ATLASHIDE(const Filt: array of integer);
@@ -68,14 +69,14 @@ type
     Decl,Vars: string[255];
   end;
 const
-     knFunc = 1;
-     kFuncRA : array [1..knFunc] of TScriptRec =( (
-               Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
+     knFunc = 2;
+     kFuncRA : array [1..knFunc] of TScriptRec =(
+              (Ptr:@ATLASMAXINDEX;Decl:'ATLASMAXINDEX';Vars:'(): integer'),
+               (Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
              );
 
 knProc = 58;
   kProcRA : array [1..knProc] of TScriptRec = (
-
   (Ptr:@ATLASSTATMAP;Decl:'ATLASSTATMAP';Vars:'(ATLASNAME, STATNAME: string; const Intensities: array of integer; const Intensities: array of single)'),
   (Ptr:@ATLASSATURATIONALPHA;Decl:'ATLASSATURATIONALPHA';Vars:'(lSaturation, lTransparency: single)'),
   (Ptr:@ATLASHIDE;Decl:'ATLASHIDE';Vars:'(const Filt: array of integer)'),
@@ -140,11 +141,53 @@ implementation
 uses
     mainunit, define_types, shaderui, graphics, LCLintf, Forms, SysUtils, Dialogs, scriptengine, mesh;
 
-procedure BMPZOOM(Z: byte);
+function ATLASMAXINDEX: integer;
 begin
-  if (Z > 10) or (Z < 1) then
-     Z := 1;
-  gPrefs.ScreenCaptureZoom := Z;
+  result := gMesh.AtlasMaxIndex;
+  if result < 1 then
+     ScriptForm.Memo2.Lines.Add('Current mesh is not an atlas.');
+end;
+
+procedure ATLASGRAY(const Filt: array of integer);
+// ATLASGRAY([]);
+// ATLASGRAY([17, 22, 32]);
+var
+  i, maxROI: integer;
+begin
+  maxROI := gMesh.AtlasMaxIndex;
+  setlength(gMesh.atlasTransparentFilter,0); //release
+  if (length(Filt) < 1) or (maxROI < 1) then begin
+     gMesh.isRebuildList:= true;
+     GLForm1.GLboxRequestUpdate(nil);
+     exit;
+  end;
+  setlength(gMesh.atlasTransparentFilter,maxROI+1);
+  for i := 0 to maxROI do
+      gMesh.atlasTransparentFilter[i] := false;
+  for i := Low(Filt) to High(Filt) do
+      if (Filt[i] > 0) and (Filt[i] <= maxROI) then
+         gMesh.atlasTransparentFilter[Filt[i]] := true;
+  gMesh.isRebuildList:= true;
+  GLForm1.GLboxRequestUpdate(nil);
+end;
+
+procedure ATLASHIDE(const Filt: array of integer);
+// http://rvelthuis.de/articles/articles-openarr.html
+// ATLASHIDE([]);
+// ATLASHIDE([17, 22, 32]);
+var
+  i: integer;
+begin
+  setlength(gMesh.atlasHideFilter, length(Filt));
+  if length(Filt) < 1 then begin //release filter
+    gMesh.isRebuildList:= true;
+    GLForm1.GLboxRequestUpdate(nil);
+    exit;
+  end;
+  for i := Low(Filt) to High(Filt) do
+     gMesh.atlasHideFilter[i] := Filt[i];//ScriptForm.Memo2.Lines.Add('F= '+inttostr(Filt[i]));
+  gMesh.isRebuildList:= true;
+  GLForm1.GLboxRequestUpdate(nil);
 end;
 
 procedure ATLASSTATMAP(ATLASNAME, STATNAME: string; const Indices: array of integer; const Intensities: array of single);
@@ -173,7 +216,7 @@ begin
      err := 'Unable to load mesh named "'+ATLASNAME+'"';
      goto 123;
   end;
-  maxROI := gMesh.MaxAtlasRegion;
+  maxROI := gMesh.AtlasMaxIndex;
   if maxROI < 1 then  begin
      err := 'This mesh not an Atlas "'+ATLASNAME+'"';
      goto 123;
@@ -210,7 +253,13 @@ begin
   GLForm1.UpdateToolbar;
   GLForm1.StringGrid1.RowCount := gMesh.OpenOverlays+1;
   GLForm1.UpdateOverlaySpread;
+end;
 
+procedure BMPZOOM(Z: byte);
+begin
+  if (Z > 10) or (Z < 1) then
+     Z := 1;
+  gPrefs.ScreenCaptureZoom := Z;
 end;
 
 procedure RESETDEFAULTS;
@@ -238,46 +287,6 @@ end;
 procedure CAMERADISTANCE(DISTANCE: single);
 begin
      GLForm1.SetDistance(DISTANCE);
-end;
-
-procedure ATLASHIDE(const Filt: array of integer);
-// http://rvelthuis.de/articles/articles-openarr.html
-// ATLASHIDE([]);
-// ATLASHIDE([17, 22, 32]);
-var
-  i: integer;
-begin
-  setlength(gMesh.atlasHideFilter, length(Filt));
-  if length(Filt) < 1 then begin //release filter
-    GLForm1.GLboxRequestUpdate(nil);
-    exit;
-  end;
-  for i := Low(Filt) to High(Filt) do
-     gMesh.atlasHideFilter[i] := Filt[i];//ScriptForm.Memo2.Lines.Add('F= '+inttostr(Filt[i]));
-  gMesh.isRebuildList:= true;
-  GLForm1.GLboxRequestUpdate(nil);
-end;
-
-procedure ATLASGRAY(const Filt: array of integer);
-// ATLASTRANSPARENT([]);
-// ATLASTRANSPARENT([17, 22, 32]);
-var
-  i, maxROI: integer;
-begin
-  maxROI := gMesh.MaxAtlasRegion;
-  setlength(gMesh.atlasTransparentFilter,0); //release
-  if (length(Filt) < 1) or (maxROI < 1) then begin
-     GLForm1.GLboxRequestUpdate(nil);
-     exit;
-  end;
-  setlength(gMesh.atlasTransparentFilter,maxROI+1);
-  for i := 0 to maxROI do
-      gMesh.atlasTransparentFilter[i] := false;
-  for i := Low(Filt) to High(Filt) do
-      if (Filt[i] > 0) and (Filt[i] <= maxROI) then
-         gMesh.atlasTransparentFilter[Filt[i]] := true;
-  gMesh.isRebuildList:= true;
-  GLForm1.GLboxRequestUpdate(nil);
 end;
 
 procedure AZIMUTH (DEG: integer);
@@ -362,7 +371,6 @@ begin
       ScriptForm.Memo2.Lines.Add('Unable to load overlay named "'+lFilename+'"');
 end;
 
-
 procedure TRACKLOAD(lFilename: string);
 begin
       if not GLForm1.OpenTrack(lFilename) then
@@ -389,6 +397,7 @@ end;
 procedure SHADERFORBACKGROUNDONLY(BGONLY: boolean);
 begin
   gPrefs.ShaderForBackgroundOnly:= BGONLY;
+  GLForm1.XRayBtn.Down := BGONLY;
   GLForm1.GLBoxRequestUpdate(nil);
 end;
 
@@ -396,7 +405,6 @@ procedure SHADERAMBIENTOCCLUSION( lVal: single);
 begin
      GLForm1.occlusionTrack.Position := round(lVal * GLForm1.occlusionTrack.Max);
 end;
-
 
 procedure SHADERLIGHTAZIMUTHELEVATION (AZI, ELEV: integer);
 begin
@@ -532,7 +540,6 @@ begin
      GLForm1.ClipElevTrack.position := round(Elev);
 end;
 
-
 procedure COLORBARPOSITION(P: integer);
 begin
   gPrefs.ColorBarPosition:= P;
@@ -656,6 +663,5 @@ begin
     Application.ProcessMessages;//HandleMessage
   {$IFDEF FPC}until (GetTickCount64 >= lEnd); {$ELSE}until (GetTickCount >= lEnd);{$ENDIF}
 end;
-
 
 end.

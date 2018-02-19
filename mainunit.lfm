@@ -1,12 +1,12 @@
 object GLForm1: TGLForm1
-  Left = 320
+  Left = 615
   Height = 755
-  Top = 23
-  Width = 960
+  Top = 58
+  Width = 972
   AllowDropFiles = True
   Caption = 'Surf Ice'
   ClientHeight = 755
-  ClientWidth = 960
+  ClientWidth = 972
   Menu = MainMenu1
   OnChangeBounds = FormChangeBounds
   OnClose = FormClose
@@ -172,18 +172,6 @@ object GLForm1: TGLForm1
         ShowHint = True
         TabOrder = 4
       end
-      object XRayLabel: TLabel
-        Left = 4
-        Height = 16
-        Hint = 'These sliders control transparency of background image (left) and enhance occluded overlay/tracks/nodes (right).  Easter egg: click this button to toggle whether shader is applied to overlays/tracks/nodes'
-        Top = 36
-        Width = 31
-        Caption = 'XRay'
-        ParentColor = False
-        ParentShowHint = False
-        ShowHint = True
-        OnClick = XRayLabelClick
-      end
       object MeshBlendTrack: TTrackBar
         Left = 170
         Height = 30
@@ -226,12 +214,12 @@ object GLForm1: TGLForm1
       object S1Track: TTrackBar
         Tag = 1
         Left = 170
-        Height = 46
+        Height = 30
         Top = 90
         Width = 88
         Max = 100
         OnChange = UniformChange
-        Position = 50
+        Position = 51
         TickStyle = tsNone
         TabOrder = 7
       end
@@ -286,7 +274,7 @@ object GLForm1: TGLForm1
       object S2Track: TTrackBar
         Tag = 2
         Left = 170
-        Height = 46
+        Height = 30
         Top = 120
         Width = 88
         Max = 100
@@ -298,7 +286,7 @@ object GLForm1: TGLForm1
       object S3Track: TTrackBar
         Tag = 3
         Left = 170
-        Height = 46
+        Height = 30
         Top = 150
         Width = 88
         Max = 100
@@ -358,7 +346,7 @@ object GLForm1: TGLForm1
       object S4Track: TTrackBar
         Tag = 4
         Left = 170
-        Height = 46
+        Height = 30
         Top = 180
         Width = 88
         Max = 100
@@ -394,7 +382,7 @@ object GLForm1: TGLForm1
       object S5Track: TTrackBar
         Tag = 5
         Left = 170
-        Height = 46
+        Height = 30
         Top = 210
         Width = 88
         Max = 100
@@ -526,7 +514,7 @@ object GLForm1: TGLForm1
       object S6Track: TTrackBar
         Tag = 6
         Left = 170
-        Height = 46
+        Height = 30
         Top = 240
         Width = 88
         Max = 100
@@ -538,7 +526,7 @@ object GLForm1: TGLForm1
       object S7Track: TTrackBar
         Tag = 7
         Left = 170
-        Height = 46
+        Height = 30
         Top = 270
         Width = 88
         Max = 100
@@ -550,7 +538,7 @@ object GLForm1: TGLForm1
       object S8Track: TTrackBar
         Tag = 8
         Left = 170
-        Height = 46
+        Height = 30
         Top = 300
         Width = 88
         Max = 100
@@ -562,7 +550,7 @@ object GLForm1: TGLForm1
       object S9Track: TTrackBar
         Tag = 9
         Left = 170
-        Height = 46
+        Height = 30
         Top = 330
         Width = 88
         Max = 100
@@ -574,7 +562,7 @@ object GLForm1: TGLForm1
       object S10Track: TTrackBar
         Tag = 10
         Left = 170
-        Height = 46
+        Height = 30
         Top = 360
         Width = 88
         Max = 100
@@ -1044,6 +1032,19 @@ object GLForm1: TGLForm1
           ''
         )
         TabOrder = 3
+      end
+      object XRayBtn: TSpeedButton
+        Left = 2
+        Height = 26
+        Hint = 'These sliders adjust the transparency of the background image and the visibility of the overlays. Click this button to toggle whether the chosen shader is also used for the overlays'
+        Top = 32
+        Width = 42
+        AllowAllUp = True
+        Caption = 'XRay'
+        GroupIndex = 397
+        OnClick = XRayLabelClick
+        ShowHint = True
+        ParentShowHint = False
       end
     end
     object TrackBox: TGroupBox

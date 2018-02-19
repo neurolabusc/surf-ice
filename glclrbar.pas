@@ -638,14 +638,12 @@ begin
      isRedraw := true;
 end;
 
-
 destructor TGLClrbar.Destroy;
 begin
   Txt.Free;
   //call the parent destructor:
   inherited;
 end;
-
 
 end.
 

@@ -18,7 +18,7 @@ const
    kGL_TRUE = GL_TRUE;
 {$ENDIF}
 kMaxDistance = 10;
-  kMaxUniform = 9;
+  kMaxUniform = 10;
   kError = 666;
   kNote = 777;
   kBool = 0;
@@ -83,8 +83,6 @@ const kVert2D ='#version 330'
 +#10'    color = vClr;'
 +#10'}';
 
-
-
 const kAoShaderVert = '#version 330'
 +#10'layout(location = 0) in vec3 Vert;'
 +#10'layout(location = 3) in vec2 Coord;'
@@ -93,7 +91,6 @@ const kAoShaderVert = '#version 330'
 +#10'  gl_Position = vec4 (Vert, 1.0);'
 +#10'  texCoord = Coord;'
 +#10'}';
-
 
   {$IFDEF HEMISSAO}
   //https://gist.github.com/fisch0920/6770363
@@ -374,7 +371,6 @@ const kAoShaderVert = '#version 330'
 
 {$ENDIF}
 
-
 (*moved to gl_2d procedure Set2DDraw (w,h: integer; r,g,b: byte);
 begin
   glMatrixMode(GL_PROJECTION);
@@ -415,7 +411,6 @@ procedure uniform3fx(prog: GLint;   name: AnsiString; v1,v2,v3: single);
 begin
   glUniform3f(glGetUniformLocation(prog, pAnsiChar(Name)), v1,v2,v3) ;
 end;
-
 
 procedure uniform1i( name: AnsiString; value: integer);
 begin
@@ -505,7 +500,6 @@ begin
      glBindFramebuffer(GL_FRAMEBUFFER, f.frameBuf);
      //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, f.tex, 0);
      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, f.tex, 0);
-
 
     (*glGenTextures(1, @f.depthBuf);
     glBindTexture(GL_RENDERBUFFER, f.depthBuf);
@@ -945,8 +939,6 @@ begin
       initFrame(gShader.fScreenShot);
   end;
 
-
-
   //glGetError(); //clear errors
   if (length(gShader.VertexProgram) > 0) then begin
      glUseProgram(0);
@@ -977,9 +969,6 @@ begin
      {$ENDIF}{$ENDIF}
 
   end;
-
-
-
 end;
 
 function strtofloat0 (lS:string): single;
@@ -1047,7 +1036,6 @@ begin
     inc(lP);
   end;
 end;
-
 
 procedure DefaultShader( var Shader: TShader);
 begin
@@ -1147,7 +1135,6 @@ begin
      SetTrackUniforms (lineWidth, ScreenPixelX, ScreenPixelY);
      {$ENDIF}
 end;
-
 
 procedure RunMeshGLSL (clipPlane: TPoint4f;  UseDefaultShader: boolean);
 var

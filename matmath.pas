@@ -46,7 +46,6 @@ uses
  procedure MakeCylinder( radius, len: single; var faces: TFaces; var vertices: TVertices; slices: integer = 20); overload;
  procedure makeCylinderEnd(radius: single; prevPos, Pos, nextPos: TPoint3f; var vertices: TVertices; var  B: TPoint3f; slices: integer = 20);
 
-
 implementation
 
 procedure vectorReciprocal(var v: TPoint3f);
@@ -166,8 +165,6 @@ begin
   matrixTranspose(result);
 end; //AlignVector
 
-
-
 procedure MakeCylinder( radius, len: single; var faces: TFaces; var vertices: TVertices; slices : integer = 20); Overload;
 //procedure MakeCylinder( radius, len: single; var faces: TFaces; var vertices: TVertices); Overload;
 //make a triangular mesh cylinder of specified radius and length. length is in X-dimension, so center is from (0,0,0)..(len,0,0)
@@ -277,7 +274,6 @@ begin
   vectorNormalize(N);  //unit length
   B := crossProduct(N,T); //binormal
 end; //sload()
-
 
 procedure makeCylinderEnd(radius: single; prevPos, Pos, nextPos: TPoint3f; var vertices: TVertices; var B: TPoint3f; slices: integer = 20);
 // http://www.lab4games.net/zz85/blog/2012/04/24/spline-extrusions-tubes-and-knots-of-sorts/

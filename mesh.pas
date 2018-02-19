@@ -35,6 +35,7 @@ type
     //next: if loaded as mesh...
     faces : TFaces;
     vertices: TVertices;
+    vertexRGBA : array of TRGBA;
  end;
 
  TNodePrefs = record //preferences for nodes
@@ -126,7 +127,7 @@ type
   public
     procedure MakePyramid;
     //function AtlasStatMapCore(AtlasName, StatName: string; Indices: TInts; Intensities: TFloats): string;
-    function MaxAtlasRegion: integer;
+    function AtlasMaxIndex: integer;
     procedure DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean);
     procedure Node2Mesh;
     procedure ReverseFaces;
@@ -148,7 +149,6 @@ type
   end;
 
 implementation
-
 
 uses
   mainunit,
@@ -354,10 +354,7 @@ begin
     nFace := length(faces);
     if (nVert < 3) or (nFace < 1) or (length(vertexAtlas) <>  nVert) or (length(atlasHideFilter) < 1) then exit;
     //set up lookup table - list of regions that survive
-    maxROI := MaxAtlasRegion;
-    (*maxROI := 0;
-    for i := 0 to (nVert -1) do
-        if vertexAtlas[i] > maxROI then maxROI := vertexAtlas[i]; //does not survive *)
+    maxROI := AtlasMaxIndex;
     if maxROI < 1 then exit;
     setlength(filterLUT, maxROI+1);
     for i := 0 to maxROI do
@@ -367,14 +364,13 @@ begin
            filterLUT[atlasHideFilter[i]] := true; //filter the specified region
     //mark surviving vertices
     setlength(vOK, nVert);
-    for i := 0 to (nVert -1) do
-        vOK[i] := -1; //does not survive
     nvOK := 0;
     for i := 0 to (nVert -1) do
         if (vertexAtlas[i] > 0) and (not filterLUT[vertexAtlas[i]]) then begin
              vOK[i] := nvOK;
              nvOK := nvOK + 1;
-        end;
+        end else
+            vOK[i] := -1; //does not survive
     setlength(filterLUT, 0);
     //conditionals for unusual situations
     if nvOK = 0 then begin //nothing survives
@@ -388,11 +384,17 @@ begin
     end;
     //see how many faces survive
     setlength(fOK,nFace);
-    for i := 0 to (nFace -1) do
-        fOK[i] := (vOK[faces[i].X] >= 0) and (vOK[faces[i].Y] >= 0) and (vOK[faces[i].Z] >= 0);
     nfOK := 0;
-    for i := 0 to (nFace -1) do
+    for i := 0 to (nFace -1) do begin
+        fOK[i] := (vOK[faces[i].X] >= 0) and (vOK[faces[i].Y] >= 0) and (vOK[faces[i].Z] >= 0);
         if fOK[i] then nfOK := nfOK + 1;
+    end;
+    //no faces survive
+    if nvOK = 0 then begin //nothing survives
+      setlength(vOK,0);
+      setlength(fOK,0);
+      exit;
+    end;
     //copy surviving vertices
     setlength(v,nvOK);
     for i := 0 to (nVert -1) do
@@ -435,7 +437,8 @@ var
      i,idx: integer;
 begin
   if (length(faces) < 1) or (length(vertices) < 3) then exit;
-  if (length(atlasTransparentFilter) > 0) and (MaxAtlasRegion > 0) and (length(vertexAtlas) =  length(vertices)) then begin
+  if (length(atlasTransparentFilter) > 0) and (AtlasMaxIndex > 0) and (length(vertexAtlas) =  length(vertices)) then begin
+     //make transparent parts of an atlas that is loaded as the background mesh
      setlength(vtxRGBA, length(vertexRGBA));
      vtxRGBA := Copy(vertexRGBA,0,length(vertexRGBA));
      for i := 0 to (length(vertices)-1) do begin
@@ -445,14 +448,14 @@ begin
             vtxRGBA[i] := Clr;
      end;
      if (length(atlasHideFilter) > 0) and (length(vertexAtlas) =  length(vertices)) then
-        BuildListPartialAtlas(Clr, vtxRGBA)
+        BuildListPartialAtlas(Clr, vtxRGBA)  //hide parts of an overlay atlas
      else
        	BuildListCore(Clr, faces, vertices, vtxRGBA);
      setlength(vtxRGBA,0);
      exit;
   end;
   if (length(atlasHideFilter) > 0) and (length(vertexAtlas) =  length(vertices)) then
-       BuildListPartialAtlas(Clr, vertexRGBA)
+       BuildListPartialAtlas(Clr, vertexRGBA)    //hide parts of an overlay atlas
   else
 	BuildListCore(Clr, faces, vertices, vertexRGBA)
 end;
@@ -763,6 +766,9 @@ begin
         setlength(vRGBA, sumVert + nVert);
         for i := 0 to (nVert -1) do
             vRGBA[i+sumVert] := overlay[c].LUT[192];
+        if (length(overlay[c].vertexRGBA) = nVert) then
+           for i := 0 to (nVert -1) do
+               vRGBA[i+sumVert] := overlay[c].vertexRGBA[i];
         (*if isIntensityColored then begin
           if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
              mn := overlay[c].windowScaledMin;
@@ -1137,8 +1143,7 @@ begin
      SetDescriptives;
 end; // MakePyramid()
 
-
-function TMesh.MaxAtlasRegion: integer; //returns maximim atlas region, e.g. JHU has 192 regions labelled 1..192, so 192 - returns 0 if not an atlas
+function TMesh.AtlasMaxIndex: integer; //returns maximim atlas region, e.g. JHU has 192 regions labelled 1..192, so 192 - returns 0 if not an atlas
 var
    num_v, i: integer;
 begin
@@ -1154,6 +1159,8 @@ begin
 end;
 
 constructor TMesh.Create;
+var
+   i: integer;
 begin
      {$IFDEF COREGL}
      vao := 0;
@@ -1203,6 +1210,12 @@ begin
      //MakePyramid;
      isBusy := false;
      isNode := false;
+     for i := kMinOverlayIndex to kMaxOverlays do begin
+         setlength(overlay[i].intensity,0);
+         setlength(overlay[i].faces,0);
+         setlength(overlay[i].vertices,0);
+         setlength(overlay[i].vertexRGBA,0);
+     end;
 end; // Create()
 
 procedure TMesh.LoadPial(const FileName: string);
@@ -1218,6 +1231,7 @@ var
    vValues: array [1..3] of single;
    fValues: array [1..3] of LongWord;
 begin
+     if (FSize(FileName) < 64) then exit;
      AssignFile(f, FileName);
      FileMode := fmOpenRead;
      Reset(f,1);
@@ -1313,6 +1327,7 @@ var
    i, num_v, num_f: integer;
    v1,v2,v3, v4: single;
 begin
+     if (FSize(FileName) < 27) then exit;
      AssignFile(f, FileName);
      Reset(f);
      ReadlnSafe(f, v1,v2,v3, v4);
@@ -1349,7 +1364,8 @@ var
    s: string;
    v1,v2,v3, v4: single;
 begin
-  result := true;
+     result := false;
+     if (FSize(FileName) < 64) then exit;
      AssignFile(f, FileName);
      Reset(f);
      Readln(f,s);
@@ -1366,6 +1382,7 @@ begin
         CloseFile(f);
         exit;
      end;
+     result := true;
      setlength(vertices, num_v);
      for i := 0 to (num_v - 1) do
          ReadlnSafe(f, vertices[i].X, vertices[i].Y, vertices[i].Z, v4);
@@ -1402,6 +1419,7 @@ var
    strlst : TStringList;
 begin
      result := false;
+     if (FSize(FileName) < 64) then exit;
      AssignFile(f, FileName);
      Reset(f);
      Readln(f,s);
@@ -1468,6 +1486,7 @@ var
    f: TextFile;
    i, num_v, num_f: integer;
 begin
+     if (FSize(FileName) < 64) then exit;
      AssignFile(f, FileName);
        Reset(f);
        Readln(f);  //% #!ascii
@@ -1698,9 +1717,10 @@ var
    num_node,i: integer;
    strlst : TStringList;
 begin
-   isEmbeddedEdge := false;
-  strlst:=TStringList.Create;
-  AssignFile(f, FileName);
+     if (FSize(FileName) < 64) then exit;
+     isEmbeddedEdge := false;
+     strlst:=TStringList.Create;
+     AssignFile(f, FileName);
      Reset(f);
      num_node := 0;
      while not EOF(f) do begin
@@ -1777,6 +1797,7 @@ begin
   result := false;
   setlength(edges,0,0);
   if not FileExistsF(FileName) then exit;
+  if (FSize(FileName) < 64) then exit;
   if (length(nodes) < 2) then begin
        showmessage('You must load a NODE file before loading your EDGE file.');
        exit;
@@ -1869,8 +1890,6 @@ begin
   strlst.free;
 end; // LoadNode()
 
-
-
 function TMesh.LoadObjMni(const FileName: string): boolean;
 //This is for MNI Obj files, not the WaveFront Obj format
 //This code only reads the most popular ASCII polygon mesh that starts with 'P'
@@ -1888,6 +1907,7 @@ var
    normals: TVertices;
 begin
   result := false;
+  if (FSize(FileName) < 64) then exit;
   AssignFile(f, FileName);
   Reset(f);
   Read(f,c);
@@ -2033,6 +2053,7 @@ var
    i16: array [1..3] of word;
    binByt: array of byte;
 begin
+  if (FSize(FileName) < 64) then exit;
   AssignFile(f, FileName);
   Reset(f);
   ReadLn(f, str);
@@ -2297,6 +2318,7 @@ var
    i,num_v, num_f: integer;
 begin
   result := false;
+  if (FSize(FileName) < 64) then exit;
   fstr := '';
   vstr := '';
   AssignFile(f, FileName);
@@ -2375,6 +2397,7 @@ var
    v, t, i3, num_v, num_f: integer;
 begin
      result := false;
+     if (FSize(FileName) < 64) then exit;
      AssignFile(f, FileName);
      Reset(f);
      Read(f, num_v);
@@ -2789,6 +2812,7 @@ begin
      setlength(vertices, 0);
   end;
   result := 0;
+  if (FSize(FileName) < 64) then exit;
   nOverlays := 0;
   gz := TMemoryStream.Create;
   AssignFile(f, FileName);
@@ -3015,6 +3039,7 @@ begin
   setlength(faces, 0); //just in case faces were read but not vertices
   setlength(vertices, 0);
   setlength(vertexRGBA,0);
+  if (FSize(FileName) < 64) then exit;
   {$IFDEF CTM} readCTM(FileName, Faces, Vertices, vertexRGBA); {$ENDIF}
  //readCTM(const FileName: string; var Faces: TFaces;  var Verts: TVertices; var vertexRGBA : TVertexRGBA): boolean;
 end;
@@ -3320,7 +3345,6 @@ begin
         setlength(vertexAtlas, length(floats));
         for i := 0 to (length(floats)-1) do
             vertexAtlas[i] := round(floats[i]);
-
      end;
      if (length(vertexRGBA) < 1) and (length(Faces) > 0) and (length(floats) > 0) then
         Showmessage('Scalar meshes are usually overlays, not background images (hint use Overlay/Add to load this image again).');
@@ -3331,8 +3355,11 @@ begin
      exit;
   end;
   //otherwise, load overlay
-  result := LoadMz3Core(Filename, Overlay[lOverlayIndex].Faces,Overlay[lOverlayIndex].Vertices,vtxRGBA,Overlay[lOverlayIndex].intensity);
-  setlength(vtxRGBA,0);
+  //result := LoadMz3Core(Filename, Overlay[lOverlayIndex].Faces,Overlay[lOverlayIndex].Vertices,vtxRGBA,Overlay[lOverlayIndex].intensity);
+  //setlength(vtxRGBA,0);
+  result := LoadMz3Core(Filename, Overlay[lOverlayIndex].Faces,Overlay[lOverlayIndex].Vertices,Overlay[lOverlayIndex].vertexRGBA,Overlay[lOverlayIndex].intensity);
+  if (length(Overlay[lOverlayIndex].vertexRGBA) > 0) and (length(Overlay[lOverlayIndex].intensity) > 0) then //template with BOTH intensity and RGBA: give precedence to RGBA
+     setlength(Overlay[lOverlayIndex].intensity,0);
   if not result then exit;
   if (length(Overlay[lOverlayIndex].Vertices) < 3) and (length(Overlay[lOverlayIndex].intensity) > 0) and (length(overlay[lOverlayIndex].intensity)  <> length(Vertices)) then begin
      showmessage(format('This overlay has a different number of vertices (%d) than the background mesh (%d).', [length(overlay[lOverlayIndex].intensity), length(Vertices) ]));
@@ -3419,6 +3446,7 @@ var
    v4: single;
 begin
      result := false;
+     if (FSize(FileName) < 64) then exit;
      AssignFile(f, FileName);
      Reset(f);
      Readln(f,s);
@@ -3566,6 +3594,7 @@ begin
   result := false;
   nF := 0;
   nV := 0;
+  if (FSize(FileName) < 64) then exit;
   SetLength(Faces,kBlockSz);
   SetLength(Vertices,kBlockSz);
   floatListVal := TStringList.Create;
@@ -3723,6 +3752,7 @@ var
    uedges : array of TPoint3i;
 begin
      result := false;
+     if (FSize(FileName) < 64) then exit;
      AssignFile(f, FileName);
      Reset(f);
      Readln(f, nV, nE, nF);
@@ -3795,6 +3825,7 @@ begin
 end;
 begin
      result := false;
+     if (FSize(FileName) < 64) then exit;
      AssignFile(f, FileName);
      Reset(f);
      nF := 0;
@@ -3837,8 +3868,6 @@ begin
      UnifyVertices(faces, vertices);
 end; // LoadDxf()
 
-
-
 function TMesh.LoadSrf(const FileName: string): boolean;
 //ALWAYS little-endian, n.b. despite docs the 'reserve' may not be zero: NeuroElf refers to this as "ExtendedNeighbors"
 // http://support.brainvoyager.com/automation-aamp-development/23-file-formats/382-developer-guide-26-file-formats-overview.html
@@ -3863,6 +3892,7 @@ var
    rgbab: array [0..2] of  TRGBA;
 begin
   result := false;
+  if (FSize(FileName) < 64) then exit;
   AssignFile(f, FileName);
   FileMode := fmOpenRead;
   Reset(f,1);
@@ -3984,6 +4014,7 @@ begin
 end; //ReadVal
 begin
      result := false;
+     if (FSize(FileName) < 64) then exit;
      AssignFile(f, FileName);
      Reset(f);
      num_v := 0;
@@ -4048,6 +4079,7 @@ var
    i, num_v, num_f, num_n: integer;
 begin
   result := false;
+  if (FSize(FileName) < 64) then exit;
   AssignFile(f, FileName);
   Reset(f);
   Readln(f,s);  //ascii
@@ -4113,8 +4145,9 @@ var
    f: TextFile;
    i, num_v, num_f: integer;
 begin
-  strlst:=TStringList.Create;
   result := false;
+  if (FSize(FileName) < 64) then exit;
+  strlst:=TStringList.Create;
   AssignFile(f, FileName);
   Reset(f);
   Readln(f,s);  //ascii
@@ -4155,7 +4188,6 @@ begin
   strlst.free;
 end; //LoadTri()
 
-
 function TMesh.LoadMesh(const FileName: string): boolean;
 // http://brainvisa.info/aimsdata-4.5/user_doc/formats.html
 type
@@ -4183,6 +4215,7 @@ var
    swapEnd: boolean;
 begin
   result := false;
+  if (FSize(FileName) < 64) then exit;
   AssignFile(f, FileName);
   FileMode := fmOpenRead;
   Reset(f,1);
@@ -4689,8 +4722,8 @@ var
    s: string;
    f: TextFile;
    i, num_v, num_f: integer;
-
 begin
+  if (FSize(FileName) < 64) then exit;
   AssignFile(f, FileName);
   Reset(f);
   Readln(f,s);
@@ -4746,6 +4779,7 @@ var
    colorBytes: word; //uint16
    i, v, sz, min_sz: integer;
 begin
+     if (FSize(FileName) < 64) then exit;
      AssignFile(f, FileName);
      FileMode := fmOpenRead;
      Reset(f,1);
@@ -4794,8 +4828,6 @@ begin
     UnifyVertices(faces, vertices);
 end; // LoadStl()
 
-
-
 procedure TMesh.LoadVtk(const FileName: string);
 //Read VTK mesh
 // https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bvtk/readVtk.m
@@ -4815,6 +4847,7 @@ var
    nV: LongInt;
    isBinary: boolean = true;
 begin
+  if (FSize(FileName) < 64) then exit;
   strlst:=TStringList.Create;
   AssignFile(f, FileName);
   Reset(f,1);
@@ -5030,97 +5063,94 @@ var
    ext: string;
    isEmbeddedEdge: boolean;
 begin
-  result := false;
-  isEmbeddedEdge := false;
-
-     if not FileExistsF(FileName) then exit;
-     isBusy := true;
-     isNode := false;
-     isFreeSurferMesh := false;
-     ext := UpperCase(ExtractFileExt(Filename));
-     isRebuildList := true;
-     CloseOverlays;
-     (*setlength(faces, 0);
-     setlength(vertices, 0);*)
-     self.Close;
-
-     if (ext = '.3DO') then
-        Load3Do(Filename);
-     if (ext = '.AC') then
-        LoadAc(Filename);
-     if (ext = '.DAE') then
-        LoadDae(Filename);
-     if (ext = '.GTS') then
-        LoadGts(Filename);
-     if (ext = '.DFS') then
-        LoadDfs(FileName);
-     if (ext = '.DXF') then
-        LoadDxf(Filename);
-     if ((ext = '.JS') or (ext = '.JSON')) then
-        LoadJson(Filename);
-     if (ext = '.LWO') then
-        LoadLwo(Filename);
-     if (ext = '.MS3D') then
-        LoadMs3d(Filename);
-     if (ext = '.3DS') then
-        Load3ds(Filename);
-     if (ext = '.MZ3') then
-        LoadMz3(Filename, 0);
-     //if (ext = '.VBO') then
-     //   LoadVbo(Filename);
-     if (ext = '.MESH') then
-        LoadMesh(Filename);
-     if (ext = '.CTM') then
-         LoadCtm(Filename);
-     if (ext = '.NV') then
-         LoadNv(Filename);
-     if (ext = '.OFF') then
-         LoadOff(Filename);
-     if (ext = '.PLY') then
-         LoadPly(Filename);
-     if (ext = '.PLY2') then
-         LoadPly2(Filename);
-     if (ext = '.PRWM') then
-        LoadPrwm(Filename);
-     if (ext = '.GII') then
-         LoadGii(Filename,0, 1);
-     if (ext = '.VTK') then
-         LoadVtk(Filename);
-     if (ext = '.STL') then
-         LoadStl(Filename);
-     if (ext = '.SURF') then
-        LoadSurf(Filename);
-     if (ext = '.NODE') or (ext = '.NODZ')then begin
-         LoadNode(Filename, isEmbeddedEdge);
-         if isEmbeddedEdge then
-            LoadEdge(Filename, isEmbeddedEdge);
-     end;
-     if (ext = '.SRF') and (not LoadSrf(Filename)) then
-        LoadAsc_Srf(Filename);
-     if (ext = '.TRI') then
-        LoadTri(Filename);
-     if (ext = '.ASC') then  //https://brainder.org/category/neuroinformatics/file-types/
-        LoadAsc_Srf(Filename);
-     if (ext = '.OBJ') then
-         LoadObj(Filename);
-     if (ext = '.WFR') then
-        LoadWfr(Filename);
-     if length(faces) < 1 then begin//not yet loaded - see if it is freesurfer format (often saved without filename extension)
-        LoadPial(Filename);
-        if length(faces) > 0 then
-           isFreeSurferMesh := true;
-     end;
-     if length(faces) < 1 then //error loading file
-        MakePyramid
-     else
-         result := true;
-     CheckMesh;
-     SetDescriptives;
-     if not isZDimIsUp then
-        SwapYZ;
-     //showmessage(Filename+'  '+ inttostr(length(faces))+' '+inttostr(length(vertices)) );
-     //NormalizeSize;
-  isBusy := false;
+	result := false;
+	isEmbeddedEdge := false;
+	if not FileExistsF(FileName) then exit;
+	if (FSize(FileName) < 64) then exit;
+	isBusy := true;
+	isNode := false;
+	isFreeSurferMesh := false;
+	ext := UpperCase(ExtractFileExt(Filename));
+	isRebuildList := true;
+	CloseOverlays;
+	self.Close;
+	if (ext = '.3DO') then
+	Load3Do(Filename);
+	if (ext = '.AC') then
+	LoadAc(Filename);
+	if (ext = '.DAE') then
+	LoadDae(Filename);
+	if (ext = '.GTS') then
+	LoadGts(Filename);
+	if (ext = '.DFS') then
+	LoadDfs(FileName);
+	if (ext = '.DXF') then
+	LoadDxf(Filename);
+	if ((ext = '.JS') or (ext = '.JSON')) then
+	LoadJson(Filename);
+	if (ext = '.LWO') then
+	LoadLwo(Filename);
+	if (ext = '.MS3D') then
+	LoadMs3d(Filename);
+	if (ext = '.3DS') then
+	Load3ds(Filename);
+	if (ext = '.MZ3') then
+	LoadMz3(Filename, 0);
+	//if (ext = '.VBO') then
+	//   LoadVbo(Filename);
+	if (ext = '.MESH') then
+	LoadMesh(Filename);
+	if (ext = '.CTM') then
+	 LoadCtm(Filename);
+	if (ext = '.NV') then
+	 LoadNv(Filename);
+	if (ext = '.OFF') then
+	 LoadOff(Filename);
+	if (ext = '.PLY') then
+	 LoadPly(Filename);
+	if (ext = '.PLY2') then
+	 LoadPly2(Filename);
+	if (ext = '.PRWM') then
+	LoadPrwm(Filename);
+	if (ext = '.GII') then
+	 LoadGii(Filename,0, 1);
+	if (ext = '.VTK') then
+	 LoadVtk(Filename);
+	if (ext = '.STL') then
+	 LoadStl(Filename);
+	if (ext = '.SURF') then
+	LoadSurf(Filename);
+	if (ext = '.NODE') or (ext = '.NODZ')then begin
+	 LoadNode(Filename, isEmbeddedEdge);
+	 if isEmbeddedEdge then
+		LoadEdge(Filename, isEmbeddedEdge);
+	end;
+	if (ext = '.SRF') and (not LoadSrf(Filename)) then
+	LoadAsc_Srf(Filename);
+	if (ext = '.TRI') then
+	LoadTri(Filename);
+	if (ext = '.ASC') then  //https://brainder.org/category/neuroinformatics/file-types/
+	LoadAsc_Srf(Filename);
+	if (ext = '.OBJ') then
+	 LoadObj(Filename);
+	if (ext = '.WFR') then
+	LoadWfr(Filename);
+	if length(faces) < 1 then begin//not yet loaded - see if it is freesurfer format (often saved without filename extension)
+	LoadPial(Filename);
+	if length(faces) > 0 then
+	   isFreeSurferMesh := true;
+	end;
+	if length(faces) < 1 then //error loading file
+		MakePyramid
+	else
+	 result := true;
+	CheckMesh;
+	SetDescriptives;
+	if not isZDimIsUp then
+	SwapYZ;
+	//showmessage(Filename+'  '+ inttostr(length(faces))+' '+inttostr(length(vertices)) );
+	//NormalizeSize;
+	isBusy := false;
 end; // LoadFromFile()
 
 (* works, but Stc files are sparse, so better to use other routines for smoothing
@@ -5439,7 +5469,7 @@ begin
         showmessage('ROX format requires labelled mesh.');
         exit;
      end;
-     maxROI := MaxAtlasRegion;
+     maxROI := AtlasMaxIndex;
      if (maxROI < 1) then begin
         showmessage('ROX format requires labelled mesh with varying indices.');
         exit;
@@ -5974,6 +6004,7 @@ begin
          setlength(overlay[i].intensity,0);
          setlength(overlay[i].faces,0);
          setlength(overlay[i].vertices,0);
+         setlength(overlay[i].vertexRGBA,0);
      end;
      OpenOverlays := 0;
      setlength(vertexRGBA,0);

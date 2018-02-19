@@ -25,7 +25,8 @@ procedure simplify_mesh_lossless(var faces : TFaces; var verts: TVertices);
 implementation
 
 type
-  TFloat = single; //"TFloat = single" is faster "TFloat = double" more precise
+  TFloat = double; //"TFloat = single" is faster "TFloat = double" more precise
+                   //double recommended - especially for lossless which can fail to detect small differences (e.g. knot.mz3)
   TSymetricMatrix = array [0..9] of TFloat;
   TRef = record
 	  tid,tvertex: integer;
@@ -114,7 +115,7 @@ var
    len: single;
 begin
      len := sqrt( (v.X*v.X) + (v.Y*v.Y) + (v.Z*v.Z) );
-     if len <= 0 then exit;
+     if len <= 0 then len := 0.0000001;
      v.X := v.X / len;
      v.Y := v.Y / len;
      v.Z := v.Z / len;

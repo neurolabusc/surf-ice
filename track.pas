@@ -1978,7 +1978,6 @@ begin
   quicksort(low(s), high(s), s);
 end;
 
-
 function TTrack.SimplifyRemoveRedundant(Tol: float): boolean;
 var
    pos, pos0: TPoint3f;
@@ -2072,6 +2071,5 @@ begin
   self.Close;
   inherited;
 end; // Destroy()
-
 
 end.

@@ -530,7 +530,6 @@ begin
   result := true;
 end;
 
-
 function TGLText.LoadMetrics(fnm : string): boolean;
 var
    fntfnm: string;

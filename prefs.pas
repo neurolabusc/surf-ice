@@ -16,7 +16,6 @@ const
   kSaveAsTrackBfloat = 1;
   kSaveAsTrackTrk = 2;
 
-
 type
   TMRU =  array [1..knMRU] of string;
   TPrefs = record
@@ -199,8 +198,6 @@ begin
      if not GLForm1.OpenDialog.Execute then exit;
      result := GLForm1.OpenDialog.FileName;
 end;
-
-
 {$ENDIF}
 
 const

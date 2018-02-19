@@ -183,6 +183,35 @@ begin
      {$ENDIF}
 end;
 
+
+function RemoveDegenerateTriangles(var faces: TFaces): integer;
+var
+	nOK, n,i: integer;
+	f: TFaces;
+begin
+	result := 0; //EXIT_SUCCESS - no change
+	n := length(faces);
+	if n < 1 then exit;
+	nOK := 0;
+	for i := 0 to (n-1) do
+		if (faces[i].x <> faces[i].y) and (faces[i].x <> faces[i].z) and (faces[i].y <> faces[i].z) then
+			nOK := nOK + 1;
+	//printf(format(' %d degenerate triangles', [n - nOK]));
+	if (nOK = n) then exit;
+	if (nOK = 0) then exit; //nothing survives!
+	result := n - nOK; //report number of faces removed
+	setlength(f,n);
+	f := Copy(faces, Low(faces), Length(faces));
+	setlength(faces,nOK);
+	nOK := 0;
+	for i := 0 to (n-1) do
+		if (faces[i].x <> faces[i].y) and (faces[i].x <> faces[i].z) and (faces[i].y <> faces[i].z) then begin
+			faces[nOK] := f[i];
+			nOK := nOK + 1;
+		end;
+end; //end RemoveDegenerateTriangles()
+
+
 procedure ClusterVertex( var faces: TFaces; var vertices: TVertices; Radius: single);
 var
  s: TSortArray;
@@ -270,8 +299,8 @@ begin
              Faces[High(Faces)].Y :=  face.Y;
              Faces[High(Faces)].Z :=  face.Z;
         end;
-
    end;
+   RemoveDegenerateTriangles(faces);
 end;
 
 procedure UnifyVertices(var faces: TFaces;  var vertices: TVertices);
@@ -846,7 +875,7 @@ begin
      Showmessage('Error: no mesh will survive such an extreme reduction.');
      exit;
   end;
-  //UnifyVertices(faces, vertices);  // not sure if this is required
+  UnifyVertices(faces, vertices);  //remove duplicate vertices - see example "duplicated_vertices.obj"
   simplify_mesh(faces, vertices, facesTarget, 3, true);
   simplify_mesh_lossless(faces, vertices);
   result := true;

@@ -11,7 +11,6 @@ uses
 const
   kPrimitiveRestart = 2147483647;
 
-
 const  kVert3d = 'varying vec3 vN, vL, vV;'
 +#10'varying vec4 vP, vClr;'
 +#10'void main() {  '

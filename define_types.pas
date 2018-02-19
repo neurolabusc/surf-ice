@@ -308,7 +308,6 @@ begin //should work with both little and big endian, as order is same
   result := outguy.Sngl;
 end; // asSingle()
 
-
 function asInt(s : single): longint;
 type
   swaptype = packed record
