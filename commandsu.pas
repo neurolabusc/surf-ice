@@ -3,11 +3,11 @@ unit commandsu;
 interface
 
 function EXISTS(lFilename: string): boolean; //function
-function ATLASMAXINDEX: integer;
+function ATLASMAXINDEX(OVERLAY: integer): integer;
 procedure ATLASSTATMAP(ATLASNAME, STATNAME: string; const Indices: array of integer; const Intensities: array of single);
 procedure ATLASSATURATIONALPHA(lSaturation, lTransparency: single);
-procedure ATLASHIDE(const Filt: array of integer);
-procedure ATLASGRAY(const Filt: array of integer);
+procedure ATLASHIDE(OVERLAY: integer; const Filt: array of integer);
+procedure ATLASGRAY(OVERLAY: integer; const Filt: array of integer);
 procedure AZIMUTH (DEG: integer);
 procedure AZIMUTHELEVATION (AZI, ELEV: integer);
 procedure BACKCOLOR (R,G,B: byte);
@@ -33,8 +33,11 @@ procedure MODELESSMESSAGE(STR: string);
 procedure NODECOLOR(name: string; varies: boolean);
 procedure NODEHEMISPHERE(VAL: integer);
 procedure NODEPOLARITY(VAL: integer);
+procedure NODECREATE(filename: string; const x,y,z,clr,radius: array of single);
+procedure EDGECREATE(filename: string; const mtx: array of single);
 procedure NODESIZE(size: single; varies: boolean);
 procedure NODETHRESH (LO, HI: single);
+procedure NODETHRESHBYSIZENOTCOLOR (NodeThresholdBySize: boolean);
 procedure MESHCOLOR (R,G,B: byte);
 procedure ORIENTCUBEVISIBLE (VISIBLE: boolean);
 procedure OVERLAYADDITIVE (ADD: boolean);
@@ -71,16 +74,16 @@ type
 const
      knFunc = 2;
      kFuncRA : array [1..knFunc] of TScriptRec =(
-              (Ptr:@ATLASMAXINDEX;Decl:'ATLASMAXINDEX';Vars:'(): integer'),
+              (Ptr:@ATLASMAXINDEX;Decl:'ATLASMAXINDEX';Vars:'(OVERLAY: integer): integer'),
                (Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
              );
 
-knProc = 58;
+knProc = 61;
   kProcRA : array [1..knProc] of TScriptRec = (
   (Ptr:@ATLASSTATMAP;Decl:'ATLASSTATMAP';Vars:'(ATLASNAME, STATNAME: string; const Intensities: array of integer; const Intensities: array of single)'),
   (Ptr:@ATLASSATURATIONALPHA;Decl:'ATLASSATURATIONALPHA';Vars:'(lSaturation, lTransparency: single)'),
-  (Ptr:@ATLASHIDE;Decl:'ATLASHIDE';Vars:'(const Filt: array of integer)'),
-  (Ptr:@ATLASGRAY;Decl:'ATLASGRAY';Vars:'(const Filt: array of integer)'),
+  (Ptr:@ATLASHIDE;Decl:'ATLASHIDE';Vars:'(OVERLAY: integer; const Filt: array of integer)'),
+  (Ptr:@ATLASGRAY;Decl:'ATLASGRAY';Vars:'(OVERLAY: integer; const Filt: array of integer)'),
    (Ptr:@AZIMUTH;Decl:'AZIMUTH';Vars:'(DEG: integer)'),
    (Ptr:@AZIMUTHELEVATION;Decl:'AZIMUTHELEVATION';Vars:'(AZI, ELEV: integer)'),
    (Ptr:@BMPZOOM;Decl:'BMPZOOM';Vars:'(Z: byte)'),
@@ -92,6 +95,7 @@ knProc = 58;
    (Ptr:@COLORBARPOSITION;Decl:'COLORBARPOSITION';Vars:'(P: integer)'),
    (Ptr:@COLORBARVISIBLE;Decl:'COLORBARVISIBLE';Vars:'(VISIBLE: boolean)'),
    (Ptr:@EDGECOLOR;Decl:'EDGECOLOR';Vars:'(name: string; varies: boolean)'),
+   (Ptr:@EDGECREATE;Decl:'EDGECREATE';Vars:'(filename: string; const mtx: array of single)'),
    (Ptr:@EDGESIZE;Decl:'EDGESIZE';Vars:'(size: single; varies: boolean)'),
    (Ptr:@EDGETHRESH;Decl:'EDGETHRESH';Vars:'(LO, HI: single)'),
    (Ptr:@ELEVATION;Decl:'ELEVATION';Vars:'(DEG: integer)'),
@@ -106,8 +110,10 @@ knProc = 58;
    (Ptr:@NODECOLOR;Decl:'NODECOLOR';Vars:'(name: string; varies: boolean)'),
    (Ptr:@NODEHEMISPHERE;Decl:'NODEHEMISPHERE';Vars:'(VAL: integer)'),
    (Ptr:@NODEPOLARITY;Decl:'NODEPOLARITY';Vars:'(VAL: integer)'),
+   (Ptr:@NODECREATE;Decl:'NODECREATE';Vars:'(filename: string; const x,y,z,clr,radius: array of single)'),
    (Ptr:@NODESIZE;Decl:'NODESIZE';Vars:'(size: single; varies: boolean)'),
    (Ptr:@NODETHRESH;Decl:'NODETHRESH';Vars:'(LO, HI: single)'),
+   (Ptr:@NODETHRESHBYSIZENOTCOLOR;Decl:'NODETHRESHBYSIZENOTCOLOR';Vars:'(NodeThresholdBySize: boolean)'),
    (Ptr:@MESHCOLOR;Decl:'MESHCOLOR';Vars:'(R, G, B: byte)'),
    (Ptr:@ORIENTCUBEVISIBLE;Decl:'ORIENTCUBEVISIBLE';Vars:'(VISIBLE: boolean)'),
    (Ptr:@OVERLAYADDITIVE;Decl:'OVERLAYADDITIVE';Vars:'(ADD: boolean)'),
@@ -139,16 +145,20 @@ knProc = 58;
 
 implementation
 uses
+    //{$IFDEF UNIX}fileutil,{$ENDIF}
     mainunit, define_types, shaderui, graphics, LCLintf, Forms, SysUtils, Dialogs, scriptengine, mesh;
 
-function ATLASMAXINDEX: integer;
+function ATLASMAXINDEX(OVERLAY: integer): integer;
 begin
-  result := gMesh.AtlasMaxIndex;
+  if (OVERLAY < 1) or (OVERLAY > kMaxOverlays) then
+     result := gMesh.AtlasMaxIndex
+  else
+      result := gMesh.overlay[OVERLAY].atlasMaxIndex;
   if result < 1 then
      ScriptForm.Memo2.Lines.Add('Current mesh is not an atlas.');
 end;
 
-procedure ATLASGRAY(const Filt: array of integer);
+procedure ATLASGRAYBG(const Filt: array of integer);
 // ATLASGRAY([]);
 // ATLASGRAY([17, 22, 32]);
 var
@@ -171,7 +181,35 @@ begin
   GLForm1.GLboxRequestUpdate(nil);
 end;
 
-procedure ATLASHIDE(const Filt: array of integer);
+procedure ATLASGRAY(OVERLAY: integer; const Filt: array of integer);
+// ATLASGRAY([]);
+// ATLASGRAY([17, 22, 32]);
+var
+  i, maxROI: integer;
+begin
+  if (OVERLAY < 1) or (OVERLAY > kMaxOverlays) then begin
+     ATLASGRAYBG(FILT);
+     exit;
+  end;
+  maxROI := gMesh.overlay[OVERLAY].AtlasMaxIndex;
+  setlength(gMesh.overlay[OVERLAY].atlasTransparentFilter,0); //release
+  if (length(Filt) < 1) or (maxROI < 1) then begin
+     gMesh.isRebuildList:= true;
+     GLForm1.GLboxRequestUpdate(nil);
+     exit;
+  end;
+  //ScriptForm.Memo2.Lines.Add(inttostr(OVERLAY)+'F= '+inttostr(maxROI));
+  setlength(gMesh.overlay[OVERLAY].atlasTransparentFilter,maxROI+1);
+  for i := 0 to maxROI do
+      gMesh.overlay[OVERLAY].atlasTransparentFilter[i] := false;
+  for i := Low(Filt) to High(Filt) do
+      if (Filt[i] > 0) and (Filt[i] <= maxROI) then
+         gMesh.overlay[OVERLAY].atlasTransparentFilter[Filt[i]] := true;
+  gMesh.isRebuildList:= true;
+  GLForm1.GLboxRequestUpdate(nil);
+end;
+
+procedure ATLASHIDEBG(const Filt: array of integer);
 // http://rvelthuis.de/articles/articles-openarr.html
 // ATLASHIDE([]);
 // ATLASHIDE([17, 22, 32]);
@@ -186,6 +224,29 @@ begin
   end;
   for i := Low(Filt) to High(Filt) do
      gMesh.atlasHideFilter[i] := Filt[i];//ScriptForm.Memo2.Lines.Add('F= '+inttostr(Filt[i]));
+  gMesh.isRebuildList:= true;
+  GLForm1.GLboxRequestUpdate(nil);
+end;
+
+procedure ATLASHIDE(OVERLAY: integer; const Filt: array of integer);
+// http://rvelthuis.de/articles/articles-openarr.html
+// ATLASHIDE([]);
+// ATLASHIDE([17, 22, 32]);
+var
+  i: integer;
+begin
+  if (OVERLAY < 1) or (OVERLAY > kMaxOverlays) then begin
+     ATLASHIDEBG(FILT);
+     exit;
+  end;
+  setlength(gMesh.overlay[OVERLAY].atlasHideFilter, length(Filt));
+  if length(Filt) < 1 then begin //release filter
+    gMesh.isRebuildList:= true;
+    GLForm1.GLboxRequestUpdate(nil);
+    exit;
+  end;
+  for i := Low(Filt) to High(Filt) do
+     gMesh.overlay[OVERLAY].atlasHideFilter[i] := Filt[i];//ScriptForm.Memo2.Lines.Add('F= '+inttostr(Filt[i]));
   gMesh.isRebuildList:= true;
   GLForm1.GLboxRequestUpdate(nil);
 end;
@@ -243,8 +304,12 @@ begin
   ok := gMesh.LoadOverlay('',false);
   err := gMesh.errorString;
   if not ok then goto 123;
-  if STATNAME <> '' then
+  if STATNAME <> '' then begin
+    STATNAME := DefaultToHomeDir(STATNAME);
+    STATNAME := changefileext(STATNAME,'.mz3');
     gMesh.SaveOverlay(STATNAME, gMesh.OpenOverlays);
+    ScriptForm.Memo2.Lines.Add('Creating mesh '+STATNAME);
+  end;
   //err := gMesh.AtlasStatMapCore(AtlasName, StatName, idxs, intens);
   123:
   if err <> '' then //report error
@@ -488,6 +553,16 @@ begin
   GLForm1.NodePrefChange(nil);
 end;
 
+procedure NODETHRESHBYSIZENOTCOLOR (NodeThresholdBySize: boolean);
+begin
+  if NodeThresholdBySize then
+     GLForm1.NodeThreshDrop.ItemIndex := 0  //threshold by size
+  else
+      GLForm1.NodeThreshDrop.ItemIndex := 1; //threshold by color
+  GLForm1.NodeThreshDropChange(nil);
+
+end;
+
 procedure NODEHEMISPHERE(VAL: integer);
 begin
      if VAL < 0 then
@@ -513,6 +588,108 @@ begin
   GLForm1.edgeScaleTrack.Position := round(size * 10);
   GLForm1.EdgeSizeVariesCheck.checked := varies;
   GLForm1.NodePrefChange(nil);
+end;
+
+procedure EDGECREATE(filename: string; const mtx: array of single);
+var
+  n, i,j, k, nRow : integer;
+  fnm : string;
+  f : TextFile;
+begin
+    n := length(mtx);
+    nRow := round(sqrt(n));
+    if (n < 1) or ((nRow * nRow) <> n) then begin
+       ScriptForm.Memo2.Lines.Add('EDGECREATE expects a matrix that has a size of n*n. For example, a connectome with 3 nodes should have a matrix with 9 items.');
+       exit;
+    end;
+    //write output
+    if filename = '' then
+         fnm := 'surficeEdgeTemp.edge'
+    else
+      fnm := filename;
+    fnm := changeFileExt(fnm, '.edge');
+    fnm := DefaultToHomeDir(fnm);
+    AssignFile(f, fnm);
+    ReWrite(f);
+    WriteLn(f, '# created with Surf Ice EDGECREATE command');
+    k := 0;
+    for i := 0 to (nRow-1) do begin
+        for j := 0 to (nRow-1) do begin
+            if j < (nRow -1) then
+               Write(f, floattostr(mtx[k])+kTab)
+            else
+              Writeln(f, floattostr(mtx[k]));
+            inc(k);
+        end;
+    end;
+    CloseFile(f);
+    if not GLForm1.OpenEdge(fnm) then
+       ScriptForm.Memo2.Lines.Add('EDGECREATE Unable to load edge file named "'+fnm+'" (use nodecreate or nodeload first) ')
+    else
+        ScriptForm.Memo2.Lines.Add('EDGECREATE created "'+fnm+'"')
+end;
+
+procedure NODECREATE(filename: string; const x,y,z,clr,radius: array of single);
+var
+  n, i : integer;
+  fnm : string;
+  f : TextFile;
+  c,r: array of single;
+begin
+    n := length(x);
+    if (n < 1) or (n <> length(y)) or (n <> length(z)) then begin
+       ScriptForm.Memo2.Lines.Add('NODECREATE error: x,y,z must have same number of nodes');
+       exit;
+    end;
+    if (length(clr) > 1) and (length(clr) <> n) then begin
+       ScriptForm.Memo2.Lines.Add('NODECREATE error: color must have same number of items as x,y and z');
+       exit;
+    end;
+    if (length(radius) > 1) and (length(radius) <> n) then begin
+       ScriptForm.Memo2.Lines.Add('NODECREATE error: radius must have same number of items as x,y and z');
+       exit;
+    end;
+    //set color
+    setlength(c,n);
+    if length(clr) < 1 then
+         c[0] := 1
+    else
+      c[0] := clr[0];
+    if length(clr) = n then
+       for i := 0 to (n-1) do
+           c[i] := clr[i]
+    else
+        for i := 0 to (n-1) do
+            c[i] := c[0];
+    //set radius
+    setlength(r,n);
+    if length(radius) < 1 then
+         r[0] := 1
+    else
+      r[0] := radius[0];
+    if length(radius) = n then
+       for i := 0 to (n-1) do
+           r[i] := radius[i]
+    else
+        for i := 0 to (n-1) do
+            r[i] := r[0];
+    //write output
+    if filename = '' then
+         fnm := 'surficeNodeTemp.node'
+    else
+      fnm := filename;
+    fnm := changeFileExt(fnm, '.node');
+    fnm := DefaultToHomeDir(fnm);
+    AssignFile(f, fnm);
+    ReWrite(f);
+    WriteLn(f, '# created with Surf Ice NODECREATE command');
+    for i := 0 to (n-1) do
+          WriteLn(f, format('%g %g %g %g %g', [x[i], y[i], z[i], c[i], r[i]]));
+    CloseFile(f);
+    if not GLForm1.OpenNode(fnm) then
+       ScriptForm.Memo2.Lines.Add('NODECREATE Unable to load node named "'+fnm+'"')
+    else
+        ScriptForm.Memo2.Lines.Add('NODECREATE created "'+fnm+'"')
 end;
 
 procedure NODESIZE(size: single; varies: boolean);

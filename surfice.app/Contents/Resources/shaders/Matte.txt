@@ -1,9 +1,9 @@
 //pref
-Diffuse|float|0.0|0.7|1.4
-DiffuseRough|float|0.0|1|5
-Edge|float|0.0|0.7|1.4
-EdgePower|float|0.1|1.0|1.9
-Minimal edge shader. Copyright 2015 Chris Rorden, BSD2clause.|note
+Diffuse|float|0.0|0.5|1.4
+DiffuseRough|float|0.1|1|5
+Edge|float|0.0|0.5|1.4
+EdgeRough|float|0.1|1|5
+Two illumination sources: from camera position and light position.|note
 //vert
 #version 330
 layout(location = 0) in vec3 Vert;
@@ -31,17 +31,17 @@ out vec4 color;
 uniform float Diffuse = 0.7;
 uniform float DiffuseRough = 1.0;
 uniform float Edge = 1.0;
-uniform float EdgePower = 1.0;
+uniform float EdgeRough = 1.0;
 uniform vec4 ClipPlane = vec4(2.0, 0.0, 0.0, 0.0);
 
 void main() {
 	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
 	vec3 n = normalize(vN);
 	float lightNormDot = abs(dot(n,normalize(vV))); //with respect to viewer
-	lightNormDot = pow(lightNormDot, EdgePower);
+	lightNormDot = pow(lightNormDot, EdgeRough);
 	vec3 l = normalize(vL);
 	//float d = dot(n,l) * Diffuse;
-	float d = max(pow(max(dot( l, n), 0.0), DiffuseRough), 0.0) * Diffuse;
+	float d = pow(max(dot( l, n), 0.0), DiffuseRough) * Diffuse;
 	d = (lightNormDot*Edge) + d;
 	color = vec4(d * vClr.rgb, 1.0);
 }

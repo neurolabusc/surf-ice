@@ -200,6 +200,7 @@ type
     ObjectColorMenu: TMenuItem;
     OpenMenu: TMenuItem;
     procedure FormDestroy(Sender: TObject);
+    procedure NodeThreshDropChange(Sender: TObject);
     procedure ROImeshMenuClick(Sender: TObject);
     procedure StringGrid1MouseMove(Sender: TObject; Shift: TShiftState; X,
       Y: Integer);
@@ -602,13 +603,19 @@ begin
  if Filename = '' then exit;
   if not gNode.LoadFromFile(FileName) then exit;
  result := true;
-  gPrefs.PrevNodename := FileName;
- NodeMinEdit.value := gNode.nodePrefs.minNodeThresh;
- NodeMaxEdit.value := gNode.nodePrefs.maxNodeThresh;
- if gNode.NodePrefs.isNodeThresholdBySize then
-  NodeThreshDrop.ItemIndex := 0  //threshold by size
- else
+ gPrefs.PrevNodename := FileName;
+ NodeBox.Visible:= true;
+ if gNode.NodePrefs.isNodeThresholdBySize then begin
+  NodeThreshDrop.ItemIndex := 0;  //threshold by size
+  NodeMinEdit.Value:=gNode.NodePrefs.minNodeSize;
+  NodeMaxEdit.Value:=gNode.NodePrefs.maxNodeSize;
+ end else begin
    NodeThreshDrop.ItemIndex := 1; //threshold by color
+   NodeMinEdit.Value:=gNode.NodePrefs.minNodeColor;
+   NodeMaxEdit.Value:=gNode.NodePrefs.maxNodeColor;
+ end;
+ gNode.nodePrefs.minNodeThresh := NodeMinEdit.value;
+ gNode.nodePrefs.maxNodeThresh := NodeMaxEdit.value;
  edgename := ChangeFileExt(FileName, '.edge');
  if fileexists(edgename) then
     OpenEdge(edgename);
@@ -1958,6 +1965,9 @@ begin
      setlength(gMesh.atlasTransparentFilter,0);
      AdditiveOverlayMenu.Checked:= gPrefs.AdditiveOverlay;
      gPrefs.ObjColor:= RGBToColor(192,192,192);
+     //set nodes/edges
+     NodeScaleTrack.Position := 20;
+     EdgeScaleTrack.Position:= 37;
      //set tracks
      TrackLengthTrack.Position:= 20;
      TrackWidthTrack.Position := 2; ;  //12 for 666Demo
@@ -1970,6 +1980,7 @@ begin
      ClipAziTrack.Position := 180;
      ClipElevTrack.Position := 0;
      //set shaders
+     XRayBtn.Down := false;
      OcclusionTrack.Position := gPrefs.OcclusionAmount;
      MeshAlphaTrack.Position := 100;
      MeshBlendTrack.Position:= 0;
@@ -2312,6 +2323,19 @@ begin
  gClrBar.Free;
 end;
 
+procedure TGLForm1.NodeThreshDropChange(Sender: TObject);
+begin
+ if NodeThreshDrop.ItemIndex = 0 then begin
+    NodeMinEdit.Value:=gNode.NodePrefs.minNodeSize;
+    NodeMaxEdit.Value:=gNode.NodePrefs.maxNodeSize;
+ end else begin
+    NodeMinEdit.Value:=gNode.NodePrefs.minNodeColor;
+    NodeMaxEdit.Value:=gNode.NodePrefs.maxNodeColor;
+ end;
+  NodePrefChange(Sender);
+end;
+
+
 procedure TGLForm1.ROImeshMenuClick(Sender: TObject);
 const
  kRoiIntensityFilter = 'ROX Intensities|*.rox';
@@ -2406,7 +2430,7 @@ begin
      UpdateTimer.enabled := true;
      exit;
   end;
-  if (length(gShader.VertexProgram) > 0) then gTrack.isRebuildList:= true; //666Demo
+  if (length(gShader.VertexProgram) > 0) then gTrack.isRebuildList:= true;
   InitGLSL(false);
   origin := GetOrigin(scale);
   //glUseProgram(gShader.program3d);
@@ -3275,9 +3299,8 @@ procedure TGLForm1.NodePrefChange(Sender: TObject);
 var
   lo, hi: single;
 begin
-  gNode.nodePrefs.scaleNodeSize := NodeScaleTrack.Position / 10;
+ gNode.nodePrefs.scaleNodeSize := NodeScaleTrack.Position / 10;
   gNode.nodePrefs.nodeLUTindex := LUTdropNode.itemIndex;
-  //gNode.nodePrefs.isNodeSizeVaries := NodeSizeVariesCheck.checked;
   gNode.nodePrefs.isEdgeSizeVaries := EdgeSizeVariesCheck.checked;
   gNode.nodePrefs.isNodeColorVaries := NodeColorVariesCheck.checked;
   gNode.nodePrefs.isEdgeColorVaries := EdgeColorVariesCheck.checked;

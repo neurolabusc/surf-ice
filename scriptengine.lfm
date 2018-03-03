@@ -32,7 +32,6 @@ object ScriptForm: TScriptForm
     Width = 420
     Align = alClient
     Constraints.MinHeight = 3
-    Lines.Strings = (    )
     OnChange = Memo1Change
     OnClick = Memo1Click
     OnDragDrop = Memo1DragDrop
@@ -50,7 +49,6 @@ object ScriptForm: TScriptForm
     Width = 420
     Align = alBottom
     Constraints.MinHeight = 3
-    Lines.Strings = (    )
     ParentFont = False
     ScrollBars = ssVertical
     TabOrder = 1
@@ -139,6 +137,7 @@ object ScriptForm: TScriptForm
     end
     object Insert1: TMenuItem
       Caption = 'Insert'
+      OnClick = Insert1Click
       object MainImage1: TMenuItem
         Caption = 'Mesh'
         object meshload1: TMenuItem
@@ -242,6 +241,12 @@ object ScriptForm: TScriptForm
           Hint = 'EDGECOLOR(name: string; varies: boolean);'
           OnClick = InsertCommand
         end
+        object edgecreate1: TMenuItem
+          Tag = 1419
+          Caption = 'edgecreate'
+          Hint = 'procedure createedge(filename: string; const mtx: array of single); Create a connectome edge map. For example, if you have 3 nodes, mtx should be an array with 9 values (3*3). For example, edgecreate('''',[1,2,3, 2,4,5, 3,5,6]) creates the links between 3 regions. Note the lower triangle and diagonal of this matrix is ignored.'
+          OnClick = InsertCommand
+        end
         object edgesize1: TMenuItem
           Tag = 1311
           Caption = 'edgesize'
@@ -264,6 +269,12 @@ object ScriptForm: TScriptForm
           Tag = 1411
           Caption = 'nodecolor'
           Hint = 'NODECOLOR(name: string; varies: boolean); '
+          OnClick = InsertCommand
+        end
+        object nodecreate1: TMenuItem
+          Tag = 1459
+          Caption = 'nodecreate'
+          Hint = 'procedure nodecreate(filename: string; const x, y, z, color, radius: array of single); Generates and displays a connectome hub map. The arrays x,y,z refer to the 3D spatial coordinates. The optional color and radius arrays allow you to specify the size. For example nodecreate(''mynode.node'',[0, 10, 8], [9, 0, 8], [0, 9, 0], [], []) creates three spheres with the default size and color. On the other hand, nodecreate(''mynode.node'',[0, 10, 8], [9, 0, 8], [0, 9, 0], [1, 2, 9], [5]) creates three spheres each with a unique color intensity and with a size of 5.'
           OnClick = InsertCommand
         end
         object nodehemisphere1: TMenuItem
@@ -290,6 +301,12 @@ object ScriptForm: TScriptForm
           Hint = 'NODETHRESH (LO, HI: single); '
           OnClick = InsertCommand
         end
+        object nodethreshbysizenotcolor1: TMenuItem
+          Tag = 1
+          Caption = 'nodethreshbysizenotcolor'
+          Hint = 'NODETHRESHBYSIZENOTCOLOR (NodeThresholdBySize: boolean). If true then nodes will be hidden if they are smaller than the provided threshold. If false, they will be hidden if their color intensity is below the provided threshold.'
+          OnClick = InsertCommand
+        end
       end
       object Tracks1: TMenuItem
         Caption = 'Tracks'
@@ -303,6 +320,39 @@ object ScriptForm: TScriptForm
           Tag = 33
           Caption = 'trackprefs'
           Hint = 'TRACKPREFS(lLength,lWidth,lDither: single);'
+          OnClick = InsertCommand
+        end
+      end
+      object Atlas1: TMenuItem
+        Caption = 'Atlas'
+        object atlasgray1: TMenuItem
+          Tag = 1218
+          Caption = 'atlasgray'
+          Hint = 'procedure atlashide(overlay: integer; const filt: array of integer); Hide atlas areas. For example atlashide(0,[3,7]) will hide the areas 3 and 7 of the background atlas. On the other hand, atlashide(1,[2,5]) will hide areas 2 and 5 of the first overlay image. For example atlashide(0,[3,7]) will gray the areas 3 and 7 of the background atlas. On the other hand, atlashide(1,[2,5]) will gray areas 2 and 5 of the first overlay image.'
+          OnClick = InsertCommand
+        end
+        object atlashide1: TMenuItem
+          Tag = 1218
+          Caption = 'atlashide'
+          Hint = 'procedure atlashide(overlay: integer; const filt: array of integer); Hide atlas areas. For example atlashide(0,[3,7]) will hide the areas 3 and 7 of the background atlas. On the other hand, atlashide(1,[2,5]) will hide areas 2 and 5 of the first overlay image.'
+          OnClick = InsertCommand
+        end
+        object atlasmaxindex1: TMenuItem
+          Tag = 2
+          Caption = 'atlasmaxindex'
+          Hint = 'function ATLASMAXINDEX(OVERLAY: integer): integer; Reports maximum region humber in specified atlas. For example, if you load the CIT168 atlas (which has 15 regions) as your background image, then atlasmaxindex(0) will return 15.'
+          OnClick = InsertCommand
+        end
+        object atlassaturationalpha1: TMenuItem
+          Tag = 23
+          Caption = 'atlassaturationalpha'
+          Hint = 'procedure atlassaturationalpha(saturation, transparency: single); Set saturation and transparency of atlas. A desaturated atlas will appear gray, a transparent atlas will reveal the background color.'
+          OnClick = InsertCommand
+        end
+        object atlasstatmap1: TMenuItem
+          Tag = 241819
+          Caption = 'atlasstatmap'
+          Hint = 'procedure atlasstatmap(atlasname, statname: string; const indices: array of integer; const intensities: array of single); This creates a new mesh, where indexed regions are saved having the corresponding brightness from the array ''indices''. For example atlasstatmap(''jhu.mz3'','''',[1,3,9],[1.1, 4.4, 2.4]) creates a mesh where regions 1, 3, and 9 are given values 1.1, 4.4 and 2.4. If statname is provided, a mesh will be saved to disk, e.g. atlasstatmap(''jhu.mz3'',''out.mz3'',[1,3,9],[1.1, 4.4, 2.4]). nb this function is for creating maps, you can load them with loadmesh() and loadoverlay(). '
           OnClick = InsertCommand
         end
       end

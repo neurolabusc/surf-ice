@@ -1,0 +1,36 @@
+//pref
+Diffuse|float|0.0|0.5|1.4
+DiffuseRough|float|0.1|1|5
+Edge|float|0.0|0.5|1.4
+EdgeRough|float|0.1|1|5
+Two illumination sources: from camera position and light position.|note
+//vert
+varying vec3 vN, vV, vL;
+varying vec4 vP, vClr;
+
+void main()
+{
+    vN = normalize(gl_NormalMatrix * gl_Normal);
+    vV = -vec3(gl_ModelViewMatrix*gl_Vertex);
+    vL = normalize(gl_LightSource[0].position.xyz);
+    vP = gl_Vertex;
+    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+    vClr = gl_Color;
+}
+//frag
+uniform float Diffuse, DiffuseRough, Edge, EdgeRough;
+uniform vec4 ClipPlane;
+varying vec3 vN, vV, vL;
+varying vec4 vP, vClr;
+
+void main() {
+	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
+	vec3 n = normalize(vN);
+	float lightNormDot = abs(dot(n,normalize(vV))); //with respect to viewer
+	lightNormDot = pow(lightNormDot, EdgeRough);
+	vec3 l = normalize(vL);
+	//float d = dot(n,l) * Diffuse;
+	float d = pow(max(dot( l, n), 0.0), DiffuseRough)* Diffuse;
+	d = (lightNormDot*Edge) + d;
+	gl_FragColor = vec4(d * vClr.rgb, 1.0);
+}

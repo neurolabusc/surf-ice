@@ -8,15 +8,15 @@ BEGIN
 	RESETDEFAULTS;
 	AZIMUTHELEVATION(240, 15);
 	MESHLOAD(atlasName);
-	n := ATLASMAXINDEX;
+	n := ATLASMAXINDEX(0);
 	for i := n downto 1 do begin
 		setlength(msk, i);
 		for j := 1 to i do
 			msk[j-1] := j;
-		ATLASHIDE(msk);
+		ATLASHIDE(0,msk);
 		wait(1);
 	end;
-	ATLASHIDE([]); //show everything
+	ATLASHIDE(0,[]); //show everything
 END.
 
 

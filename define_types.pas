@@ -44,6 +44,7 @@ type
  TFaces = array of TPoint3i;
  TVertices = array of TPoint3f;
  TVertexRGBA = array of TRGBA;
+ TBools = array of boolean;
  TInts = array of integer;
  TFloats = array of single;
  TMat33 = array [1..3, 1..3] of single;

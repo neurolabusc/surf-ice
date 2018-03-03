@@ -177,7 +177,6 @@ begin
   end;
   //glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
   glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GLint(GL_FALSE));
-
   glEnable(GL_LIGHTING);
   glEnable(GL_LIGHT0);
   glLightfv(GL_LIGHT0, GL_AMBIENT, @KaRGB);
@@ -305,7 +304,6 @@ begin
  end;
  if  (length(lMesh.faces) > 0) then begin
     lMesh.isVisible := isDrawMesh;
-
     RunMeshGLSL (ClipPlane,  false);
     if not isOverlayClipped then
        lMesh.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W),isFlipMeshOverlay )
@@ -314,7 +312,6 @@ begin
     lMesh.isVisible := true;
  end;
 end; //DrawScene
-
 
 function BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA): GLuint;
 var

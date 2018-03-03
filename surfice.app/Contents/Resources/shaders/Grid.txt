@@ -38,7 +38,6 @@ uniform float Specular = 0.2;
 uniform float Shininess = 60.0;
 uniform float GridSpacing = 0.3;
 uniform float WireWidth = 0.2;
-uniform float Offset = 0.2;
 uniform bool xGrid = true;
 uniform bool yGrid = true;
 uniform bool zGrid = true;
@@ -47,7 +46,7 @@ uniform vec4 ClipPlane = vec4(2.0, 0.0, 0.0, 0.0);
 void main() {
 	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
 	float W = pow(GridSpacing, 4.0);
-	float o = Offset * W;
+	float o = W * WireWidth * 0.5;
 	float xDx = mod(vP.x + o, W);
 	float yDx = mod(vP.y + o, W);
 	float zDx = mod(vP.z + o, W);

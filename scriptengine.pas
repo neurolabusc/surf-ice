@@ -39,6 +39,15 @@ type
     Close1: TMenuItem;
     camerapan1: TMenuItem;
     MenuItem2: TMenuItem;
+    Atlas1: TMenuItem;
+    atlasstatmap1: TMenuItem;
+    atlassaturationalpha1: TMenuItem;
+    atlashide1: TMenuItem;
+    atlasgray1: TMenuItem;
+    edgecreate1: TMenuItem;
+    atlasmaxindex1: TMenuItem;
+    nodethreshbysizenotcolor1: TMenuItem;
+    nodecreate1: TMenuItem;
     overlaysmoothvoxelwisedata1: TMenuItem;
     overlaytranslucent1: TMenuItem;
     meshcurv1: TMenuItem;
@@ -130,6 +139,7 @@ type
     procedure FormDeactivate(Sender: TObject);
     procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
     procedure FormHide(Sender: TObject);
+    procedure Insert1Click(Sender: TObject);
     procedure Memo1DragDrop(Sender, Source: TObject; X, Y: Integer);
     procedure ReportCaretPos;
     procedure FormCreate(Sender: TObject);
@@ -329,6 +339,11 @@ begin
     {$IFDEF Darwin}Application.MainForm.SetFocus;{$ENDIF}
 end;
 
+procedure TScriptForm.Insert1Click(Sender: TObject);
+begin
+
+end;
+
 procedure TScriptForm.Memo1DragDrop(Sender, Source: TObject; X, Y: Integer);
 begin
   //
@@ -395,7 +410,6 @@ begin
   FillMRU (gPrefs.PrevScriptName, ScriptDir+pathdelim,kScriptExt,True);
   //FillMRU (gPrefs.PrevScriptName, ScriptDir+pathdelim,kScriptExt,False);
   UpdateSMRU;
-
   OpenDialog1.InitialDir := ScriptDir;
   SaveDialog1.InitialDir := ScriptDir;
  {$IFDEF Darwin}
@@ -614,6 +628,9 @@ begin
               lStr := lStr +'255';
             end;
         7: lStr := lStr +'5';//kludge - make integer where 1 is not a good default, e.g. shaderquality
+        8: lStr := lStr +'[1, 2, 4]';
+        9: lStr := lStr +'[1.1, 2.5, 4.2]';
+
         else lStr := lStr + '''?''';
       end;//case
       if lLoop < n then
