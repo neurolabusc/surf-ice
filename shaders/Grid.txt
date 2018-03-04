@@ -1,0 +1,67 @@
+//pref
+Ambient|float|0.0|0.5|1
+Diffuse|float|0.0|0.7|1
+Specular|float|0.0|0.2|1
+GridSpacing|float|0.01|2|5
+WireWidth|float|0.01|0.15|1.0
+xGrid|bool|true
+yGrid|bool|true
+zGrid|bool|true
+Blinn-Phong shading with Lambertian diffuse. Copyright 2015 Chris Rorden, BSD2clause.|note
+//vert
+#version 330
+layout(location = 0) in vec3 Vert;
+layout(location = 3) in vec3 Norm;
+layout(location = 6) in vec4 Clr;
+out vec3 vN, vL, vV;
+out vec4 vClr, vP;
+uniform mat4 ModelViewProjectionMatrix;
+uniform mat4 ModelViewMatrix;
+uniform mat3 NormalMatrix;
+uniform vec3 LightPos = vec3(0.0, 20.0, 30.0); //LR, -DU+, -FN+
+void main() {
+    vN = normalize((NormalMatrix * Norm));
+    vP = vec4(Vert, 1.0);
+    gl_Position = ModelViewProjectionMatrix * vec4(Vert, 1.0);
+    vL = normalize(LightPos);
+    vV = -vec3(ModelViewMatrix*vec4(Vert,1.0));
+    vClr = Clr;
+}
+//frag
+#version 330
+in vec4 vClr, vP;
+in vec3 vN, vL, vV;
+out vec4 color;
+uniform float Ambient = 0.6;
+uniform float Diffuse = 0.7;
+uniform float Specular = 0.2;
+uniform float Shininess = 60.0;
+uniform float GridSpacing = 0.3;
+uniform float WireWidth = 0.2;
+uniform bool xGrid = true;
+uniform bool yGrid = true;
+uniform bool zGrid = true;
+uniform vec4 ClipPlane = vec4(2.0, 0.0, 0.0, 0.0);
+
+void main() {
+	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
+	float W = pow(GridSpacing, 4.0);
+	float o = W * WireWidth * 0.5;
+	float xDx = mod(vP.x + o, W);
+	float yDx = mod(vP.y + o, W);
+	float zDx = mod(vP.z + o, W);
+	if (!xGrid) xDx = W;
+	if (!yGrid) yDx = W;
+	if (!zGrid) zDx = W;
+	float minDx = min(min(xDx, yDx), zDx);
+	if ( ( W * WireWidth) < minDx) discard;
+	vec3 l = normalize(vL);
+	vec3 n = normalize(vN);
+	vec3 h = normalize(l+normalize(vV));
+	vec3 backcolor = Ambient * vec3(0.1+0.1+0.1) + vClr.rgb * abs(dot(n,l)) * Diffuse;
+	vec3 a = vClr.rgb * Ambient;
+	vec3 d = vClr.rgb * dot(n,l) * Diffuse;
+	float s = pow(max(0.0,dot(n,h)), Shininess) * Specular;
+	float backface = step(0.00, n.z);
+	color = vec4(mix(backcolor.rgb, a + d + s,  backface), 1.0);
+}
