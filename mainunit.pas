@@ -1552,7 +1552,7 @@ begin
  for lIndex := 1 to gMesh.OpenOverlays do begin
    GLForm1.StringGrid1.Cells[kFName, lIndex] := gMesh.Overlay[lIndex].FileName;
     GLForm1.StringGrid1.Cells[kLUT, lIndex] := GLForm1.LutDrop.Items[gMesh.Overlay[lIndex].LUTindex];
-    if (length(gMesh.Overlay[lIndex].vertexRGBA) .MaxValue> 0) then
+    if (gMesh.Overlay[lIndex].atlasMaxIndex > 0) then
        GLForm1.StringGrid1.Cells[kLUT, lIndex] := 'Atlas';
     OverlayBox.Height :=  2+ ( (2+gMesh.OpenOverlays)*(StringGrid1.DefaultRowHeight+1));
     StringGrid1.Cells[kMin,lIndex] := float2str(gMesh.Overlay[lIndex].WindowScaledMin,3);//FloatToStrF(gMesh.Overlay[lIndex].WindowScaledMin, ffGeneral, 8, 4);
