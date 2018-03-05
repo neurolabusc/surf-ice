@@ -12,13 +12,26 @@ vertRGB = [1 0 0; 0 1 0; 0 0 0; 0 0 1; 1 0 1; 1 1 1];
 vertRGBA = [vertRGB, ones(size(vertRGB,1),1)];
 %vertex intensity
 inten = [1 2 3 4 5 6]';
-%patch('Vertices',vert,'Faces',face,'FaceVertexCData',clrs, 'facealpha',alph, 'facecolor','interp','facelighting','phong'); view(3); axis vis3d;
+%display results:
 patch('Faces',face,'Vertices',vert,'FaceVertexCData',vertRGB, 'FaceColor','interp'); view(3); axis vis3d;
-writeMz3Sub('3mesh.mz3', face, vert);
-writeMz3Sub('7coloredmesh.mz3', face, vert, vertRGB);
-writeMz3Sub('8scalar.mz3', [], [],inten);
-writeMz3Sub('11scalarmesh.mz3', face, vert,inten);
-writeMz3Sub('15templatemesh.mz3', face, vert,[vertRGBA, inten]);
+writeMz3Sub('3Mesh.mz3', face, vert);
+writeMz3Sub('7ColoredMeshPerVertex.mz3', face, vert, vertRGB);
+writeMz3Sub('8Scalar.mz3', [], [],inten);
+writeMz3Sub('11ScalarMesh.mz3', face, vert,inten);
+writeMz3Sub('15TemplateMesh.mz3', face, vert,[vertRGBA, inten]);
+%per face colors
+vert = [1 0 0; 0 1 0; 0 0 1; ...
+        0 1 0; -1 0 0; 0 0 1; ...
+        -1 0 0; 0 -1 0; 0 0 1; ...
+        0 -1 0; 1 0 0; 0 0 1; ...
+        0 1 0; 1 0 0; 0 0 -1; ...
+        -1 0 0; 0 1 0; 0 0 -1; ...
+        0 -1 0; -1 0 0; 0 0 -1; ...
+        1 0 0; 0 -1 0; 0 0 -1];
+face = reshape(1:24,3,8)';
+vertRGB = [1 0 0; 0 1 0; 0 0 0; 0 0 1; 1 0 1; 1 1 1; 0 1 1; 1 1 0];
+vertRGB = kron(vertRGB,ones(3,1));
+writeMz3Sub('7ColoredMeshPerFace.mz3', face, vert, vertRGB);
 %end mz3_demo()
 
 function writeMz3Sub(filename, face, vertex,vertexColors,alpha, compress)
