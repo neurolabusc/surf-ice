@@ -3325,7 +3325,10 @@ begin
             mStream.Write(bytes[0],i) ;
      until i < kChunkSize;
      zStream.Free;
-     if mStream.Size < 72 then exit; //6 item header, 3 vertices (3 values, XYZ), 1 face (3 indices) each 4 bytes
+     if mStream.Size < 28 then begin
+       //showmessage('MZ3 file too small'+inttostr(mStream.Size));
+       exit; //16 byte header, 3 vertices, single 4-byte scalar per vertex vertices
+     end;
      mStream.Position := 0;
      mStream.Read(Magic,2);
      mStream.Read(Attr,2);
@@ -5955,7 +5958,7 @@ begin
   end;
   if (ext = '.MZ3') then begin
      if not LoadMz3(FileName, OpenOverlays) then begin //unable to open as an overlay - perhaps vertex colors?
-        OpenOverlays := OpenOverlays - 1;
+       OpenOverlays := OpenOverlays - 1;
         exit;
      end;
   end;
