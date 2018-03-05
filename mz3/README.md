@@ -79,7 +79,7 @@ Faces indexed from 0: a triangle of the first 3 vertices is  0,1,2
 ## Examples
 
 The included Matlab script `demo_mz3.m` will generate a series of simple mz3 files to demonstrate the properties of the format. These meshes are inspired by these [ascii meshes](https://brainder.org/2011/09/25/braindering-with-ascii-files/).
--`3mesh.mz3` a mesh defined by vertices and faces, but no colors. ATTR: isFACE(+1), isVERT(+2).
--`7coloredmesh.mz3` a mesh defined by vertices, faces, and vertex colors. ATTR: isFACE(+1), isVERT(+2), isRGBA(+4).
--`8scalar.mz3` a file that stores scalar values only: requires a mesh to infer geometry. ATTR: isSCALAR(+8).
--`15templatemesh.mz3` a mesh defined by vertices and faces, colors and scalars. As described in the specification, this is assumed to be a template mesh. ATTR: isFACE(+1), isVERT(+2), isRGBA(+4), isSCALAR(+8).
+ - `3mesh.mz3` a mesh defined by vertices and faces, but no colors. ATTR: isFACE(+1), isVERT(+2).
+ - `7coloredmesh.mz3` a mesh defined by vertices, faces, and vertex colors. ATTR: isFACE(+1), isVERT(+2), isRGBA(+4).
+ - `8scalar.mz3` a file that stores scalar values only: requires a mesh to infer geometry. ATTR: isSCALAR(+8).
+ - `15templatemesh.mz3` a mesh defined by vertices and faces, colors and scalars. As described in the specification, this is assumed to be a template mesh. ATTR: isFACE(+1), isVERT(+2), isRGBA(+4), isSCALAR(+8).
