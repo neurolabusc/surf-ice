@@ -83,3 +83,8 @@ The included Matlab script `demo_mz3.m` will generate a series of simple mz3 fil
  - `7coloredmesh.mz3` a mesh defined by vertices, faces, and vertex colors. ATTR: isFACE(+1), isVERT(+2), isRGBA(+4).
  - `8scalar.mz3` a file that stores scalar values only: requires a mesh to infer geometry. ATTR: isSCALAR(+8).
  - `15templatemesh.mz3` a mesh defined by vertices and faces, colors and scalars. As described in the specification, this is assumed to be a template mesh. ATTR: isFACE(+1), isVERT(+2), isRGBA(+4), isSCALAR(+8).
+
+## Implementations
+
+ - [MRIcroS](https://github.com/bonilhamusclab/MRIcroS) can read, write and visualize MZ3 meshes. The Matlab scripts [writeMz3.m](https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bmz3/writeMz3.m) and [readMz3.m](https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bmz3/readMz3.m) handle the MZ3 format.
+ - [Surfice](https://www.nitrc.org/plugins/mwiki/index.php/surfice:MainPage) can read, write and visualize MZ3 meshes. The Pascal functions [loadMz3 and saveMz3](https://github.com/neurolabusc/surf-ice/blob/master/mesh.pas) handle the MZ3 format.
