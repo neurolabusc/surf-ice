@@ -47,59 +47,6 @@ function writeMz3Sub(filename, face, vertex,vertexColors,alpha, compress)
 %Example
 % [f,v,c] = fileUtils.ply.readPly('stroke.ply');
 % fileUtils.mz3.writeMz3('stroke.mz3',f,v,c)
-%MZ3 format specifications:
-%  Faces indexed from 0: a triangle of the first 3 vertices is  0,1,2
-%  Always LITTLE endian
-%  First two bytes are a signature for detecting format, next two bytes reveal features and version
-%  Optionally: may be GZ compressed (read first two bytes to detect: GZip = 0x1f8B, raw = 0x4D5A )
-% HEADER: first 16 bytes
-%  bytes : type : notes
-%  0-1: UINT16 : MAGIC signature hex = 0x4D5A integer = 23117, ASCII = 'MZ'
-%  2-3: UINT16 : ATTR attributes bitfield reporting stored data (value larger than 15 indicates future version):
-%        bitand(ATTR,1) = 1 : isFACE File includes FACE indices
-%        bitand(ATTR,2) = 2 : isVERT File includes VERT vertices
-%        bitand(ATTR,4) = 4 : isRGBA File includes RGBA values (one per vertex)
-%        bitand(ATTR,8) = 8 : isSCALAR File includes SCALAR values (one per vertex)
-%  4-7: UINT32 : NFACE number of faces (one face per triangle)
-%  8-11: UINT32 : NVERT number of vertices
-%  12-15: UINT32 : NSKIP bytes to skip (0 for current version)
-% The header is 16+NSKIP bytes long
-% Note: for better compression integer data is transposed (interleaved)
-%  FACE DATA: if isFACE, next 12*NFACE bytes
-%   +0..3: INT32 : 1st index of 1st triangle
-%   +0..3: INT32 : 1st index of 2nd triangle
-%   +0..3: INT32 : 1st index of 3rd triangle
-%    ....
-%   ++     INT32 : 3rd index of NVERT triangle
-%  VERTEX DATA: if isVERT, next 12*NVERT bytes
-%   +0..3: FLOAT32 : X of first vertex
-%   +4..7: FLOAT32 : Y of first vertex
-%   +8..11: FLOAT32 : Z of first vertex
-%   +12..15: FLOAT32 : X of second vertex
-%    ....
-%   ++     INT32 : Z of NVERT triangle
-%  RGBA DATA: if isRGBA next 4*NVERT bytes
-%   +0: UINT8: red for first vertex
-%   +1: UINT8: red for 2nd vertex
-%   ...
-%   ++  UINT8 : red for NVERT vertex
-%   ++: UINT8: green for first vertex
-%   ++: UINT8: green for 2nd vertex
-%   ...
-%   ++  UINT8 : green for NVERT vertex
-%   ++: UINT8: blue for first vertex
-%   ++: UINT8: blue for 2nd vertex
-%   ...
-%   ++  UINT8 : blue for NVERT vertex
-%   ++: UINT8: alpha for first vertex
-%   ++: UINT8: alpha for 2nd vertex
-%   ...
-%   ++     UINT8 : alpha for NVERT vertex
-%  SCALAR DATA: if isSCALAR next 4*NVERT bytes
-%   +0..3: FLOAT32: intensity for first vertex
-%   +4..7: FLOAT32: intensity for 2nd vertex
-%   +8..11: FLOAT32: intensity for 3rd vertex
-%   ...
 
 if ~exist('vertexColors','var'), vertexColors = []; end;
 if ~exist('alpha','var'), alpha = []; end;

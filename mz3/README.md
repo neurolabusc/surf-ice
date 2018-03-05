@@ -55,19 +55,10 @@ Faces indexed from 0: a triangle of the first 3 vertices is  0,1,2
    ++     INT32 : Z of NVERT triangle
   RGBA DATA: if isRGBA next 4*NVERT bytes
    +0: UINT8: red for first vertex
-   +1: UINT8: red for 2nd vertex
-   ...
-   ++  UINT8 : red for NVERT vertex
-   ++: UINT8: green for first vertex
-   ++: UINT8: green for 2nd vertex
-   ...
-   ++  UINT8 : green for NVERT vertex
-   ++: UINT8: blue for first vertex
-   ++: UINT8: blue for 2nd vertex
-   ...
-   ++  UINT8 : blue for NVERT vertex
-   ++: UINT8: alpha for first vertex
-   ++: UINT8: alpha for 2nd vertex
+   +1: UINT8: green for first vertex
+   +2: UINT8: blue for first vertex
+   +3: UINT8: alpha for first vertex
+   +4: UINT8: red for 2nd vertex
    ...
    ++     UINT8 : alpha for NVERT vertex
   SCALAR DATA: if isSCALAR next 4*NVERT bytes
@@ -75,6 +66,7 @@ Faces indexed from 0: a triangle of the first 3 vertices is  0,1,2
    +4..7: FLOAT32: intensity for 2nd vertex
    +8..11: FLOAT32: intensity for 3rd vertex
    ...
+   ++     FLOAT32: intensity for NVERT vertex
 ```
 
 ## Examples
