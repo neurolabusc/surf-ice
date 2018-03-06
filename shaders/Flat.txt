@@ -42,13 +42,11 @@ void main() {
 	vec3 l = normalize(vL);
 	vec3 n = normalize(vN);
 	vec3 h = normalize(l+normalize(vV));
-	vec3 a = vClr.rgb;
-	vec3 d = a;
 	if (LightBackfaces)
 		n = (dot(n,vV) < 0.0) ? -n : n; //double sided light
-	float diff = dot(n,l);
+	float diff = max(0.0, dot(n,l));
 	float spec = pow(max(0.0,dot(n,h)), Shininess);
-	vec3 backcolor = Ambient*vec3(0.1+0.1+0.1) + d*abs(diff)*Diffuse;
+	vec3 backcolor = Ambient*vec3(0.1+0.1+0.1) + vClr.rgb*abs(diff)*Diffuse;
 	float backface = step(0.00, n.z);
-	color = vec4(mix(backcolor.rgb, a*Ambient + d*diff*Diffuse + spec*Specular,  backface), 1.0);
+	color = vec4(mix(backcolor.rgb, vClr.rgb*Ambient + vClr.rgb*diff*Diffuse + spec*Specular,  backface), 1.0);
 }

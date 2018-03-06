@@ -3386,7 +3386,6 @@ end; // LoadMz3Core()
 function TMesh.LoadMz3(const FileName: string; lOverlayIndex : integer): boolean;
 var
   floats: TFloats;
-  //vtxRGBA: TVertexRGBA;
   i: integer;
 begin
   if lOverlayIndex < 1 then begin //save main image
@@ -3394,20 +3393,25 @@ begin
      if not result then exit;
      if (length(Faces) < 1) and (length(floats) > 0) then
         Showmessage('Please load mesh (using File/Open) BEFORE loading the overlay (using Overlay/Add).')
-     else if  (length(floats) > 0) then
-        Showmessage('Scalar meshes are usually overlays, not background images (hint use Overlay/Add to load this image again).');
+     else if  (length(floats) > 0) then begin
+          if OpenOverlays < kMaxOverlays then begin
+             OpenOverlays := OpenOverlays + 1;
+             setlength(Overlay[OpenOverlays].intensity, length(vertices));
+             Overlay[OpenOverlays].intensity := copy(floats, 0, maxint);
+             Overlay[OpenOverlays].LUTindex := OpenOverlays;
+             Overlay[OpenOverlays].filename  := ExtractFilename(FileName);
+             SetOverlayDescriptives(OpenOverlays);
+             //Showmessage('>>>'+inttostr(OpenOverlays));
+          end else //will never happen: we close all overlays when we open a mesh
+             Showmessage('Too many overlays open to show the intensity map.');
+     end;
      setlength(floats,0);
      exit;
   end;
   //otherwise, load overlay
-  //result := LoadMz3Core(Filename, Overlay[lOverlayIndex].Faces,Overlay[lOverlayIndex].Vertices,vtxRGBA,Overlay[lOverlayIndex].intensity);
-  //setlength(vtxRGBA,0);
   result := LoadMz3Core(Filename, Overlay[lOverlayIndex].Faces,Overlay[lOverlayIndex].Vertices,Overlay[lOverlayIndex].vertexRGBA,Overlay[lOverlayIndex].intensity,Overlay[lOverlayIndex].vertexAtlas, overlay[lOverlayIndex].atlasMaxIndex);
   if (length(Overlay[lOverlayIndex].vertexRGBA) > 0) and (length(Overlay[lOverlayIndex].intensity) > 0) then //template with BOTH intensity and RGBA: give precedence to RGBA
      setlength(Overlay[lOverlayIndex].intensity,0);
-  //if (length(Overlay[lOverlayIndex].vertexRGBA) > 0) then
-  //   for i := 0 to (length(Overlay[lOverlayIndex].vertexRGBA)-1) do
-  //       vertexRGBA[lOverlayIndex].A := 192;
   if not result then exit;
   if (length(Overlay[lOverlayIndex].Vertices) < 3) and (length(Overlay[lOverlayIndex].intensity) > 0) and (length(overlay[lOverlayIndex].intensity)  <> length(Vertices)) then begin
      showmessage(format('This overlay has a different number of vertices (%d) than the background mesh (%d).', [length(overlay[lOverlayIndex].intensity), length(Vertices) ]));
@@ -6034,7 +6038,6 @@ begin
      Overlay[OpenOverlays].windowScaledMin:= 0.0;//-0.1;
      Overlay[OpenOverlays].windowScaledMax := 0.8;
   end;
-
   Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex, Overlay[OpenOverlays].LUTinvert); //set color scheme
   isRebuildList := true;
   //showmessage(format('%d %d', [length(Overlay[OpenOverlays].intensity), length(Overlay[OpenOverlays].vertices) ]));

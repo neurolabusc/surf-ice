@@ -870,12 +870,17 @@ begin
   end;
   OpenDialog.InitialDir:= ExtractFileDir(Filename);
   UpdateToolbar;
+  if gMesh.OpenOverlays > 0 then begin //e.g. MZ3 with both MESH and SCALAR intensity
+    StringGrid1.RowCount := gMesh.OpenOverlays+1;
+    UpdateOverlaySpread;
+  end;
   AddMRU(Filename);
   //if gMesh.isFreeSurferMesh then begin
-     curvname := changefileext(Filename, '.curv');
-     if fileexistsF(curvname) then
-        OpenOverlay(curvname);
+  curvname := changefileext(Filename, '.curv');
+  if fileexistsF(curvname) then
+     OpenOverlay(curvname);
   //end;
+
   GLBoxRequestUpdate(nil);
 end;
 

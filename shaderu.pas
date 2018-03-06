@@ -4,7 +4,7 @@ unit shaderu;
 {$D-,O+,Q-,R-,S-}
 interface
 uses
- {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, glext, {$ENDIF}  {$ENDIF DGL}
+ {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, glext, {$IFDEF GEOM_GLEXT}glext2, {$ENDIF} {$ENDIF}  {$ENDIF DGL}
   {$IFDEF COREGL} gl_core_3d, {$ELSE} gl_legacy_3d, {$ENDIF}
   sysutils,dialogs, define_types,  userdir, StrUtils;
 const

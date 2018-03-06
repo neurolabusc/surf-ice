@@ -7,6 +7,7 @@ function mz3_demo
 vert = [1 0 0; 0 1 0; 0 0 1; -1 0 0; 0 -1 0; 0 0 -1];
 %definition of faces from vertex index (1st vertex is 1)
 face = [1 2 3; 2 4 3; 4 5 3; 5 1 3; 2 1 6; 4 2 6; 5 4 6; 1 5 6];
+%face = [1 2 3; 2 4 3; 4 5 3; 5 1 3; 2 6 1; 4 6 2; 5 6 4; 1 6 5];
 %vertex colors RGB triplet for each vertex
 vertRGB = [1 0 0; 0 1 0; 0 0 0; 0 0 1; 1 0 1; 1 1 1];
 vertRGBA = [vertRGB, ones(size(vertRGB,1),1)];
