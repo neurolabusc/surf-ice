@@ -92,14 +92,20 @@ function asRGBA(clr: TColor): TRGBA;
 implementation
 
 uses
-  {$IFNDEF UNIX} windows, {$ENDIF}
-  sysutils, math;//, dialogs;
+  {$IFDEF UNIX} BaseUnix, {$ELSE} windows, {$ENDIF}
+  sysutils, math;
 
 function FileExistsF(fnm: string): boolean; //returns false if file exists but is directory
 begin
      result := FileExists(fnm);
      if result = false then exit;
      result := not DirectoryExists(fnm);
+     {$IFDEF UNIX}
+     if result = false then exit;
+     //showmessage(fnm + inttostr( fpAccess (fnm,R_OK)));
+     if fpAccess(fnm,R_OK) < 0 then
+        result := false;
+     {$ENDIF}
 end;
 
 function DefaultToHomeDir(FileName: string): string; //set path to home if not provided

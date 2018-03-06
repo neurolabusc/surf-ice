@@ -485,7 +485,7 @@ begin
     lOK := 0;
     for lI := 1 to knMRU do begin
       IniStr(lRead,lIniFile,lIdent+inttostr(lI),lStr);
-      if (length(lStr) > 0) and (fileexists(lStr)) and (Novel) then begin
+      if (length(lStr) > 0) and (fileexistsF(lStr)) and (Novel) then begin
 		    inc(lOK);
 		    lMRU[lOK] := lStr;
       end else
@@ -496,7 +496,7 @@ begin
       while (lOK < knMRU) and (lI < kNumDefaultMesh) do begin
         lI := lI + 1;
         lStr := DefaultMeshName(lI, lPrefs, lOK = 0);
-        if (length(lStr) > 0) and (fileexists(lStr)) and (Novel) then begin
+        if (length(lStr) > 0) and (fileexistsF(lStr)) and (Novel) then begin
 		    inc(lOK);
 		    lMRU[lOK] := lStr;
         end;
@@ -590,7 +590,7 @@ begin
   if (lRead) then
     SetDefaultPrefs (lPrefs, true, not Fileexists(lFilename));
   if (not lRead) and (lPrefs.SkipPrefWriting) then exit;
-  if (lRead) and (not Fileexists(lFilename)) then
+  if (lRead) and (not FileexistsF(lFilename)) then
         exit;
   lIniFile := TIniFile.Create(lFilename);
   IniBool(lRead,lIniFile, 'MultiSample',lPrefs.MultiSample);

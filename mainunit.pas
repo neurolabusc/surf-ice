@@ -3709,6 +3709,7 @@ begin
      end; //length > 1 char
      inc(i);
    end; //for each parameter
+
   //writeln('OK'+inttostr(ParamCount)+ ' *' + gPrefs.initScript+'*' );
   //launch program
   CreateMRU;
