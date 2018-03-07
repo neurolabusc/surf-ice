@@ -530,6 +530,7 @@ var
    i, bytesHdrImg, nNotes: integer;
 begin
   result := false;
+  FileMode := fmOpenRead;
   {$I-}
   AssignFile(lHdrFile, fname);
   FileMode := 0;  //Set file access to read only
@@ -616,6 +617,7 @@ var
   m: mat44;
 begin
   result := false;
+  FileMode := fmOpenRead;
   lExt := ExtractFileExtGzUpper(fname);
   if (lExt = '.MGZ') then begin
 	  lBuff := @mgh;
@@ -781,6 +783,7 @@ begin
   {$ENDIF}
   result := false;
   strlst:=TStringList.Create;
+  FileMode := fmOpenRead;
   AssignFile(f, fname);
   {$IFDEF FPC} Reset(f,1); {$ELSE} Reset(f); {$ENDIF}
   ReadLnBin(f, str); //signature: '# vtk DataFile'
@@ -1145,6 +1148,7 @@ begin
   mArray := TStringList.Create;
   Filemode := 0;
   isFirstLine := true;
+  FileMode := fmOpenRead;
   AssignFile(fp,fname);
   reset(fp);
   while (not EOF(fp))  do begin

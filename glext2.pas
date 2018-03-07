@@ -17,7 +17,7 @@ const
 
 var
   glProgramParameteriEXT: procedure(_program: GLuint; pname: GLenum; value: GLint); extdecl;
-
+  procedure SetglProgramParameteriEXT;
 implementation
 
 {$IFDEF Windows}
@@ -30,6 +30,9 @@ begin
 end;
 {$ENDIF}
 
-initialization
+procedure SetglProgramParameteriEXT;
+begin
   glProgramParameteriEXT := wglGetProcAddress('glProgramParameteriEXT');
+end;
+
 end.

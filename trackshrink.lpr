@@ -133,6 +133,7 @@ var
    items: array of LongInt;
 begin
   result := false;
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f,1);
   fsz := filesize(f);
@@ -429,6 +430,7 @@ begin
        showmessage('You need to open a mesh before you can save it');
        exit;
     end;
+    FileMode := fmOpenWrite;
     AssignFile(f, FileName);
     ReWrite(f);
     WriteLn(f, '# vtk DataFile Version 3.0');
@@ -473,6 +475,7 @@ begin
     WriteLn(f, MemoryStreamAsString(outStream));
     outStream.Free;
     CloseFile(f);
+    FileMode := fmOpenRead;
 end;
 
 procedure SimplifyTracks(inname, outname: string; tol: single);

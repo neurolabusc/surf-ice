@@ -609,6 +609,7 @@ begin
       fnm := filename;
     fnm := changeFileExt(fnm, '.edge');
     fnm := DefaultToHomeDir(fnm);
+    FileMode := fmOpenWrite;
     AssignFile(f, fnm);
     ReWrite(f);
     WriteLn(f, '# created with Surf Ice EDGECREATE command');
@@ -623,6 +624,7 @@ begin
         end;
     end;
     CloseFile(f);
+    FileMode := fmOpenRead;
     if not GLForm1.OpenEdge(fnm) then
        ScriptForm.Memo2.Lines.Add('EDGECREATE Unable to load edge file named "'+fnm+'" (use nodecreate or nodeload first) ')
     else
@@ -680,12 +682,14 @@ begin
       fnm := filename;
     fnm := changeFileExt(fnm, '.node');
     fnm := DefaultToHomeDir(fnm);
+    FileMode := fmOpenWrite;
     AssignFile(f, fnm);
     ReWrite(f);
     WriteLn(f, '# created with Surf Ice NODECREATE command');
     for i := 0 to (n-1) do
           WriteLn(f, format('%g %g %g %g %g', [x[i], y[i], z[i], c[i], r[i]]));
     CloseFile(f);
+    FileMode := fmOpenRead;
     if not GLForm1.OpenNode(fnm) then
        ScriptForm.Memo2.Lines.Add('NODECREATE Unable to load node named "'+fnm+'"')
     else

@@ -113,10 +113,12 @@ var
   f : File of TMetrics;
 begin
   {$IFDEF ENDIAN_BIG}to do: byte-swap to little-endian  {$ENDIF}
+  FileMode := fmOpenWrite;
   AssignFile(f, changefileext(fnm,'.fnb'));
   ReWrite(f, 1);
   Write(f, fnt);
   CloseFile(f);
+  FileMode := fmOpenRead;
 end;
 
 function LoadMetricsBinary(fnm: string; out fnt: TMetrics): boolean;
@@ -126,6 +128,7 @@ begin
   result := false;
   fnm := changefileext(fnm,'.fnb');
   if not fileexists(fnm) then exit;
+  FileMode := fmOpenRead;
   AssignFile(f, fnm);
   Reset(f, 1);
   Read(f, fnt);
@@ -194,6 +197,7 @@ begin
        showmessage('Unable to find '+fnm);
        exit;
     end;
+    FileMode := fmOpenRead;
     AssignFile(f, fnm);
     Reset(f);
     ReadLn(f, str);

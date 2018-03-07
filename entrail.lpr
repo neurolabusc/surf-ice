@@ -178,6 +178,7 @@ begin
      if i < 1 then goto 666;
      if length(p.outName) > 0 then begin
         showmsg(format(' Creating output %s', [p.outName]));
+        FileMode := fmOpenWrite;
         AssignFile(txtFile, p.outName);
         ReWrite(txtFile);
         WriteLn(txtFile, kVers);
@@ -200,6 +201,7 @@ begin
      end;
      if length(p.outName) > 0 then
         CloseFile(txtFile);
+    FileMode := fmOpenRead;
      showmsg(format('Fiber tracking completed (%dms)', [ MilliSecondsBetween(Now, startTime)]));
     result := true;
 666:

@@ -747,6 +747,7 @@ var
 begin
      result := false;
      if not fileexistsF(filename) then exit;
+     FileMode := fmOpenRead;
      AssignFile(f, FileName);
      Reset(f,1);
      FileMode := fmOpenRead;
@@ -756,7 +757,6 @@ begin
      CloseFile(f);
      if (pos('POLYGONS ', Str) > 0) then result := true; //faces
      if (pos('TRIANGLE_STRIPS ', Str) > 0) then result := true; //faces
-
 end;
 
 function isGiiMesh (filename: string): boolean;
@@ -3693,6 +3693,7 @@ var
   c: char;
   forceReset: boolean = false;
 begin
+  FileMode := fmOpenRead;  //in case files set with read-only permissions
   //check if user includes parameters
   gPrefs.initScript := ''; //e.g. 'c:\dir\script.gls'
   i := 1;

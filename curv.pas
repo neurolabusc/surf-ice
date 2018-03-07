@@ -37,6 +37,7 @@ begin
      num_vS := num_v;
      num_fS := num_f;
      ValsPerVertex := 1;
+     FileMode := fmOpenRead;
      AssignFile(f, fnm);
      FileMode := fmOpenWrite;
      Rewrite(f,1);

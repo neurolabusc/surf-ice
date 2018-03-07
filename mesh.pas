@@ -1307,6 +1307,7 @@ var
    v1,v2,v3, v4: single;
 begin
      if (FSize(FileName) < 27) then exit;
+     FileMode := fmOpenRead;
      AssignFile(f, FileName);
      Reset(f);
      ReadlnSafe(f, v1,v2,v3, v4);
@@ -1345,6 +1346,7 @@ var
 begin
      result := false;
      if (FSize(FileName) < 64) then exit;
+     FileMode := fmOpenRead;
      AssignFile(f, FileName);
      Reset(f);
      Readln(f,s);
@@ -1399,6 +1401,7 @@ var
 begin
      result := false;
      if (FSize(FileName) < 64) then exit;
+     FileMode := fmOpenRead;
      AssignFile(f, FileName);
      Reset(f);
      Readln(f,s);
@@ -1466,6 +1469,7 @@ var
    i, num_v, num_f: integer;
 begin
      if (FSize(FileName) < 64) then exit;
+     FileMode := fmOpenRead;
      AssignFile(f, FileName);
        Reset(f);
        Readln(f);  //% #!ascii
@@ -1703,6 +1707,7 @@ var
 begin
   result := false;
   if (FSize(FileName) < 64) then exit;
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f);
   ReadLn(f, str);
@@ -1757,6 +1762,7 @@ begin
      if LoadCluster(FileName) then
         goto 555;
      strlst:=TStringList.Create;
+     FileMode := fmOpenRead;
      AssignFile(f, FileName);
      Reset(f);
      num_node := 0;
@@ -1839,6 +1845,7 @@ begin
        exit;
   end;
   strlst:=TStringList.Create;
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f);
   if isEmbeddedEdge then begin
@@ -1944,6 +1951,7 @@ var
 begin
   result := false;
   if (FSize(FileName) < 64) then exit;
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f);
   Read(f,c);
@@ -2019,6 +2027,7 @@ begin
   setlength(vertices, (fsz div 70)+kBlockSize); //guess number of faces based on filesize to reduce reallocation frequencey
   setlength(faces, (fsz div 35)+kBlockSize); //guess number of vertices based on filesize to reduce reallocation frequencey
   //load faces and vertices
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f);
   DefaultFormatSettings.DecimalSeparator := '.';
@@ -2090,6 +2099,7 @@ var
    binByt: array of byte;
 begin
   if (FSize(FileName) < 64) then exit;
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f);
   ReadLn(f, str);
@@ -2357,6 +2367,7 @@ begin
   if (FSize(FileName) < 64) then exit;
   fstr := '';
   vstr := '';
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f);
   s := '';
@@ -2434,6 +2445,7 @@ var
 begin
      result := false;
      if (FSize(FileName) < 64) then exit;
+     FileMode := fmOpenRead;
      AssignFile(f, FileName);
      Reset(f);
      Read(f, num_v);
@@ -2520,6 +2532,7 @@ begin
        +'element face '+inttostr(length(faces))+kEOLN
        +s+kEOLN
        +'end_header'+kEOLN;
+  FileMode := fmOpenWrite;   //FileMode := fmOpenRead;
   AssignFile(f, FileNamePly);
   ReWrite(f, 1);
   BlockWrite(f, s[1], length(s));
@@ -2540,6 +2553,7 @@ begin
       end;
   end;
   CloseFile(f);
+  FileMode := fmOpenRead;
 end; // SavePly()
 
 procedure TMesh.SaveObj(const FileName: string);
@@ -2559,6 +2573,7 @@ begin
   {$IFDEF UNIX}
   FileNameObj := ExpandUNCFileNameUTF8(FileNameObj); // ~/tst.pl -> /Users/rorden/home/tst.ply
   {$ENDIF}
+  FileMode := fmOpenWrite;
   AssignFile(f, FileNameObj);
   ReWrite(f);
   WriteLn(f, '# WaveFront Object format image created with Surf Ice');
@@ -2570,6 +2585,7 @@ begin
   //fprintf(fid, 'v %.12g %.12g %.12g\n', vertex');
   //fprintf(fid, 'f %d %d %d\n', (face)');
   CloseFile(f);
+  FileMode := fmOpenRead;
 end; // SaveObj()
 
 procedure SaveMz3Core(const FileName: string; Faces: TFaces; Vertices: TVertices; vertexRGBA: TVertexRGBA; intensity: TFloats);
@@ -2625,10 +2641,12 @@ begin
   if isScalar then
      mStream.Write(intensity[0], nVert * sizeof(single));
   mStream.Position := 0;
+  FileMode := fmOpenWrite;   //FileMode := fmOpenRead;
   zStream := TGZFileStream.Create(FileNameMz3, gzopenwrite);
   zStream.CopyFrom(mStream, mStream.Size);
   zStream.Free;
   mStream.Free;
+  FileMode := fmOpenRead;
 end;
 
 procedure TMesh.SaveMz3(const FileName: string);
@@ -2675,6 +2693,7 @@ begin
      exit;
   end;
   if not CheckMesh then exit;
+  FileMode := fmOpenWrite;   //FileMode := fmOpenRead;
   AssignFile(f, FileNameGii);
   ReWrite(f);
   WriteLn(f, '<?xml="1.0" encoding="UTF-8"?>');
@@ -2741,6 +2760,7 @@ begin
   WriteLn(f, '   </DataArray>');
   WriteLn(f, '</GIFTI>');
   CloseFile(f);
+  FileMode := fmOpenRead;
 end;
 
 //Next: GIfTI specific types
@@ -2850,9 +2870,9 @@ begin
   if (FSize(FileName) < 64) then exit;
   nOverlays := 0;
   gz := TMemoryStream.Create;
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f,1);
-  FileMode := fmOpenRead;
   szRead := FileSize(f);
   SetLength(Str, szRead);
   BlockRead(f, Str[1],szRead);
@@ -3499,6 +3519,7 @@ var
 begin
      result := false;
      if (FSize(FileName) < 64) then exit;
+     FileMode := fmOpenRead;
      AssignFile(f, FileName);
      Reset(f);
      Readln(f,s);
@@ -3651,6 +3672,7 @@ begin
   SetLength(Vertices,kBlockSz);
   floatListVal := TStringList.Create;
   floatListID := TStringList.Create;
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f);
   //1: skip all lines before <mesh>
@@ -3805,6 +3827,7 @@ var
 begin
      result := false;
      if (FSize(FileName) < 64) then exit;
+     FileMode := fmOpenRead;
      AssignFile(f, FileName);
      Reset(f);
      Readln(f, nV, nE, nF);
@@ -3878,6 +3901,7 @@ end;
 begin
      result := false;
      if (FSize(FileName) < 64) then exit;
+     FileMode := fmOpenRead;
      AssignFile(f, FileName);
      Reset(f);
      nF := 0;
@@ -4067,6 +4091,7 @@ end; //ReadVal
 begin
      result := false;
      if (FSize(FileName) < 64) then exit;
+     FileMode := fmOpenRead;
      AssignFile(f, FileName);
      Reset(f);
      num_v := 0;
@@ -4132,6 +4157,7 @@ var
 begin
   result := false;
   if (FSize(FileName) < 64) then exit;
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f);
   Readln(f,s);  //ascii
@@ -4200,6 +4226,7 @@ begin
   result := false;
   if (FSize(FileName) < 64) then exit;
   strlst:=TStringList.Create;
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f);
   Readln(f,s);  //ascii
@@ -4776,6 +4803,7 @@ var
    i, num_v, num_f: integer;
 begin
   if (FSize(FileName) < 64) then exit;
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f);
   Readln(f,s);
@@ -4901,6 +4929,7 @@ var
 begin
   if (FSize(FileName) < 64) then exit;
   strlst:=TStringList.Create;
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f,1);
   ReadLnBin(f, str); //signature: '# vtk DataFile'
@@ -5118,6 +5147,7 @@ begin
 	result := false;
 	isEmbeddedEdge := false;
 	if not FileExistsF(FileName) then exit;
+        FileMode := fmOpenRead;
 	if (FSize(FileName) < 9) then exit;
 	isBusy := true;
 	isNode := false;
@@ -5531,6 +5561,7 @@ begin
          intensityLUT[i] := kUndefined;
      //if (lOverlayIndex < kMinOverlayIndex) or (lOverlayIndex > kMaxOverlays) then exit;
      strlst:=TStringList.Create;
+     FileMode := fmOpenRead;
      AssignFile(f, FileName);
      Reset(f);
      while (not EOF(f)) do begin
@@ -5575,6 +5606,7 @@ begin
      if (lOverlayIndex < kMinOverlayIndex) or (lOverlayIndex > kMaxOverlays) then exit;
      num_v := length(vertices);
      setlength(overlay[lOverlayIndex].intensity, num_v); //vertices = zeros(num_f, 9);
+     FileMode := fmOpenRead;
      AssignFile(f, FileName);
      Reset(f);
      idx := 0;
@@ -5715,6 +5747,7 @@ var
 begin
      result := false;
      strlst:=TStringList.Create;
+     FileMode := fmOpenRead;
      AssignFile(f, FileName);
      Reset(f);
      Readln(f, version, file_type);  //'3\t4000\n'
@@ -5911,6 +5944,7 @@ var
 begin
   result := false;
   if (not FileExistsF(FileName)) and (length(tempIntensityLUT) < 1) then exit;
+  FileMode := fmOpenRead;
   nOverlays := 1;
   isCiftiNii := false;
   ext := UpperCase(ExtractFileExt(Filename));

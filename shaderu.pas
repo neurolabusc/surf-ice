@@ -897,6 +897,12 @@ begin
              Load_GL_EXT_texture_object;
              {$IFDEF GEOM_GLEXT} //requires new version of glext.pp with glProgramParameteriEXT
              gShader.isGeometryShaderSupported := HasGeometryShaderSupport();
+             if gShader.isGeometryShaderSupported then begin
+               if not Assigned(glProgramParameteriEXT) then
+                  SetglProgramParameteriEXT;
+               if not Assigned(glProgramParameteriEXT) then
+                  gShader.isGeometryShaderSupported := false;
+             end;
              {$ELSE}
              gShader.isGeometryShaderSupported := false;
              {$ENDIF}
@@ -1082,6 +1088,7 @@ begin
     exit;
   end;
   mode := knone;
+  FileMode := fmOpenRead;
   AssignFile(F,lFilename);
   Reset(F);
   while not Eof(F) do begin

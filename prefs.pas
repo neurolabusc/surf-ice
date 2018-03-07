@@ -590,6 +590,7 @@ begin
   if (lRead) then
     SetDefaultPrefs (lPrefs, true, not Fileexists(lFilename));
   if (not lRead) and (lPrefs.SkipPrefWriting) then exit;
+  if not lRead then FileMode := fmOpenWrite;
   if (lRead) and (not FileexistsF(lFilename)) then
         exit;
   lIniFile := TIniFile.Create(lFilename);
@@ -640,6 +641,7 @@ begin
   if (lPrefs.RenderQuality < kRenderPoor) then lPrefs.RenderQuality:= kRenderPoor;
   if (lPrefs.RenderQuality > kRenderBetter) then lPrefs.RenderQuality:= kRenderBetter;
   lIniFile.Free;
+  FileMode := fmOpenRead;
 end;
 
 end.

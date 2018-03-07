@@ -727,6 +727,7 @@ end; //readInt()
 begin
   isRebuildList := true;
   result := false;
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f);
   ReadLn(f, str); //signature: '# vtk DataFile'
@@ -818,7 +819,8 @@ begin
        showmessage('You need to open a mesh before you can save it');
        exit;
     end;
-    AssignFile(f, FileName);
+	FileMode := fmOpenWrite;
+  	AssignFile(f, FileName);
     ReWrite(f);
     WriteLn(f, '# vtk DataFile Version 3.0');
     WriteLn(f, 'vtk output');
@@ -843,7 +845,6 @@ begin
               vert[j] := tracks[i]; inc(i);  inc(j);
         end;
     end;
-
     {$IFDEF ENDIAN_LITTLE}
     for i := 0 to (n_items -1) do
         SwapLongInt(items[i]);
@@ -865,6 +866,7 @@ begin
     WriteLn(f, MemoryStreamAsString(outStream));
     outStream.Free;
     CloseFile(f);
+    FileMode := fmOpenRead;
 end; //SaveVtk()
 
 function TTrack.LoadVtk(const FileName: string): boolean;
@@ -884,6 +886,7 @@ var
 begin
   isRebuildList := true;
   result := false;
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f,1);
   fsz := filesize(f);
@@ -1036,6 +1039,7 @@ begin
      isRebuildList := true;
      result := false;
      ext := ExtractFileExtGzUpper(Filename);
+     FileMode := fmOpenRead;
      if (ext = '.BFLOAT.GZ') then begin
        mStream := TMemoryStream.Create;
        zStream := TGZFileStream.create(FileName, gzopenread);
@@ -1142,6 +1146,7 @@ var
 begin
   isRebuildList := true;
   result := false;
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   FileMode := fmOpenRead;
   Reset(f,1);
@@ -1223,7 +1228,8 @@ var
 begin
     isRebuildList := true;
     result := false;
-     AssignFile(f, FileName);
+     FileMode := fmOpenRead;
+  	AssignFile(f, FileName);
      FileMode := fmOpenRead;
      Reset(f,1);
      sz := FileSize(f);
@@ -1333,6 +1339,7 @@ var
 begin
   isRebuildList := true;
   result := false;
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f,1);
   fsz := filesize(f);

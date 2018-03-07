@@ -383,7 +383,7 @@ function ReadHdr(const FileName: string): TNIfTIhdr;
 var
    f: File;
 begin
-
+  FileMode := fmOpenRead;
   AssignFile(f, FileName);
   FileMode := fmOpenRead;
   Reset(f,1);

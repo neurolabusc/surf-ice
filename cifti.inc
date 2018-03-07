@@ -8,6 +8,7 @@ begin
   result := false;
   if not fileexists(fnm) then exit;
   if fsize(fnm) < 540 then exit;
+  FileMode := fmOpenRead;
   AssignFile(f, fnm);
   FileMode := fmOpenRead;  //Set file access to read only
   Reset(f, 1);
@@ -150,6 +151,7 @@ begin
   if not fileexists(fnm) then exit;
   fsz := FSize(fnm);
   if (fsz < (sizeof(hdr)+132)) then exit;
+  FileMode := fmOpenRead;
   AssignFile(f, fnm);
   FileMode := fmOpenRead;  //Set file access to read only
   Reset(f, 1);
@@ -172,6 +174,7 @@ begin
   end;
   //next: read XML
   setlength(xmlStr, xmlLen);
+  FileMode := fmOpenRead;
   AssignFile(f, fnm);
   FileMode := fmOpenRead;  //Set file access to read only
   Reset(f, 1);
