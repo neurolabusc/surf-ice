@@ -235,12 +235,13 @@ end;
 function FSize (lFName: String): longint;
 var F : File Of byte;
 begin
-  result := 0;
-  if not fileexists(lFName) then exit;
-  Assign (F, lFName);
-  Reset (F);
-  result := FileSize(F);
-  Close (F);
+	result := 0;
+	if not fileexistsF(lFName) then exit;
+	FileMode := fmOpenRead;
+	Assign (F, lFName);
+	Reset (F);
+	result := FileSize(F);
+	Close (F);
 end;
 
 function ParseFileName(Filename: string): string;
