@@ -1,5 +1,6 @@
 //pref
 WireLength|float|0.001|0.05|0.2
+PerFaceNormal|bool|false
 Experimental shader: show direction of surface normal. Copyright 2018 Chris Rorden, BSD2clause.|note
 //vert
 #version 330
@@ -24,23 +25,27 @@ void main() {
 //geom
 #version 330
 uniform float WireLength;
-
+uniform bool PerFaceNormal;
 in vec3 vL[3], vV[3];
 in vec4 vN[3], vP[3], vPmvp[3], vClr[3];
 layout (triangles) in;
 layout (line_strip, max_vertices = 10) out;
-
-//out vec3 gE, gL, gN, gV;
 out vec4 gP, gClr;
 
 void main(void) {
-
+	vec3 P0 = vPmvp[0].xyz;
+	vec3 P1 = vPmvp[1].xyz;
+	vec3 P2 = vPmvp[2].xyz;
+	vec3 V0 = P0 - P1;
+	vec3 V1 = P2 - P1;
+	vec4 N = vec4((cross(V0, V1)), 0.0);
+	N = mix(N, normalize(N), float(length(N) > 0.0001));
     for(int i=0; i < 3; i++) {
     	gP = vP[i];
     	gl_Position = vPmvp[i];
         gClr = vec4(abs(vN[i].rgb), 1.0);
         EmitVertex();
-        gl_Position = vPmvp[i]+(vN[i]* WireLength);
+        gl_Position += mix(vN[i],N,float(PerFaceNormal))* WireLength;
         EmitVertex();
     	EndPrimitive();
     }

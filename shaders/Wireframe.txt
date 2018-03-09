@@ -28,7 +28,6 @@ void main() {
 }
 //geom
 #version 330
-
 in vec3 vL[3];   //[3] because this makes a triangle
 in vec3 vN[3];
 in vec3 vV[3];

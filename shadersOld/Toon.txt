@@ -4,9 +4,10 @@ Diffuse|float|0.0|0.8|1
 Specular|float|0.0|0.5|1
 Roughness|float|0.001|0.15|0.5
 Smooth|float|0.01|1|10
-OutlineWidth|float|0.0|0.05|0.2
+OutlineWidth|float|0.0|0.75|0.2
 ShowGradient|bool|false
-Hint: set ambient occlusion (AO) to zero. Cel shading, adapted from Philip Rideout work, Copyright 2010, MIT License|note
+AOradius|float|0|0|16
+Cel shading, adapted from Philip Rideout work, Copyright 2010, MIT License|note
 //vert
 varying vec3 vN, vV;
 varying vec4 vP, vClr;
@@ -58,10 +59,24 @@ void main() {
     if (df < A + E) df = stepmix(A, B, E, df);
     else if (df < B + E) df = stepmix(B, C, E, df);
     else df = stepmix(C, D, E, df);
-    float outline = step(0.0, OutlineWidth - dot(n,normalize(vV)));
-    outline *= step(0.001, OutlineWidth);
-    specular = mix(specular, -1.0, outline);
+    float outline = mix(1.0, dot(vec3(0, 0, 1),n), OutlineWidth);
+	#define antialias
+	#ifdef antialias
+    E = fwidth(outline);
+    if (outline > 0.5 - E && outline < 0.5 + E)
+    {
+        outline = smoothstep(0.5 - E, 0.5 + E, outline);
+    }
+    else
+    {
+        outline = step(0.5, outline);
+    }
+    #endif
+    //float outline = step(0.0, OutlineWidth - dot(n,normalize(vV)));
+    //outline *= step(0.001, OutlineWidth);
+    //specular = mix(specular, -1.0, outline);
     gl_FragColor.rgb = mix(a + df * d + specular, n + specular, float(ShowGradient) );
+    gl_FragColor.rgb *= outline;
 	float backface = step(0.0, n.z);
 	gl_FragColor = vec4(mix(backcolor.rgb, gl_FragColor.rgb,  backface), 1.0);
 

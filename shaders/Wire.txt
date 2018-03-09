@@ -29,12 +29,10 @@ void main() {
 }
 //geom
 #version 330
-
 in vec3 vL[3], vN[3], vV[3];
 in vec4 vP[3], vPmvp[3], vClr[3];
 layout (triangles) in;
 layout (triangle_strip, max_vertices = 3) out;
-
 out vec3 gE, gL, gN, gV;
 out vec4 gP, gClr;
 
