@@ -43,6 +43,7 @@ type
     lightPos : TPoint3f;
     {$IFDEF COREGL} TrackAmbient, TrackDiffuse, TrackSpecular : single; {$ENDIF}
     isGeometryShaderSupported: boolean;
+    AOradiusU: integer;
     FragmentProgram,VertexProgram, GeometryProgram, Note, Vendor: AnsiString;
     Uniform: array [1..kMaxUniform] of TUniform;
   end;
@@ -197,6 +198,35 @@ const kAoShaderVert = '#version 330'
 +#10'}';
 
   {$ELSE}
+(*//this next shader is nice, but AO changes as image is zoomed closer/further
+const kAoShaderFragToon = '#version 330'
++#10'uniform sampler2D tex1, tex2, depth_texture1, depth_texture2;'
++#10'uniform float blend1, alpha1, fracAO;'
++#10'uniform vec2 texture_size;'
++#10'smooth in vec2 texCoord;'
++#10'out vec4 color;'
++#10'float getAO(void) {'
++#10'	vec2 px = vec2(1.0 / texture_size.x, 1.0 / texture_size.y) * 1.4;'
++#10'	vec2 nXY = texCoord;'
++#10'	vec2 x1 = vec2(px.x, 0.0);'
++#10'	vec2 y1 = vec2(0.0, px.y);'
++#10'	float dx =  0.125 * (texture(depth_texture1, nXY-x1-y1).x+texture(depth_texture1, nXY-y1).x+texture(depth_texture1, nXY+x1-y1).x+texture(depth_texture1, nXY-x1).x+texture(depth_texture1, nXY+x1).x+texture(depth_texture1, nXY-x1+y1).x+texture(depth_texture1, nXY+y1).x+texture(depth_texture1, nXY+x1+y1).x);'
++#10'	dx = abs(texture(depth_texture1, nXY).x - dx);'
++#10'	dx = dx * 5000.0;'
++#10'	dx = smoothstep(1.0-fracAO, 1.0, dx);'
++#10'	return dx;'
++#10'}'
++#10'void main(void) {'
++#10'  vec4 t1 = texture(tex1, texCoord);'
++#10'  if (t1.a == 0.0) discard;'
++#10'  vec4 t2 = texture(tex2, texCoord);'
++#10'  if (fracAO > 0.0)'
++#10'    t1.rgb = clamp(t1.rgb-getAO(), 0.0, 1.0);'
++#10'  t1.rgb = mix(t2.rgb,t1.rgb, alpha1);'
++#10'  float depth = 1.0 - (3.0 * (texture(depth_texture2, texCoord).x - texture(depth_texture1, texCoord).x));'
++#10'  depth = clamp(depth, 0.0, 1.0);'
++#10'  color = mix(t1, t2, blend1 * depth);'
++#10'}';   *)
     const kAoShaderFrag = '#version 330'
  +#10'uniform sampler2D tex1, tex2, depth_texture1, depth_texture2;'
 +#10'uniform float blend1, alpha1, fracAO, aoRadius;'
@@ -260,12 +290,14 @@ const kAoShaderVert = '#version 330'
 +#10'		l = l + dl;'
 +#10'	}'
 +#10'	ao /= float(samples);'
++#10'	//if (ao > 1.0) ao = 0.0;'
 +#10'	ao = clamp(ao, 0.0, 0.4) * 2.5; //threshold then LERP 0..1'
 +#10'	ao = smoothstep(0.0, 1.0, ao);'
 +#10'	ao = (1.0 - ao) * fracAO;'
 +#10'	return ao;'
 +#10'}'
 +#10'void main(void) {'
++#10'  //diffarea = 0.35;'
 +#10'  vec4 t1 = texture(tex1, texCoord);'
 +#10'  if (t1.a == 0.0) discard;'
 +#10'  vec4 t2 = texture(tex2, texCoord);'
@@ -821,6 +853,7 @@ begin
     exit;
 
   for i := 1 to lShader.nUniform do begin
+    if i = lShader.AOradiusU then continue;
     case lShader.Uniform[i].Widget of
       kFloat: uniform1f(lShader.Uniform[i].name,lShader.Uniform[i].defaultV);
       kInt: uniform1i(lShader.Uniform[i].name,round(lShader.Uniform[i].defaultV));
@@ -912,6 +945,7 @@ begin
       gShader.program2d := initVertFrag(kVert2D, '', kFrag2D);
       gShader.program3dx :=  initVertFrag(kVert3d, '', kFrag3d);
       gShader.programDefault :=  initVertFrag(kVert3d, '', kFrag3d);
+      gShader.AOradiusU:= 0;
       {$IFDEF COREGL}
       if LoadShader(AppDir+'ao3.glsl', lShader)  then
           gShader.programAoID :=  initVertFrag(lShader.VertexProgram, lShader.GeometryProgram,  lShader.FragmentProgram)
@@ -958,6 +992,14 @@ begin
      gShader.GeometryProgram := '';
      gShader.FragmentProgram := '';
      glUseProgram(0);
+     {$IFDEF COREGL}
+     (*glDeleteProgram(gShader.programAoID);
+     if gShader.isToonAO then
+        gShader.programAoID := initVertFrag(kAoShaderVert, '', kAoShaderFragToon)
+     else
+        gShader.programAoID := initVertFrag(kAoShaderVert, '', kAoShaderFrag);  *)
+     {$ENDIF}
+
      {$IFDEF COREGL} {$IFNDEF TUBES}  //666Demo
      (* if not isStartUp then begin
         glUseProgram(0);
@@ -988,6 +1030,20 @@ begin
       on Exception : EConvertError do
          result := 0;
   end;
+end;
+
+function RStrToInt(lS: string; Default: integer): integer;
+var
+  lV: string;
+  lC: char;
+  lLen,lP,lN: integer;
+begin
+  result := Default;
+  lV := '';
+  for lP := 1 to length(lS) do
+      if lS[lP] in ['0'..'9'] then
+         lV := lV + lS[lP];
+  result := StrToIntDef(lV, Default);
 end;
 
 function StrToUniform(lS: string): TUniform;
@@ -1069,6 +1125,8 @@ const
   kFragBOM = kBOM + kFragStr;
   kGeomStr = '//geom';
   kGeomBOM = kBOM + kGeomStr;
+  //kAOStr = '//AOradius';
+  //kAOBOM = kBOM + kAOStr;
 var
   mode: integer;
   F : TextFile;
@@ -1077,6 +1135,7 @@ var
 begin
   result := false;
   Shader.Note := '';
+  Shader.AOradiusU := 0;
   Shader.VertexProgram := '';
   Shader.GeometryProgram := '';
   Shader.nUniform := 0;
@@ -1093,6 +1152,8 @@ begin
   Reset(F);
   while not Eof(F) do begin
     ReadLn(F, S);
+    //if (PosEx(kAOStr,S) = 1) or (PosEx(kAOBOM,S) = 1)  then
+    //  gShader.AOradius := RStrToInt(S, gShader.AOradius);
     if (S = kPrefStr) or (S = kPrefBOM)  then
       mode := kpref
     else if (S = kVertStr) or (S = kVertBOM) then
@@ -1112,6 +1173,8 @@ begin
         if (Shader.nUniform < kMaxUniform) then begin
           inc(Shader.nUniform);
           Shader.Uniform[Shader.nUniform] := U;
+          if U.Name = 'AOradius' then
+            Shader.AOradiusU := Shader.nUniform;
         end else
           showmessage('Too many preferences');
       end ;
@@ -1248,14 +1311,22 @@ begin
   glBindTexture(GL_TEXTURE_2D, f1.tex1);//normal map
   uniform1ix(gShader.programAoID, 'norm1', 5);
  {$ENDIF}
-  uniform1fx(gShader.programAoID, 'aoRadius', zoom * 16.0 / distance);
+ uniform1fx(gShader.programAoID, 'fracAO', fracAO);
+ if gShader.AOradiusU > 0 then begin
+  uniform1fx(gShader.programAoID, 'aoRadius', gShader.Uniform[gShader.AOradiusU].DefaultV);
+  if gShader.Uniform[gShader.AOradiusU].DefaultV <= 0 then
+    uniform1fx(gShader.programAoID, 'fracAO', 0.0);
+ end else
+  uniform1fx(gShader.programAoID, 'aoRadius', 16);//zoom * gShader.AOradius / distance);
   uniform2fx(gShader.programAoID, 'texture_size', f1.w, f1.h);
   //   GLForm1.caption := floattostr(distance);
   //
-
   uniform1fx(gShader.programAoID, 'blend1', blend1);
   uniform1fx(gShader.programAoID, 'alpha1', alpha1);
-  uniform1fx(gShader.programAoID, 'fracAO', fracAO);
+  //if gShader.AOradius <= 0 then
+  //   uniform1fx(gShader.programAoID, 'fracAO', 0.0)
+  //else
+
   {$IFDEF COREGL}
   CoreDrawQuad;
 

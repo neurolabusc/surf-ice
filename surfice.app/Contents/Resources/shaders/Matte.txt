@@ -28,20 +28,15 @@ void main() {
 in vec4 vClr, vP;
 in vec3 vN, vL, vV;
 out vec4 color;
-uniform float Diffuse = 0.7;
+uniform float Diffuse = 0.5;
 uniform float DiffuseRough = 1.0;
-uniform float Edge = 1.0;
+uniform float Edge = 0.5;
 uniform float EdgeRough = 1.0;
 uniform vec4 ClipPlane = vec4(2.0, 0.0, 0.0, 0.0);
-
 void main() {
 	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
 	vec3 n = normalize(vN);
-	float lightNormDot = abs(dot(n,normalize(vV))); //with respect to viewer
-	lightNormDot = pow(lightNormDot, EdgeRough);
-	vec3 l = normalize(vL);
-	//float d = dot(n,l) * Diffuse;
-	float d = pow(max(dot( l, n), 0.0), DiffuseRough) * Diffuse;
-	d = (lightNormDot*Edge) + d;
-	color = vec4(d * vClr.rgb, 1.0);
+	float e = pow(max(dot(normalize(vV), n), 0.0), EdgeRough) * Edge; //surface angle with respect to viewer location
+	float d = pow(max(dot(normalize(vL), n), 0.0), DiffuseRough) * Diffuse; //surface angle with respect to light source location
+	color = vec4((e + d) * vClr.rgb, 1.0);
 }

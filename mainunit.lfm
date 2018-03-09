@@ -127,7 +127,7 @@ object GLForm1: TGLForm1
         Height = 20
         Top = 0
         Width = 127
-        DropDownCount = 24
+        DropDownCount = 36
         ItemHeight = 0
         OnChange = ShaderDropChange
         Style = csDropDownList

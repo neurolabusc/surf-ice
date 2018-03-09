@@ -1,0 +1,74 @@
+//pref
+WireLength|float|0.001|0.05|0.2
+PerFaceNormal|bool|false
+Experimental shader: show direction of surface normal. Copyright 2018 Chris Rorden, BSD2clause.|note
+//vert
+#version 330
+layout(location = 0) in vec3 Vert;
+layout(location = 3) in vec3 Norm;
+layout(location = 6) in vec4 Clr;
+out vec3 vL, vV;
+out vec4 vN, vPmvp, vClr, vP;
+uniform mat4 ModelViewProjectionMatrix;
+uniform mat4 ModelViewMatrix;
+uniform mat3 NormalMatrix;
+uniform vec3 LightPos = vec3(0.0, 20.0, 30.0); //LR, -DU+, -FN+
+void main() {
+    vN = vec4(normalize((NormalMatrix * Norm)),0.0);
+    vP = vec4(Vert, 1.0);
+    gl_Position = ModelViewProjectionMatrix * vec4(Vert, 1.0);
+    vPmvp = gl_Position;
+    vL = normalize(LightPos);
+    vV = -vec3(ModelViewMatrix*vec4(Vert,1.0));
+    vClr = Clr;
+}
+//geom
+#version 330
+uniform float WireLength;
+uniform bool PerFaceNormal;
+in vec3 vL[3], vV[3];
+in vec4 vN[3], vP[3], vPmvp[3], vClr[3];
+layout (triangles) in;
+layout (line_strip, max_vertices = 10) out;
+out vec4 gP, gClr;
+
+void main(void) {
+	vec3 P0 = vPmvp[0].xyz;
+	vec3 P1 = vPmvp[1].xyz;
+	vec3 P2 = vPmvp[2].xyz;
+	vec3 V0 = P0 - P1;
+	vec3 V1 = P2 - P1;
+	vec4 N = vec4((cross(V0, V1)), 0.0);
+	N = mix(N, normalize(N), float(length(N) > 0.0001));
+    for(int i=0; i < 3; i++) {
+    	gP = vP[i];
+    	gl_Position = vPmvp[i];
+        gClr = vec4(abs(vN[i].rgb), 1.0);
+        EmitVertex();
+        gl_Position += mix(vN[i],N,float(PerFaceNormal))* WireLength;
+        EmitVertex();
+    	EndPrimitive();
+    }
+	for(int i=0; i < 3; i++) {
+    	gP = vP[i];
+    	gl_Position = vPmvp[i];
+    	gClr = vClr[i];
+    	EmitVertex();
+    }
+    gP = vP[0];
+    gl_Position = vPmvp[0];
+    gClr = vClr[0];
+    EmitVertex();
+    EndPrimitive();
+}
+//frag
+#version 330
+uniform vec4 ClipPlane;
+in vec4 gP, gClr;
+out vec4 color;
+
+void main() {
+	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, gP) > 0.0)) discard;
+	color = vec4(gClr.rgb, 1.0);
+}
+// https://stackoverflow.com/questions/4703432/why-does-my-opengl-phong-shader-behave-like-a-flat-shader

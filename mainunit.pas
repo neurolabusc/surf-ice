@@ -694,7 +694,8 @@ begin
    gPrefs.PrevOverlayname := FileName;
    OpenDialog.InitialDir:= ExtractFileDir(FileName);
    StringGrid1.RowCount := gMesh.OpenOverlays+1;
-        StringGrid1.Col := kMin;
+   StringGrid1.Col := kMin;
+   //Caption := format('%g..%g',[gMesh.overlay[gMesh.OpenOverlays].minIntensity, gMesh.overlay[gMesh.OpenOverlays].maxIntensity]);
    UpdateToolbar;
    UpdateOverlaySpread;
 end;
@@ -2930,7 +2931,6 @@ begin
     fnm := changefileext(gPrefs.PrevFilename[1],'.curv');
     if isTemp then begin
        fnm := DesktopFolder + ExtractFileName(fnm);
-
     end;
     if fileexists(fnm) then begin
        showmessage('File already exists '+fnm);

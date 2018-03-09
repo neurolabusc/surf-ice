@@ -3,6 +3,7 @@ Ambient|float|0.0|0.5|1
 Diffuse|float|0.0|0.7|1
 Specular|float|0.0|0.2|1
 Shininess|float|1|60|120
+LightBackfaces|bool|false
 Per-facet instead of per-pixel shading. Useful for evaluating mesh quality. Copyright 2015 Chris Rorden, BSD2clause.|note
 //vert
 #version 330
@@ -21,6 +22,7 @@ void main() {
     gl_Position = ModelViewProjectionMatrix * vec4(Vert, 1.0);
     vL = normalize(LightPos);
     vV = -vec3(ModelViewMatrix*vec4(Vert,1.0));
+    //vN = (dot(vN,vV.rgb) < 0.0) ? -vN : vN; //double sided light
     vClr = Clr;
 }
 //frag
@@ -33,17 +35,18 @@ uniform float Diffuse = 0.7;
 uniform float Specular = 0.2;
 uniform float Shininess = 60.0;
 uniform vec4 ClipPlane = vec4(2.0, 0.0, 0.0, 0.0);
+uniform bool LightBackfaces;
 
 void main() {
 	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
 	vec3 l = normalize(vL);
 	vec3 n = normalize(vN);
 	vec3 h = normalize(l+normalize(vV));
-	vec3 a = vClr.rgb;
-	vec3 d = a;
-	float diff = dot(n,l);
+	if (LightBackfaces)
+		n = (dot(n,vV) < 0.0) ? -n : n; //double sided light
+	float diff = max(0.0, dot(n,l));
 	float spec = pow(max(0.0,dot(n,h)), Shininess);
-	vec3 backcolor = Ambient*vec3(0.1+0.1+0.1) + d*abs(diff)*Diffuse;
+	vec3 backcolor = Ambient*vec3(0.1+0.1+0.1) + vClr.rgb*abs(diff)*Diffuse;
 	float backface = step(0.00, n.z);
-	color = vec4(mix(backcolor.rgb, a*Ambient + d*diff*Diffuse + spec*Specular,  backface), 1.0);
+	color = vec4(mix(backcolor.rgb, vClr.rgb*Ambient + vClr.rgb*diff*Diffuse + spec*Specular,  backface), 1.0);
 }
