@@ -78,7 +78,7 @@ function FSize (lFName: String): longint;
 function ChangeFileExtX( lFilename: string; lExt: string): string;
 function ReadNumBin(var f: TFByte): string; //read next ASCII number in binary file
 function float2str(Avalue:double; ADigits:integer):string; //e.g x:single=2.6; floattostrf(x,8,4);
-function DefaultToHomeDir(FileName: string): string; //set path to home if not provided
+function DefaultToHomeDir(FileName: string; Force: boolean = false): string; //set path to home if not provided
 {$ifdef isTerminalApp}
 function RGBToColor(R, G, B: Byte): TColor;
 procedure ShowMessage(msg: string);
@@ -108,14 +108,14 @@ begin
      {$ENDIF}
 end;
 
-function DefaultToHomeDir(FileName: string): string; //set path to home if not provided
+function DefaultToHomeDir(FileName: string; Force: boolean = false ): string; //set path to home if not provided
 {$IFDEF UNIX}
 var
    p,n,x: string;
 begin
    result := FileName;
    FilenameParts (Filename, p,n,x);
-   if (p <> '') and (DirectoryExists(p)) then exit;
+   if (not Force) and (p <> '') and (DirectoryExists(p)) then exit;
    p := expandfilename('~/');
    result := p+n+x;
 end;

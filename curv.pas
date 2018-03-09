@@ -32,38 +32,43 @@ var
    b : byte = 255;
    kS: TFloats;
 begin
-     num_v := length(k);
-     if (num_v < 3) or (num_f < 1) then exit;
-     num_vS := num_v;
-     num_fS := num_f;
-     ValsPerVertex := 1;
-     FileMode := fmOpenRead;
-     AssignFile(f, fnm);
-     FileMode := fmOpenWrite;
-     Rewrite(f,1);
-     blockwrite(f, b, 1 ); //since these files do not have a file extension, check first 3 bytes "0xFFFFFF"
-     blockwrite(f, b, 1 ); //since these files do not have a file extension, check first 3 bytes "0xFFFFFF"
-     blockwrite(f, b, 1 ); //since these files do not have a file extension, check first 3 bytes "0xFFFFFF"
-     {$IFDEF ENDIAN_LITTLE}
-     SwapLongWord(num_vS);
-     SwapLongWord(num_fS);
-     SwapLongWord(ValsPerVertex);
-     {$ENDIF}
-     blockwrite(f, num_vS, 4 ); //uint32
-     blockwrite(f, num_fS, 4 ); //uint32
-     blockwrite(f, ValsPerVertex, 4 ); //uint32
-     {$IFDEF ENDIAN_LITTLE}
-     setlength(kS, num_v);
-     for i := 0 to (num_v-1) do begin
-         kS[i] := k[i];
-         SwapSingle(kS[i]);
-     end;
-     blockwrite(f,kS[0], 4 * num_v);
-     setlength(kS, 0);
-     {$ELSE}
-     blockwrite(f,k[0], 4 * num_v);
-     {$ENDIF}
-     CloseFile(f);
+  num_v := length(k);
+  if (num_v < 3) or (num_f < 1) then exit;
+  num_vS := num_v;
+  num_fS := num_f;
+  ValsPerVertex := 1;
+  AssignFile(f, fnm);
+  FileMode := fmOpenWrite;
+  try
+    Rewrite(f,1);
+    blockwrite(f, b, 1 ); //since these files do not have a file extension, check first 3 bytes "0xFFFFFF"
+    blockwrite(f, b, 1 ); //since these files do not have a file extension, check first 3 bytes "0xFFFFFF"
+    blockwrite(f, b, 1 ); //since these files do not have a file extension, check first 3 bytes "0xFFFFFF"
+    {$IFDEF ENDIAN_LITTLE}
+    SwapLongWord(num_vS);
+    SwapLongWord(num_fS);
+    SwapLongWord(ValsPerVertex);
+    {$ENDIF}
+    blockwrite(f, num_vS, 4 ); //uint32
+    blockwrite(f, num_fS, 4 ); //uint32
+    blockwrite(f, ValsPerVertex, 4 ); //uint32
+    {$IFDEF ENDIAN_LITTLE}
+    setlength(kS, num_v);
+    for i := 0 to (num_v-1) do begin
+       kS[i] := k[i];
+       SwapSingle(kS[i]);
+    end;
+    blockwrite(f,kS[0], 4 * num_v);
+    setlength(kS, 0);
+    {$ELSE}
+    blockwrite(f,k[0], 4 * num_v);
+    {$ENDIF}
+    CloseFile(f);
+  except
+   // If there was an error the reason can be found here
+   on E: EInOutError do
+     writeln('Unable to create '+fnm+' Details: ', E.ClassName, '/', E.Message);
+  end;
 end;
 
 (*procedure SmoothK (var vK : TFloats; var faces: TFaces);

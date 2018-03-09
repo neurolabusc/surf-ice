@@ -2927,10 +2927,10 @@ begin
     end;
     //isTemp := (MessageDlg('Temporary CURV file?', mtConfirmation, [mbNo, mbYes], 0) = mrYes);
     isTemp := (Sender as TMenuItem).Tag = 1;
-
     fnm := changefileext(gPrefs.PrevFilename[1],'.curv');
     if isTemp then begin
-       fnm := DesktopFolder + ExtractFileName(fnm);
+       //fnm := DesktopFolder + ExtractFileName(fnm);
+       fnm := DefaultToHomeDir(fnm, true);
     end;
     if fileexists(fnm) then begin
        showmessage('File already exists '+fnm);
@@ -3117,6 +3117,8 @@ begin
      OpenDialog.Filter := kNodeFilter;
      OpenDialog.Title := 'Select Node/Edge file';
      if not OpenDialog.Execute then exit;
+     if FSize(OpenDialog.Filename) < 1 then
+        showmessage('Unable to open file (check permissions) '+ OpenDialog.Filename);
      //OpenDialog.FileName := '/Users/rorden/Desktop/obj/myNodes.node';
      ext := UpperCase(ExtractFileExt(OpenDialog.Filename));
      if (ext = '.EDGE') and (length(gNode.nodes) < 1) then begin
@@ -3152,6 +3154,8 @@ begin
         OpenDialog.FileName := gPrefs.PrevOverlayname;
   end;
   if not OpenDialog.Execute then exit;
+  if FSize(OpenDialog.Filename) < 1 then
+     showmessage('Unable to open file (check permissions) '+ OpenDialog.Filename);
   //OpenDialog.FileName := ('/Users/rorden/Desktop/Surf_Ice/other/motor_4t95vol.nii.gz');
   //OpenDialog.FileName := ('/Users/rorden/Desktop/Surf_Ice/other/motor_4t95mesh.gii');
   OpenOverlay(OpenDialog.FileName);
@@ -3166,6 +3170,8 @@ begin
     OpenDialog.Filename := gPrefs.PrevTrackname;
  end;
  if not OpenDialog.Execute then exit;
+ if FSize(OpenDialog.Filename) < 1 then
+    showmessage('Unable to open file (check permissions) '+ OpenDialog.Filename);
  //OpenDialog.Filename := '/Users/rorden/Desktop/Surf_Ice/sample/stroke.trk';
  OpenTrack(OpenDialog.FileName);
 end;
@@ -3382,6 +3388,8 @@ begin
     OpenDialog.Filename := gPrefs.PrevFilename[1];
   end;
   if not OpenDialog.Execute then exit;
+  if FSize(OpenDialog.Filename) < 1 then
+     showmessage('Unable to open file (check permissions) '+ OpenDialog.Filename);
   OpenMesh(OpenDialog.Filename);
 end;
 
