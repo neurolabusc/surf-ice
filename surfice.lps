@@ -17,7 +17,6 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
         <TopLine Value="2919"/>
         <CursorPos X="79" Y="2925"/>
         <UsageCount Value="200"/>
@@ -327,9 +326,10 @@
       </Unit43>
       <Unit44>
         <Filename Value="curv.pas"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="3"/>
-        <TopLine Value="48"/>
-        <CursorPos X="37" Y="48"/>
+        <TopLine Value="59"/>
+        <CursorPos X="73" Y="70"/>
         <UsageCount Value="10"/>
         <Loaded Value="True"/>
       </Unit44>

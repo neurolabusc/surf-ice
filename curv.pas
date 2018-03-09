@@ -1,7 +1,7 @@
 unit curv;
 interface
 
-uses define_types, matmath, sysutils;
+uses define_types, matmath, sysutils, Dialogs;
 
 procedure GenerateCurv(fnm: string; var faces: TFaces; vertices: TVertices);
 
@@ -67,7 +67,7 @@ begin
   except
    // If there was an error the reason can be found here
    on E: EInOutError do
-     writeln('Unable to create '+fnm+' Details: ', E.ClassName, '/', E.Message);
+     Showmessage('Unable to create '+fnm+' Details: '+ E.ClassName+ '/'+ E.Message);
   end;
 end;
 
