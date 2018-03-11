@@ -227,7 +227,8 @@ const kAoShaderFragToon = '#version 330'
 +#10'  depth = clamp(depth, 0.0, 1.0);'
 +#10'  color = mix(t1, t2, blend1 * depth);'
 +#10'}';   *)
-    const kAoShaderFrag = '#version 330'
+
+const kAoShaderFrag = '#version 330'
  +#10'uniform sampler2D tex1, tex2, depth_texture1, depth_texture2;'
 +#10'uniform float blend1, alpha1, fracAO, aoRadius;'
 +#10'uniform vec2 texture_size;'
@@ -290,14 +291,12 @@ const kAoShaderFragToon = '#version 330'
 +#10'		l = l + dl;'
 +#10'	}'
 +#10'	ao /= float(samples);'
-+#10'	//if (ao > 1.0) ao = 0.0;'
 +#10'	ao = clamp(ao, 0.0, 0.4) * 2.5; //threshold then LERP 0..1'
 +#10'	ao = smoothstep(0.0, 1.0, ao);'
 +#10'	ao = (1.0 - ao) * fracAO;'
 +#10'	return ao;'
 +#10'}'
 +#10'void main(void) {'
-+#10'  //diffarea = 0.35;'
 +#10'  vec4 t1 = texture(tex1, texCoord);'
 +#10'  if (t1.a == 0.0) discard;'
 +#10'  vec4 t2 = texture(tex2, texCoord);'
@@ -309,6 +308,7 @@ const kAoShaderFragToon = '#version 330'
 +#10'  depth = clamp(depth, 0.0, 1.0);'
 +#10'  color = mix(t1, t2, blend1 * depth);'
 +#10'}';
+
       {$ENDIF}
 
  {$ELSE}
@@ -1317,8 +1317,8 @@ begin
   if gShader.Uniform[gShader.AOradiusU].DefaultV <= 0 then
     uniform1fx(gShader.programAoID, 'fracAO', 0.0);
  end else
-  uniform1fx(gShader.programAoID, 'aoRadius', 16);//zoom * gShader.AOradius / distance);
-  uniform2fx(gShader.programAoID, 'texture_size', f1.w, f1.h);
+  uniform1fx(gShader.programAoID, 'aoRadius', zoom * 16.0 / distance);
+ uniform2fx(gShader.programAoID, 'texture_size', f1.w, f1.h);
   //   GLForm1.caption := floattostr(distance);
   //
   uniform1fx(gShader.programAoID, 'blend1', blend1);
