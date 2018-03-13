@@ -1,6 +1,6 @@
 # Blender MZ3 Addon
 
-This addon will add the ability to import and export binary MZ3 mesh files in Blender. This is based on the [Alex Tsui's OFF addon](https://github.com/alextsui05/blender-off-addon).
+This addon will add the ability to import and export binary [MZ3](https://github.com/neurolabusc/surf-ice/tree/master/mz3) mesh files in Blender. This is based on the [Alex Tsui's OFF addon](https://github.com/alextsui05/blender-off-addon).
 
 # Quickstart
 
@@ -30,7 +30,7 @@ Blender Wiki page: http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/I
 
 ## 0.3.1 / 03032018
 
-- Initial release : May rotate objects orthogonally during opening/saving. May have problems saving quad meshes (triangular meshes are fine).
+- Initial release : May rotate objects orthogonally during opening/saving. May have problems saving quad meshes (triangular meshes are fine). Vertex colors may not be retained.
 
 # Developer notes
 

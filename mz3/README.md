@@ -86,4 +86,5 @@ The included Matlab script `demo_mz3.m` will generate a series of simple mz3 fil
 
  - [MRIcroS](https://github.com/bonilhamusclab/MRIcroS) can read, write and visualize MZ3 meshes. The Matlab scripts [writeMz3.m](https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bmz3/writeMz3.m) and [readMz3.m](https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bmz3/readMz3.m) handle the MZ3 format.
  - [Surfice](https://www.nitrc.org/plugins/mwiki/index.php/surfice:MainPage) can read, write and visualize MZ3 meshes. The Pascal functions [loadMz3 and saveMz3](https://github.com/neurolabusc/surf-ice/blob/master/mesh.pas) handle the MZ3 format.
+  - [Blender import/export](https://github.com/neurolabusc/surf-ice/tree/master/mz3/blender-mz3-addon).
   - This web page includes a simple [Python script](https://github.com/neurolabusc/surf-ice/tree/master/mz3/mz3.py) that reports the contents of a mz3 file. For example, running `python ./mz3.py 7ColoredMeshPerFace.mz3` will report the properties of that mesh. Note that all faces, vertices, colors and scalars are reported to the terminal window, so this tool is only practical for simple meshes.
