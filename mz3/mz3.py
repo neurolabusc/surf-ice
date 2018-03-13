@@ -32,10 +32,10 @@ def read(fnm, isVerbose):
             data = f.read(hdrBytes)
             hdr = struct.unpack_from('<HHIII', data)
             if hdr[0] != 23117:  # incorrect magic: not mz3
-                print "Not a valid MZ3 file"
+                print("Not a valid MZ3 file")
                 return invalid_mz3
             if isVerbose:
-                print "GZ Compressed"
+                print("GZ Compressed")
         MAGIC = hdr[0]
         ATTR = hdr[1]
         NFACE = hdr[2]
@@ -48,19 +48,19 @@ def read(fnm, isVerbose):
         isSCALAR = (ATTR & 8) != 0
         # report contents
         if isVerbose:
-            print "MAGIC %d ATTR %d" % (MAGIC, ATTR)
-            print "NFACE %d NVERT %d NSKIP %d" % (NFACE, NVERT, NSKIP)
-            print " isFACE %r isVERT %r" % (isFACE, isVERT)
-            print " isRGBA %r isSCALAR %r" % (isRGBA, isSCALAR)
+            print("MAGIC %d ATTR %d" % (MAGIC, ATTR))
+            print("NFACE %d NVERT %d NSKIP %d" % (NFACE, NVERT, NSKIP))
+            print(" isFACE %r isVERT %r" % (isFACE, isVERT))
+            print(" isRGBA %r isSCALAR %r" % (isRGBA, isSCALAR))
         # quit if file does not make sense
         if ATTR > 15:
-            print "Unable to read future version of MZ3 file"
+            print("Unable to read future version of MZ3 file")
             return invalid_mz3
         if NVERT < 1:
-            print "Unable to read MZ3 files without vertices"
+            print("Unable to read MZ3 files without vertices")
             return invalid_mz3
         if (NFACE < 1) & (isFACE):
-            print "MZ3 files with isFACE must specify NFACE"
+            print("MZ3 files with isFACE must specify NFACE")
             return invalid_mz3
         # read faces
         f.seek(hdrBytes+NSKIP)
@@ -92,22 +92,22 @@ def read(fnm, isVerbose):
         NFACE = len(faces) // 3
         j = 0
         for i in range(NFACE):
-            print "%d face %d %d %d" % (i, faces[j], faces[j+1], faces[j+2])
+            print("%d face %d %d %d" % (i, faces[j], faces[j+1], faces[j+2]))
             j = j + 3
     if isVerbose & (len(verts) > 0):
         NVERT = len(verts) // 3
         j = 0
         for i in range(NVERT):
-            print "%d vert %g %g %g" % (i, verts[j], verts[j+1], verts[j+2])
+            print("%d vert %g %g %g" % (i, verts[j], verts[j+1], verts[j+2]))
             j = j + 3
     if isVerbose & (len(rbga) > 0):
         for i in range(len(rbga)):
             rgba = struct.unpack("4B", struct.pack("I", rbga[i]))
-            print "%d rgba %d %d %d %d" % (i, rgba[0],
-                                           rgba[1], rgba[2], rgba[3])
+            print("%d rgba %d %d %d %d" % (i, rgba[0],
+                                           rgba[1], rgba[2], rgba[3]))
     if isVerbose & (len(scalar) > 0):
         for i in range(len(scalar)):
-            print "%d scalar %g" % (i, scalar[i])
+            print("%d scalar %g" % (i, scalar[i]))
     return faces, verts, rbga, scalar
 
 
@@ -120,10 +120,10 @@ def load_mz3_mesh(filepath, mz3_name, isVerbose):
 
 # main program follows:
 if len(sys.argv) < 2:
-    print "Error: no input filename provided"
+    print("Error: no input filename provided")
     quit()
 fnm = sys.argv[1]
 if not os.path.isfile(fnm):
-    print "Unable to find file named %s" % (fnm)
+    print("Unable to find file named %s" % (fnm))
     quit()
 load_mz3_mesh(fnm, "", True)
