@@ -291,31 +291,67 @@ def load(operator, context, filepath):
         for i, facet in enumerate(mesh.polygons):
             for j, vidx in enumerate(facet.vertices):
                 color_data.data[3*i + j].color = colors[vidx]
-
     return mesh
+
+def writeMZ3(filepath, faces, verts, colors):
+    isFACE = len(faces) > 0
+    isVERT = len(verts) > 0
+    isRGBA = len(colors) > 0
+    MAGIC = 23117
+    NFACE = len(faces)
+    NVERT = len(verts)
+    ATTR = 0
+    if (isFACE):
+        ATTR = ATTR + 1
+    if (isVERT):
+        ATTR = ATTR + 2
+    if (isRGBA):
+        ATTR = ATTR + 4
+    NSKIP = 0
+    filepath = os.fsencode(filepath)
+    with gzip.open(filepath, 'wb') as f:  # <-- compressed
+    #with open(filepath, 'wb') as f:  # <-- uncompressed
+        f.write(struct.pack('<H', MAGIC))
+        f.write(struct.pack('<H', ATTR))
+        f.write(struct.pack('<I', NFACE))
+        f.write(struct.pack('<I', NVERT))
+        f.write(struct.pack('<I', NSKIP))
+        if (isFACE):
+            for i, facet in enumerate(faces):
+            	#if (len(facet.vertices) != 3): error
+                for vid in facet.vertices:
+                    f.write(struct.pack('<1I', int( vid)))
+        if (isVERT):
+            for i, vert in enumerate(verts):
+                f.write(struct.pack('<3f', float(vert.co[0]), float(vert.co[1]), float(vert.co[2])))
+                #print("%.16f %.16f %.16f" % vert.co[:])
+        if (isRGBA):
+            for i, vc in enumerate(colors):
+            	f.write(struct.pack('<4B', int(vc[0]), int(vc[1]), int(vc[2]), 255))
 
 def save(operator, context, filepath,
     global_matrix = None,
     use_colors = False):
-    print("MZ3 Export not yet supported")
-    return {'EXPORT NOT YET SUPPORTED'}
     # Export the selected mesh
     APPLY_MODIFIERS = True # TODO: Make this configurable
     if global_matrix is None:
         global_matrix = mathutils.Matrix()
     scene = context.scene
     obj = scene.objects.active
+    # Make sure it's triangles.
     mesh = obj.to_mesh(scene, APPLY_MODIFIERS, 'PREVIEW')
-
+    bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+    bpy.ops.mesh.quads_convert_to_tris(quad_method='BEAUTY', ngon_method='BEAUTY')
+    bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
     # Apply the inverse transformation
     obj_mat = obj.matrix_world
     mesh.transform(global_matrix * obj_mat)
-
+    #export data
     verts = mesh.vertices[:]
     facets = [ f for f in mesh.tessfaces ]
     # Collect colors by vertex id
     colors = False
-    vertex_colors = None
+    vertex_colors = []
     if use_colors:
         colors = mesh.tessface_vertex_colors.active
     if colors:
@@ -329,36 +365,9 @@ def save(operator, context, filepath,
                     vertex_colors[vidx] = (int(color[j][0] * 255.0),
                                             int(color[j][1] * 255.0),
                                             int(color[j][2] * 255.0))
-    else:
-        use_colors = False
-
-    # Write geometry to file
-    filepath = os.fsencode(filepath)
-    fp = open(filepath, 'w')
-
-    if use_colors:
-        fp.write('COFF\n')
-    else:
-        fp.write('OFF\n')
-
-    fp.write('%d %d 0\n' % (len(verts), len(facets)))
-
-    for i, vert in enumerate(mesh.vertices):
-        fp.write('%.16f %.16f %.16f' % vert.co[:])
-        if use_colors:
-            fp.write(' %d %d %d 255' % vertex_colors[i])
-        fp.write('\n')
-
-    #for facet in facets:
-    for i, facet in enumerate(mesh.tessfaces):
-        fp.write('%d' % len(facet.vertices))
-        for vid in facet.vertices:
-            fp.write(' %d' % vid)
-        fp.write('\n')
-
-    fp.close()
-
+    writeMZ3(filepath, facets, verts, vertex_colors)
     return {'FINISHED'}
+
 
 if __name__ == "__main__":
     register()
