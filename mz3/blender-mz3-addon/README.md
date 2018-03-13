@@ -30,7 +30,7 @@ Blender Wiki page: http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/I
 
 ## 0.3.1 / 03032018
 
-- Initial release : May rotate objects orthogonally during opening/saving. May have problems saving quad meshes (triangular meshes are fine). Vertex colors may not be retained.
+- Initial release : May rotate objects orthogonally during opening/saving. Vertex colors may not be retained.
 
 # Developer notes
 

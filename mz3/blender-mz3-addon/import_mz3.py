@@ -332,14 +332,17 @@ def writeMZ3(filepath, faces, verts, colors):
 def save(operator, context, filepath,
     global_matrix = None,
     use_colors = False):
-    # Export the selected mesh
-    APPLY_MODIFIERS = True # TODO: Make this configurable
     if global_matrix is None:
         global_matrix = mathutils.Matrix()
-    scene = context.scene
-    obj = scene.objects.active
-    # Make sure it's triangles.
-    mesh = obj.to_mesh(scene, APPLY_MODIFIERS, 'PREVIEW')
+    # Export the selected mesh
+    obj = bpy.context.scene.objects.active
+    bpy.context.scene.objects.active = obj
+    bpy.ops.object.modifier_add(type='TRIANGULATE')  # no 4-gons or n-gons
+    mesh = obj.to_mesh(bpy.context.scene, True, 'PREVIEW')
+    #APPLY_MODIFIERS = True # TODO: Make this configurable
+    #scene = context.scene
+    #obj = scene.objects.active
+    #mesh = obj.to_mesh(scene, APPLY_MODIFIERS, 'PREVIEW')
     bpy.ops.object.mode_set(mode='EDIT', toggle=False)
     bpy.ops.mesh.quads_convert_to_tris(quad_method='BEAUTY', ngon_method='BEAUTY')
     bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
