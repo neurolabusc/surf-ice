@@ -3,7 +3,7 @@ interface
 
 uses define_types, matmath, sysutils, Dialogs;
 
-procedure GenerateCurv(fnm: string; var faces: TFaces; vertices: TVertices);
+procedure GenerateCurv(fnm: string; var faces: TFaces; vertices: TVertices; isSmooth: boolean);
 
 implementation
 
@@ -71,41 +71,42 @@ begin
   end;
 end;
 
-(*procedure SmoothK (var vK : TFloats; var faces: TFaces);
+procedure SmoothK (var vK : TFloats; var faces: TFaces);
 //smooth curvature across neighbors
 //vK : one curvature value k for each vertex, faces: triangle face indices
 var
-   tK: TFloats;
+   inK: TFloats;
    nK : array of integer;
    i, num_v, x, y, z: integer;
 begin
   num_v := length(vK);
-  setlength(tK, num_v);
+  setlength(inK, num_v);
   setlength(nK, num_v);
-  tK := Copy(vK, Low(vK), num_v);
+  //tK := Copy(vK, Low(vK), num_v);
   for i := 0 to (num_v-1) do begin
+     inK[i] := vK[i];
      vK[i] := 0;
      nK[i] := 0;
   end;
   for i := 0 to (length(faces)-1) do begin //compute the normal for each face
     X := faces[i].X;
-    Y := faces[i].X;
-    Z := faces[i].X;
+    Y := faces[i].Y;
+    Z := faces[i].Z;
     nK[X] := nK[X] + 1;
     nK[Y] := nK[Y] + 1;
     nK[Z] := nK[Z] + 1;
-    vK[X] := vK[X] + tK[X];
-    vK[Y] := vK[Y] + tK[Y];
-    vK[Z] := vK[Z] + tK[Z];
+    vK[X] := vK[X] + inK[X];
+    vK[Y] := vK[Y] + inK[Y];
+    vK[Z] := vK[Z] + inK[Z];
   end;
-  setlength(tK, 0);
+  setlength(inK, 0);
   for i := 0 to (num_v-1) do
       if nK[i] > 1 then
          vK[i] := vK[i] / nK[i];
   setlength(nK, 0);
-end;  *)
+end;
 
-procedure GenerateCurv(fnm: string; var faces: TFaces; vertices: TVertices);
+procedure GenerateCurv(fnm: string; var faces: TFaces; vertices: TVertices; isSmooth: boolean);
 var
   vNorm : array of TPoint3f;
   vK : TFloats;
@@ -162,7 +163,8 @@ begin
          vK[i] := vK[i]/vnK[i];
   end;
   //optional: smooth curves
-  //SmoothK (vK, faces);
+  if (isSmooth) then
+     SmoothK (vK, faces);
   //normalize curvature from
   mx := vK[0];
   for i := 0 to (length(vertices)-1) do

@@ -261,31 +261,33 @@ begin
           setNode(255,192,0,52,192, 5, result);
           setNode(255,3,0,80,255, 6, result);
        end;
-       15: begin //FreeSurferCurve - center dark
+       15: begin //FreeSurferCurve - valleys dark
           result.isFreeSurfer:= true;
-         setNode(0,0,0,0,0, 0, result);
-         setNode(0,0,0,128,40,1, result);
-         setNode(0,0,0,128,215,2, result);
-         setNode(0,0,0,0,255, 3, result);
+          setNode(0,0,0,0,0, 0, result);
+          setNode(0,0,0,0,156, 1, result);
+          setNode(0,0,0,255,255, 2, result);
+
        end;
-       16: begin //FreeSurferCurve  - center transparent
+       16: begin //FreeSurferCurve  - curves (valleys and ridges) dark
          result.isFreeSurfer:= true;
-         setNode(0,0,0,128,0, 0, result);
-         setNode(0,0,0,0, 40,1, result);
-         setNode(0,0,0,0, 215,2, result);
-         setNode(0,0,0,128,255, 3, result);
+            setNode(0,0,0,255,0, 0, result);
+          setNode(0,0,0,0,100, 1, result);
+          setNode(0,0,0,0,156, 2, result);
+          setNode(0,0,0,255,255, 3, result);
        end;
-       17: begin //FreeSurferCurve - center dark
+       17: begin //FreeSurferCurve - flat surfaces darkened
          result.isFreeSurfer:= true;
          setNode(0,0,0,0,0, 0, result);
-         setNode(0,0,0,148,128,1, result);
+       setNode(0,0,0,0,100, 1, result);
+       setNode(0,0,0,255,128, 2, result);
+       setNode(0,0,0,0,156, 3, result);
+       setNode(0,0,0,0,255, 4, result);
+       end;
+       18: begin //FreeSurferCurve  - ridges dark
+         result.isFreeSurfer:= true;
+         setNode(0,0,0,255,0, 0, result);
+         setNode(0,0,0,0,100,1, result);
          setNode(0,0,0,0,255, 2, result);
-       end;
-       18: begin //FreeSurferCurve  - center transparent
-         result.isFreeSurfer:= true;
-         setNode(0,0,0,148,0, 0, result);
-         setNode(0,0,0,0,128,1, result);
-         setNode(0,0,0,148,255, 2, result);
        end;
        else begin
            result := loadCustomLUT(lIndex);  //index unknown!!!
@@ -332,7 +334,13 @@ begin
     result[0].A := rev[0].A;
     result[255].A := rev[255].A;
  end;
- if lLUTNodes.isFreeSurfer then exit; //not for freesurfer
+ if lLUTNodes.isFreeSurfer then begin
+   //result[255].R := 0;
+   //result[255].G := 0;
+   //result[255].B := 0;
+   //result[255].A := 255;//result[254].A;
+   exit; //not for freesurfer
+ end;
  //result[0].A := 0; //see LUT[0].A <> 0
  for lInc := 1 to 255 do
      result[lInc].A := 255;

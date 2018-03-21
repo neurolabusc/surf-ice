@@ -1125,8 +1125,6 @@ const
   kFragBOM = kBOM + kFragStr;
   kGeomStr = '//geom';
   kGeomBOM = kBOM + kGeomStr;
-  //kAOStr = '//AOradius';
-  //kAOBOM = kBOM + kAOStr;
 var
   mode: integer;
   F : TextFile;

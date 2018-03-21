@@ -2936,7 +2936,7 @@ begin
        showmessage('File already exists '+fnm);
        exit;
     end;
-    GenerateCurv(fnm, gMesh.faces, gMesh.vertices);
+    GenerateCurv(fnm, gMesh.faces, gMesh.vertices, gPrefs.GenerateSmoothCurves);
     OpenOverlay(fnm);
     if isTemp then
       deletefile(fnm);

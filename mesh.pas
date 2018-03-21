@@ -159,7 +159,7 @@ uses
   mainunit,
   meshify_simplify,shaderu, {$IFDEF COREGL} gl_core_3d {$ELSE} gl_legacy_3d {$ENDIF};
 
-{$IFDEF COREGL}
+//{$IFDEF COREGL}
 function mixRGBA(c1, c2: TRGBA; frac2: single): TRGBA;
 var
    frac1: single;
@@ -170,7 +170,7 @@ begin
   result.G := round(c1.G*frac1 + c2.G*frac2);
   result.B := round(c1.B*frac1 + c2.B*frac2);
 end;
-{$ENDIF}
+//{$ENDIF}
 
 procedure AddPt4f(var v: TPoint4f; c1,c2,c3: TRGBA); //create float vector
 begin
@@ -247,6 +247,7 @@ begin
           for i := 0 to (length(v)-1) do
               vRGBA[i] := blendRGBA(vRGBA[i],vRGBAmx[i]);
         end else begin
+            //GLForm1.caption := 'xxxxx'+(inttostr(vRGBA[i].A));
             for c :=  OpenOverlays downto 1 do begin
               if (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) = length(v)) then begin
                  if overlay[c].LUTvisible <> kLUTopaque then
@@ -321,17 +322,33 @@ begin
        for i := 0 to (length(v)-1) do
               vRGBA[i] := mixRGBA( Clr, vRGBA[i], mx);
        {$ELSE}  //with old GLSL we mix in the shader
-       if (OverlayTransparency > 0 ) and (OverlayTransparency <= 100) then
-          for i := 0 to (length(v)-1) do
+       if (OverlayTransparency > 0 ) and (OverlayTransparency <= 100) then begin
+         for i := 0 to (length(v)-1) do
               vRGBA[i].a := round( vRGBA[i].a * (1 - (OverlayTransparency /100)) );
+       end;
        {$ENDIF}
      end; // if OpenOverlays > 0
+     {$IFDEF COREGL}
+     //the purpose of the next loop is to allow us to hide curvature
+     for c :=  OpenOverlays downto 1 do begin
+         if isFreeSurferLUT(overlay[c].LUTindex) then begin
+           for i := 0 to (length(v)-1) do begin
+             mn := ((overlay[c].intensity[i] + 1.0) * 0.5); //convert curvature to range 0..1
+             if (mn < 0) then mn := 0;
+             if (mn > 1) then mn := 1;
+             mn := mn * 255.0;
+               vRGBA[i].A := round(mn);
+           end;
+         end;
+     end; //for c
+     {$ENDIF}
      {$IFDEF COREGL}
      BuildDisplayList(f, v, vRGBA, vao, vbo, Clr);
      {$ELSE}
      displayList:= BuildDisplayList(f, v, vRGBA);
      {$ENDIF}
   end else begin
+      Clr.A := 128; //just a bit less than 50% - only for hiding curvature
      setLength(vRGBA,0);
      {$IFDEF COREGL}
      BuildDisplayList(f, v, vRGBA,vao, vbo, Clr);
@@ -5636,6 +5653,7 @@ procedure TMesh.LoadCurv(const FileName: string; lOverlayIndex: integer);
 var
    f: File;
    i, sz: integer;
+   mn,mx: single;
    num_v, num_f, ValsPerVertex : LongWord;
    sig : array [1..3] of byte;
 begin
@@ -5672,6 +5690,17 @@ begin
          SwapSingle(overlay[lOverlayIndex].intensity[i]); //Curv files are ALWAYS big endian
      {$ENDIF}
      CloseFile(f);
+     //normalize intensity
+     mn := overlay[lOverlayIndex].intensity[0];
+     mx := mn;
+     for i := 0 to (num_v-1) do begin
+         if (overlay[lOverlayIndex].intensity[i] > mx) then mx := overlay[lOverlayIndex].intensity[i];
+         if (overlay[lOverlayIndex].intensity[i] < mn) then mn := overlay[lOverlayIndex].intensity[i];
+     end;
+     if (mn = mx) or (mx < 0) or (mn > 0) then exit;
+     if abs(mn) > mx then mx := abs(mn);
+     for i := 0 to (num_v-1) do
+         overlay[lOverlayIndex].intensity[i] := overlay[lOverlayIndex].intensity[i] / mx;
 end; // LoadCurv()
 
 function fread3 (var f: File): LongWord;
@@ -6039,12 +6068,10 @@ begin
         end;
      end else
          nOverlays := 1;
-
      if (length(overlay[OpenOverlays].faces) < 1 ) and (length(overlay[OpenOverlays].intensity) < 1 ) then begin //unable to open as an overlay - perhaps vertex colors?
         OpenOverlays := OpenOverlays - 1;
         exit;
      end;
-
   end;
   if not isCiftiNii then begin
     {$IFDEF FOREIGNVOL}
@@ -6063,14 +6090,15 @@ begin
       if (length(overlay[OpenOverlays].intensity) > 0 ) then
          Overlay[OpenOverlays].LUTindex := 15;//CURV file
   end;
-
   if  (length(overlay[OpenOverlays].intensity) < 1 ) then begin
       LoadMeshAsOverlay(FileName, OpenOverlays);
   end else
       SetOverlayDescriptives(OpenOverlays);
   if isFreeSurferLUT(Overlay[OpenOverlays].LUTindex) then begin //CURV file
-     Overlay[OpenOverlays].windowScaledMin:= 0.0;//-0.1;
-     Overlay[OpenOverlays].windowScaledMax := 0.8;
+    Overlay[OpenOverlays].windowScaledMin := -0.6;
+    Overlay[OpenOverlays].windowScaledMax := 0.6;
+    //Overlay[OpenOverlays].windowScaledMin:= 0.0;//-0.1;
+    //Overlay[OpenOverlays].windowScaledMax := 1.0;//0.8;
   end;
   Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex, Overlay[OpenOverlays].LUTinvert); //set color scheme
   isRebuildList := true;
