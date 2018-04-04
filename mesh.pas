@@ -149,6 +149,7 @@ type
     procedure SaveGii(const FileName: string);
     procedure SaveObj(const FileName: string);
     procedure SavePly(const FileName: string);
+    procedure SaveMesh(const FileName: string);
     procedure SaveOverlay(const FileName: string; OverlayIndex: integer);
     destructor  Destroy; override;
   end;
@@ -2672,6 +2673,23 @@ var
 begin
   setlength(i,0);
   SaveMz3Core(Filename, Faces,Vertices,vertexRGBA, i);
+end;
+
+procedure TMesh.SaveMesh(const FileName: string);
+var
+  x: string;
+begin
+  x := UpperCase(ExtractFileExt(Filename));
+  if (x = '.MZ3') then
+     SaveMz3(FileName)
+  else if (x = '.GII') then
+     SaveGii(Filename)
+  else if (x = '.PLY') then
+     SavePly(Filename)
+  else
+     SaveObj(Filename);
+
+  //SaveMz3Core(Filename, Faces,Vertices,vertexRGBA, i);
 end;
 
 procedure TMesh.SaveOverlay(const FileName: string; OverlayIndex: integer);

@@ -59,7 +59,7 @@ void main() {
 	s = smoothstep(0.72-w,0.72+w,s) * Specular;
 	vec3 frontcolor = a + d +  s;
 	frontcolor *= min((max(dot(n,normalize(v)), 0.0) - 0.5) * Edge, 0.0) + 1.0;
-	backface = 1.0 - step(0.0, n.z); //1=backface
+	//backface = 1.0 - step(0.0, n.z); //1=backface
 	color = vec4(mix(frontcolor,backcolor,   backface), 1.0);
 }
 // Copyright (C) 2007 Dave Griffiths

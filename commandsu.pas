@@ -25,6 +25,7 @@ procedure EDGETHRESH (LO, HI: single);
 procedure ELEVATION (DEG: integer);
 procedure FONTNAME(name: string);
 procedure MESHLOAD(lFilename: string);
+procedure MESHCREATE(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer);
 procedure MESHCURV;
 procedure MESHOVERLAYORDER (FLIP: boolean);
 procedure NODELOAD(lFilename: string);
@@ -78,7 +79,7 @@ const
                (Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
              );
 
-knProc = 61;
+knProc = 62;
   kProcRA : array [1..knProc] of TScriptRec = (
   (Ptr:@ATLASSTATMAP;Decl:'ATLASSTATMAP';Vars:'(ATLASNAME, STATNAME: string; const Intensities: array of integer; const Intensities: array of single)'),
   (Ptr:@ATLASSATURATIONALPHA;Decl:'ATLASSATURATIONALPHA';Vars:'(lSaturation, lTransparency: single)'),
@@ -103,6 +104,7 @@ knProc = 61;
    (Ptr:@FONTNAME;Decl:'FONTNAME';Vars:'(name: string)'),
    (Ptr:@MESHCURV;Decl:'MESHCURV';Vars:''),
    (Ptr:@MESHLOAD;Decl:'MESHLOAD';Vars:'(lFilename: string)'),
+   (Ptr:@MESHCREATE;Decl:'MESHCREATE';Vars:'(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer)'),
    (Ptr:@MESHOVERLAYORDER;Decl:'MESHOVERLAYORDER';Vars:'(FLIP: boolean)'),
    (Ptr:@NODELOAD;Decl:'NODELOAD';Vars:'(lFilename: string)'),
    (Ptr:@MODALMESSAGE;Decl:'MODALMESSAGE';Vars:'(STR: string)'),
@@ -146,7 +148,7 @@ knProc = 61;
 implementation
 uses
     //{$IFDEF UNIX}fileutil,{$ENDIF}
-    mainunit, define_types, shaderui, graphics, LCLintf, Forms, SysUtils, Dialogs, scriptengine, mesh;
+    mainunit, define_types, shaderui, graphics, LCLintf, Forms, SysUtils, Dialogs, scriptengine, mesh, meshify;
 
 function ATLASMAXINDEX(OVERLAY: integer): integer;
 begin
@@ -416,6 +418,28 @@ end;
 procedure MESHCURV;
 begin
      GLForm1.CurvMenuTemp.Click;
+end;
+
+procedure MESHCREATE(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer);
+var
+  nVtx: integer;
+  meshnamePth: string;
+begin
+  //Nii2MeshCore(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer): integer;
+  if (niiname = '') then begin
+    ScriptForm.Memo2.Lines.Add('meshcreate error: no NIfTI name');
+    exit;
+  end;
+  if (meshname = '') then begin
+    ScriptForm.Memo2.Lines.Add('meshcreate error: no mesh name');
+    exit;
+  end;
+  meshnamePth := DefaultToHomeDir(meshname);
+  nVtx := Nii2MeshCore(niiname, meshnamePth, threshold, decimateFrac, minimumClusterVox, smoothStyle);
+  if (nVtx < 3) then
+     ScriptForm.Memo2.Lines.Add('meshcreate error: no mesh created')
+  else
+      ScriptForm.Memo2.Lines.Add('meshcreate generated mesh with '+inttostr(nVtx)+' vertices');
 end;
 
 procedure MESHLOAD(lFilename: string);

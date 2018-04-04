@@ -6,7 +6,7 @@ Shininess|float|1|60|120
 Blinn-Phong shading with Lambertian diffuse. Copyright 2015 Chris Rorden, BSD2clause.|note
 //vert
 varying vec3 vL, vN, vV;
-varying vec4 vP, vClr;
+varying vec4 vClr, vP;
 
 void main() {
     vN = normalize(gl_NormalMatrix * gl_Normal);
@@ -20,7 +20,7 @@ void main() {
 uniform float Ambient, Diffuse, Specular, Shininess;
 uniform vec4 ClipPlane;
 varying vec3 vL, vN, vV;
-varying vec4 vP, vClr;
+varying vec4 vClr, vP;
 
 void main() {
 	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
@@ -28,11 +28,10 @@ void main() {
 	vec3 n = normalize(vN);
 	vec3 h = normalize(l+normalize(vV));
 	vec3 a = mix(gl_FrontMaterial.ambient.rgb, vClr.rgb, vClr.a);
-	vec3 d = a * Diffuse;
-	float diff = dot(n,l);
+	vec3 d = a * Diffuse * dot(n,l);
 	a *= Ambient;
 	float s = pow(max(0.0,dot(n,h)), Shininess) * Specular;
-	vec3 backcolor = Ambient*vec3(0.1+0.1+0.1) + d * abs(diff);
+	vec3 backcolor =  (a - d) * 0.6;
 	float backface = step(0.00, n.z);
-	gl_FragColor = vec4(mix(backcolor.rgb, a + d * diff + s,  backface), 1.0);
+	gl_FragColor = vec4(mix(backcolor.rgb, a + d + s,  backface), 1.0);
 }

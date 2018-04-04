@@ -1,6 +1,7 @@
 //pref
 Ambient|float|0.0|0.5|1
 Diffuse|float|0.0|0.7|1
+AOradius|float|0|0|16
 Fastest but poorest: for software emulation like Mesa. Clip plane will be ignored|note
 //vert
 varying vec3 vL, vN;

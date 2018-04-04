@@ -11,6 +11,8 @@ uses
 
 function Nii2Mesh(const FileName: string): boolean;
 function Atlas2Mesh(const FileName: string): boolean;
+function Nii2MeshCore(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer): integer;
+
 
 implementation
 
@@ -128,6 +130,51 @@ begin
        Decim := 0.01;
   end;
 
+function Nii2MeshCore(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer): integer;
+var
+    nii: TNIFTI;
+    lMesh: TMesh;
+    IsoSurfaceEx: TIsoSurfaceExtractor;
+    vx: TPoint3f;
+    i: integer;
+begin
+   result := -1;
+   nii := TNIfTI.Create;
+   nii.LoadFromFile(niiname, kNiftiSmoothNone);
+   if length(nii.img) < 9 then begin
+      nii.Free;
+      exit;
+   end;
+   if (decimateFrac <= 0) or (decimateFrac > 1) then
+      decimateFrac := 1.0;
+   if smoothStyle = kNiftiSmoothMaskZero then
+      nii.SmoothMaskZero
+   else if smoothStyle = kNiftiSmooth then
+      nii.Smooth;
+   if specialsingle(threshold) then
+    threshold := nii.minInten + ((nii.maxInten - nii.minInten) * 0.5);
+   ApplyClusterThreshold(nii, threshold, minimumClusterVox);
+   IsoSurfaceEx := TIsoSurfaceExtractor.Create(nii.hdr.dim[1], nii.hdr.dim[2],nii.hdr.dim[3], nii.img);
+   lMesh := TMesh.Create;
+  IsoSurfaceEx.MarchingCubes(threshold,lMesh.vertices, lMesh.faces);
+  UnifyVertices (lMesh.faces, lMesh.vertices);
+  ClusterVertex(lMesh.faces, lMesh.vertices, 0.0079295);
+  if decimateFrac < 1.0 then
+     if not ReducePatch(lMesh.faces, lMesh.vertices, decimateFrac) then exit;
+  //v1 := ptf(-0.5, -0.5, -0.5); //1Sept2016: not required: middle voxel 0 based: see https://github.com/neurolabusc/spmScripts/blob/master/nii_makeDTI.m
+  for i := 0 to (length(lMesh.vertices) -1) do begin //apply matrix to convert from voxels to mm (voxelspace -> worldspace)
+      vx := lMesh.vertices[i];
+      lMesh.vertices[i].X := vx.X*nii.mat[1,1] + vx.Y*nii.mat[1,2] + vx.Z*nii.mat[1,3] + nii.mat[1,4];
+      lMesh.vertices[i].Y := vx.X*nii.mat[2,1] + vx.Y*nii.mat[2,2] + vx.Z*nii.mat[2,3] + nii.mat[2,4];
+      lMesh.vertices[i].Z := vx.X*nii.mat[3,1] + vx.Y*nii.mat[3,2] + vx.Z*nii.mat[3,3] + nii.mat[3,4];
+  end;
+  IsoSurfaceEx.Free();
+  nii.free;
+  lMesh.SaveMesh(meshname);
+  result := length(lMesh.vertices);
+  lMesh.Free();
+end; //Nii2MeshCore()
+
 function Nii2Mesh(const FileName: string): boolean;
 var
   nii: TNIFTI;
@@ -135,7 +182,7 @@ var
   lThresh, lDecimate, s: single;
   lSmoothStyle: integer;
   IsoSurfaceEx: TIsoSurfaceExtractor;
-  v1,vx: TPoint3f;
+  vx: TPoint3f;
   lPath,lName,lExt: string;
   i, lMinClusterVox: integer;
 begin
