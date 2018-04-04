@@ -168,6 +168,9 @@ begin
       lMesh.vertices[i].Y := vx.X*nii.mat[2,1] + vx.Y*nii.mat[2,2] + vx.Z*nii.mat[2,3] + nii.mat[2,4];
       lMesh.vertices[i].Z := vx.X*nii.mat[3,1] + vx.Y*nii.mat[3,2] + vx.Z*nii.mat[3,3] + nii.mat[3,4];
   end;
+  //kludge follows: consider smarter way to detect reversed winding
+  if (nii.mat[1,1] >= 0) then
+     lMesh.ReverseFaces;
   IsoSurfaceEx.Free();
   nii.free;
   lMesh.SaveMesh(meshname);
@@ -238,6 +241,9 @@ begin
       lMesh.vertices[i].Y := vx.X*nii.mat[2,1] + vx.Y*nii.mat[2,2] + vx.Z*nii.mat[2,3] + nii.mat[2,4];
       lMesh.vertices[i].Z := vx.X*nii.mat[3,1] + vx.Y*nii.mat[3,2] + vx.Z*nii.mat[3,3] + nii.mat[3,4];
   end;
+  //kludge follows: consider smarter way to detect reversed winding
+  if (nii.mat[1,1] >= 0) then
+     lMesh.ReverseFaces;
   IsoSurfaceEx.Free();
   nii.free;
   GLForm1.SaveMesh(lMesh, false);

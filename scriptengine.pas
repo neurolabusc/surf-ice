@@ -46,6 +46,8 @@ type
     atlasgray1: TMenuItem;
     edgecreate1: TMenuItem;
     atlasmaxindex1: TMenuItem;
+    meshcreate1: TMenuItem;
+    meshreversefaces1: TMenuItem;
     nodethreshbysizenotcolor1: TMenuItem;
     nodecreate1: TMenuItem;
     overlaysmoothvoxelwisedata1: TMenuItem;

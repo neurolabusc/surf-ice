@@ -27,6 +27,7 @@ procedure FONTNAME(name: string);
 procedure MESHLOAD(lFilename: string);
 procedure MESHCREATE(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer);
 procedure MESHCURV;
+procedure MESHREVERSEFACES;
 procedure MESHOVERLAYORDER (FLIP: boolean);
 procedure NODELOAD(lFilename: string);
 procedure MODALMESSAGE(STR: string);
@@ -79,7 +80,7 @@ const
                (Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
              );
 
-knProc = 62;
+knProc = 63;
   kProcRA : array [1..knProc] of TScriptRec = (
   (Ptr:@ATLASSTATMAP;Decl:'ATLASSTATMAP';Vars:'(ATLASNAME, STATNAME: string; const Intensities: array of integer; const Intensities: array of single)'),
   (Ptr:@ATLASSATURATIONALPHA;Decl:'ATLASSATURATIONALPHA';Vars:'(lSaturation, lTransparency: single)'),
@@ -103,6 +104,7 @@ knProc = 62;
    (Ptr:@EDGELOAD;Decl:'EDGELOAD';Vars:'(lFilename: string)'),
    (Ptr:@FONTNAME;Decl:'FONTNAME';Vars:'(name: string)'),
    (Ptr:@MESHCURV;Decl:'MESHCURV';Vars:''),
+   (Ptr:@MESHREVERSEFACES;Decl:'MESHREVERSEFACES';Vars:''),
    (Ptr:@MESHLOAD;Decl:'MESHLOAD';Vars:'(lFilename: string)'),
    (Ptr:@MESHCREATE;Decl:'MESHCREATE';Vars:'(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer)'),
    (Ptr:@MESHOVERLAYORDER;Decl:'MESHOVERLAYORDER';Vars:'(FLIP: boolean)'),
@@ -413,6 +415,11 @@ begin
     AZIMUTHELEVATION(90,0)
   else
     AZIMUTHELEVATION(270,0);
+end;
+
+procedure MESHREVERSEFACES;
+begin
+     GLForm1.ReverseFacesMenu.Click;
 end;
 
 procedure MESHCURV;

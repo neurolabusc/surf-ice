@@ -157,6 +157,15 @@ object ScriptForm: TScriptForm
           Hint = 'meshcurv(); Displays mesh curvature, so crevices appear dark.'
           OnClick = InsertCommand
         end
+        object meshreversefaces1: TMenuItem
+          Caption = 'meshreversefaces'
+          Hint = 'meshreversefaces(): reverse triangle winding to reverse front/back faces'
+        end
+        object meshcreate1: TMenuItem
+          Tag = 242322
+          Caption = 'meshcreate'
+          Hint = 'MESHCREATE(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer); Convert a NIfTI voxel-based image into a mesh'
+        end
       end
       object Overlays1: TMenuItem
         Caption = 'Overlays'
