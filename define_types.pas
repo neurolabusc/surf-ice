@@ -92,7 +92,7 @@ function asRGBA(clr: TColor): TRGBA;
 implementation
 
 uses
-  {$IFDEF UNIX} BaseUnix, {$ELSE} windows, {$ENDIF}
+  {$IFDEF UNIX} BaseUnix, {$ELSE} windows, shlobj, {$ENDIF}
   sysutils, math;
 
 function FileExistsF(fnm: string): boolean; //returns false if file exists but is directory
@@ -108,34 +108,38 @@ begin
      {$ENDIF}
 end;
 
-function DefaultToHomeDir(FileName: string; Force: boolean = false ): string; //set path to home if not provided
+function HomeDir: string; //set path to home if not provided
 {$IFDEF UNIX}
+begin
+   result := expandfilename('~/');
+end;
+{$ELSE}
+var
+  SpecialPath: PWideChar;
+begin
+  Result := '';
+  SpecialPath := WideStrAlloc(MAX_PATH);
+  try
+    FillChar(SpecialPath^, MAX_PATH, 0);
+    if SHGetSpecialFolderPathW(0, SpecialPath, CSIDL_PERSONAL, False) then
+      Result := SpecialPath+pathdelim;
+  finally
+    StrDispose(SpecialPath);
+  end;
+end;
+{$ENDIF}
+
+
+function DefaultToHomeDir(FileName: string; Force: boolean = false ): string; //set path to home if not provided
 var
    p,n,x: string;
 begin
    result := FileName;
    FilenameParts (Filename, p,n,x);
    if (not Force) and (p <> '') and (DirectoryExists(p)) then exit;
-   p := expandfilename('~/');
+   p := HomeDir; //set path to home if not provided
    result := p+n+x;
 end;
-{$ELSE}
-var
-   p,n,x: string;
-var
-    PIDL : PItemIDList;
-    Folder : array[0..MAX_PATH] of Char;
-    const CSIDL_PERSONAL = $0005;
-begin
-   result := FileName;
-   FilenameParts (Filename, p,n,x);
-   if (p <> '') and (DirectoryExists(p)) then exit;
-   SHGetSpecialFolderLocation(0, CSIDL_PERSONAL, PIDL);
-   SHGetPathFromIDList(PIDL, Folder);
-   p := Folder+pathdelim;
-   result := p+n+x;
-end;
-{$ENDIF}
 
 {$IFDEF oldFloat2Str}
 function float2str(Avalue:double; ADigits:integer):string; //e.g x:single=2.6; floattostrf(x,8,4);
