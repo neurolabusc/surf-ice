@@ -1,5 +1,0 @@
-BEGIN
-	RESETDEFAULTS;
-	MESHLOAD('3mesh.mz3');
-	OVERLAYLOAD('8scalar.mz3');
-END.

@@ -12,8 +12,10 @@ uses
   {$ELSE}
     Windows,
   {$ENDIF}
+{$IFDEF LCLCocoa} nsappkitext, {$ENDIF}
   ClipBrd,
 {$endif}
+{$IFDEF Windows} uscaledpi,{$ENDIF}
    //Messages,
  //{$IFNDEF USETRANSFERTEXTURE}  scaleimageintensity,{$ENDIF}
  SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
@@ -141,6 +143,7 @@ type
     procedure FormDeactivate(Sender: TObject);
     procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
     procedure FormHide(Sender: TObject);
+    procedure FormShow(Sender: TObject);
     procedure Insert1Click(Sender: TObject);
     procedure Memo1DragDrop(Sender, Source: TObject; X, Y: Integer);
     procedure ReportCaretPos;
@@ -341,6 +344,20 @@ begin
     {$IFDEF Darwin}Application.MainForm.SetFocus;{$ENDIF}
 end;
 
+procedure TScriptForm.FormShow(Sender: TObject);
+begin
+  {$IFDEF LCLCocoa}
+  setThemeMode(Self.Handle, gPrefs.DarkMode);
+  if gPrefs.DarkMode then begin
+     Memo1.Color := clGray;
+     Memo2.Color := clGray;
+  end else begin
+      Memo1.Color := Graphics.clDefault;
+      Memo2.Color := Graphics.clDefault;
+  end;
+  {$ENDIF}
+end;
+
 procedure TScriptForm.Insert1Click(Sender: TObject);
 begin
 
@@ -405,6 +422,7 @@ procedure TScriptForm.FormCreate(Sender: TObject);
 var
   lPos: integer;
 begin
+  {$IFDEF Windows} ScaleDPIX(ScriptForm, ScriptForm.DesignTimePPI); {$ENDIF}
   {$IFNDEF Darwin} AppleMenu.Visible := false; {$ENDIF}
   fn := '';
   gchanged := False;

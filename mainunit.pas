@@ -23,13 +23,17 @@ type
     AOLabel: TLabel;
     CurvMenu: TMenuItem;
     CurvMenuTemp: TMenuItem;
+    ShaderForBackgroundOnlyCheck: TCheckBox;
     GoldColorMenu: TMenuItem;
     ConvertAtlas: TMenuItem;
     ColorBarMenu: TMenuItem;
     BlackClrbarMenu: TMenuItem;
     ColorbarSep: TMenuItem;
+    meshAlphaTrack: TTrackBar;
+    MeshBlendTrack: TTrackBar;
+    BGShader: TLabel;
     ROImeshMenu: TMenuItem;
-    XRayBtn: TSpeedButton;
+    TrackLengthLabel2: TLabel;
     TransBlackClrbarMenu: TMenuItem;
     ColorBarVisibleMenu: TMenuItem;
     WhiteClrbarMenu: TMenuItem;
@@ -91,8 +95,6 @@ type
     FileSepMenu: TMenuItem;
     occlusionTrack: TTrackBar;
     SaveTracksMenu: TMenuItem;
-    meshAlphaTrack: TTrackBar;
-    MeshBlendTrack: TTrackBar;
     NodeSizeVariesCheck: TCheckBox;
     PrefMenu: TMenuItem;
     NodeMaxEdit: TFloatSpinEdit;
@@ -199,6 +201,7 @@ type
     SaveMenu: TMenuItem;
     ObjectColorMenu: TMenuItem;
     OpenMenu: TMenuItem;
+    BackgroundBox: TGroupBox;
     procedure FormDestroy(Sender: TObject);
     procedure NodeThreshDropChange(Sender: TObject);
     procedure ROImeshMenuClick(Sender: TObject);
@@ -269,7 +272,10 @@ type
     procedure OverlayVisible(lOverlay: integer; lVisible: integer);
     procedure OverlayInvert(lOverlay: integer; lInvert: boolean);
     procedure PrefMenuClick(Sender: TObject);
-    {$IFDEF LCLCocoa}procedure SetRetina;{$ENDIF}
+    {$IFDEF LCLCocoa}
+    procedure SetRetina;
+    procedure SetDarkMode;
+    {$ENDIF}
     procedure QuickColorClick(Sender: TObject);
     procedure ExitMenuClick(Sender: TObject);
     procedure ResetMenuClick(Sender: TObject);
@@ -327,7 +333,7 @@ type
     procedure UpdateToolbar;
     procedure MultiPassRenderingToolsUpdate;
     procedure VolumeToMeshMenuClick(Sender: TObject);
-    procedure XRayLabelClick(Sender: TObject);
+    procedure ShaderForBackgroundOnlyClick(Sender: TObject);
     procedure GLInvalidate;
   private
     { private declarations }
@@ -354,7 +360,7 @@ implementation
 {$R *.lfm}
 {$IFDEF LCLCocoa}
 uses
-  glcocoanscontext;
+  nsappkitext, glcocoanscontext;
 {$ENDIF}
 var
   gNode: TMesh;
@@ -375,6 +381,48 @@ const
   kMax=3;
   kTrackFilter = 'Camino, VTK, MRTrix, Quench, TrakVis, DTIstudio|*.Bfloat;*.Bfloat.gz;*.trk.gz;*.trk;*.tck;*.pdb;*.fib;*.vtk;*.dat|Any file|*.*';
 {$IFDEF LCLCocoa}
+
+procedure TGLForm1.SetDarkMode;
+begin
+  setThemeMode(Self.Handle, gPrefs.DarkMode);
+  if gPrefs.DarkMode then begin
+     //MosaicText.Color := clGray;
+     Memo1.Color := clGray;
+     StringGrid1.Color := clGray;
+     StringGrid1.AlternateColor:= clGray;
+     StringGrid1.FixedColor:= clBlack;
+  end else begin
+      //MosaicText.Color:= clDefault;
+      Memo1.Color := Graphics.clDefault;
+      StringGrid1.Color := Graphics.clWindow;
+      StringGrid1.AlternateColor:= Graphics.clWindow;
+      StringGrid1.FixedColor:= Graphics.clBtnFace;
+  end;
+end;
+
+procedure TGLForm1.SetRetina;
+begin
+  (*if gPrefs.RetinaDisplay then
+     GLBox.Options := [ocoMacRetinaMode]
+  else
+    GLBox.Options := [];
+  GLBox.MultiSampling:=GLBox.MultiSampling;
+  *)
+  LSetWantsBestResolutionOpenGLSurface(gPrefs.RetinaDisplay, GLBox.Handle);
+  //GLBox.WantsBestResolutionOpenGLSurface:=gPrefs.RetinaDisplay;
+  if (GLbox.Height < 1) or (GLBoxBackingHeight <= GLbox.Height) then
+     gRetinaScale := 1
+  else
+      gRetinaScale := GLBoxBackingHeight/GLbox.Height;
+end;
+
+procedure SetFormDarkMode(var f: TForm);
+begin
+  f.PopupMode:= pmAuto;
+  f.HandleNeeded;
+  setThemeMode(f.Handle, true);
+end;
+
 procedure Mouse2Retina(var X,Y: integer);
 begin
      if not gPrefs.RetinaDisplay then exit;
@@ -553,7 +601,7 @@ begin
   lBetter := (gPrefs.RenderQuality <> kRenderPoor) and (gPrefs.SupportBetterRenderQuality);
   AOLabel.Visible:= lBetter;
   occlusionTrack.Visible:= lBetter;
-  XRayBtn.Visible:= lBetter;
+  ShaderForBackgroundOnlyCheck.Visible:= lBetter;
   MeshBlendTrack.Visible:= lBetter;
   meshAlphaTrack.visible :=  lBetter;
 end;
@@ -576,16 +624,36 @@ begin
       Nii2Mesh(OpenDialog.FileName);
 end;
 
-procedure TGLForm1.XRayLabelClick(Sender: TObject);
+procedure TGLForm1.ShaderForBackgroundOnlyClick(Sender: TObject);
 begin
-  gPrefs.ShaderForBackgroundOnly := not gPrefs.ShaderForBackgroundOnly;
-  XRayBtn.Down := gPrefs.ShaderForBackgroundOnly ;
-   GLBoxRequestUpdate(nil);
+  gPrefs.ShaderForBackgroundOnly := ShaderForBackgroundOnlyCheck.Checked;
+  //ShaderForBackgroundOnlyCheck.Checked := gPrefs.ShaderForBackgroundOnly ;
+  GLBoxRequestUpdate(nil);
+end;
+
+function meshBackgroundOpen: boolean;
+//returns true if a mesh is open as an overlay
+// returns false if there are no overlays or if they are vertex colors
+var lI: integer;
+begin
+ result := false;
+  if (gMesh.OpenOverlays < 1) then exit;
+  for lI := 1 to gMesh.OpenOverlays do
+      if  length(gMesh.overlay[lI].faces) > 1 then
+         result := true;
 end;
 
 procedure TGLForm1.UpdateToolbar;
 begin
+ BackgroundBox.Visible := (length(gNode.nodes) > 0) or (gTrack.n_count > 0) or ((gMesh.OpenOverlays > 0) and (meshBackgroundOpen));
  NodeBox.Visible:= (length(gNode.nodes) > 0) ;
+ if (length(gNode.edges) > 0) and (EdgeBox.Visible = false) and (BackgroundBox.Visible) then begin
+    //this keeps node and edge boxes next to each other
+    // executed when node is opened (which displays the background) and then edge is opened
+    BackgroundBox.Visible := false;
+    EdgeBox.Visible := true;
+    BackgroundBox.Visible := true;
+ end;
  EdgeBox.Visible:= (length(gNode.edges) > 0) ;
  TrackBox.Visible:= (gTrack.n_count > 0);
  OverlayBox.Visible := (gMesh.OpenOverlays > 0);
@@ -1253,8 +1321,13 @@ begin
 	OkBtn.Left := PrefForm.Width - OkBtn.Width - 8;
 	OkBtn.Parent:=PrefForm;
 	OkBtn.ModalResult:= mrOK;
-	{$IFNDEF Darwin} ScaleDPIX(PrefForm, 96);{$ENDIF}
-	PrefForm.ShowModal;
+	{$IFNDEF Darwin}
+        ScaleDPIX(PrefForm, 96);
+        {$ENDIF}
+        {$IFDEF LCLCocoa}
+        if gPrefs.DarkMode then SetFormDarkMode(PrefForm);
+        {$ENDIF}
+        PrefForm.ShowModal;
 	Tol := StrToFloatDef(TolEdit.Caption, Tol);
 	minLength := StrToFloatDef(minLengthEdit.Caption, minLength);
 	result :=  PrefForm.ModalResult = mrOK;
@@ -1379,6 +1452,9 @@ begin
     OkBtn.Parent:=PrefForm;
     OkBtn.ModalResult:= mrOK;
     {$IFNDEF Darwin} ScaleDPIX(PrefForm, 96);{$ENDIF}
+    {$IFDEF LCLCocoa}
+    if gPrefs.DarkMode then SetFormDarkMode(PrefForm);
+    {$ENDIF}
     PrefForm.ShowModal;
     min := StrToFloatDef(minEdit.Caption, min);
     max := StrToFloatDef(maxEdit.Caption, max);
@@ -1423,8 +1499,14 @@ begin
     TStringGrid(Sender).Canvas.Font.Color := clRed
  else if (gMesh.Overlay[aRow].LUTvisible = kLUTtranslucent) then
       TStringGrid(Sender).Canvas.Font.Color := clBlue
- else
+ else begin
+     {$IFDEF LCLCocoa}
+     if gPrefs.DarkMode then
+        TStringGrid(Sender).Canvas.Font.Color := clWhite
+     else
+     {$ENDIF}
      TStringGrid(Sender).Canvas.Font.Color := clBlack;
+ end;
  (*if (gMesh.Overlay[aRow].LUTvisible <> kLUTinvisible) then begin
     if (gMesh.Overlay[aRow].LUTinvert) then begin
        TStringGrid(Sender).Canvas.Font.Color := clBlue;
@@ -1438,6 +1520,11 @@ begin
  // TH fixed on Jan 22,2018
  //TStringGrid(Sender).Canvas.TextOut(aRect.Left+2,aRect.Top+2, TStringGrid(Sender).Cells[ACol, ARow]);
  //TStringGrid(Sender).Canvas.TextOut(aRect.Left,aRect.Top, TStringGrid(Sender).Cells[ACol, ARow]);
+ {$IFDEF LCLCocoa}
+ if gPrefs.DarkMode then
+    TStringGrid(Sender).Canvas.Brush.Color := clGray
+ else
+ {$ENDIF}
  TStringGrid(Sender).Canvas.Brush.Color := clWindow;
  TStringGrid(Sender).Canvas.FillRect(aRect);
  InflateRect(aRect, -2, -2);
@@ -1560,6 +1647,8 @@ begin
     GLForm1.StringGrid1.Cells[kLUT, lIndex] := GLForm1.LutDrop.Items[gMesh.Overlay[lIndex].LUTindex];
     if (gMesh.Overlay[lIndex].atlasMaxIndex > 0) then
        GLForm1.StringGrid1.Cells[kLUT, lIndex] := 'Atlas';
+    //caption := inttostr(gMesh.OpenOverlays);
+    //OverlayBox.Height :=  2+ ( (1+gMesh.OpenOverlays)*(StringGrid1.RowHeights[1]+1));
     OverlayBox.Height :=  2+ ( (2+gMesh.OpenOverlays)*(StringGrid1.DefaultRowHeight+1));
     StringGrid1.Cells[kMin,lIndex] := float2str(gMesh.Overlay[lIndex].WindowScaledMin,3);//FloatToStrF(gMesh.Overlay[lIndex].WindowScaledMin, ffGeneral, 8, 4);
     StringGrid1.Cells[kMax,lIndex] := float2str(gMesh.Overlay[lIndex].WindowScaledMax,3);//FloatToStrF(gMesh.Overlay[lIndex].WindowScaledMax, ffGeneral, 8, 4);
@@ -1587,24 +1676,6 @@ begin
   gMesh.overlay[lOverlay].LUT := UpdateTransferFunction (gMesh.Overlay[lOverlay].LUTindex, gMesh.Overlay[lOverlay].LUTinvert);
   OverlayTimerStart;
 end;
-
-{$IFDEF LCLCocoa}
-procedure TGLForm1.SetRetina;
-begin
-  (*if gPrefs.RetinaDisplay then
-     GLBox.Options := [ocoMacRetinaMode]
-  else
-    GLBox.Options := [];
-  GLBox.MultiSampling:=GLBox.MultiSampling;
-  *)
-  LSetWantsBestResolutionOpenGLSurface(gPrefs.RetinaDisplay, GLBox.Handle);
-  //GLBox.WantsBestResolutionOpenGLSurface:=gPrefs.RetinaDisplay;
-  if (GLbox.Height < 1) or (GLBoxBackingHeight <= GLbox.Height) then
-     gRetinaScale := 1
-  else
-      gRetinaScale := GLBoxBackingHeight/GLbox.Height;
-end;
-{$ENDIF}
 
 procedure TGLForm1.UpdateFont(initialSetup: boolean);
 var
@@ -1702,18 +1773,18 @@ procedure TGLForm1.PrefMenuClick(Sender: TObject);
 var
   PrefForm: TForm;
   UpdateBtn, OkBtn, AdvancedBtn: TButton;
-  {$IFDEF LCLCocoa} RetinaCheck,{$ENDIF}
-  BitmapAlphaCheck, SmoothVoxelwiseDataCheck, TracksAreTubesCheck: TCheckBox;
+  {$IFDEF LCLCocoa} DarkModeCheck, RetinaCheck,{$ENDIF}
+  BlackDefaultBackgroundCheck, BitmapAlphaCheck, SmoothVoxelwiseDataCheck, TracksAreTubesCheck: TCheckBox;
   bmpEdit: TEdit;
   s: string;
   Quality: integer;
   searchRec: TSearchRec;
   FontCombo, ZDimIsUpCombo, QualityCombo, SaveAsFormatCombo: TComboBox;
   bmpLabel, QualityLabel: TLabel;
-  isFontChanged, isAdvancedPrefs {$IFDEF LCLCocoa}, isRetinaChanged {$ENDIF} : boolean;
+  isFontChanged, isAdvancedPrefs {$IFDEF LCLCocoa}, isDarkModeChanged, isRetinaChanged {$ENDIF} : boolean;
 begin
   PrefForm:=TForm.Create(nil);
-  PrefForm.SetBounds(100, 100, 520, 362);
+  PrefForm.SetBounds(100, 100, 520, 422);
   PrefForm.Caption:='Preferences';
   PrefForm.Position := poScreenCenter;
   PrefForm.BorderStyle := bsDialog;
@@ -1842,13 +1913,28 @@ begin
   SaveAsFormatCombo.ItemIndex:= gPrefs.SaveAsFormat;
   SaveAsFormatCombo.Style := csDropDownList;
   SaveAsFormatCombo.Parent:=PrefForm;
+  //
+  BlackDefaultBackgroundCheck:=TCheckBox.create(PrefForm);
+  BlackDefaultBackgroundCheck.Checked := gPrefs.BlackDefaultBackground;
+  BlackDefaultBackgroundCheck.Caption:='Black Default Background';
+  BlackDefaultBackgroundCheck.Left := 8;
+  BlackDefaultBackgroundCheck.Top := 278;
+  BlackDefaultBackgroundCheck.Parent:=PrefForm;
   {$IFDEF LCLCocoa}
   RetinaCheck:=TCheckBox.create(PrefForm);
   RetinaCheck.Checked := gPrefs.RetinaDisplay;
   RetinaCheck.Caption:='Retina display (better but slower)';
   RetinaCheck.Left := 8;
-  RetinaCheck.Top := 278;
+  RetinaCheck.Top := 308;
   RetinaCheck.Parent:=PrefForm;
+  //DarkMode
+  DarkModeCheck:=TCheckBox.create(PrefForm);
+  DarkModeCheck.Checked := gPrefs.DarkMode;
+  DarkModeCheck.Caption:='Dark Mode';
+  DarkModeCheck.Left := 8;
+  DarkModeCheck.Top := 338;
+  DarkModeCheck.Parent:=PrefForm;
+  if gPrefs.DarkMode then SetFormDarkMode(PrefForm);
   {$ENDIF}
   //UpdateBtn
   {$IFDEF FPC}
@@ -1856,7 +1942,7 @@ begin
   UpdateBtn.Caption:='Check for updates';
   UpdateBtn.Left := 28;
   UpdateBtn.Width:= 168;
-  UpdateBtn.Top := 318;
+  UpdateBtn.Top := 378;
   UpdateBtn.Parent:=PrefForm;
   UpdateBtn.OnClick:= GLForm1.CheckForUpdates;
   {$ENDIF}
@@ -1865,7 +1951,7 @@ begin
   OkBtn.Caption:='OK';
   OkBtn.Left := PrefForm.Width - 128;
   OkBtn.Width:= 100;
-  OkBtn.Top := 318;
+  OkBtn.Top := 378;
   OkBtn.Parent:=PrefForm;
   OkBtn.ModalResult:= mrOK;
 
@@ -1873,7 +1959,7 @@ begin
   AdvancedBtn.Caption:='Advanced';
   AdvancedBtn.Left := PrefForm.Width - 256;
   AdvancedBtn.Width:= 100;
-  AdvancedBtn.Top := 318;
+  AdvancedBtn.Top := 378;
   AdvancedBtn.Parent:=PrefForm;
   AdvancedBtn.ModalResult:= mrYesToAll;
   {$IFNDEF Darwin} ScaleDPIX(PrefForm, 96);  {$ENDIF}
@@ -1885,6 +1971,8 @@ begin
   {$IFDEF LCLCocoa}
   isRetinaChanged := gPrefs.RetinaDisplay <> RetinaCheck.Checked;
   gPrefs.RetinaDisplay := RetinaCheck.Checked;
+  isDarkModeChanged := gPrefs.DarkMode <> DarkModeCheck.Checked;
+  gPrefs.DarkMode := DarkModeCheck.Checked;
   {$ENDIF}
   s := '';
   if FontCombo.ItemIndex > 0 then
@@ -1893,6 +1981,7 @@ begin
   gPrefs.FontName := s;
   gPrefs.ScreenCaptureTransparentBackground :=  BitmapAlphaCheck.Checked;
   gPrefs.SmoothVoxelwiseData := SmoothVoxelwiseDataCheck.Checked;
+  gPrefs.BlackDefaultBackground := BlackDefaultBackgroundCheck.Checked;
   gPrefs.ScreenCaptureZoom:= strtointdef(bmpEdit.Text,1);
   (*if ShaderForBackgroundOnlyCombo.ItemIndex = 1 then
      gPrefs.ShaderForBackgroundOnly := false
@@ -1932,6 +2021,8 @@ begin
   {$IFDEF LCLCocoa}
   if isRetinaChanged then
     SetRetina;//GLBox.WantsBestResolutionOpenGLSurface:=gPrefs.RetinaDisplay;
+  if isDarkModeChanged then
+    SetDarkMode;
   {$ENDIF}
       GLBoxRequestUpdate(Sender);
   if  isAdvancedPrefs then
@@ -1955,7 +2046,10 @@ end;
 
 procedure TGLForm1.ResetMenuClick(Sender: TObject);
 begin
-     gPrefs.BackColor := RGBToColor(255,255,255);
+     if gPrefs.BlackDefaultBackground then
+         gPrefs.BackColor := RGBToColor(0,0,0)
+     else
+         gPrefs.BackColor := RGBToColor(255,255,255);
      //gPrefs.Colorbar := true;
      TransBlackClrbarMenu.Checked:=true;
      gPrefs.ScreenPan.X := 0; gPrefs.ScreenPan.Y := 0; gPrefs.ScreenPan.Z := 0;
@@ -1963,7 +2057,8 @@ begin
      gElevation := 20;
      gAzimuth := 250;
      Transparency0.Click;
-     gPrefs.ShaderForBackgroundOnly:= false;
+     gPrefs.ShaderForBackgroundOnly:= true;
+     ShaderForBackgroundOnlyCheck.Checked := gPrefs.ShaderForBackgroundOnly;
      gPrefs.isFlipMeshOverlay:= false;
      gPrefs.AdditiveOverlay:= false;
      gMesh.isAdditiveOverlay:= gPrefs.AdditiveOverlay;
@@ -1986,7 +2081,6 @@ begin
      ClipAziTrack.Position := 180;
      ClipElevTrack.Position := 0;
      //set shaders
-     XRayBtn.Down := false;
      OcclusionTrack.Position := gPrefs.OcclusionAmount;
      MeshAlphaTrack.Position := 100;
      MeshBlendTrack.Position:= 0;
@@ -3254,7 +3348,7 @@ procedure TGLForm1.SetDistance(Distance: single);
 begin
      gDistance := Distance;
      if gDistance > kMaxDistance then gDistance := kMaxDistance;
-     if gDistance < 0.5 then gDistance := 0.5;
+     if gDistance < kMinDistance then gDistance := kMinDistance;
      GLBox.Invalidate;
 end;
 
@@ -3400,14 +3494,14 @@ var
 begin
  StringGrid1.Selection := TGridRect(Rect(-1, -1, -1, -1));
  StringGrid1.DefaultRowHeight := LUTdrop.Height+1;
- StringGrid1.DefaultColWidth := (StringGrid1.width div 4)-2;
+ //StringGrid1.DefaultColWidth := (StringGrid1.width div 4)-2;
   {$IFDEF FPC} {$IFNDEF UNIX}
   //StringGrid1.DefaultRowHeight := LUTdrop.height  + 1;;
  if Screen.PixelsPerInch <> 96 then begin
      StringGrid1.DefaultColWidth := round(StringGrid1.width* (Screen.PixelsPerInch/96) * 0.25) - 2;
  end;
 {$ENDIF}{$ENDIF}
-  StringGrid1.Cells[kFname, 0] := 'Name';
+StringGrid1.Cells[kFname, 0] := 'Name';
   StringGrid1.Cells[kLUT, 0] := 'Color';
   StringGrid1.Cells[kMin, 0] := 'Min';
   StringGrid1.Cells[kMax, 0] := 'Max';
@@ -3690,6 +3784,7 @@ begin
  GLBox.ReleaseContext;
  MultiPassRenderingToolsUpdate;
  ShaderDropChange(sender);
+ {$IFDEF LCLCocoa} SetDarkMode; {$ENDIF}
  {$IFDEF Windows}UpdateOverlaySpread;{$ENDIF}//July2017 - scripting on High-dpi, reset scaling
  ScriptForm.OpenStartupScript;
 end;
@@ -3701,7 +3796,7 @@ var
   c: char;
   forceReset: boolean = false;
 begin
-  FileMode := fmOpenRead;  //in case files set with read-only permissions
+ FileMode := fmOpenRead;  //in case files set with read-only permissions
   //check if user includes parameters
   gPrefs.initScript := ''; //e.g. 'c:\dir\script.gls'
   i := 1;
@@ -3752,14 +3847,20 @@ begin
   gTrack.isTubes := gPrefs.TracksAreTubes;
   Application.ShowButtonGlyphs:= sbgNever;
   GLbox:= TOpenGLControl.Create(GLForm1);
-   GLBox.Parent := GLForm1;
-
+  //GLBox.DepthBits:=16;
+  GLBox.Parent := GLForm1;
  {$IFDEF COREGL}
    GLbox.OpenGLMajorVersion:= 3;
    GLbox.OpenGLMinorVersion:= 3;
-   {$ELSE}
+   {$IFDEF Linux}
+   writeln('OpenGL 3.3 with 8/8/8/24 bits of R/G/B/Dpth required. Use glxinfo to test capabilities.');
+   {$ENDIF}
+ {$ELSE}
    GLbox.OpenGLMajorVersion:= 2;
    GLbox.OpenGLMinorVersion:= 1;
+    {$IFDEF Linux}
+    writeln('OpenGL 2.1 with 8/8/8/24 bits of R/G/B/Dpth required. Use glxinfo to test capabilities.');
+    {$ENDIF}
    {$ENDIF}
    GLbox.AutoResizeViewport:= true;   // http://www.delphigl.com/forum/viewtopic.php?f=10&t=11311
    if gPrefs.MultiSample then
@@ -3859,7 +3960,8 @@ end;
 
 procedure TGLForm1.AppDropFiles(Sender: TObject; const FileNames: array of String);
 begin
- OpenMesh(Filenames[0]);
+  //With MacOS and Lazarus 1.9, thee following code caused OpenMesh to be called twice
+ //OpenMesh(Filenames[0]);
 end;
 
 end.

@@ -15,6 +15,7 @@ object ScriptForm: TScriptForm
   OnDeactivate = FormDeactivate
   OnDropFiles = FormDropFiles
   OnHide = FormHide
+  OnShow = FormShow
   LCLVersion = '1.9.0.0'
   object Splitter1: TSplitter
     Cursor = crVSplit

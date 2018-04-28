@@ -4,7 +4,7 @@ interface
 uses graphics;
 {$endif}
 const
-  kVers = 'v1.0.20180202';
+  kVers = 'v1.0.20180404';
   NaN : double = 1/0;
   kTab = chr(9);
   kCR = chr (13);

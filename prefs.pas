@@ -20,9 +20,9 @@ type
   TMRU =  array [1..knMRU] of string;
   TPrefs = record
     SmoothVoxelwiseData,
-    OverlayClip, StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube, MultiSample,
+    OverlayClip, StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube, MultiSample, BlackDefaultBackground,
      Colorbar,TracksAreTubes, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,ColorBarPrecedenceTracksNotOverlays,
-     ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting, isFlipMeshOverlay, RetinaDisplay, GenerateSmoothCurves : boolean;
+     ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting, isFlipMeshOverlay, DarkMode, RetinaDisplay, GenerateSmoothCurves : boolean;
     TrackTubeSlices, ScreenCaptureZoom,ColorbarColor,ColorBarPosition,
     window_width, window_height, RenderQuality, SaveAsFormat,SaveAsFormatTrack, OcclusionAmount: integer;
     ObjColor,BackColor: TColor;
@@ -340,6 +340,8 @@ begin
     SkipPrefWriting := false;
     isFlipMeshOverlay := false;
     RetinaDisplay := true;
+    DarkMode := false;
+    BlackDefaultBackground := false;
     OverlayClip := false;
     StartupScript := false;
     ScreenCaptureTransparentBackground := true;
@@ -600,8 +602,11 @@ begin
   IniBool(lRead,lIniFile, 'Perspective',lPrefs.Perspective);
   IniBool(lRead,lIniFile, 'AdditiveOverlay',lPrefs.AdditiveOverlay);
   IniBool(lRead,lIniFile, 'StartupScript',lPrefs.StartupScript);
+  {$IFDEF LCLCocoa}
   IniBool(lRead,lIniFile, 'RetinaDisplay',lPrefs.RetinaDisplay);
-
+  IniBool(lRead,lIniFile, 'DarkMode',lPrefs.DarkMode);
+  {$ENDIF}
+  IniBool(lRead,lIniFile, 'BlackDefaultBackground',lPrefs.BlackDefaultBackground);
   //IniBool(lRead,lIniFile, 'MultiPassRendering',lPrefs.MultiPassRendering);
   //IniBool(lRead,lIniFile, 'SaveAsObj',lPrefs.SaveAsObj);
   IniBool(lRead,lIniFile, 'TracksAreTubes',lPrefs.TracksAreTubes);

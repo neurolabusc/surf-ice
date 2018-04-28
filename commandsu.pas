@@ -493,7 +493,7 @@ end;
 procedure SHADERFORBACKGROUNDONLY(BGONLY: boolean);
 begin
   gPrefs.ShaderForBackgroundOnly:= BGONLY;
-  GLForm1.XRayBtn.Down := BGONLY;
+  GLForm1.ShaderForBackgroundOnlyCheck.Checked := BGONLY;
   GLForm1.GLBoxRequestUpdate(nil);
 end;
 

@@ -17,6 +17,7 @@ const
    kGL_FALSE = GL_FALSE;
    kGL_TRUE = GL_TRUE;
 {$ENDIF}
+kMinDistance = 0.1;
 kMaxDistance = 10;
   kMaxUniform = 10;
   kError = 666;
@@ -911,12 +912,13 @@ begin
              gShader.TrackDiffuse := 0.7;
              gShader.TrackSpecular := 0.2;
              if (not  Load_GL_version_3_3_CORE) then begin
+             	showmessage('Unable to load OpenGL 3.3 Core (hint: try surficeOld)');
              {$ELSE}
              if not  (Load_GL_VERSION_2_1) then begin
-             {$ENDIF}
                  //On Ubuntu 14.04 LTS on VirtualBox with Chromium 19 drivers Load_GL_VERSION_2_1 fails but still works...
                  //showmessage(format('Unable to load OpenGL %d.%d found %s. Vendor %s. GLSL %s',[GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion, glGetString(GL_VERSION), glGetString(GL_VENDOR),glGetString(GL_SHADING_LANGUAGE_VERSION)]));
-                 showmessage('Unable to load OpenGL');
+                 showmessage('Unable to load OpenGL 2.1');
+            {$ENDIF}
                  halt();
              end;
              (*if GLVersionError(GLForm1.GLBox.OpenGLMajorVersion, GLForm1.GLBox.OpenGLMinorVersion) then begin

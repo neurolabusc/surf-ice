@@ -1,12 +1,12 @@
 object GLForm1: TGLForm1
-  Left = 615
-  Height = 755
-  Top = 23
-  Width = 972
+  Left = 178
+  Height = 699
+  Top = 53
+  Width = 1027
   AllowDropFiles = True
   Caption = 'Surf Ice'
-  ClientHeight = 755
-  ClientWidth = 972
+  ClientHeight = 699
+  ClientWidth = 1027
   Menu = MainMenu1
   OnChangeBounds = FormChangeBounds
   OnClose = FormClose
@@ -18,12 +18,14 @@ object GLForm1: TGLForm1
   LCLVersion = '1.9.0.0'
   object ToolPanel: TPanel
     Left = 0
-    Height = 755
+    Height = 699
     Top = 0
     Width = 272
     Align = alLeft
-    ClientHeight = 755
+    BevelOuter = bvSpace
+    ClientHeight = 699
     ClientWidth = 272
+    ParentFont = False
     TabOrder = 1
     object ClipBox: TGroupBox
       Left = 1
@@ -33,35 +35,38 @@ object GLForm1: TGLForm1
       Align = alTop
       Caption = 'Clipping'
       ClientHeight = 88
-      ClientWidth = 262
+      ClientWidth = 256
       ParentFont = False
-      TabOrder = 0
+      TabOrder = 1
       OnDblClick = DepthLabelDblClick
       object DepthLabel: TLabel
         Left = 4
         Height = 16
         Top = 2
-        Width = 38
+        Width = 37
         Caption = 'Depth'
         ParentColor = False
+        ParentFont = False
         OnClick = DepthLabelClick
       end
       object AzimuthLabel: TLabel
         Left = 4
         Height = 16
         Top = 32
-        Width = 53
+        Width = 50
         Caption = 'Azimuth'
         ParentColor = False
+        ParentFont = False
         OnClick = AzimuthLabelClick
       end
       object ElevationLabel: TLabel
         Left = 4
         Height = 16
         Top = 62
-        Width = 57
+        Width = 55
         Caption = 'Elevation'
         ParentColor = False
+        ParentFont = False
         OnClick = ElevationLabelClick
       end
       object ClipTrack: TTrackBar
@@ -73,6 +78,7 @@ object GLForm1: TGLForm1
         OnChange = ClipTrackChange
         Position = 0
         TickStyle = tsNone
+        ParentFont = False
         TabOrder = 0
       end
       object ClipAziTrack: TTrackBar
@@ -84,6 +90,7 @@ object GLForm1: TGLForm1
         OnChange = ClipTrackChange
         Position = 180
         TickStyle = tsNone
+        ParentFont = False
         TabOrder = 1
       end
       object ClipElevTrack: TTrackBar
@@ -96,954 +103,8 @@ object GLForm1: TGLForm1
         OnChange = ClipTrackChange
         Position = 0
         TickStyle = tsNone
+        ParentFont = False
         TabOrder = 2
-      end
-    end
-    object ShaderBox: TGroupBox
-      Left = 1
-      Height = 85
-      Top = 669
-      Width = 270
-      Align = alClient
-      Caption = 'Shader'
-      ClientHeight = 63
-      ClientWidth = 262
-      ParentFont = False
-      TabOrder = 1
-      OnResize = ShaderBoxResize
-      object Label2: TLabel
-        Left = 4
-        Height = 16
-        Hint = 'Set the elevation and azimuth of the illumination'
-        Top = 64
-        Width = 32
-        Caption = 'Light'
-        ParentColor = False
-        ParentShowHint = False
-        ShowHint = True
-      end
-      object ShaderDrop: TComboBox
-        Left = 2
-        Height = 20
-        Top = 0
-        Width = 127
-        DropDownCount = 36
-        ItemHeight = 0
-        OnChange = ShaderDropChange
-        Style = csDropDownList
-        TabOrder = 0
-      end
-      object LightElevTrack: TTrackBar
-        Left = 52
-        Height = 30
-        Top = 60
-        Width = 92
-        Max = 90
-        Min = -90
-        OnChange = SurfaceAppearanceChange
-        Position = 25
-        TickStyle = tsNone
-        TabOrder = 1
-      end
-      object LightAziTrack: TTrackBar
-        Left = 170
-        Height = 30
-        Top = 60
-        Width = 92
-        Max = 90
-        Min = -90
-        OnChange = SurfaceAppearanceChange
-        Position = 0
-        TickStyle = tsNone
-        TabOrder = 2
-      end
-      object meshAlphaTrack: TTrackBar
-        Left = 52
-        Height = 30
-        Hint = 'Adjust main mesh transparency'
-        Top = 30
-        Width = 92
-        Max = 100
-        OnChange = SurfaceAppearanceChange
-        Position = 100
-        TickStyle = tsNone
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 4
-      end
-      object MeshBlendTrack: TTrackBar
-        Left = 170
-        Height = 30
-        Hint = 'XRay: make internal overlays, tracks and nodes visible'
-        Top = 30
-        Width = 92
-        Max = 100
-        OnChange = SurfaceAppearanceChange
-        Position = 0
-        TickStyle = tsNone
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 5
-      end
-      object occlusionTrack: TTrackBar
-        Left = 170
-        Height = 30
-        Hint = 'Ambient Occlusion: make sulci and other crevices darker'
-        Top = 0
-        Width = 92
-        Max = 100
-        OnChange = SurfaceAppearanceChange
-        Position = 25
-        TickStyle = tsNone
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 6
-      end
-      object AOLabel: TLabel
-        Left = 138
-        Height = 16
-        Hint = 'Ambient occlusion makes sucli and other crevices darker'
-        Top = 6
-        Width = 19
-        Caption = 'AO'
-        ParentColor = False
-        ParentShowHint = False
-        ShowHint = True
-      end
-      object S1Track: TTrackBar
-        Tag = 1
-        Left = 170
-        Height = 30
-        Top = 90
-        Width = 88
-        Max = 100
-        OnChange = UniformChange
-        Position = 51
-        TickStyle = tsNone
-        TabOrder = 7
-      end
-      object S1Label: TLabel
-        Tag = 1
-        Left = 4
-        Height = 16
-        Top = 92
-        Width = 15
-        Caption = 'S1'
-        ParentColor = False
-        ParentShowHint = False
-      end
-      object S1Check: TCheckBox
-        Tag = 1
-        Left = 141
-        Height = 18
-        Hint = 'If checked, edge color varies'
-        Top = 92
-        Width = 20
-        Checked = True
-        OnChange = UniformChange
-        ParentShowHint = False
-        ShowHint = True
-        State = cbChecked
-        TabOrder = 8
-      end
-      object S2Label: TLabel
-        Tag = 2
-        Left = 4
-        Height = 16
-        Top = 122
-        Width = 15
-        Caption = 'S2'
-        ParentColor = False
-        ParentShowHint = False
-      end
-      object S2Check: TCheckBox
-        Tag = 2
-        Left = 141
-        Height = 18
-        Hint = 'If checked, edge color varies'
-        Top = 122
-        Width = 20
-        Checked = True
-        OnChange = UniformChange
-        ParentShowHint = False
-        ShowHint = True
-        State = cbChecked
-        TabOrder = 10
-      end
-      object S2Track: TTrackBar
-        Tag = 2
-        Left = 170
-        Height = 30
-        Top = 120
-        Width = 88
-        Max = 100
-        OnChange = UniformChange
-        Position = 50
-        TickStyle = tsNone
-        TabOrder = 9
-      end
-      object S3Track: TTrackBar
-        Tag = 3
-        Left = 170
-        Height = 30
-        Top = 150
-        Width = 88
-        Max = 100
-        OnChange = UniformChange
-        Position = 50
-        TickStyle = tsNone
-        TabOrder = 11
-      end
-      object S3Check: TCheckBox
-        Tag = 3
-        Left = 141
-        Height = 18
-        Hint = 'If checked, edge color varies'
-        Top = 152
-        Width = 20
-        Checked = True
-        OnChange = UniformChange
-        ParentShowHint = False
-        ShowHint = True
-        State = cbChecked
-        TabOrder = 12
-      end
-      object S3Label: TLabel
-        Tag = 3
-        Left = 4
-        Height = 16
-        Top = 152
-        Width = 15
-        Caption = 'S3'
-        ParentColor = False
-        ParentShowHint = False
-      end
-      object S4Label: TLabel
-        Tag = 4
-        Left = 4
-        Height = 16
-        Top = 182
-        Width = 15
-        Caption = 'S4'
-        ParentColor = False
-        ParentShowHint = False
-      end
-      object S4Check: TCheckBox
-        Tag = 4
-        Left = 141
-        Height = 18
-        Hint = 'If checked, edge color varies'
-        Top = 182
-        Width = 20
-        Checked = True
-        OnChange = UniformChange
-        ParentShowHint = False
-        ShowHint = True
-        State = cbChecked
-        TabOrder = 14
-      end
-      object S4Track: TTrackBar
-        Tag = 4
-        Left = 170
-        Height = 30
-        Top = 180
-        Width = 88
-        Max = 100
-        OnChange = UniformChange
-        Position = 50
-        TickStyle = tsNone
-        TabOrder = 13
-      end
-      object S5Label: TLabel
-        Tag = 5
-        Left = 4
-        Height = 16
-        Top = 212
-        Width = 15
-        Caption = 'S5'
-        ParentColor = False
-        ParentShowHint = False
-      end
-      object S5Check: TCheckBox
-        Tag = 5
-        Left = 141
-        Height = 18
-        Hint = 'If checked, edge color varies'
-        Top = 212
-        Width = 20
-        Checked = True
-        OnChange = UniformChange
-        ParentShowHint = False
-        ShowHint = True
-        State = cbChecked
-        TabOrder = 16
-      end
-      object S5Track: TTrackBar
-        Tag = 5
-        Left = 170
-        Height = 30
-        Top = 210
-        Width = 88
-        Max = 100
-        OnChange = UniformChange
-        Position = 50
-        TickStyle = tsNone
-        TabOrder = 15
-      end
-      object S6Label: TLabel
-        Tag = 6
-        Left = 4
-        Height = 16
-        Top = 242
-        Width = 15
-        Caption = 'S6'
-        ParentColor = False
-        ParentShowHint = False
-      end
-      object S7Label: TLabel
-        Tag = 7
-        Left = 4
-        Height = 16
-        Top = 272
-        Width = 15
-        Caption = 'S7'
-        ParentColor = False
-        ParentShowHint = False
-      end
-      object S8Label: TLabel
-        Tag = 8
-        Left = 4
-        Height = 16
-        Top = 302
-        Width = 15
-        Caption = 'S8'
-        ParentColor = False
-        ParentShowHint = False
-      end
-      object S9Label: TLabel
-        Tag = 9
-        Left = 4
-        Height = 16
-        Top = 332
-        Width = 15
-        Caption = 'S9'
-        ParentColor = False
-        ParentShowHint = False
-      end
-      object S10Label: TLabel
-        Tag = 10
-        Left = 4
-        Height = 16
-        Top = 362
-        Width = 23
-        Caption = 'S10'
-        ParentColor = False
-        ParentShowHint = False
-      end
-      object S6Check: TCheckBox
-        Tag = 6
-        Left = 141
-        Height = 18
-        Hint = 'If checked, edge color varies'
-        Top = 242
-        Width = 20
-        Checked = True
-        OnChange = UniformChange
-        ParentShowHint = False
-        ShowHint = True
-        State = cbChecked
-        TabOrder = 18
-      end
-      object S7Check: TCheckBox
-        Tag = 7
-        Left = 141
-        Height = 18
-        Hint = 'If checked, edge color varies'
-        Top = 272
-        Width = 20
-        Checked = True
-        OnChange = UniformChange
-        ParentShowHint = False
-        ShowHint = True
-        State = cbChecked
-        TabOrder = 20
-      end
-      object S8Check: TCheckBox
-        Tag = 8
-        Left = 141
-        Height = 18
-        Hint = 'If checked, edge color varies'
-        Top = 302
-        Width = 20
-        Checked = True
-        OnChange = UniformChange
-        ParentShowHint = False
-        ShowHint = True
-        State = cbChecked
-        TabOrder = 22
-      end
-      object S9Check: TCheckBox
-        Tag = 9
-        Left = 141
-        Height = 18
-        Hint = 'If checked, edge color varies'
-        Top = 332
-        Width = 20
-        Checked = True
-        OnChange = UniformChange
-        ParentShowHint = False
-        ShowHint = True
-        State = cbChecked
-        TabOrder = 24
-      end
-      object S10Check: TCheckBox
-        Tag = 10
-        Left = 141
-        Height = 18
-        Hint = 'If checked, edge color varies'
-        Top = 362
-        Width = 20
-        Checked = True
-        OnChange = UniformChange
-        ParentShowHint = False
-        ShowHint = True
-        State = cbChecked
-        TabOrder = 26
-      end
-      object S6Track: TTrackBar
-        Tag = 6
-        Left = 170
-        Height = 30
-        Top = 240
-        Width = 88
-        Max = 100
-        OnChange = UniformChange
-        Position = 50
-        TickStyle = tsNone
-        TabOrder = 17
-      end
-      object S7Track: TTrackBar
-        Tag = 7
-        Left = 170
-        Height = 30
-        Top = 270
-        Width = 88
-        Max = 100
-        OnChange = UniformChange
-        Position = 50
-        TickStyle = tsNone
-        TabOrder = 19
-      end
-      object S8Track: TTrackBar
-        Tag = 8
-        Left = 170
-        Height = 30
-        Top = 300
-        Width = 88
-        Max = 100
-        OnChange = UniformChange
-        Position = 50
-        TickStyle = tsNone
-        TabOrder = 21
-      end
-      object S9Track: TTrackBar
-        Tag = 9
-        Left = 170
-        Height = 30
-        Top = 330
-        Width = 88
-        Max = 100
-        OnChange = UniformChange
-        Position = 50
-        TickStyle = tsNone
-        TabOrder = 23
-      end
-      object S10Track: TTrackBar
-        Tag = 10
-        Left = 170
-        Height = 30
-        Top = 360
-        Width = 88
-        Max = 100
-        OnChange = UniformChange
-        Position = 50
-        TickStyle = tsNone
-        TabOrder = 25
-      end
-      object Memo1: TMemo
-        Left = 0
-        Height = 50
-        Top = 13
-        Width = 262
-        Align = alBottom
-        Lines.Strings = (
-          'Memo1'
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-          ''
-        )
-        TabOrder = 3
-      end
-      object XRayBtn: TSpeedButton
-        Left = 2
-        Height = 26
-        Hint = 'These sliders adjust the transparency of the background image and the visibility of the overlays. Click this button to toggle whether the chosen shader is also used for the overlays'
-        Top = 32
-        Width = 42
-        AllowAllUp = True
-        Caption = 'XRay'
-        GroupIndex = 397
-        OnClick = XRayLabelClick
-        ShowHint = True
-        ParentShowHint = False
       end
     end
     object TrackBox: TGroupBox
@@ -1055,17 +116,18 @@ object GLForm1: TGLForm1
       Align = alTop
       Caption = 'Tracks'
       ClientHeight = 113
-      ClientWidth = 262
+      ClientWidth = 256
       ParentFont = False
-      TabOrder = 2
+      TabOrder = 3
       Visible = False
       object TrackLengthLabel: TLabel
         Left = 4
         Height = 16
         Top = 2
-        Width = 43
+        Width = 42
         Caption = 'Length'
         ParentColor = False
+        ParentFont = False
       end
       object TrackLengthTrack: TTrackBar
         Left = 98
@@ -1076,6 +138,7 @@ object GLForm1: TGLForm1
         OnChange = TrackBoxChange
         Position = 20
         TickStyle = tsNone
+        ParentFont = False
         TabOrder = 0
       end
       object TrackWidthTrack: TTrackBar
@@ -1088,6 +151,7 @@ object GLForm1: TGLForm1
         OnChange = TrackBoxChange
         Position = 2
         TickStyle = tsNone
+        ParentFont = False
         TabOrder = 1
       end
       object TrackWidthLabel: TLabel
@@ -1097,6 +161,7 @@ object GLForm1: TGLForm1
         Width = 36
         Caption = 'Width'
         ParentColor = False
+        ParentFont = False
       end
       object TrackDitherTrack: TTrackBar
         Left = 98
@@ -1106,23 +171,25 @@ object GLForm1: TGLForm1
         OnChange = TrackBoxChange
         Position = 5
         TickStyle = tsNone
+        ParentFont = False
         TabOrder = 2
       end
       object TrackDitherLabel: TLabel
         Left = 4
         Height = 16
         Top = 62
-        Width = 39
+        Width = 37
         Caption = 'Dither'
         ParentColor = False
+        ParentFont = False
       end
       object TrackScalarLUTdrop: TComboBox
         Left = 116
-        Height = 20
+        Height = 26
         Top = 90
         Width = 108
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         Items.Strings = (
           'a'
           'b'
@@ -1136,14 +203,15 @@ object GLForm1: TGLForm1
         ParentFont = False
         Style = csDropDownList
         TabOrder = 3
+        Text = '0'
       end
       object TrackScalarNameDrop: TComboBox
         Left = 4
-        Height = 20
+        Height = 26
         Top = 90
         Width = 108
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         ItemIndex = 0
         Items.Strings = (
           'Direction'
@@ -1161,6 +229,7 @@ object GLForm1: TGLForm1
         Width = 28
         Caption = '...'
         OnClick = TrackScalarRangeBtnClick
+        ParentFont = False
         TabOrder = 5
       end
     end
@@ -1173,19 +242,20 @@ object GLForm1: TGLForm1
       Align = alTop
       Caption = 'Overlays'
       ClientHeight = 60
-      ClientWidth = 262
+      ClientWidth = 256
       Constraints.MaxHeight = 240
-      Constraints.MinHeight = 82
+      Constraints.MinHeight = 2
+      ParentFont = False
       ParentShowHint = False
       ShowHint = True
-      TabOrder = 4
+      TabOrder = 2
       Visible = False
       object StringGrid1: TStringGrid
         Left = 0
         Height = 60
         Hint = 'Click on name to hide, control+click to reverse palette'
         Top = 0
-        Width = 262
+        Width = 256
         Align = alClient
         BorderStyle = bsNone
         ColCount = 4
@@ -1209,11 +279,11 @@ object GLForm1: TGLForm1
       end
       object LUTdrop: TComboBox
         Left = 88
-        Height = 20
+        Height = 26
         Top = 40
         Width = 73
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         Items.Strings = (
           'a'
           'b'
@@ -1227,6 +297,7 @@ object GLForm1: TGLForm1
         ParentFont = False
         Style = csDropDownList
         TabOrder = 1
+        Text = '0'
         Visible = False
       end
     end
@@ -1239,25 +310,26 @@ object GLForm1: TGLForm1
       Align = alTop
       Caption = 'Nodes'
       ClientHeight = 118
-      ClientWidth = 262
+      ClientWidth = 256
       ParentFont = False
-      TabOrder = 5
+      TabOrder = 4
       Visible = False
       object TrackWidthLabel1: TLabel
         Left = 0
         Height = 16
         Top = 90
-        Width = 34
+        Width = 33
         Caption = 'Color'
         ParentColor = False
+        ParentFont = False
       end
       object LUTdropNode: TComboBox
         Left = 97
-        Height = 20
+        Height = 26
         Top = 88
         Width = 161
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         Items.Strings = (
           'a'
           'b'
@@ -1271,15 +343,17 @@ object GLForm1: TGLForm1
         ParentFont = False
         Style = csDropDownList
         TabOrder = 0
+        Text = '0'
       end
       object NodeColorVariesCheck: TCheckBox
         Left = 58
         Height = 18
         Hint = 'If checked, node color varies'
         Top = 90
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = NodePrefChange
+        ParentFont = False
         ParentShowHint = False
         ShowHint = True
         State = cbChecked
@@ -1294,24 +368,26 @@ object GLForm1: TGLForm1
         OnChange = NodePrefChange
         Position = 20
         TickStyle = tsNone
+        ParentFont = False
         TabOrder = 2
       end
       object NodeScaleLabel: TLabel
         Left = 4
         Height = 16
         Top = 2
-        Width = 25
+        Width = 26
         Alignment = taRightJustify
         Caption = 'Size'
         ParentColor = False
+        ParentFont = False
       end
       object NodeThreshDrop: TComboBox
         Left = 15
-        Height = 20
+        Height = 26
         Top = 64
         Width = 242
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         ItemIndex = 0
         Items.Strings = (
           'Threshold based on size'
@@ -1325,13 +401,13 @@ object GLForm1: TGLForm1
       end
       object NodeMinEdit: TFloatSpinEdit
         Left = 58
-        Height = 16
+        Height = 21
         Top = 40
         Width = 90
-        Increment = 1
         MaxValue = 65535
         MinValue = 0
         OnChange = NodePrefChange
+        ParentFont = False
         TabOrder = 4
         Value = 0
       end
@@ -1339,19 +415,20 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 40
-        Width = 44
+        Width = 43
         Caption = 'Thresh'
         ParentColor = False
+        ParentFont = False
       end
       object NodeMaxEdit: TFloatSpinEdit
         Left = 162
-        Height = 16
+        Height = 21
         Top = 40
         Width = 90
-        Increment = 1
         MaxValue = 65535
         MinValue = 0
         OnChange = NodePrefChange
+        ParentFont = False
         TabOrder = 5
         Value = 1
       end
@@ -1360,9 +437,10 @@ object GLForm1: TGLForm1
         Height = 18
         Hint = 'If checked, node size varies'
         Top = 2
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = NodePrefChange
+        ParentFont = False
         ParentShowHint = False
         ShowHint = True
         State = cbChecked
@@ -1379,25 +457,26 @@ object GLForm1: TGLForm1
       Align = alTop
       Caption = 'Edges'
       ClientHeight = 93
-      ClientWidth = 262
+      ClientWidth = 256
       ParentFont = False
-      TabOrder = 6
+      TabOrder = 5
       Visible = False
       object TrackWidthLabel2: TLabel
         Left = 2
         Height = 16
         Top = 66
-        Width = 34
+        Width = 33
         Caption = 'Color'
         ParentColor = False
+        ParentFont = False
       end
       object LUTdropEdge: TComboBox
         Left = 99
-        Height = 20
+        Height = 26
         Top = 64
         Width = 161
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         Items.Strings = (
           'a'
           'b'
@@ -1411,15 +490,17 @@ object GLForm1: TGLForm1
         ParentFont = False
         Style = csDropDownList
         TabOrder = 0
+        Text = '0'
       end
       object EdgeColorVariesCheck: TCheckBox
         Left = 58
         Height = 18
         Hint = 'If checked, edge color varies'
         Top = 66
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = NodePrefChange
+        ParentFont = False
         ParentShowHint = False
         ShowHint = True
         State = cbChecked
@@ -1429,31 +510,32 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 40
-        Width = 44
+        Width = 43
         Caption = 'Thresh'
         ParentColor = False
+        ParentFont = False
       end
       object EdgeMinEdit: TFloatSpinEdit
         Left = 58
-        Height = 16
+        Height = 21
         Top = 40
         Width = 90
-        Increment = 1
         MaxValue = 65535
         MinValue = 0
         OnChange = NodePrefChange
+        ParentFont = False
         TabOrder = 2
         Value = 0
       end
       object EdgeMaxEdit: TFloatSpinEdit
         Left = 162
-        Height = 16
+        Height = 21
         Top = 40
         Width = 90
-        Increment = 1
         MaxValue = 65535
         MinValue = 0
         OnChange = NodePrefChange
+        ParentFont = False
         TabOrder = 3
         Value = 1
       end
@@ -1466,24 +548,27 @@ object GLForm1: TGLForm1
         OnChange = NodePrefChange
         Position = 37
         TickStyle = tsNone
+        ParentFont = False
         TabOrder = 4
       end
       object NodeScaleLabel1: TLabel
         Left = 4
         Height = 16
         Top = 2
-        Width = 25
+        Width = 26
         Caption = 'Size'
         ParentColor = False
+        ParentFont = False
       end
       object EdgeSizeVariesCheck: TCheckBox
         Left = 58
         Height = 18
         Hint = 'If checked, edge size varies'
         Top = 2
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = NodePrefChange
+        ParentFont = False
         ParentShowHint = False
         ShowHint = True
         State = cbChecked
@@ -1499,17 +584,18 @@ object GLForm1: TGLForm1
       Align = alTop
       Caption = 'Mesh Color'
       ClientHeight = 64
-      ClientWidth = 262
+      ClientWidth = 256
       ParentFont = False
-      TabOrder = 7
+      TabOrder = 6
       Visible = False
       object TrackLengthLabel1: TLabel
         Left = 4
         Height = 16
         Top = 2
-        Width = 64
+        Width = 63
         Caption = 'Saturation'
         ParentColor = False
+        ParentFont = False
       end
       object MeshSaturationTrack: TTrackBar
         Left = 100
@@ -1520,6 +606,7 @@ object GLForm1: TGLForm1
         OnChange = MeshColorBoxChange
         Position = 100
         TickStyle = tsNone
+        ParentFont = False
         TabOrder = 0
       end
       object MeshTransparencyTrack: TTrackBar
@@ -1531,15 +618,587 @@ object GLForm1: TGLForm1
         OnChange = MeshColorBoxChange
         Position = 100
         TickStyle = tsNone
+        ParentFont = False
         TabOrder = 1
       end
       object TrackWidthLabel3: TLabel
         Left = 4
         Height = 16
         Top = 32
-        Width = 85
+        Width = 83
         Caption = 'Transparency'
         ParentColor = False
+        ParentFont = False
+      end
+    end
+    object BackgroundBox: TGroupBox
+      Left = 1
+      Height = 78
+      Top = 669
+      Width = 270
+      Align = alTop
+      Caption = 'Background Mesh'
+      ClientHeight = 56
+      ClientWidth = 256
+      ParentFont = False
+      TabOrder = 8
+      object meshAlphaTrack: TTrackBar
+        Left = 52
+        Height = 30
+        Hint = 'Adjust main mesh transparency'
+        Top = 0
+        Width = 92
+        Max = 100
+        OnChange = SurfaceAppearanceChange
+        Position = 100
+        TickStyle = tsNone
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 0
+      end
+      object MeshBlendTrack: TTrackBar
+        Left = 170
+        Height = 30
+        Hint = 'XRay: make internal overlays, tracks and nodes visible'
+        Top = 0
+        Width = 92
+        Max = 100
+        OnChange = SurfaceAppearanceChange
+        Position = 0
+        TickStyle = tsNone
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 1
+      end
+      object TrackLengthLabel2: TLabel
+        Left = 4
+        Height = 16
+        Hint = 'XRay: make internal overlays, tracks and nodes visible'
+        Top = 2
+        Width = 31
+        Caption = 'XRay'
+        ParentColor = False
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+      end
+      object ShaderForBackgroundOnlyCheck: TCheckBox
+        Left = 222
+        Height = 18
+        Hint = 'If checked, edge size varies'
+        Top = 32
+        Width = 22
+        Checked = True
+        OnChange = ShaderForBackgroundOnlyClick
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 2
+      end
+      object BGShader: TLabel
+        Left = 4
+        Height = 16
+        Top = 34
+        Width = 176
+        Caption = 'Shader For Background Only'
+        ParentColor = False
+        ParentFont = False
+      end
+    end
+    object ShaderBox: TGroupBox
+      Left = 1
+      Height = 0
+      Top = 698
+      Width = 270
+      Align = alClient
+      Caption = 'Shader'
+      ClientHeight = 0
+      ClientWidth = 256
+      ParentFont = False
+      TabOrder = 7
+      OnResize = ShaderBoxResize
+      object Label2: TLabel
+        Left = 4
+        Height = 16
+        Hint = 'Set the elevation and azimuth of the illumination'
+        Top = 34
+        Width = 31
+        Caption = 'Light'
+        ParentColor = False
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+      end
+      object ShaderDrop: TComboBox
+        Left = 2
+        Height = 26
+        Top = 0
+        Width = 127
+        DropDownCount = 36
+        ItemHeight = 26
+        OnChange = ShaderDropChange
+        ParentFont = False
+        Style = csDropDownList
+        TabOrder = 0
+        Text = '0'
+      end
+      object LightElevTrack: TTrackBar
+        Left = 52
+        Height = 30
+        Top = 30
+        Width = 92
+        Max = 90
+        Min = -90
+        OnChange = SurfaceAppearanceChange
+        Position = 25
+        TickStyle = tsNone
+        ParentFont = False
+        TabOrder = 1
+      end
+      object LightAziTrack: TTrackBar
+        Left = 170
+        Height = 30
+        Top = 30
+        Width = 92
+        Max = 90
+        Min = -90
+        OnChange = SurfaceAppearanceChange
+        Position = 0
+        TickStyle = tsNone
+        ParentFont = False
+        TabOrder = 2
+      end
+      object occlusionTrack: TTrackBar
+        Left = 170
+        Height = 30
+        Hint = 'Ambient Occlusion: make sulci and other crevices darker'
+        Top = 0
+        Width = 92
+        Max = 100
+        OnChange = SurfaceAppearanceChange
+        Position = 25
+        TickStyle = tsNone
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 4
+      end
+      object AOLabel: TLabel
+        Left = 138
+        Height = 16
+        Hint = 'Ambient occlusion makes sucli and other crevices darker'
+        Top = 6
+        Width = 18
+        Caption = 'AO'
+        ParentColor = False
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+      end
+      object S1Track: TTrackBar
+        Tag = 1
+        Left = 170
+        Height = 30
+        Top = 64
+        Width = 88
+        Max = 100
+        OnChange = UniformChange
+        Position = 51
+        TickStyle = tsNone
+        ParentFont = False
+        TabOrder = 5
+      end
+      object S1Label: TLabel
+        Tag = 1
+        Left = 4
+        Height = 16
+        Top = 64
+        Width = 14
+        Caption = 'S1'
+        ParentColor = False
+        ParentFont = False
+        ParentShowHint = False
+      end
+      object S1Check: TCheckBox
+        Tag = 1
+        Left = 140
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 66
+        Width = 22
+        Checked = True
+        OnChange = UniformChange
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 6
+      end
+      object S2Label: TLabel
+        Tag = 2
+        Left = 4
+        Height = 16
+        Top = 94
+        Width = 16
+        Caption = 'S2'
+        ParentColor = False
+        ParentFont = False
+        ParentShowHint = False
+      end
+      object S2Check: TCheckBox
+        Tag = 2
+        Left = 140
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 96
+        Width = 22
+        Checked = True
+        OnChange = UniformChange
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 8
+      end
+      object S2Track: TTrackBar
+        Tag = 2
+        Left = 170
+        Height = 30
+        Top = 94
+        Width = 88
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        ParentFont = False
+        TabOrder = 7
+      end
+      object S3Track: TTrackBar
+        Tag = 3
+        Left = 170
+        Height = 30
+        Top = 124
+        Width = 88
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        ParentFont = False
+        TabOrder = 9
+      end
+      object S3Check: TCheckBox
+        Tag = 3
+        Left = 140
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 126
+        Width = 22
+        Checked = True
+        OnChange = UniformChange
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 10
+      end
+      object S3Label: TLabel
+        Tag = 3
+        Left = 4
+        Height = 16
+        Top = 124
+        Width = 16
+        Caption = 'S3'
+        ParentColor = False
+        ParentFont = False
+        ParentShowHint = False
+      end
+      object S4Label: TLabel
+        Tag = 4
+        Left = 4
+        Height = 16
+        Top = 154
+        Width = 17
+        Caption = 'S4'
+        ParentColor = False
+        ParentFont = False
+        ParentShowHint = False
+      end
+      object S4Check: TCheckBox
+        Tag = 4
+        Left = 140
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 156
+        Width = 22
+        Checked = True
+        OnChange = UniformChange
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 12
+      end
+      object S4Track: TTrackBar
+        Tag = 4
+        Left = 170
+        Height = 30
+        Top = 154
+        Width = 88
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        ParentFont = False
+        TabOrder = 11
+      end
+      object S5Label: TLabel
+        Tag = 5
+        Left = 4
+        Height = 16
+        Top = 184
+        Width = 16
+        Caption = 'S5'
+        ParentColor = False
+        ParentFont = False
+        ParentShowHint = False
+      end
+      object S5Check: TCheckBox
+        Tag = 5
+        Left = 140
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 186
+        Width = 22
+        Checked = True
+        OnChange = UniformChange
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 14
+      end
+      object S5Track: TTrackBar
+        Tag = 5
+        Left = 170
+        Height = 30
+        Top = 184
+        Width = 88
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        ParentFont = False
+        TabOrder = 13
+      end
+      object S6Label: TLabel
+        Tag = 6
+        Left = 4
+        Height = 16
+        Top = 214
+        Width = 17
+        Caption = 'S6'
+        ParentColor = False
+        ParentFont = False
+        ParentShowHint = False
+      end
+      object S7Label: TLabel
+        Tag = 7
+        Left = 4
+        Height = 16
+        Top = 244
+        Width = 16
+        Caption = 'S7'
+        ParentColor = False
+        ParentFont = False
+        ParentShowHint = False
+      end
+      object S8Label: TLabel
+        Tag = 8
+        Left = 4
+        Height = 16
+        Top = 274
+        Width = 17
+        Caption = 'S8'
+        ParentColor = False
+        ParentFont = False
+        ParentShowHint = False
+      end
+      object S9Label: TLabel
+        Tag = 9
+        Left = 4
+        Height = 16
+        Top = 304
+        Width = 17
+        Caption = 'S9'
+        ParentColor = False
+        ParentFont = False
+        ParentShowHint = False
+      end
+      object S10Label: TLabel
+        Tag = 10
+        Left = 4
+        Height = 16
+        Top = 334
+        Width = 23
+        Caption = 'S10'
+        ParentColor = False
+        ParentFont = False
+        ParentShowHint = False
+      end
+      object S6Check: TCheckBox
+        Tag = 6
+        Left = 141
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 216
+        Width = 22
+        Checked = True
+        OnChange = UniformChange
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 16
+      end
+      object S7Check: TCheckBox
+        Tag = 7
+        Left = 141
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 246
+        Width = 22
+        Checked = True
+        OnChange = UniformChange
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 18
+      end
+      object S8Check: TCheckBox
+        Tag = 8
+        Left = 141
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 276
+        Width = 22
+        Checked = True
+        OnChange = UniformChange
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 20
+      end
+      object S9Check: TCheckBox
+        Tag = 9
+        Left = 141
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 306
+        Width = 22
+        Checked = True
+        OnChange = UniformChange
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 22
+      end
+      object S10Check: TCheckBox
+        Tag = 10
+        Left = 141
+        Height = 18
+        Hint = 'If checked, edge color varies'
+        Top = 336
+        Width = 22
+        Checked = True
+        OnChange = UniformChange
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        State = cbChecked
+        TabOrder = 24
+      end
+      object S6Track: TTrackBar
+        Tag = 6
+        Left = 170
+        Height = 30
+        Top = 214
+        Width = 88
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        ParentFont = False
+        TabOrder = 15
+      end
+      object S7Track: TTrackBar
+        Tag = 7
+        Left = 170
+        Height = 30
+        Top = 244
+        Width = 88
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        ParentFont = False
+        TabOrder = 17
+      end
+      object S8Track: TTrackBar
+        Tag = 8
+        Left = 170
+        Height = 30
+        Top = 274
+        Width = 88
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        ParentFont = False
+        TabOrder = 19
+      end
+      object S9Track: TTrackBar
+        Tag = 9
+        Left = 170
+        Height = 30
+        Top = 304
+        Width = 88
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        ParentFont = False
+        TabOrder = 21
+      end
+      object S10Track: TTrackBar
+        Tag = 10
+        Left = 170
+        Height = 30
+        Top = 334
+        Width = 88
+        Max = 100
+        OnChange = UniformChange
+        Position = 50
+        TickStyle = tsNone
+        ParentFont = False
+        TabOrder = 23
+      end
+      object Memo1: TMemo
+        Left = 0
+        Height = 54
+        Top = -54
+        Width = 256
+        Align = alBottom
+        Lines.Strings = (
+          ''
+        )
+        ParentFont = False
+        TabOrder = 3
       end
     end
     object CollapseToolPanelBtn: TButton
@@ -1549,17 +1208,19 @@ object GLForm1: TGLForm1
       Top = 1
       Width = 16
       OnClick = CollapseToolPanelBtnClick
+      ParentFont = False
       ParentShowHint = False
       ShowHint = True
-      TabOrder = 3
+      TabOrder = 0
     end
   end
   object CollapsedToolPanel: TPanel
     Left = 272
-    Height = 755
+    Height = 699
     Top = 0
     Width = 6
     Align = alLeft
+    ParentFont = False
     TabOrder = 0
     Visible = False
     OnClick = CollapseToolPanelBtnClick

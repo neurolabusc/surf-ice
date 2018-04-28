@@ -38,12 +38,12 @@ begin
        Height := ScaleY(Height, FromDPI);
     {$ENDIF}
     Width := ScaleX(Width, FromDPI);
-    {$IFNDEF WINDOWS}
     if (Control is TStringGrid) then begin
-       (Control as TStringGrid).DefaultColWidth := ScaleY((Control as TStringGrid).DefaultColWidth, FromDPI);
+       {$IFNDEF WINDOWS}
+      (Control as TStringGrid).DefaultColWidth := ScaleY((Control as TStringGrid).DefaultColWidth, FromDPI);
+      {$ENDIF}
       (Control as TStringGrid).DefaultRowHeight := ScaleY((Control as TStringGrid).DefaultRowHeight, FromDPI);
     end;
-    {$ENDIF}
   end;
   if Control is TWinControl then
   begin
