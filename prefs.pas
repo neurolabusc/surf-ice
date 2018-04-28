@@ -590,6 +590,7 @@ var
   lIniFile: TIniFile;
 begin
   result := false;
+  DefaultFormatSettings.DecimalSeparator := '.'; //OBJ/GII/Etc write real numbers as 1.23 not 1,23
   if (lRead) then
     SetDefaultPrefs (lPrefs, true, not Fileexists(lFilename));
   if (not lRead) and (lPrefs.SkipPrefWriting) then exit;

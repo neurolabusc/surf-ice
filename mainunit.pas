@@ -3796,7 +3796,8 @@ var
   c: char;
   forceReset: boolean = false;
 begin
- FileMode := fmOpenRead;  //in case files set with read-only permissions
+  DefaultFormatSettings.DecimalSeparator := '.'; //OBJ/GII/Etc write real numbers as 1.23 not 1,23
+  FileMode := fmOpenRead;  //in case files set with read-only permissions
   //check if user includes parameters
   gPrefs.initScript := ''; //e.g. 'c:\dir\script.gls'
   i := 1;
@@ -3826,7 +3827,6 @@ begin
     if MessageDlg('Use advanced graphics? Press "Yes" for better quality. Press "Cancel" for old hardware.', mtConfirmation, [mbYes, mbCancel], 0) = mrCancel then
       gPrefs.RenderQuality:= kRenderPoor;
   end;
-  DefaultFormatSettings.DecimalSeparator := '.'; //OBJ/GII/Etc write real numbers as 1.23 not 1,23
   OverlayBoxCreate;//after we read defaults
   {$IFDEF Darwin} Application.OnDropFiles:= AppDropFiles; {$ENDIF}
   //{$IFDEF Windows} //July 2017  - see overlay box create
