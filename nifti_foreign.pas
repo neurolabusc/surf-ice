@@ -471,6 +471,8 @@ function parsePicString(s: string): single;
 //given "AXIS_4 001 0.000000e+00 4.000000e-01 microns"  return 0.4
 var
   sList : TStringList;
+  x : double;
+  code : integer;
 begin
   result := 0.0;
   DecimalSeparator := '.';
@@ -478,12 +480,9 @@ begin
   sList.Delimiter := ' ';        // Each list item will be blank separated
   sList.DelimitedText := s;
   if sList.Count > 4 then begin
-     //ShowMessage(sList[3]);
-     try
-        result := StrToFloat(sList[3]);    // Middle blanks are not supported
-     except
-           //ShowMessage(Exception.Message);
-     end;
+     	  
+	 VAL (sList[3], X, CODE);
+	 result := x;
   end;
   sList.Free;
 end;
@@ -887,6 +886,8 @@ var
   offset,position, elementSize: array [0..3] of single;
   transformMatrix: array [0..11] of single;
   mArray: TStringList;
+  x : double;
+  code : integer;
 begin
   result := false;
   if not FileExists(fname) then exit;
@@ -959,9 +960,10 @@ begin
         end  else if AnsiContainsText(tagName, 'Orientation') and (not AnsiContainsText(tagName, 'Anatomical') ) then begin
             if (nItems > 12) then nItems := 12;
             matElementsOrient := nItems;
-            for i := 0 to (nItems-1) do
-              transformMatrix[i] :=  strtofloat(mArray[i]);
-
+            for i := 0 to (nItems-1) do begin				  
+			  VAL (mArray[i], X, CODE);
+              transformMatrix[i] :=  x;
+			end;
 
             if (matElementsOrient >= 12) then
                 LOAD_MAT33(matOrient, transformMatrix[0],transformMatrix[1],transformMatrix[2],
@@ -975,8 +977,10 @@ begin
         end else if AnsiContainsText(tagName, 'TransformMatrix') then begin
             if (nItems > 12) then nItems := 12;
             matElements := nItems;
-            for i := 0 to (nItems-1) do
-              transformMatrix[i] :=  strtofloat(mArray[i]);
+            for i := 0 to (nItems-1) do begin
+			  val(mArray[i], x, code);
+              transformMatrix[i] :=  x;
+			end;
             if (matElements >= 12) then
                 LOAD_MAT33(mat, transformMatrix[0],transformMatrix[1],transformMatrix[2],
                            transformMatrix[4],transformMatrix[5],transformMatrix[6],
@@ -988,19 +992,25 @@ begin
         end else if AnsiContainsText(tagName, 'Position') then begin
             if (nItems > 3) then nItems := 3;
             nPosition := nItems;
-            for i := 0 to (nItems-1) do
-              position[i] :=  strtofloat(mArray[i]);
+            for i := 0 to (nItems-1) do begin
+			  val(mArray[i], x, code);
+              position[i] :=  x;
+			end;
         end else if AnsiContainsText(tagName, 'Offset') then begin
             if (nItems > 3) then nItems := 3;
             nOffset := nItems;
-            for i := 0 to (nItems-1) do
-              offset[i] :=  strtofloat(mArray[i]);
+            for i := 0 to (nItems-1) do begin
+			  val(mArray[i], x, code);
+              offset[i] :=  x;
+			end;
         end else if AnsiContainsText(tagName, 'AnatomicalOrientation') then begin
             //e.g. RAI
         end else if AnsiContainsText(tagName, 'ElementSpacing') then begin
             if (nItems > 4) then nItems := 4;
-            for i := 0 to (nItems-1) do
-                nhdr.pixdim[i+1] := strtofloat(mArray[i]);
+            for i := 0 to (nItems-1) do begin
+				val(mArray[i], x, code);
+                nhdr.pixdim[i+1] := x;
+			end;
         end else if AnsiContainsText(tagName, 'DimSize') then begin
             if (nItems > 4) then nItems := 4;
             for i := 0 to (nItems-1) do
@@ -1009,8 +1019,10 @@ begin
             headerSize := strtoint(mArray[0]);
         end else if AnsiContainsText(tagName, 'ElementSize') then begin
             if (nItems > 4) then nItems := 4;
-            for i := 0 to (nItems-1) do
-                elementSize[i] := strtofloat(mArray[i]);
+            for i := 0 to (nItems-1) do begin
+				val(mArray[i], x, code);
+                elementSize[i] := x;
+			end;
         end else if AnsiContainsText(tagName, 'ElementNumberOfChannels') then begin
             channels := strtoint(mArray[0]);
             if (channels > 1) then NSLog('Unable to read MHA/MHD files with multiple channels ');
@@ -1180,8 +1192,10 @@ begin
       nDims := strtoint(mArray.Strings[0])
     else*) if AnsiContainsText(tagName, 'spacings') then begin
       if (nItems > 6) then nItems :=6;
-      for i:=0 to (nItems-1) do
-        nhdr.pixdim[i+1] :=strtofloat(mArray.Strings[i]);
+      for i:=0 to (nItems-1) do begin
+			  val(mArray.Strings[i], x, code);
+			  nhdr.pixdim[i+1] :=x;
+		end;
     end else if AnsiContainsText(tagName, 'sizes') then begin
       if (nItems > 6) then nItems :=6;
       for i:=0 to (nItems-1) do
@@ -1189,8 +1203,10 @@ begin
     end else if AnsiContainsText(tagName, 'space directions') then begin
       if (nItems > 12) then nItems :=12;
       matElements :=nItems;
-      for i:=0 to (nItems-1) do
-          transformMatrix[i] :=strtofloat(mArray.Strings[i]);
+      for i:=0 to (nItems-1) do begin
+			  val(mArray.Strings[i], x, code);
+			  transformMatrix[i] :=x;
+	  end;
       if (matElements >= 12) then
           LOAD_MAT33(mat, transformMatrix[0],transformMatrix[1],transformMatrix[2],
                      transformMatrix[4],transformMatrix[5],transformMatrix[6],
@@ -1244,8 +1260,10 @@ begin
           NSLog('Unknown encoding format '+mArray.Strings[0]);
     end  else if AnsiContainsText(tagName, 'space origin') then begin
       if (nItems > 3) then nItems :=3;
-      for i:=0 to (nItems-1) do
-          offset[i] := strtofloat(mArray.Strings[i]);
+      for i:=0 to (nItems-1) do begin
+		  val(mArray.Strings[i], x, code);
+          offset[i] := x;
+	  end;
     end else if AnsiContainsText(tagName, 'data file') then begin
       str := mArray.Strings[0];
       if (pos('LIST', UpperCase(str)) = 1) and (length(str) = 4) then begin  //e.g. "data file: LIST"
@@ -1443,8 +1461,10 @@ begin
         end
     end else begin //if numeric attributes...
       setlength(valArray,itemCount);
-      for i := 0 to (itemCount-1) do
-        valArray[i] := strtofloat(cleanStr(mArray[i]) );
+      for i := 0 to (itemCount-1) do begin
+		val(cleanStr(mArray[i]) , x, code);
+        valArray[i] := x;
+	  end;
       //next - harvest data from important names
       if AnsiContainsText(nameStr,'BRICK_TYPES') then begin
               vInt := round(valArray[0]);

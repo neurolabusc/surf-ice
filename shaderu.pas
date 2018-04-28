@@ -1022,16 +1022,15 @@ begin
 end;
 
 function strtofloat0 (lS:string): single;
+var x : single;
+	code : integer;
 begin
   result := 0;
   if length(lS) < 1 then exit;
-  if (upcase (lS[1]) = 'T')  or (upcase (lS[1]) = 'F') then exit; //old unsupported 'SET' used true/false booleans
-  try
-     result :=  strtofloat(lS);
-  except
-      on Exception : EConvertError do
-         result := 0;
-  end;
+  if (upcase (lS[1]) = 'T')  or (upcase (lS[1]) = 'F') then exit; //old unsupported 'SET' used true/false booleans begin
+  
+     val(lS, x, code);
+     result :=  x;
 end;
 
 function RStrToInt(lS: string; Default: integer): integer;

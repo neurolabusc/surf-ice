@@ -1722,6 +1722,8 @@ var
    str: string;
    num_node: integer;
    strlst : TStringList;
+	x:double;
+	code:Integer;
 begin
   result := false;
   if (FSize(FileName) < 64) then exit;
@@ -1748,10 +1750,18 @@ begin
 	  if (strlst.count > 4) then begin
 		  if length(nodes) <= num_node then
 			  setlength(nodes, num_node + kCache);
-		  nodes[num_node].Clr := strtofloat(strlst[2]);
-		  nodes[num_node].X := strtofloat(strlst[3]);
-		  nodes[num_node].Y := strtofloat(strlst[4]);
-		  nodes[num_node].Z := strtofloat(strlst[5]);
+			  
+		  VAL (strlst[2], X, CODE);	  
+		  nodes[num_node].Clr := x;
+		  
+		  VAL (strlst[3], X, CODE);
+		  nodes[num_node].X := x;
+		  
+		  VAL (strlst[4], X, CODE);
+		  nodes[num_node].Y := x;
+		  
+		  VAL (strlst[5], X, CODE);
+		  nodes[num_node].Z := x;
 		  nodes[num_node].radius := 1;
                   //showmessage(format('%gx%gx%g=%g',[nodes[num_node].X,nodes[num_node].Y,nodes[num_node].Z,nodes[num_node].Clr]));
 		  inc(num_node);
@@ -1774,6 +1784,8 @@ var
    str: string;
    num_node,i: integer;
    strlst : TStringList;
+   x : double;
+   code : integer;
 begin
      isEmbeddedEdge := false;
      if (FSize(FileName) < 9) then exit;
@@ -1798,11 +1810,21 @@ begin
            if (length(str) > 0) and (str[1] <> '#') then begin
               strlst.DelimitedText := str;
               if (strlst.count > 4) then begin
-                 self.nodes[num_node].X := strtofloat(strlst[0]);
-                 self.nodes[num_node].Y := strtofloat(strlst[1]);
-                 self.nodes[num_node].Z := strtofloat(strlst[2]);
-                 self.nodes[num_node].Clr := strtofloat(strlst[3]);
-                 self.nodes[num_node].radius := strtofloat(strlst[4]);
+		  
+				 VAL (strlst[0], X, CODE);
+                 self.nodes[num_node].X := x;
+		  
+				 VAL (strlst[1], X, CODE);
+                 self.nodes[num_node].Y := x;
+		  
+				 VAL (strlst[2], X, CODE);
+                 self.nodes[num_node].Z := x;
+		  
+				 VAL (strlst[3], X, CODE);
+                 self.nodes[num_node].Clr := x;
+		  
+				 VAL (strlst[4], X, CODE);
+                 self.nodes[num_node].radius := x;
                  inc(num_node);
               end;
            end else if (pos(kEmbeddedEdge, uppercase(str)) > 0)then

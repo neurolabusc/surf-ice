@@ -138,14 +138,18 @@ procedure IniFloat(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lVal
 //read or write an integer value to the initialization file
 var
 	lStr: string;
+	x : single;
+	code : integer;
 begin
         if not lRead then begin
            lIniFile.WriteString('FLT',lIdent,FloattoStr(lValue));
            exit;
         end;
 	lStr := lIniFile.ReadString('FLT',lIdent, '');
-	if length(lStr) > 0 then
-		lValue := StrToFloat(lStr);
+	if length(lStr) > 0 then begin
+		val(lStr, x, code);
+		lValue := x;
+	end;
 end; //IniFloat
 
 procedure IniByte(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lValue: byte);
