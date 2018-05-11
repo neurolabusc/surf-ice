@@ -1,15 +1,15 @@
-CONST
- 	kSteps = 100;
-VAR
+const
+ 	ksteps = 100;
+var
 	i: integer;
-BEGIN
-	RESETDEFAULTS;
-	MESHLOAD('stroke.mz3');
-	TRACKLOAD('stroke.trk.gz');
-	TRACKPREFS(15, 3, 0.5);
-	FOR i := 1 TO kSteps DO BEGIN
-		CLIPAZIMUTHELEVATION(( (0.8*i)/kSteps ), 0, 130);
-		WAIT(20);
-	END;
-END.
+begin
+	resetdefaults();
+	meshload('stroke.mz3');
+	trackload('stroke.trk.gz');
+	trackprefs(15, 3, 0.5);
+	for i := 1 to ksteps do begin
+		clipazimuthelevation(( (0.8*i)/ksteps ), 0, 130);
+		wait(20);
+	end;
+end.
 

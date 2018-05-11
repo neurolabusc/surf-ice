@@ -287,6 +287,7 @@ type
     procedure SaveMenuClick(Sender: TObject);
     procedure SaveMz3(var mesh: TMesh; isSaveOverlays: boolean);
     procedure SaveTrack (var lTrack: TTrack);
+    function SaveMeshCore(lFilename: string): boolean;
     procedure SaveMesh(var mesh: TMesh; isSaveOverlays: boolean);
     procedure SaveMeshMenuClick(Sender: TObject);
     procedure SaveTracksMenuClick(Sender: TObject);
@@ -360,7 +361,7 @@ implementation
 {$R *.lfm}
 {$IFDEF LCLCocoa}
 uses
-  nsappkitext, glcocoanscontext;
+  UserNotification, nsappkitext, glcocoanscontext;
 {$ENDIF}
 var
   gNode: TMesh;
@@ -2123,6 +2124,57 @@ begin
  GLBoxRequestUpdate(Sender);
 end;
 
+function GetFloat(prompt: string; min,def,max: extended): extended;
+var
+    PrefForm: TForm;
+    OkBtn: TButton;
+    promptLabel: TLabel;
+    valEdit: TEdit;
+begin
+  PrefForm:=TForm.Create(nil);
+  PrefForm.SetBounds(100, 100, 640, 112);
+  PrefForm.Caption:='Value required';
+  PrefForm.Position := poScreenCenter;
+  PrefForm.BorderStyle := bsDialog;
+  //label
+  promptLabel:=TLabel.create(PrefForm);
+  promptLabel.Caption:= prompt;
+  if (min < max) then
+     promptLabel.Caption:= format('%s (range %g..%g)', [prompt, min, max]);
+  promptLabel.Left := 8;
+  promptLabel.Top := 12;
+  promptLabel.Parent:=PrefForm;
+  //edit
+  valEdit:=TEdit.create(PrefForm);
+  valEdit.Caption := FloatToStrF(def, ffGeneral, 8, 4);
+  valEdit.Top := 42;
+  valEdit.Width := PrefForm.Width - 16;
+  valEdit.Left :=  8;
+  valEdit.Parent:=PrefForm;
+  //OK button
+  OkBtn:=TButton.create(PrefForm);
+  OkBtn.Caption:='OK';
+  OkBtn.Top := 78;
+  OkBtn.Width := 128;
+  OkBtn.Left := PrefForm.Width - OkBtn.Width - 8;
+  OkBtn.Parent:=PrefForm;
+  OkBtn.ModalResult:= mrOK;
+  {$IFNDEF Darwin} ScaleDPIX(PrefForm, 96);{$ENDIF}
+  {$IFDEF LCLCocoa}
+  if gPrefs.DarkMode then SetFormDarkMode(PrefForm);
+  {$ENDIF}
+  PrefForm.ShowModal;
+  result := def;
+  if (PrefForm.ModalResult = mrOK) then begin
+    result := StrToFloatDef(valEdit.Caption, def);
+    if (min < max) and (result < min) then
+      result := min;
+    if (min < max) and (result > max) then
+      result := max;
+  end;
+  FreeAndNil(PrefForm);
+end; //GetFloat()
+
 procedure TGLForm1.SimplifyMeshMenuClick(Sender: TObject);
 
 var
@@ -2133,9 +2185,10 @@ var
 begin
  msStart := gettickcount();
  nTri := length(gMesh.Faces);
- s := '.3';
- if not inputquery('Track simplify', 'Enter reduction factor (e.g. 0.2 will decimate 80% of all triangles)', s) then exit;
- r := StrToFloatDef(s, 0.5);
+ r := GetFloat('Enter reduction factor (e.g. 0.2 will decimate 80% of all triangles)', 0.001,0.3,0.999);
+ //s := '.3';
+ //if not inputquery('Track simplify', 'Enter reduction factor (e.g. 0.2 will decimate 80% of all triangles)', s) then exit;
+ //r := StrToFloatDef(s, 0.5);
  if (r <= 0.0) or (r > 1.0) then begin
     showmessage('Error: reduction factor should be BETWEEN 0 and 1');
     exit;
@@ -3019,7 +3072,6 @@ begin
        showmessage('Unable to compute curvature: no mesh is loaded (use File/Open).');
        exit;
     end;
-    //isTemp := (MessageDlg('Temporary CURV file?', mtConfirmation, [mbNo, mbYes], 0) = mrYes);
     isTemp := (Sender as TMenuItem).Tag = 1;
     fnm := changefileext(gPrefs.PrevFilename[1],'.curv');
     if isTemp then begin
@@ -3139,7 +3191,7 @@ procedure TGLForm1.AboutMenuClick(Sender: TObject);
 const
   kSamp = 36;
 var
-  isAtlasStr, TrackStr, MeshStr, str: string;
+  titleStr, isAtlasStr, TrackStr, MeshStr, str: string;
   s: dword;
   i: integer;
   scale: single;
@@ -3174,11 +3226,15 @@ begin
    {$IFDEF DGL} + ' DGL'{$ENDIF}
    {$IFNDEF COREGL}+' (Legacy OpenGL)'{$ENDIF}
    {$IFDEF Darwin}
-
+           {$IFDEF LCLCocoa}
+           +''; titleStr := Str; str := ' '+GetHardwareVersion
+           +LineEnding+' '+ GetOSVersion
+           {$ELSE}
            +LineEnding+' @: '+ AppDir2
            +LineEnding+' '+ isExeReadOnly
            +LineEnding+' '+GetHardwareVersion
            +LineEnding+' '+ GetOSVersion
+           {$ENDIF}
    {$ENDIF}
    +LineEnding+' www.mricro.com :: BSD 2-Clause License (opensource.org/licenses/BSD-2-Clause)'
    +LineEnding+' FPS ' +inttostr(round( (kSamp*1000)/(gettickcount-s)))
@@ -3190,12 +3246,17 @@ begin
    +LineEnding+' Track Vertices '+inttostr(gTrack.n_vertices)+' Faces '+  inttostr(gTrack.n_faces) +' Count ' +inttostr(gTrack.n_count)
    +TrackStr
    +LineEnding+' Node Vertices '+inttostr(length(gNode.vertices))+' Faces '+  inttostr(length(gNode.faces))
-   +LineEnding+' GPU '+gShader.Vendor
-   +LineEnding+'Press "Abort" to quit and open settings '+ininame;
-  ClipBoard.AsText:= str;
+   +LineEnding+' GPU '+gShader.Vendor;
   //str := DefaultToHomeDir('mega');
-  i := MessageDlg(str,mtInformation,[mbAbort, mbOK],0);
-  if i  = mrAbort then Quit2TextEditor;
+  {$IFDEF LCLCocoa}
+  ClipBoard.AsText:= titleStr + LineEnding + str;
+  ShowAlertSheet(GLForm1.Handle,titleStr, str);
+  {$ELSE}
+  ClipBoard.AsText:= str;
+  MessageDlg(str,mtInformation,[mbOK],0);
+  {$ENDIF}
+  //i := MessageDlg(str,mtInformation,[mbAbort, mbOK],0);
+  //if i  = mrAbort then Quit2TextEditor;
 end;
 
 procedure TGLForm1.AddNodesMenuClick(Sender: TObject);
@@ -3702,6 +3763,31 @@ begin
       mesh.SaveObj(SaveMeshDialog.Filename);
 end;
 {$ENDIF}
+
+function TGLForm1.SaveMeshCore(lFilename: string): boolean;
+var
+   x: string;
+begin
+  result := false;
+  if (lFilename = '') or (length(gMesh.Faces) < 1) then begin
+     exit;
+  end;
+  result := true;
+  x := UpperCase(ExtractFileExt(lFilename));
+  if (x <> '.MZ3') and (x <> '.PLY') and (x <> '.OBJ')  and (x <> '.GII') then begin
+     x := '.MZ3';
+     lFilename := lFilename + x;
+  end;
+  if (x = '.MZ3') then
+     gMesh.SaveMz3(lFilename)
+  else if (x = '.GII') then
+     gMesh.SaveGii(lFilename)
+  else if (x = '.PLY') then
+     gMesh.SavePly(lFilename)
+  else
+      gMesh.SaveObj(lFilename);
+end;
+
 
 procedure TGLForm1.SaveMeshMenuClick(Sender: TObject);
 begin

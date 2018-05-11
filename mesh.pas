@@ -4958,7 +4958,8 @@ var
    f: TFByte;//TextFile;
    strlst: TStringList;
    str: string;
-   i, j, num_v, num_f, num_f_allocated, num_strip, cnt: integer;
+   strips: array of int32;
+   c, i, j, k, num_v, num_f, num_f_allocated, num_strip, cnt: integer;
    nV: LongInt;
    isBinary: boolean = true;
 begin
@@ -5001,8 +5002,16 @@ begin
     goto 666;
   end;
   setlength(vertices, num_v); //vertices = zeros(num_f, 9);
-  if isBinary then
-     blockread(f, vertices[0], 3 * 4 * num_v)
+  if isBinary then begin
+     blockread(f, vertices[0], 3 * 4 * num_v);
+     {$IFDEF ENDIAN_LITTLE} // VTK is ALWAYS big endian!
+     for i := 0 to (num_v -1) do begin
+            SwapSingle(vertices[i].X);
+            SwapSingle(vertices[i].Y);
+            SwapSingle(vertices[i].Z);
+     end;
+     {$ENDIF}
+  end
   else begin //if binary else ASCII
        for i := 0 to (num_v-1) do begin
          //n.b. ParaView and Mango pack multiple vertices per line, so we can not use ReadLnBin(f, str);
@@ -5023,49 +5032,110 @@ begin
     ReadLnBin(f, str);
   end;
   if pos('TRIANGLE_STRIPS', UpperCase(str)) = 1 then begin
-     if isBinary then begin
-        showmessage('Unable to read VTK binary "TRIANGLE_STRIPS"');
-        goto 666;
-     end;
      strlst.DelimitedText := str;
      num_strip := StrToIntDef(strlst[1],0);
      cnt := StrToIntDef(strlst[2],0);
      num_f_allocated := cnt;
+     (*if isBinary then begin
+        showmessage(format('Unable to read VTK binary "TRIANGLE_STRIPS" %d %d', [num_strip, cnt]));
+        goto 666;
+     end;*)
      setlength(faces, num_f_allocated); //not sure how many triangles, lets guess
      num_f := 0;
-     for i := 0 to (num_strip -1) do begin
-         ReadLnBin(f, str);
-         strlst.DelimitedText := str;
-         cnt := StrToIntDef(strlst[0],0);
-         if (cnt < 3) then begin
-            setlength(faces,0);
-            num_f := 0;
-            goto 666;
-         end;
-         if ((num_f+cnt) > num_f_allocated) then begin //need to allocate more faces
-            num_f_allocated := num_f_allocated + cnt + kBlockSz;
-            setlength(faces, num_f_allocated);
-         end;
-         faces[num_f].Y := StrToIntDef(strlst[1],0);
-         faces[num_f].X := StrToIntDef(strlst[2],0);
-         faces[num_f].Z := StrToIntDef(strlst[3],0);
-         num_f := num_f + 1;
-         if (cnt > 3) then begin
-            for j := 4 to cnt do begin
-                //http://ogldev.atspace.co.uk/www/tutorial27/tutorial27.html
-                //  winding order is reversed on the odd triangles
-                if odd(j) then begin //ITK snap triangle winding reverses with each new point
-                   faces[num_f].X := StrToIntDef(strlst[j-1],0);
-                   faces[num_f].Y := StrToIntDef(strlst[j-2],0);
-                end else begin
-                  faces[num_f].X := StrToIntDef(strlst[j-2],0);
-                  faces[num_f].Y := StrToIntDef(strlst[j-1],0);
-                end;
-              faces[num_f].Z := StrToIntDef(strlst[j],0);
+     if isBinary then begin
+       //Harvard Surgical Planning Laboratory MRB files are zip files with binary VTK Triangle_Strips
+       c := cnt;
+       setlength(strips, cnt); //vertices = zeros(num_f, 9);
+       blockread(f, strips[0], 4 * cnt);
+       {$IFDEF ENDIAN_LITTLE} // VTK is ALWAYS big endian!
+       for i := 0 to (cnt -1) do
+           SwapLongInt(strips[i]);
+       {$ENDIF}
+       k := 0;
+       for i := 0 to (num_strip -1) do begin
+           cnt := strips[k];
+           k := k + 1;
+           if ((cnt < 3) or (k > c)) then begin
+              setlength(faces,0);
+              num_f := 0;
+              goto 666;
+           end;
+           if ((num_f+cnt) > num_f_allocated) then begin //need to allocate more faces
+              num_f_allocated := num_f_allocated + cnt + kBlockSz;
+              setlength(faces, num_f_allocated);
+           end;
+           faces[num_f].X := strips[k];
+           faces[num_f].Y := strips[k+1];
+           faces[num_f].Z := strips[k+2];
+           k := k + 3;
+           num_f := num_f + 1;
+           if (cnt > 3) then begin
+              for j := 4 to cnt do begin
+                  //http://ogldev.atspace.co.uk/www/tutorial27/tutorial27.html
+                  //  winding order is reversed on the odd triangles
+                  if odd(j) then begin //ITK snap triangle winding reverses with each new point
+                     faces[num_f].X := strips[k-2];
+                     faces[num_f].Y := strips[k-1];
+                  end else begin
+                    faces[num_f].X := strips[k-1];
+                    faces[num_f].Y := strips[k-2];
+                  end;
+                faces[num_f].Z := strips[k];
+                k := k + 1;
                 num_f := num_f + 1;
-            end; //for j: each additional strip point
-         end; //cnt > 3
-     end; //for i: each strip
+              end; //for j: each additional strip point
+           end; //cnt > 3
+       end; //for i: each strip
+       (*k := faces[0].X;
+       c := faces[0].X;
+       for i := 0 to (num_f -1) do
+           if faces[i].X > k then k := faces[i].X;
+       for i := 0 to (num_f -1) do
+           if faces[i].X < c then c := faces[i].X;
+       for i := 0 to (num_f -1) do
+           if faces[i].Y > k then k := faces[i].Y;
+       for i := 0 to (num_f -1) do
+           if faces[i].Y < c then c := faces[i].Y;
+       for i := 0 to (num_f -1) do
+           if faces[i].Z > k then k := faces[i].Z;
+       for i := 0 to (num_f -1) do
+           if faces[i].Z < c then c := faces[i].Z;
+       showmessage(format('faces %d triangle indices %d..%d', [num_f,c,k])); *)
+     end else begin
+       for i := 0 to (num_strip -1) do begin
+           ReadLnBin(f, str);
+           strlst.DelimitedText := str;
+           cnt := StrToIntDef(strlst[0],0);
+           if (cnt < 3) then begin
+              setlength(faces,0);
+              num_f := 0;
+              goto 666;
+           end;
+           if ((num_f+cnt) > num_f_allocated) then begin //need to allocate more faces
+              num_f_allocated := num_f_allocated + cnt + kBlockSz;
+              setlength(faces, num_f_allocated);
+           end;
+           faces[num_f].Y := StrToIntDef(strlst[1],0);
+           faces[num_f].X := StrToIntDef(strlst[2],0);
+           faces[num_f].Z := StrToIntDef(strlst[3],0);
+           num_f := num_f + 1;
+           if (cnt > 3) then begin
+              for j := 4 to cnt do begin
+                  //http://ogldev.atspace.co.uk/www/tutorial27/tutorial27.html
+                  //  winding order is reversed on the odd triangles
+                  if odd(j) then begin //ITK snap triangle winding reverses with each new point
+                     faces[num_f].X := StrToIntDef(strlst[j-1],0);
+                     faces[num_f].Y := StrToIntDef(strlst[j-2],0);
+                  end else begin
+                    faces[num_f].X := StrToIntDef(strlst[j-2],0);
+                    faces[num_f].Y := StrToIntDef(strlst[j-1],0);
+                  end;
+                faces[num_f].Z := StrToIntDef(strlst[j],0);
+                  num_f := num_f + 1;
+              end; //for j: each additional strip point
+           end; //cnt > 3
+       end; //for i: each strip
+     end; //if binary else ASCII
      setlength(faces, num_f);
      goto 666;
 
@@ -5100,11 +5170,11 @@ begin
            SwapLongInt(faces[i].Y);
            SwapLongInt(faces[i].Z);
     end;
-    for i := 0 to (num_v -1) do begin
+    (*for i := 0 to (num_v -1) do begin
            SwapSingle(vertices[i].X);
            SwapSingle(vertices[i].Y);
            SwapSingle(vertices[i].Z);
-    end;
+    end;*)
     {$ENDIF}
   end else begin //if binary else ASCII - indexed from 0
       for i := 0 to (num_f -1) do begin
@@ -5152,7 +5222,7 @@ begin
          if specialsingle( vertices[i].X) or specialsingle( vertices[i].Y) or specialsingle( vertices[i].Z) then
             isNan := true;
      if isNan then begin
-        showmessage('Vertices are corrupted (infinity of NaN values)');
+        showmessage('Vertices are corrupted (infinity of NaN values) '+inttostr(length(vertices)));
         result := false;
      end;
      if not result then

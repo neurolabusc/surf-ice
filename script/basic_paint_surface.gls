@@ -1,12 +1,13 @@
-BEGIN
-	RESETDEFAULTS;
-	AZIMUTHELEVATION(70, 15);
-	MESHLOAD('BrainMesh_ICBM152Right.mz3');
-	OVERLAYLOAD('motor_4t95vol.nii.gz');
-	OVERLAYMINMAX(1,2,12);
-	OVERLAYLOAD('motor_4t95vol.nii.gz');
-	OVERLAYMINMAX(2,-1,-2);
-	COLORBARVISIBLE(true);
-	OVERLAYTRANSPARENCYONBACKGROUND(25);
-END.
+begin
+	resetdefaults();
+	azimuthelevation(70, 15);
+	meshload('BrainMesh_ICBM152Right.mz3');
+	overlayload('motor_4t95vol.nii.gz');
+	overlayminmax(1,2,12);
+	overlayload('motor_4t95vol.nii.gz');
+	overlayminmax(2,-1,-2);
+	colorbarvisible(true);
+	overlaytransparencyonbackground(25);
+	meshcurv();
+end.
 

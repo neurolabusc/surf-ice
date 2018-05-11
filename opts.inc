@@ -1,3 +1,4 @@
+{$DEFINE MYPY}
 //{$DEFINE DGL}  //for DGL library, otherwise gl/glext
 //{$DEFINE COREGL}
 {$DEFINE GEOM_GLEXT} //if glext.pp defines

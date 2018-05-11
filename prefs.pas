@@ -28,7 +28,7 @@ type
     ObjColor,BackColor: TColor;
     PrevFilename, PrevScriptName: TMRU;
     //{$IFDEF Darwin}BaseDirname,  {$ENDIF} //OSX Sierra puts application in random directory, so 'Sample' 'BrainNet' folders will be in unknown locations
-    FontName, PrevTrackname, PrevNodename, PrevOverlayname,PrevScript, InitScript : string;
+    PyLib, FontName, PrevTrackname, PrevNodename, PrevOverlayname,PrevScript, InitScript : string;
     TextColor,TextBorder,GridAndBorder: TRGBA;
     ColorbarSize: single;
     //ColorBarPos: TUnitRect;
@@ -312,6 +312,7 @@ begin
             for i := 1 to kNumDefaultMesh do
                 PrevFilename[i] := DefaultMeshName(i, lPrefs, askUserIfMissing);
             FontName := '';
+            PyLib := '';
        end;
   end;
   with lPrefs do begin
@@ -626,6 +627,7 @@ begin
   IniStr(lRead, lIniFile, 'PrevOverlayname', lPrefs.PrevOverlayname);
   IniStr(lRead,lIniFile,'PrevScript',lPrefs.PrevScript);
   IniStrX(lRead,lIniFile,'FontName',lPrefs.FontName);
+  IniStrX(lRead,lIniFile,'PyLib',lPrefs.PyLib);
   IniMRU(lRead,lIniFile,'PrevFilename',lPrefs.PrevFilename, lPrefs);
   //IniMRU(lRead,lIniFile,'PrevScriptName',lPrefs.PrevScriptName);
   IniRGBA(lRead,lIniFile, 'TextColor',lPrefs.TextColor);

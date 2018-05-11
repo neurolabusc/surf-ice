@@ -1,10 +1,10 @@
-BEGIN
-	RESETDEFAULTS;
-	MESHLOAD('mni152_2009.mz3');
-	OVERLAYLOAD('motor_4t95mesh.mz3');
-	CLIPAZIMUTHELEVATION(0.37, 0, 140);
-	SHADERAMBIENTOCCLUSION(0.5);
-	AZIMUTHELEVATION(90, 20);
-	SHADERXRAY(1.0, 0.3);
-END.
+begin
+	resetdefaults();
+	meshload('mni152_2009.mz3');
+	overlayload('motor_4t95mesh.mz3');
+	clipazimuthelevation(0.37, 0, 140);
+	shaderambientocclusion(0.5);
+	azimuthelevation(90, 20);
+	shaderxray(1.0, 0.3);
+end.
 

@@ -1,43 +1,41 @@
 const
- 	kFramesPerRotation = 180;
+ 	kframesperrotation = 180;
 var
 	i: integer;
 	s: single;
-BEGIN
-	RESETDEFAULTS;
-	MESHCOLOR(210, 148, 148);
-	MESHLOAD('BrainMesh_ICBM152Left.mz3');
-	EDGELOAD('LPBA40.edge');
-	CLIPAZIMUTHELEVATION(0.3, 0, 130);
-	NODESIZE(6, true);
-	EDGESIZE(3,true);
-	NODEHEMISPHERE(-1);
-	AZIMUTHELEVATION(250, 35);
-	EDGECOLOR('ACTC',TRUE);
-	NODECOLOR('RED',TRUE);
-	NODETHRESH(1.0,1.0);
-	EDGETHRESH(0.5,1.0);
-	FOR i := 1 to kFramesPerRotation * 5 DO BEGIN
+begin
+	resetdefaults();
+	meshcolor(210, 148, 148);
+	meshload('BrainMesh_ICBM152Left.mz3');
+	edgeload('LPBA40.edge');
+	clipazimuthelevation(0.3, 0, 130);
+	nodesize(6, true);
+	edgesize(3,true);
+	nodehemisphere(-1);
+	azimuthelevation(250, 35);
+	edgecolor('actc',true);
+	nodecolor('red',true);
+	nodethresh(1.0,1.0);
+	edgethresh(0.5,1.0);
+	for i := 1 to kframesperrotation * 5 do begin
 		s := 0.5 + (i+0.0)/72;
-		IF s <= 1 THEN
-			CAMERADISTANCE(s);
-		IF (i MOD kFramesPerRotation) = 0 THEN BEGIN
-			CASE (i DIV kFramesPerRotation) OF
-				1:  SHADERNAME('metal');
-				2: SHADERNAME('wireframe');
+		if s <= 1 then
+			cameradistance(s);
+		if (i mod kframesperrotation) = 0 then begin
+			case (i div kframesperrotation) of
+				1:  shadername('metal');
+				2: shadername('wireframe');
 				3:  begin
-					SHADERNAME('toon');
-					SHADERAMBIENTOCCLUSION(0);
+					shadername('toon');
+					shaderambientocclusion(0);
 				   end;
 				4:  begin
-					SHADERNAME('wire');
-				SHADERFORBACKGROUNDONLY(true);
+					shadername('wire');
+				shaderforbackgroundonly(true);
 				   end;
-			END;
-		END;
-		AZIMUTH( round(360.0/kFramesPerRotation));
-		WAIT(20);
-	END;
-END.
-
-
+			end;
+		end;
+		azimuth( round(360.0/kframesperrotation));
+		wait(20);
+	end;
+end.

@@ -1,9 +1,10 @@
-BEGIN
-	RESETDEFAULTS;
-	MESHLOAD('BrainMesh_ICBM152Right.mz3');
-	OVERLAYLOAD('motor_4t95mesh.mz3');
-	OVERLAYCOLORNAME(1, 'Red');
-	SHADERXRAY(1.0, 0.3);
-	AZIMUTHELEVATION(110, 15);
-END.
+begin
+	resetdefaults();
+	meshload('BrainMesh_ICBM152Right.mz3');
+	overlayload('motor_4t95mesh.mz3');
+	overlaycolorname(1, 'red');
+	shaderxray(1.0, 0.3);
+	azimuthelevation(110, 15);
+	meshcurv();
+end.
 

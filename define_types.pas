@@ -71,6 +71,7 @@ function asPt4f(x,y,z,w: single): TPoint4f;
 function asSingle(i : longint): single; overload;
 function asSingle(b0,b1,b2,b3: byte): single; overload;
 function asInt(s : single): longint;
+function StrToFloatX(Const S : String) : Extended;
 function specialsingle (var s:single): boolean; //isFinite
 function ExtractFileExtGzUpper(FileName: string): string;
 function FileExistsF(fnm: string): boolean; //returns false if file exists but is directory
@@ -94,6 +95,19 @@ implementation
 uses
   {$IFDEF UNIX} BaseUnix, {$ELSE} windows, shlobj, {$ENDIF}
   sysutils, math;
+
+function StrToFloatX(Const S : String) : Extended;
+//like StrToFloat but accepts either decimal separator: '1.23' or '1,23'
+var
+  fmt: TFormatSettings;
+begin
+  fmt := DefaultFormatSettings;
+  fmt.DecimalSeparator := '.';
+  if TryStrToFloat(s, result, fmt) then
+    exit;
+  fmt.DecimalSeparator := ',';
+  result := StrToFloat(S,fmt);
+end;
 
 function FileExistsF(fnm: string): boolean; //returns false if file exists but is directory
 begin

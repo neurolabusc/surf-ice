@@ -4,6 +4,7 @@ interface
 
 function EXISTS(lFilename: string): boolean; //function
 function ATLASMAXINDEX(OVERLAY: integer): integer;
+function VERSION: string;
 procedure ATLASSTATMAP(ATLASNAME, STATNAME: string; const Indices: array of integer; const Intensities: array of single);
 procedure ATLASSATURATIONALPHA(lSaturation, lTransparency: single);
 procedure ATLASHIDE(OVERLAY: integer; const Filt: array of integer);
@@ -24,11 +25,12 @@ procedure EDGESIZE(size: single; varies: boolean);
 procedure EDGETHRESH (LO, HI: single);
 procedure ELEVATION (DEG: integer);
 procedure FONTNAME(name: string);
-procedure MESHLOAD(lFilename: string);
 procedure MESHCREATE(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer);
 procedure MESHCURV;
-procedure MESHREVERSEFACES;
+procedure MESHLOAD(lFilename: string);
 procedure MESHOVERLAYORDER (FLIP: boolean);
+procedure MESHREVERSEFACES;
+procedure MESHSAVE(lFilename: string);
 procedure NODELOAD(lFilename: string);
 procedure MODALMESSAGE(STR: string);
 procedure MODELESSMESSAGE(STR: string);
@@ -55,6 +57,7 @@ procedure OVERLAYSMOOTHVOXELWISEDATA (SMOOTH: boolean);
 procedure QUIT;
 procedure RESETDEFAULTS;
 procedure SAVEBMP(lFilename: string);
+procedure SCRIPTFORMVISIBLE (VISIBLE: boolean);
 procedure SHADERADJUST(lProperty: string; lVal: single);
 procedure SHADERAMBIENTOCCLUSION(lVal: single);
 procedure SHADERFORBACKGROUNDONLY(BGONLY: boolean);
@@ -74,13 +77,14 @@ type
     Decl,Vars: string[255];
   end;
 const
-     knFunc = 2;
+     knFunc = 3;
      kFuncRA : array [1..knFunc] of TScriptRec =(
               (Ptr:@ATLASMAXINDEX;Decl:'ATLASMAXINDEX';Vars:'(OVERLAY: integer): integer'),
-               (Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean')
+               (Ptr:@EXISTS;Decl:'EXISTS';Vars:'(lFilename: string): boolean'),
+               (Ptr:@VERSION;Decl:'VERSION';Vars:'(): string')
              );
 
-knProc = 63;
+knProc = 65;
   kProcRA : array [1..knProc] of TScriptRec = (
   (Ptr:@ATLASSTATMAP;Decl:'ATLASSTATMAP';Vars:'(ATLASNAME, STATNAME: string; const Intensities: array of integer; const Intensities: array of single)'),
   (Ptr:@ATLASSATURATIONALPHA;Decl:'ATLASSATURATIONALPHA';Vars:'(lSaturation, lTransparency: single)'),
@@ -108,6 +112,7 @@ knProc = 63;
    (Ptr:@MESHLOAD;Decl:'MESHLOAD';Vars:'(lFilename: string)'),
    (Ptr:@MESHCREATE;Decl:'MESHCREATE';Vars:'(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer)'),
    (Ptr:@MESHOVERLAYORDER;Decl:'MESHOVERLAYORDER';Vars:'(FLIP: boolean)'),
+   (Ptr:@MESHSAVE;Decl:'MESHSAVE';Vars:'(lFilename: string)'),
    (Ptr:@NODELOAD;Decl:'NODELOAD';Vars:'(lFilename: string)'),
    (Ptr:@MODALMESSAGE;Decl:'MODALMESSAGE';Vars:'(STR: string)'),
    (Ptr:@MODELESSMESSAGE;Decl:'MODELESSMESSAGE';Vars:'(STR: string)'),
@@ -133,6 +138,7 @@ knProc = 63;
    (Ptr:@QUIT;Decl:'QUIT';Vars:''),
    (Ptr:@RESETDEFAULTS;Decl:'RESETDEFAULTS';Vars:''),
    (Ptr:@SAVEBMP;Decl:'SAVEBMP';Vars:'(lFilename: string)'),
+   (Ptr:@SCRIPTFORMVISIBLE;Decl:'SCRIPTFORMVISIBLE';Vars:'(VISIBLE: boolean)'),
    (Ptr:@SHADERADJUST;Decl:'SHADERADJUST';Vars:'(lProperty: string; lVal: single)'),
    (Ptr:@SHADERAMBIENTOCCLUSION;Decl:'SHADERAMBIENTOCCLUSION';Vars:'(lVal: single)'),
    (Ptr:@SHADERFORBACKGROUNDONLY;Decl:'SHADERFORBACKGROUNDONLY';Vars:'(BGONLY: boolean)'),
@@ -151,6 +157,12 @@ implementation
 uses
     //{$IFDEF UNIX}fileutil,{$ENDIF}
     mainunit, define_types, shaderui, graphics, LCLintf, Forms, SysUtils, Dialogs, scriptengine, mesh, meshify;
+
+procedure SCRIPTFORMVISIBLE (VISIBLE: boolean);
+begin
+  GLForm1.ScriptMenuClick(nil);
+  ScriptForm.visible := VISIBLE;
+end;
 
 function ATLASMAXINDEX(OVERLAY: integer): integer;
 begin
@@ -337,6 +349,11 @@ begin
   GLForm1.ResetMenuClick(nil);
 end;
 
+function VERSION(): string;
+begin
+    result := kVers;
+end;
+
 function EXISTS(lFilename: string): boolean;
 begin
   result := FileExists(lFilename);
@@ -455,6 +472,14 @@ begin
      ScriptForm.Memo2.Lines.Add('Unable to load mesh named "'+lFilename+'"');
    end;
 end;
+
+procedure MESHSAVE(lFilename: string);
+begin
+  if not GLForm1.SaveMeshCore(lFilename) then begin
+     ScriptForm.Memo2.Lines.Add('Unable to save mesh named "'+lFilename+'"');
+   end;
+end;
+
 
 procedure MESHOVERLAYORDER (FLIP: boolean);
 begin
