@@ -283,7 +283,8 @@ type
     procedure RestrictHideNodesWithoutEdgesClick(Sender: TObject);
     procedure RestrictMenuClick(Sender: TObject);
     procedure ReverseFacesMenuClick(Sender: TObject);
-    procedure SaveBitmap(FilenameIn: string);
+    procedure SaveBitmap(FilenameIn: string); overload;
+    procedure SaveBitmap(FilenameIn: string; lX, lY: integer); overload;
     procedure SaveMenuClick(Sender: TObject);
     procedure SaveMz3(var mesh: TMesh; isSaveOverlays: boolean);
     procedure SaveTrack (var lTrack: TTrack);
@@ -292,7 +293,7 @@ type
     procedure SaveMeshMenuClick(Sender: TObject);
     procedure SaveTracksMenuClick(Sender: TObject);
     procedure ScalarDropChange(Sender: TObject);
-    function ScreenShot: TBitmap;
+    function ScreenShot(lForceRedraw: boolean = false): TBitmap;
     function ScreenShotX1: TBitmap;
     procedure ScriptMenuClick(Sender: TObject);
     procedure SetOverlayTransparency(Sender: TObject);
@@ -2830,7 +2831,7 @@ begin
   GLboxRequestUpdate(GLForm1);
 end;
 {$ELSE}
-function TGLForm1.ScreenShot: TBitmap;
+function TGLForm1.ScreenShot(lForceRedraw: boolean = false): TBitmap;
 var
   RawImage: TRawImage;
   p: array of byte;
@@ -2840,7 +2841,7 @@ var
   DestPtr: PInteger;
   maxXY : array[0..1] of GLuint;
 begin
- if gPrefs.ScreenCaptureZoom < 2 then begin //special case: no super sampling
+ if (gPrefs.ScreenCaptureZoom < 2) and (not lForceRedraw) then begin //special case: no super sampling
     result := ScreenShotX1;
     exit;
  end;
@@ -3637,8 +3638,64 @@ begin
   lImage.SaveToFile(ChangeFileExt(lFilename,'.bmp'));
 end;
 {$ENDIF}
+procedure TGLForm1.SaveBitmap(FilenameIn: string; lX, lY: integer); overload;
+ var
+    bmp: TBitmap;
+    png: TPortableNetworkGraphic;
+    p,n,x,ext, filename: string;
+    z: integer;
+    {$IFDEF LCLCocoa}retina: boolean; {$ENDIF}
+ begin
+  FilenameParts (FilenameIn,p,n,x);
+  if (p ='') or (not directoryexists(p)) then
+     p := DesktopFolder;
+  if (n = '') then n := 'SurfIce';
+  if (x = '') then x := '.png';
+  Filename := p+n+x;
+  z := gPrefs.ScreenCaptureZoom;
+  GLBox.Align := alNone;
+  GLBox.Width:=lX;
+  GLBox.Height:=lY;
+  {$IFDEF LCLCocoa}
+  if (gPrefs.RetinaDisplay) then begin
+     retina := gPrefs.RetinaDisplay;
+     gPrefs.RetinaDisplay := false;
+     setRetina;
+  end;
+  {$ENDIF}
+  GLBox.ClientWidth:=lX;
+  GLBox.ClientHeight:=lY;
+  gPrefs.ScreenCaptureZoom:=1;
+  GLBox.Invalidate;
+  bmp := ScreenShot(true);
+  GLBox.Align := alClient;
+  {$IFDEF LCLCocoa}
+  if (retina) then begin
+     gPrefs.RetinaDisplay := true;
+     setRetina;
+  end;
+  {$ENDIF}
+  GLBox.Invalidate;
+  gPrefs.ScreenCaptureZoom := z;
+  //JPEG
+  ext := upcase(x);
+  if (ext = '.JPEG') or (ext = '.JPG') then begin
+     SaveImgAsJPGCore (bmp, Filename);
+     exit;
+  end;
+  //PNG
+  png := TPortableNetworkGraphic.Create;
+   try
+     png.Assign(bmp);    //Convert data into png
+     png.SaveToFile(changefileext(Filename,'.png'));
+   finally
+     png.Free;
+   end;
+   bmp.Free;
+end;
 
-procedure TGLForm1.SaveBitmap(FilenameIn: string);
+
+procedure TGLForm1.SaveBitmap(FilenameIn: string); overload;
  var
     bmp: TBitmap;
     png: TPortableNetworkGraphic;

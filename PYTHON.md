@@ -181,24 +181,3 @@ for i in range(1, ksteps):
   gl.clipazimuthelevation(( (0.8*i)/ksteps ), 0, 130)
   gl.wait(20)
 ```
-
-##### fmri_mesh
-
-```python
-import gl
-
-```
-
-##### fmri_mesh
-
-```python
-import gl
-
-```
-
-##### fmri_mesh
-
-```python
-import gl
-
-```

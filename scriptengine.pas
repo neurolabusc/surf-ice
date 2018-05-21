@@ -268,7 +268,6 @@ var
        if not FileExists(changefileext(fnm,'.zip')) then exit;
        result := fnm;
   end;
-
   {$ELSE}
   {$IFDEF Linux}
     const
@@ -290,6 +289,17 @@ var
        n: integer;
     begin
          result := def;
+        if DirectoryExists(def) then begin //in case the user supplies libdir not the library name
+          result := '';
+          {$IFDEF Darwin}
+          if FindFirst(IncludeTrailingPathDelimiter(def)+'libpython*.dylib', faDirectory, searchResult) = 0 then
+          {$ELSE}
+          if FindFirst(IncludeTrailingPathDelimiter(def)+'libpython*.so', faDirectory, searchResult) = 0 then
+          {$ENDIF}
+             result := IncludeTrailingPathDelimiter(def)+(searchResult.Name);
+          FindClose(searchResult);
+          if length(result) > 0 then exit;
+        end;
          if fileexists(def) then exit;
          result :=''; //assume failure
          vers := TStringList.Create;
@@ -369,20 +379,29 @@ begin
   result := true;
   if PyEngine = nil then begin
     if not PyCreate then begin //do this the first time
-      {$IFDEF Darwin}
-      Memo2.lines.Add('Failed to launch Python [install Python in '+kBasePath+']');
-      {$ENDIF}
       {$IFDEF Windows}
-      Memo2.lines.Add('Failed to launch Python [place Python .dll and .zip in Script folder]');
+      Memo2.lines.Add('Unable to find Python library [place Python .dll and .zip in Script folder]');
       {$ENDIF}
-      {$IFDEF Linux}
+      {$IFDEF Unix}
       Memo2.lines.Add('Unable to find Python library');
+      {$IFDEF Darwin}
+      Memo2.lines.Add('   For MacOS this is typically in: '+kBasePath+'');
+      {$ELSE}
       Memo2.lines.Add('   run ''find -name "*libpython*"'' to find the library');
-      Memo2.lines.Add('   if it does not exist, install it (''apt-get install libpython2.7'')');
+      Memo2.lines.Add('   if it does not exist, install it (e.g. ''apt-get install libpython2.7'')');
+      {$ENDIF}
       Memo2.lines.Add('   if it does exist, set use the Preferences/Advanced to set ''PyLib''');
+      {$IFDEF Darwin}
+      Memo2.lines.Add('   PyLib should be the complete path and filename of libpython*.dylib');
+      {$ELSE}
       Memo2.lines.Add('   PyLib should be the complete path and filename of libpython*.so');
       {$ENDIF}
+      Memo2.lines.Add('   This file should be in your LIBDIR, which you can detect by running Python from the terminal:');
+      Memo2.lines.Add('     ''import sysconfig; print(sysconfig.get_config_var("LIBDIR"))''');
+      {$ENDIF}
+      result := true;
       exit;
+
     end;
   end;
   Memo2.lines.Add('Running Python script');
@@ -1114,9 +1133,23 @@ begin
     if Bool(PyArg_ParseTuple(Args, 'i:viewsagittal', @A)) then
        VIEWSAGITTAL(BOOL(A));
 end;
+
+
+(*function PyATLASGRAYBG(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  A: array of integer;
+begin
+  exit;
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 'O:atlasgraybg', @A)) then
+       ATLASGRAYBG(A);
+end;*)
+
 procedure TScriptForm.PyModInitialization(Sender: TObject);
 begin
   with Sender as TPythonModule do begin
+    //AddMethod('atlasgraybg', @PyATLASGRAYBG, '');
     AddMethod('atlasmaxindex', @PyATLASMAXINDEX, '');
     AddMethod('atlassaturationalpha', @PyATLASSATURATIONALPHA, '');
     AddMethod('azimuth', @PyAZIMUTH, '');
@@ -1189,7 +1222,7 @@ var
 begin
   dir:= ExtractFilePath(Application.ExeName);
   {$ifdef windows}
-  Py_SetSysPath([dir+'DLLs', dir+cPyZipWindows], false);
+  Py_SetSysPath([ScriptDir, changefileext(gPrefs.PyLib,'.zip')], false);
   {$endif}
   Py_SetSysPath([dir+'Py'], true);
 end;

@@ -1,0 +1,4 @@
+begin
+	savebmpxy('dna',240,240);
+end.
+

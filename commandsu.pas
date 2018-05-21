@@ -8,6 +8,7 @@ function VERSION: string;
 procedure ATLASSTATMAP(ATLASNAME, STATNAME: string; const Indices: array of integer; const Intensities: array of single);
 procedure ATLASSATURATIONALPHA(lSaturation, lTransparency: single);
 procedure ATLASHIDE(OVERLAY: integer; const Filt: array of integer);
+procedure ATLASGRAYBG(const Filt: array of integer);
 procedure ATLASGRAY(OVERLAY: integer; const Filt: array of integer);
 procedure AZIMUTH (DEG: integer);
 procedure AZIMUTHELEVATION (AZI, ELEV: integer);
@@ -57,6 +58,7 @@ procedure OVERLAYSMOOTHVOXELWISEDATA (SMOOTH: boolean);
 procedure QUIT;
 procedure RESETDEFAULTS;
 procedure SAVEBMP(lFilename: string);
+procedure SAVEBMPXY(lFilename: string; X,Y: integer);
 procedure SCRIPTFORMVISIBLE (VISIBLE: boolean);
 procedure SHADERADJUST(lProperty: string; lVal: single);
 procedure SHADERAMBIENTOCCLUSION(lVal: single);
@@ -84,7 +86,7 @@ const
                (Ptr:@VERSION;Decl:'VERSION';Vars:'(): string')
              );
 
-knProc = 65;
+knProc = 66;
   kProcRA : array [1..knProc] of TScriptRec = (
   (Ptr:@ATLASSTATMAP;Decl:'ATLASSTATMAP';Vars:'(ATLASNAME, STATNAME: string; const Intensities: array of integer; const Intensities: array of single)'),
   (Ptr:@ATLASSATURATIONALPHA;Decl:'ATLASSATURATIONALPHA';Vars:'(lSaturation, lTransparency: single)'),
@@ -138,6 +140,7 @@ knProc = 65;
    (Ptr:@QUIT;Decl:'QUIT';Vars:''),
    (Ptr:@RESETDEFAULTS;Decl:'RESETDEFAULTS';Vars:''),
    (Ptr:@SAVEBMP;Decl:'SAVEBMP';Vars:'(lFilename: string)'),
+   (Ptr:@SAVEBMPXY;Decl:'SAVEBMPXY';Vars:'(lFilename: string; X,Y: integer)'),
    (Ptr:@SCRIPTFORMVISIBLE;Decl:'SCRIPTFORMVISIBLE';Vars:'(VISIBLE: boolean)'),
    (Ptr:@SHADERADJUST;Decl:'SHADERADJUST';Vars:'(lProperty: string; lVal: single)'),
    (Ptr:@SHADERAMBIENTOCCLUSION;Decl:'SHADERAMBIENTOCCLUSION';Vars:'(lVal: single)'),
@@ -557,6 +560,12 @@ end;
 procedure SAVEBMP(lFilename: string);
 begin
    GLForm1.SaveBitmap(lFilename);
+end;
+
+procedure SAVEBMPXY(lFilename: string; X,Y: integer);
+begin
+  GLForm1.SaveBitmap(lFilename, X, Y);
+
 end;
 
 procedure TRACKPREFS(lLength,lWidth,lDither: single);
