@@ -6,7 +6,7 @@ interface
 uses
  {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, glext, {$IFDEF GEOM_GLEXT}glext2, {$ENDIF} {$ENDIF}  {$ENDIF DGL}
   {$IFDEF COREGL} gl_core_3d, {$ELSE} gl_legacy_3d, {$ENDIF}
-  sysutils,dialogs, define_types,  userdir, StrUtils;
+  sysutils,dialogs, define_types,  userdir, StrUtils, math;
 const
 {$IFDEF DGL}
    kGL_FALSE = FALSE;
@@ -1290,7 +1290,7 @@ end;
 procedure RunAoGLSL (var f1, f2: TFrameBuffer; zoom : integer; alpha1, blend1, fracAO, distance: single);
 {$IFNDEF COREGL}
 var
-  left, right, top, bottom: single;
+  left, right, top, bottom, aoScale: single;
 {$ENDIF}
 begin
   glUseProgram(gShader.programAoID);
@@ -1312,12 +1312,22 @@ begin
   uniform1ix(gShader.programAoID, 'norm1', 5);
  {$ENDIF}
  uniform1fx(gShader.programAoID, 'fracAO', fracAO);
+ aoScale := max( f1.w, f1.h);
+ if aoScale < 1 then
+   aoScale := 1
+ else begin
+      aoScale := aoScale / 1536;
+
+ end;
+ //GLForm1.ShaderBox.Caption := inttostr(round(mxXY));
+
  if gShader.AOradiusU > 0 then begin
-  uniform1fx(gShader.programAoID, 'aoRadius', gShader.Uniform[gShader.AOradiusU].DefaultV);
+  uniform1fx(gShader.programAoID, 'aoRadius', aoScale * gShader.Uniform[gShader.AOradiusU].DefaultV);
   if gShader.Uniform[gShader.AOradiusU].DefaultV <= 0 then
     uniform1fx(gShader.programAoID, 'fracAO', 0.0);
- end else
-  uniform1fx(gShader.programAoID, 'aoRadius', zoom * 16.0 / distance);
+ end else begin
+   uniform1fx(gShader.programAoID, 'aoRadius', aoScale * 16.0 / distance);
+ end;
  uniform2fx(gShader.programAoID, 'texture_size', f1.w, f1.h);
   //   GLForm1.caption := floattostr(distance);
   //

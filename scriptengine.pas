@@ -136,6 +136,7 @@ type
     viewcoronal1: TMenuItem;
     viewsagittal1: TMenuItem;
     savebmp1: TMenuItem;
+    savebmpxy1: TMenuItem;
     wait1: TMenuItem;
     resetdefaults1: TMenuItem;
     Toosl1: TMenuItem;
@@ -471,6 +472,20 @@ begin
     end;
 end;
 
+function PySAVEBMPXY(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  PtrName: PChar;
+  StrName: string;
+  x,y: integer;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 'sii:savebmpxy', @PtrName, @x, @y)) then
+    begin
+      StrName:= string(PtrName);
+      SAVEBMPXY(StrName, x, y);
+    end;
+end;
 function PyBACKCOLOR(Self, Args : PPyObject): PPyObject; cdecl;
 var
   R,G,B: integer;
@@ -1199,6 +1214,7 @@ begin
     AddMethod('quit', @PyQUIT, '');
     AddMethod('resetdefaults', @PyRESETDEFAULTS, '');
     AddMethod('savebmp', @PySAVEBMP, '');
+    AddMethod('savebmpxy', @PySAVEBMPXY, '');
     AddMethod('scriptformvisible', @PySCRIPTFORMVISIBLE, '');
     AddMethod('shaderadjust', @PySHADERADJUST, '');
     AddMethod('shaderambientocclusion', @PySHADERAMBIENTOCCLUSION, '');
@@ -1515,7 +1531,7 @@ procedure TScriptForm.FormCreate(Sender: TObject);
 var
   lPos: integer;
 begin
-  {$IFDEF Windows} ScaleDPIX(ScriptForm, ScriptForm.DesignTimePPI); {$ENDIF}
+  {$IFDEF Windows} ScaleDPIX(ScriptForm, 96); {$ENDIF}
   {$IFNDEF Darwin} AppleMenu.Visible := false; {$ENDIF}
   fn := '';
   gchanged := False;

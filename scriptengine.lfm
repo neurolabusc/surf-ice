@@ -550,6 +550,18 @@ object ScriptForm: TScriptForm
           Hint = 'fontname (filename) Changes font used for colorbar. For example, "fontname(''''ubuntu'''')" will use the Ubuntu font.'
           OnClick = InsertCommand
         end
+        object savebmp1: TMenuItem
+          Tag = 4
+          Caption = 'savebmp'
+          Hint = 'savebmp (filename: string) Saves the currently viewed image as a PNG format compressed bitmap image.'
+          OnClick = InsertCommand
+        end
+        object savebmpxy1: TMenuItem
+          Tag = 1422
+          Caption = 'savebmpxy'
+          Hint = 'savebmpxy (filename: string; x, y: integer) Saves the currently viewed image as a PNG bitmap image. Specify the image width (x) and height (y). Does not work for mosaic images (where resolution defined by volume dimensions).'
+          OnClick = InsertCommand
+        end
         object scriptformvisible1: TMenuItem
           Tag = 1
           Caption = 'scriptformvisible'
@@ -575,12 +587,6 @@ object ScriptForm: TScriptForm
       object resetdefaults1: TMenuItem
         Caption = 'resetdefaults'
         Hint = 'resetdefaults () Sets all of the user adjustable settings to their default values.'
-        OnClick = InsertCommand
-      end
-      object savebmp1: TMenuItem
-        Tag = 4
-        Caption = 'savebmp'
-        Hint = 'savebmp (filename: string) Saves the currently viewed image as a PNG format compressed bitmap image.'
         OnClick = InsertCommand
       end
       object wait1: TMenuItem

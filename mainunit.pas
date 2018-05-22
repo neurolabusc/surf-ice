@@ -2740,7 +2740,7 @@ begin
 
 end;
 
-function TGLForm1.ScreenShot: TBitmap;
+function TGLForm1.ScreenShot(lForceRedraw: boolean = false): TBitmap;
 var
   RawImage: TRawImage;
   p: array of byte;
@@ -2751,7 +2751,7 @@ var
   maxXY : array[0..1] of GLuint;
   fbo : TFrameBuffer;
 begin
- if gPrefs.ScreenCaptureZoom < 2 then begin //special case: no super sampling
+ if (gPrefs.ScreenCaptureZoom < 2) and (not lForceRedraw) then begin //special case: no super sampling
     result := ScreenShotX1;
     exit;
  end;
@@ -2872,7 +2872,10 @@ begin
   RawImage := Result.RawImage;
   BytePerPixel := RawImage.Description.BitsPerPixel div 8;
   setlength(p, 4*w* h);
-  CreateRender(w, h, false); //draw to framebuffer fScreenShot
+  if lForceRedraw then
+    CreateRender(w, h, true) //use screen due to Intel multisampling weirdness
+  else
+      CreateRender(w, h, false); //draw to framebuffer fScreenShot
   {$IFDEF Darwin} //http://lists.apple.com/archives/mac-opengl/2006/Nov/msg00196.html
   glReadPixels(0, 0, w, h, $80E1, $8035, @p[0]); //OSX-Darwin   GL_BGRA = $80E1;  GL_UNSIGNED_INT_8_8_8_8_EXT = $8035;
   {$ELSE}
