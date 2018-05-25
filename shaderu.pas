@@ -1288,9 +1288,10 @@ end;
 {$ENDIF}
 
 procedure RunAoGLSL (var f1, f2: TFrameBuffer; zoom : integer; alpha1, blend1, fracAO, distance: single);
-{$IFNDEF COREGL}
 var
-  left, right, top, bottom, aoScale: single;
+  aoScale: single;
+{$IFNDEF COREGL}
+  left, right, top, bottom: single;
 {$ENDIF}
 begin
   glUseProgram(gShader.programAoID);
@@ -1320,7 +1321,6 @@ begin
 
  end;
  //GLForm1.ShaderBox.Caption := inttostr(round(mxXY));
-
  if gShader.AOradiusU > 0 then begin
   uniform1fx(gShader.programAoID, 'aoRadius', aoScale * gShader.Uniform[gShader.AOradiusU].DefaultV);
   if gShader.Uniform[gShader.AOradiusU].DefaultV <= 0 then
@@ -1336,10 +1336,8 @@ begin
   //if gShader.AOradius <= 0 then
   //   uniform1fx(gShader.programAoID, 'fracAO', 0.0)
   //else
-
   {$IFDEF COREGL}
   CoreDrawQuad;
-
   {$ELSE}
      left := 0; right := 1;
   bottom := 0; top := 1;
