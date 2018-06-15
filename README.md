@@ -44,6 +44,10 @@ You can also build this project from the command line (assuming you have FPC Laz
 
 ##### Recent Versions
 
+2-February-2018 (v1.0.20180202)
+ - [Atlas-based regions of interest](https://www.nitrc.org/plugins/mwiki/index.php/surfice:MainPage#Atlas-based_Region_of_interest_Analyses).
+ - [Python scripting](https://github.com/neurolabusc/surf-ice/blob/master/PYTHON.md).
+ - [Outline, ](https://www.nitrc.org/plugins/mwiki/index.php/surfice:MainPage#Atlas-based_Region_of_interest_Analyses)[Grid and HideCurves shaders added](https://www.nitrc.org/plugins/mwiki/index.php/surfice:MainPage#Gallery).
 
 20-December-2017 (v1.0.20171220)
  - Support [PALM](https://github.com/andersonwinkler/PALM) format [DPV](https://brainder.org/2011/09/25/braindering-with-ascii-files/).

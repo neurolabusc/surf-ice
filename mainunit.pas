@@ -1940,13 +1940,13 @@ begin
   {$ENDIF}
   //UpdateBtn
   {$IFDEF FPC}
-  UpdateBtn:=TButton.create(PrefForm);
+  (*UpdateBtn:=TButton.create(PrefForm);
   UpdateBtn.Caption:='Check for updates';
   UpdateBtn.Left := 28;
   UpdateBtn.Width:= 168;
   UpdateBtn.Top := 378;
   UpdateBtn.Parent:=PrefForm;
-  UpdateBtn.OnClick:= GLForm1.CheckForUpdates;
+  UpdateBtn.OnClick:= GLForm1.CheckForUpdates;*)
   {$ENDIF}
   //OK button
   OkBtn:=TButton.create(PrefForm);
@@ -3251,10 +3251,10 @@ begin
    +TrackStr
    +LineEnding+' Node Vertices '+inttostr(length(gNode.vertices))+' Faces '+  inttostr(length(gNode.faces))
    +LineEnding+' GPU '+gShader.Vendor;
-  //str := DefaultToHomeDir('mega');
   {$IFDEF LCLCocoa}
   ClipBoard.AsText:= titleStr + LineEnding + str;
-  ShowAlertSheet(GLForm1.Handle,titleStr, str);
+  //ShowAlertSheet(GLForm1.Handle,titleStr, str);  //<- limited string length!
+  MessageDlg(titleStr,str,mtInformation,[mbOK],0);
   {$ELSE}
   ClipBoard.AsText:= str;
   MessageDlg(str,mtInformation,[mbOK],0);
@@ -4062,6 +4062,7 @@ begin
   gMesh.isBusy := false;
   isBusy := false;
   {$IFDEF Darwin}
+  CopyMenu.enabled := false; //https://bugs.freepascal.org/view.php?id=33632
   CurvMenuTemp.ShortCut:= ShortCut(Word('K'), [ssMeta]); ;
   CloseMenu.ShortCut :=  ShortCut(Word('W'), [ssMeta]);
   SwapYZMenu.ShortCut :=  ShortCut(Word('X'), [ssMeta]);

@@ -1,5 +1,4 @@
 object GLForm1: TGLForm1
-  DesignTimePPI = 96
   Left = 347
   Height = 699
   Top = 23

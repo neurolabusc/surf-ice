@@ -1543,6 +1543,7 @@ begin
   OpenDialog1.InitialDir := ScriptDir;
   SaveDialog1.InitialDir := ScriptDir;
  {$IFDEF Darwin}
+        Copy1.enabled := false; //https://bugs.freepascal.org/view.php?id=33632
         Cut1.ShortCut := ShortCut(Word('X'), [ssMeta]);
         Copy1.ShortCut := ShortCut(Word('C'), [ssMeta]);
         Paste1.ShortCut := ShortCut(Word('V'), [ssMeta]);
@@ -1647,8 +1648,6 @@ begin
   else begin
     Memo1.Lines.SaveToFile(fn);
     gchanged := False;
-    //Add2MRU(gPrefs.PrevScriptName,fn);
-    //UpdateSMRU;
   end;
 end;
 
