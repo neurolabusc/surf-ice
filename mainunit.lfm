@@ -1,5 +1,5 @@
 object GLForm1: TGLForm1
-  Left = 347
+  Left = 253
   Height = 699
   Top = 23
   Width = 1027
@@ -35,7 +35,7 @@ object GLForm1: TGLForm1
       Align = alTop
       Caption = 'Clipping'
       ClientHeight = 88
-      ClientWidth = 262
+      ClientWidth = 256
       ParentFont = False
       TabOrder = 1
       OnDblClick = DepthLabelDblClick
@@ -43,7 +43,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 2
-        Width = 38
+        Width = 37
         Caption = 'Depth'
         ParentColor = False
         ParentFont = False
@@ -53,7 +53,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 32
-        Width = 53
+        Width = 50
         Caption = 'Azimuth'
         ParentColor = False
         ParentFont = False
@@ -63,7 +63,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 62
-        Width = 57
+        Width = 55
         Caption = 'Elevation'
         ParentColor = False
         ParentFont = False
@@ -116,7 +116,7 @@ object GLForm1: TGLForm1
       Align = alTop
       Caption = 'Tracks'
       ClientHeight = 113
-      ClientWidth = 262
+      ClientWidth = 256
       ParentFont = False
       TabOrder = 3
       Visible = False
@@ -124,7 +124,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 2
-        Width = 43
+        Width = 42
         Caption = 'Length'
         ParentColor = False
         ParentFont = False
@@ -178,18 +178,18 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 62
-        Width = 39
+        Width = 37
         Caption = 'Dither'
         ParentColor = False
         ParentFont = False
       end
       object TrackScalarLUTdrop: TComboBox
         Left = 116
-        Height = 20
+        Height = 26
         Top = 90
         Width = 108
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         Items.Strings = (
           'a'
           'b'
@@ -203,14 +203,15 @@ object GLForm1: TGLForm1
         ParentFont = False
         Style = csDropDownList
         TabOrder = 3
+        Text = '0'
       end
       object TrackScalarNameDrop: TComboBox
         Left = 4
-        Height = 20
+        Height = 26
         Top = 90
         Width = 108
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         ItemIndex = 0
         Items.Strings = (
           'Direction'
@@ -241,7 +242,7 @@ object GLForm1: TGLForm1
       Align = alTop
       Caption = 'Overlays'
       ClientHeight = 60
-      ClientWidth = 262
+      ClientWidth = 256
       Constraints.MaxHeight = 240
       Constraints.MinHeight = 2
       ParentFont = False
@@ -254,7 +255,7 @@ object GLForm1: TGLForm1
         Height = 60
         Hint = 'Click on name to hide, control+click to reverse palette'
         Top = 0
-        Width = 262
+        Width = 256
         Align = alClient
         BorderStyle = bsNone
         ColCount = 4
@@ -278,11 +279,11 @@ object GLForm1: TGLForm1
       end
       object LUTdrop: TComboBox
         Left = 88
-        Height = 20
+        Height = 26
         Top = 40
         Width = 73
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         Items.Strings = (
           'a'
           'b'
@@ -296,6 +297,7 @@ object GLForm1: TGLForm1
         ParentFont = False
         Style = csDropDownList
         TabOrder = 1
+        Text = '0'
         Visible = False
       end
     end
@@ -308,7 +310,7 @@ object GLForm1: TGLForm1
       Align = alTop
       Caption = 'Nodes'
       ClientHeight = 118
-      ClientWidth = 262
+      ClientWidth = 256
       ParentFont = False
       TabOrder = 4
       Visible = False
@@ -316,18 +318,18 @@ object GLForm1: TGLForm1
         Left = 0
         Height = 16
         Top = 90
-        Width = 34
+        Width = 33
         Caption = 'Color'
         ParentColor = False
         ParentFont = False
       end
       object LUTdropNode: TComboBox
         Left = 97
-        Height = 20
+        Height = 26
         Top = 88
         Width = 161
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         Items.Strings = (
           'a'
           'b'
@@ -341,13 +343,14 @@ object GLForm1: TGLForm1
         ParentFont = False
         Style = csDropDownList
         TabOrder = 0
+        Text = '0'
       end
       object NodeColorVariesCheck: TCheckBox
         Left = 58
         Height = 18
         Hint = 'If checked, node color varies'
         Top = 90
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = NodePrefChange
         ParentFont = False
@@ -380,11 +383,11 @@ object GLForm1: TGLForm1
       end
       object NodeThreshDrop: TComboBox
         Left = 15
-        Height = 20
+        Height = 26
         Top = 64
         Width = 242
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         ItemIndex = 0
         Items.Strings = (
           'Threshold based on size'
@@ -398,7 +401,7 @@ object GLForm1: TGLForm1
       end
       object NodeMinEdit: TFloatSpinEdit
         Left = 58
-        Height = 16
+        Height = 21
         Top = 40
         Width = 90
         MaxValue = 65535
@@ -412,14 +415,14 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 40
-        Width = 44
+        Width = 42
         Caption = 'Thresh'
         ParentColor = False
         ParentFont = False
       end
       object NodeMaxEdit: TFloatSpinEdit
         Left = 162
-        Height = 16
+        Height = 21
         Top = 40
         Width = 90
         MaxValue = 65535
@@ -434,7 +437,7 @@ object GLForm1: TGLForm1
         Height = 18
         Hint = 'If checked, node size varies'
         Top = 2
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = NodePrefChange
         ParentFont = False
@@ -454,7 +457,7 @@ object GLForm1: TGLForm1
       Align = alTop
       Caption = 'Edges'
       ClientHeight = 93
-      ClientWidth = 262
+      ClientWidth = 256
       ParentFont = False
       TabOrder = 5
       Visible = False
@@ -462,18 +465,18 @@ object GLForm1: TGLForm1
         Left = 2
         Height = 16
         Top = 66
-        Width = 34
+        Width = 33
         Caption = 'Color'
         ParentColor = False
         ParentFont = False
       end
       object LUTdropEdge: TComboBox
         Left = 99
-        Height = 20
+        Height = 26
         Top = 64
         Width = 161
         DropDownCount = 22
-        ItemHeight = 0
+        ItemHeight = 26
         Items.Strings = (
           'a'
           'b'
@@ -487,13 +490,14 @@ object GLForm1: TGLForm1
         ParentFont = False
         Style = csDropDownList
         TabOrder = 0
+        Text = '0'
       end
       object EdgeColorVariesCheck: TCheckBox
         Left = 58
         Height = 18
         Hint = 'If checked, edge color varies'
         Top = 66
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = NodePrefChange
         ParentFont = False
@@ -506,14 +510,14 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 40
-        Width = 44
+        Width = 42
         Caption = 'Thresh'
         ParentColor = False
         ParentFont = False
       end
       object EdgeMinEdit: TFloatSpinEdit
         Left = 58
-        Height = 16
+        Height = 21
         Top = 40
         Width = 90
         MaxValue = 65535
@@ -525,7 +529,7 @@ object GLForm1: TGLForm1
       end
       object EdgeMaxEdit: TFloatSpinEdit
         Left = 162
-        Height = 16
+        Height = 21
         Top = 40
         Width = 90
         MaxValue = 65535
@@ -561,7 +565,7 @@ object GLForm1: TGLForm1
         Height = 18
         Hint = 'If checked, edge size varies'
         Top = 2
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = NodePrefChange
         ParentFont = False
@@ -580,7 +584,7 @@ object GLForm1: TGLForm1
       Align = alTop
       Caption = 'Mesh Color'
       ClientHeight = 64
-      ClientWidth = 262
+      ClientWidth = 256
       ParentFont = False
       TabOrder = 6
       Visible = False
@@ -588,7 +592,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 2
-        Width = 64
+        Width = 62
         Caption = 'Saturation'
         ParentColor = False
         ParentFont = False
@@ -621,7 +625,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 32
-        Width = 85
+        Width = 82
         Caption = 'Transparency'
         ParentColor = False
         ParentFont = False
@@ -635,7 +639,7 @@ object GLForm1: TGLForm1
       Align = alTop
       Caption = 'Background Mesh'
       ClientHeight = 56
-      ClientWidth = 262
+      ClientWidth = 256
       ParentFont = False
       TabOrder = 8
       object meshAlphaTrack: TTrackBar
@@ -673,7 +677,7 @@ object GLForm1: TGLForm1
         Height = 16
         Hint = 'XRay: make internal overlays, tracks and nodes visible'
         Top = 2
-        Width = 30
+        Width = 31
         Caption = 'XRay'
         ParentColor = False
         ParentFont = False
@@ -685,7 +689,7 @@ object GLForm1: TGLForm1
         Height = 18
         Hint = 'If checked, edge size varies'
         Top = 32
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = ShaderForBackgroundOnlyClick
         ParentFont = False
@@ -698,7 +702,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 34
-        Width = 179
+        Width = 174
         Caption = 'Shader For Background Only'
         ParentColor = False
         ParentFont = False
@@ -712,7 +716,7 @@ object GLForm1: TGLForm1
       Align = alClient
       Caption = 'Shader'
       ClientHeight = 0
-      ClientWidth = 0
+      ClientWidth = 256
       ParentFont = False
       TabOrder = 7
       OnResize = ShaderBoxResize
@@ -721,7 +725,7 @@ object GLForm1: TGLForm1
         Height = 16
         Hint = 'Set the elevation and azimuth of the illumination'
         Top = 34
-        Width = 32
+        Width = 31
         Caption = 'Light'
         ParentColor = False
         ParentFont = False
@@ -730,15 +734,16 @@ object GLForm1: TGLForm1
       end
       object ShaderDrop: TComboBox
         Left = 2
-        Height = 20
+        Height = 26
         Top = 0
         Width = 127
         DropDownCount = 36
-        ItemHeight = 0
+        ItemHeight = 26
         OnChange = ShaderDropChange
         ParentFont = False
         Style = csDropDownList
         TabOrder = 0
+        Text = '0'
       end
       object LightElevTrack: TTrackBar
         Left = 52
@@ -786,7 +791,7 @@ object GLForm1: TGLForm1
         Height = 16
         Hint = 'Ambient occlusion makes sucli and other crevices darker'
         Top = 6
-        Width = 19
+        Width = 18
         Caption = 'AO'
         ParentColor = False
         ParentFont = False
@@ -811,7 +816,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 64
-        Width = 15
+        Width = 14
         Caption = 'S1'
         ParentColor = False
         ParentFont = False
@@ -823,7 +828,7 @@ object GLForm1: TGLForm1
         Height = 18
         Hint = 'If checked, edge color varies'
         Top = 66
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentFont = False
@@ -837,7 +842,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 94
-        Width = 15
+        Width = 16
         Caption = 'S2'
         ParentColor = False
         ParentFont = False
@@ -849,7 +854,7 @@ object GLForm1: TGLForm1
         Height = 18
         Hint = 'If checked, edge color varies'
         Top = 96
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentFont = False
@@ -890,7 +895,7 @@ object GLForm1: TGLForm1
         Height = 18
         Hint = 'If checked, edge color varies'
         Top = 126
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentFont = False
@@ -904,7 +909,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 124
-        Width = 15
+        Width = 16
         Caption = 'S3'
         ParentColor = False
         ParentFont = False
@@ -915,7 +920,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 154
-        Width = 15
+        Width = 16
         Caption = 'S4'
         ParentColor = False
         ParentFont = False
@@ -927,7 +932,7 @@ object GLForm1: TGLForm1
         Height = 18
         Hint = 'If checked, edge color varies'
         Top = 156
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentFont = False
@@ -954,7 +959,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 184
-        Width = 15
+        Width = 16
         Caption = 'S5'
         ParentColor = False
         ParentFont = False
@@ -966,7 +971,7 @@ object GLForm1: TGLForm1
         Height = 18
         Hint = 'If checked, edge color varies'
         Top = 186
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentFont = False
@@ -993,7 +998,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 214
-        Width = 15
+        Width = 16
         Caption = 'S6'
         ParentColor = False
         ParentFont = False
@@ -1004,7 +1009,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 244
-        Width = 15
+        Width = 16
         Caption = 'S7'
         ParentColor = False
         ParentFont = False
@@ -1015,7 +1020,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 274
-        Width = 15
+        Width = 16
         Caption = 'S8'
         ParentColor = False
         ParentFont = False
@@ -1026,7 +1031,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 304
-        Width = 15
+        Width = 16
         Caption = 'S9'
         ParentColor = False
         ParentFont = False
@@ -1037,7 +1042,7 @@ object GLForm1: TGLForm1
         Left = 4
         Height = 16
         Top = 334
-        Width = 23
+        Width = 22
         Caption = 'S10'
         ParentColor = False
         ParentFont = False
@@ -1049,7 +1054,7 @@ object GLForm1: TGLForm1
         Height = 18
         Hint = 'If checked, edge color varies'
         Top = 216
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentFont = False
@@ -1064,7 +1069,7 @@ object GLForm1: TGLForm1
         Height = 18
         Hint = 'If checked, edge color varies'
         Top = 246
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentFont = False
@@ -1079,7 +1084,7 @@ object GLForm1: TGLForm1
         Height = 18
         Hint = 'If checked, edge color varies'
         Top = 276
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentFont = False
@@ -1094,7 +1099,7 @@ object GLForm1: TGLForm1
         Height = 18
         Hint = 'If checked, edge color varies'
         Top = 306
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentFont = False
@@ -1109,7 +1114,7 @@ object GLForm1: TGLForm1
         Height = 18
         Hint = 'If checked, edge color varies'
         Top = 336
-        Width = 20
+        Width = 22
         Checked = True
         OnChange = UniformChange
         ParentFont = False
@@ -1187,7 +1192,7 @@ object GLForm1: TGLForm1
         Left = 0
         Height = 54
         Top = -54
-        Width = 0
+        Width = 256
         Align = alBottom
         Lines.Strings = (
           ''

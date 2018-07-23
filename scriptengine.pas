@@ -1253,12 +1253,13 @@ begin
    if gPrefs.StartupScript then Compile1Click(nil);
  end
  else begin
-     gPrefs.PrevScript := gPrefs.InitScript;
+   gPrefs.PrevScript := gPrefs.InitScript;
    Memo1.Lines.Clear;
    if FileExistsF(gPrefs.initScript) then
      Memo1.Lines.LoadFromFile(gPrefs.initScript)
    else
        ToPascal(gPrefs.initScript);//Memo1.Lines.Add(gPrefs.initScript);
+   gPrefs.initScript := '';
    Compile1Click(nil);
  end;
 end; //RunStartUpScripts()
@@ -1543,7 +1544,7 @@ begin
   OpenDialog1.InitialDir := ScriptDir;
   SaveDialog1.InitialDir := ScriptDir;
  {$IFDEF Darwin}
-        Copy1.enabled := false; //https://bugs.freepascal.org/view.php?id=33632
+        //Copy1.enabled := false; //https://bugs.freepascal.org/view.php?id=33632
         Cut1.ShortCut := ShortCut(Word('X'), [ssMeta]);
         Copy1.ShortCut := ShortCut(Word('C'), [ssMeta]);
         Paste1.ShortCut := ShortCut(Word('V'), [ssMeta]);
@@ -1601,30 +1602,6 @@ begin
     //UpdateSMRU;
     result := true;
 end;
-
-(*function TScriptForm.OpenParamScript: boolean;
-var
-  lF: string;
-begin
-     result := false;
-     if (ParamCount = 0) then exit;
-     lF := Paramstr(1);
-     if fileexists(lF) then
-       result := OpenScript(lF);
-end; *)
-
-(*function TScriptForm.OpenStartupScript: boolean;
-var
-  lF: string;
-begin
-  result := false;
-  lF := ScriptDir +pathdelim+'startup'+kScriptExt;
-  if fileexists(lF) then
-    result := OpenScript(lF);
-  //if result then
-  //  Compile1Click(nil);
-end;  *)
-
 
 procedure TScriptForm.Open1Click(Sender: TObject);
 var

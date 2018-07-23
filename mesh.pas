@@ -2033,16 +2033,18 @@ var
    fsz : int64;
    s : string;
    strlst : TStringList;
-   i,j, num_v, num_f, new_f: integer;
+   i,j, num_c, num_v, num_f, new_f: integer;
 begin
   if LoadObjMni(Filename) then exit; //MNI format, not Wavefront
   fsz := FSize (FileName);
   if fsz < 32 then exit;
   //init values
+  num_c := 0;
   num_v := 0;
   num_f := 0;
   strlst:=TStringList.Create;
   setlength(vertices, (fsz div 70)+kBlockSize); //guess number of faces based on filesize to reduce reallocation frequencey
+  setlength(vertexRGBA, (fsz div 70)+kBlockSize); //guess number of faces based on filesize to reduce reallocation frequencey
   setlength(faces, (fsz div 35)+kBlockSize); //guess number of vertices based on filesize to reduce reallocation frequencey
   //load faces and vertices
   FileMode := fmOpenRead;
@@ -2085,6 +2087,14 @@ begin
        vertices[num_v].Y := strtofloatDef(strlst[2], 0);
        vertices[num_v].Z := strtofloatDef(strlst[3], 0);
        inc(num_v);
+       if  (strlst.count < 7) then continue;
+       if ((num_c+1) >= length(vertexRGBA)) then
+          setlength(vertexRGBA, length(vertexRGBA)+kBlockSize);
+       vertexRGBA[num_c].r := round(strtofloatDef(strlst[4], 0)*255);
+       vertexRGBA[num_c].g := round(strtofloatDef(strlst[5], 0)*255);
+       vertexRGBA[num_c].b := round(strtofloatDef(strlst[6], 0)*255);
+       vertexRGBA[num_c].a := 128;
+       inc(num_c);
     end;
   end;
   //showmessage(format('%d %g %g %g',[num_v, vertices[num_v-1].X, vertices[num_v-1].Y, vertices[num_v-1].Z]));
@@ -2092,6 +2102,10 @@ begin
   strlst.free;
   setlength(faces, num_f);
   setlength(vertices, num_v);
+  if (num_c = num_v) then
+  	setlength(vertexRGBA, num_c)
+  else
+  	setlength(vertexRGBA, 0);
   if (num_v < 3) then
      showmessage('Not a Wavefront or MNI format OBJ mesh (perhaps proprietary Mayo Clinic Analyze format)');
   if (num_f < 1) and (num_v > 1) then

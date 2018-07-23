@@ -1,8 +1,8 @@
 object ScriptForm: TScriptForm
   Tag = 2
-  Left = 451
+  Left = 716
   Height = 380
-  Top = 74
+  Top = 81
   Width = 420
   ActiveControl = Memo1
   Caption = 'ScriptForm'
@@ -33,6 +33,7 @@ object ScriptForm: TScriptForm
     Width = 420
     Align = alClient
     Constraints.MinHeight = 3
+    Lines.Strings = (    )
     OnChange = Memo1Change
     OnClick = Memo1Click
     OnDragDrop = Memo1DragDrop
@@ -50,6 +51,7 @@ object ScriptForm: TScriptForm
     Width = 420
     Align = alBottom
     Constraints.MinHeight = 3
+    Lines.Strings = (    )
     ParentFont = False
     ScrollBars = ssVertical
     TabOrder = 1
@@ -75,7 +77,6 @@ object ScriptForm: TScriptForm
       end
       object Open1: TMenuItem
         Caption = '&Open...'
-        OnClick = Open1Click
       end
       object Save1: TMenuItem
         Caption = '&Save'
@@ -601,7 +602,6 @@ object ScriptForm: TScriptForm
       object Compile1: TMenuItem
         Caption = 'Run'
         ShortCut = 16466
-        OnClick = Compile1Click
       end
       object N2: TMenuItem
         Caption = '-'

@@ -4,8 +4,10 @@ interface
 uses define_types, matmath, sysutils, Dialogs;
 
 procedure GenerateCurv(fnm: string; var faces: TFaces; vertices: TVertices; isSmooth: boolean);
+procedure GenerateCurvRGB(fnm: string; vertexRGBA : TVertexRGBA; num_f: integer);
 
 implementation
+
 
 function curvK(v0, v1, n0, n1: TPoint3f): single;
 //http://computergraphics.stackexchange.com/questions/1718/what-is-the-simplest-way-to-compute-principal-curvature-for-a-mesh-triangle
@@ -20,6 +22,7 @@ begin
   result := vectorDot(vectorSubtractF(n1,n0), vectorSubtractF(v1,v0));
   result := result / len;
 end;
+
 
 procedure SaveCurv(fnm: string; k: TFloats; num_f: integer);
 //simple format used by Freesurfer  BIG-ENDIAN
@@ -71,6 +74,19 @@ begin
   end;
 end;
 
+procedure GenerateCurvRGB(fnm: string; vertexRGBA : TVertexRGBA; num_f: integer);
+var
+	i: integer;
+	k: TFloats;
+begin
+	//vertexRGBA : array of TRGBA;
+	if length(vertexRGBA) < 3 then exit;
+	setlength(k, length(vertexRGBA));
+	for i := 0 to (length(vertexRGBA)-1) do
+		k[i] := 0.5 * (1 - ((vertexRGBA[i].r+vertexRGBA[i].g+vertexRGBA[i].b) * (1/765)));
+	SaveCurv(fnm, k, num_f);
+	k := nil;
+end;
 procedure SmoothK (var vK : TFloats; var faces: TFaces);
 //smooth curvature across neighbors
 //vK : one curvature value k for each vertex, faces: triangle face indices

@@ -2682,6 +2682,7 @@ var
   DestPtr: PInteger;
   maxXY : array[0..1] of GLuint;
 begin
+
  GLBox.MakeCurrent;
  glGetIntegerv(GL_MAX_VIEWPORT_DIMS, @maxXY);  //GL_MAX_TEXTURE_SIZE
  w := GLBoxBackingWidth * gPrefs.ScreenCaptureZoom;
@@ -2696,6 +2697,10 @@ begin
  RawImage := Result.RawImage;
  BytePerPixel := RawImage.Description.BitsPerPixel div 8;
  setlength(p, 4*w* h);
+ glFlush;
+ glFinish;//<-this would pause until all jobs finished: generally a bad idea! required here
+ // GLbox.SwapBuffers;
+
  {$IFDEF Darwin} //http://lists.apple.com/archives/mac-opengl/2006/Nov/msg00196.html
  glReadPixels(0, 0, w, h, $80E1, $8035, @p[0]); //OSX-Darwin   GL_BGRA = $80E1;  GL_UNSIGNED_INT_8_8_8_8_EXT = $8035;
  {$ELSE}
@@ -2876,6 +2881,10 @@ begin
     CreateRender(w, h, true) //use screen due to Intel multisampling weirdness
   else
       CreateRender(w, h, false); //draw to framebuffer fScreenShot
+    glFlush;
+  glFinish;//<-this would pause until all jobs finished: generally a bad idea! required here
+  //GLbox.SwapBuffers;
+
   {$IFDEF Darwin} //http://lists.apple.com/archives/mac-opengl/2006/Nov/msg00196.html
   glReadPixels(0, 0, w, h, $80E1, $8035, @p[0]); //OSX-Darwin   GL_BGRA = $80E1;  GL_UNSIGNED_INT_8_8_8_8_EXT = $8035;
   {$ELSE}
@@ -3086,7 +3095,10 @@ begin
        showmessage('File already exists '+fnm);
        exit;
     end;
-    GenerateCurv(fnm, gMesh.faces, gMesh.vertices, gPrefs.GenerateSmoothCurves);
+    if (length(gMesh.vertexRGBA) > 0) then
+    	GenerateCurvRGB(fnm, gMesh.vertexRGBA, length(gMesh.faces))
+    else
+    	GenerateCurv(fnm, gMesh.faces, gMesh.vertices, gPrefs.GenerateSmoothCurves);
     OpenOverlay(fnm);
     if isTemp then
       deletefile(fnm);
@@ -3909,6 +3921,8 @@ procedure TGLForm1.UpdateTimerTimer(Sender: TObject);
 begin
   if isBusy or gMesh.isBusy then exit; //defer
   Updatetimer.enabled := false;
+  if ( gPrefs.initScript <> '') then
+     ScriptForm.OpenStartupScript;
   GLbox.Invalidate;
 end;
 
@@ -3927,12 +3941,14 @@ begin
  if (gPrefs.ColorbarColor = BlackClrbarMenu.tag) then BlackClrbarMenu.checked := true;
  if (gPrefs.ColorbarColor = TransBlackClrbarMenu.tag) then TransBlackClrbarMenu.checked := true;
  SetColorbarPosition;
+ GLFinish;
  GLBox.ReleaseContext;
  MultiPassRenderingToolsUpdate;
  ShaderDropChange(sender);
  {$IFDEF LCLCocoa} SetDarkMode; {$ENDIF}
  {$IFDEF Windows}UpdateOverlaySpread;{$ENDIF}//July2017 - scripting on High-dpi, reset scaling
- ScriptForm.OpenStartupScript;
+ if (gPrefs.initScript <> '' ) then
+    UpdateTimer.enabled := true;
 end;
 
 procedure TGLForm1.FormCreate(Sender: TObject);
@@ -3947,6 +3963,7 @@ begin
   //check if user includes parameters
   gPrefs.initScript := ''; //e.g. 'c:\dir\script.gls'
   i := 1;
+
   while i <= ParamCount do begin
      s := ParamStr(i);
      if (length(s)> 1) and (s[1]='-') then begin
@@ -3957,11 +3974,10 @@ begin
            inc(i);
            gPrefs.InitScript := ParamStr(i);
          end;
-     end; //length > 1 char
+     end else if fileexists(ParamStr(i)) then //length > 1 char
+        gPrefs.InitScript := ParamStr(i);
      inc(i);
    end; //for each parameter
-
-  //writeln('OK'+inttostr(ParamCount)+ ' *' + gPrefs.initScript+'*' );
   //launch program
   CreateMRU;
   FormCreateShaders;
@@ -4062,7 +4078,7 @@ begin
   gMesh.isBusy := false;
   isBusy := false;
   {$IFDEF Darwin}
-  CopyMenu.enabled := false; //https://bugs.freepascal.org/view.php?id=33632
+  //CopyMenu.enabled := false; //https://bugs.freepascal.org/view.php?id=33632
   CurvMenuTemp.ShortCut:= ShortCut(Word('K'), [ssMeta]); ;
   CloseMenu.ShortCut :=  ShortCut(Word('W'), [ssMeta]);
   SwapYZMenu.ShortCut :=  ShortCut(Word('X'), [ssMeta]);
