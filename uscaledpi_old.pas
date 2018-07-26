@@ -35,11 +35,12 @@ begin
     {$IFDEF LINUX} //strange minimum size and height on Lazarus 1.6.2
     if (Control is TTrackBar) then begin
       //i := 22;
-      s := ScaleY(Height, FromDPI);
+      //s := ScaleY(Height, FromDPI);
+      s := 0;
       //Height := ScaleY(Height, FromDPI);
       i := (s) div 3;
       Top := ScaleY(Top, FromDPI) - i ;
-      Height := ScaleY(Height, FromDPI);
+
     end else begin
        Top :=ScaleY(Top, FromDPI);
        Height := ScaleY(Height, FromDPI);
@@ -89,7 +90,7 @@ var
   i, k, xPix: integer;
   AStringList, BStringList: TStringList;
 begin
-  result := 0.0;
+  result := 1.0;
   Exe := FindDefaultExecutablePath('xrandr');
   if length(Exe) < 1 then begin
      Exe := '/opt/X11/bin/xrandr';
@@ -100,7 +101,7 @@ begin
   writeln('xrandr : '+Exe);
   if length(Exe) < 1 then exit;
   if not FileExists(Exe) then exit;
-  //result := 1;
+  result := 1;
   AProcess := TProcess.Create(nil);
   AProcess.Executable:=Exe;
   AProcess.Options := AProcess.Options + [poWaitOnExit, poUsePipes];
@@ -137,10 +138,8 @@ begin
             dpi := xPix/( mm/25.4);
             writeln(format(' Xpix %d Xmm %g dpi %g',[xPix, mm, dpi]));
             //Form1.Memo1.lines.Add( inttostr(xPix)+':'+floattostr(mm)+' dpi '+floattostr(dpi));
-            if dpi > 0 then
-               result := 144 / dpi;
-               //result := 96/dpi;
-            //if (result < 1) then result := 1;
+            result := dpi / 192;
+            if (result < 1) then result := 1;
             break;
         end; //for i: each line of output
      end; //if output
@@ -204,13 +203,14 @@ begin
   writeln(format('Detected screen scaling %g', [result]));
 end;
 
+var gLinuxEffectiveDPI: integer;
+
 procedure HighDPILinux(FontSz: integer);
 var
   i, FromDPI: integer;
-  scale: single = 1;
+  scale: single = 0;
 begin
-   writeln('Use "-D 0" for no scaling, "-D -2" for XRANDR, "-D -1" for gsettings or positive value ("-D 1.25") for custom scaling');
-   if (paramcount > 1) then begin
+  if (paramcount > 1) then begin
      i := 1;
      while (i < (paramcount)) do begin
          //writeln(upcase(paramstr(i))) ;
@@ -222,30 +222,38 @@ begin
          i := i + 1;
      end;
   end;
-  if (scale < -1.99) then
+  if scale < 0 then  //e.g. -1
      scale := getFontScaleXRANDR();
-  if (scale < 0) then begin
+  if scale = 0 then begin
+    scale := 1;
     {$IFDEF LINUX}
     scale := getFontScale(FontSz);
     //if scale = 1 then  scale := getFontScaleXRANDR();
     {$ENDIF}
   end;
-  if  (scale <= 0) then exit;
+  if  (scale = 0) then exit;
   FromDPI := round( 96/scale);
+  gLinuxEffectiveDPI := FromDPI;
   writeln(format('Scale .. %g dpi %d',[scale, FromDPI]));
   for i := 0 to Screen.FormCount - 1 do
     ScaleDPI(Screen.Forms[i], FromDPI);
   writeln('Done scaling ...');
+
 end;
 
 procedure ScaleDPIX(Control: TControl; FromDPI: integer);
+var
+  vDPI: integer;
 begin
-  //writeln('Form scaling to '+inttostr(gLinuxEffectiveDPI)+' DPI from ' + inttostr(FromDPI));
-  //if ((gLinuxEffectiveDPI = FromDPI) or (gLinuxEffectiveDPI < 2)) then exit;
-  ScaleDPI(Control, FromDPI);
+  vDPI := gLinuxEffectiveDPI;
+  if (vDPI = FromDPI) then exit;
+  ScaleDPI(Control, vDPI);
 end;
 {$ELSE}
-
+procedure ScaleDPIX(Control: TControl; FromDPI: integer);
+begin
+     ScaleDPI(Control, FromDPI);
+end;
 {$ENDIF}
 
 procedure HighDPI(FromDPI: integer);
@@ -257,5 +265,7 @@ begin
   for i := 0 to Screen.FormCount - 1 do
     ScaleDPI(Screen.Forms[i], FromDPI);
 end;
+
+
 end.
 

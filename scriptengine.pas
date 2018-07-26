@@ -1297,6 +1297,7 @@ end;
 procedure MyWriteln(const s: string);
 begin
   ScriptForm.Memo2.lines.add(S);
+  {$IFDEF Unix}writeln(s);{$ENDIF}
 end;
 
 procedure TScriptForm.OpenSMRU(Sender: TObject);//open template or MRU
@@ -1663,7 +1664,6 @@ end;
 
 procedure TScriptForm.Stop1Click(Sender: TObject);
 begin
-
   if PSScript1.Running then
     PSScript1.Stop;
 end;

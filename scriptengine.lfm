@@ -602,6 +602,7 @@ object ScriptForm: TScriptForm
       object Compile1: TMenuItem
         Caption = 'Run'
         ShortCut = 16466
+        OnClick = Compile1Click
       end
       object N2: TMenuItem
         Caption = '-'
