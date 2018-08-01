@@ -1533,7 +1533,7 @@ procedure TScriptForm.FormCreate(Sender: TObject);
 var
   lPos: integer;
 begin
-  {$IFDEF Windows} ScaleDPIX(ScriptForm, 96); {$ENDIF}
+  {$IFDEF Windows} ScaleDPI(ScriptForm, 96); {$ENDIF}
   {$IFNDEF Darwin} AppleMenu.Visible := false; {$ENDIF}
   fn := '';
   gchanged := False;

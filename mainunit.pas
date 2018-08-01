@@ -894,7 +894,10 @@ var
     Filename, curvname, ext: string;
 begin
   result := false;
-  Filename := FindFile(FilenameIN);
+  if FilenameIN <> '-' then
+     Filename := FindFile(FilenameIN)
+  else
+      Filename := FilenameIN;
   if Filename = '' then exit;
   result := true;
   ext := ExtractFileExtGzUpper(Filename);
@@ -1324,7 +1327,7 @@ begin
 	OkBtn.Parent:=PrefForm;
 	OkBtn.ModalResult:= mrOK;
 	{$IFNDEF Darwin}
-        ScaleDPIX(PrefForm, 96);
+        ScaleDPI(PrefForm, 96);
         {$ENDIF}
         {$IFDEF LCLCocoa}
         if gPrefs.DarkMode then SetFormDarkMode(PrefForm);
@@ -1453,7 +1456,7 @@ begin
     OkBtn.Left := PrefForm.Width - OkBtn.Width - 8;
     OkBtn.Parent:=PrefForm;
     OkBtn.ModalResult:= mrOK;
-    {$IFNDEF Darwin} ScaleDPIX(PrefForm, 96);{$ENDIF}
+    {$IFNDEF Darwin} ScaleDPI(PrefForm, 96);{$ENDIF}
     {$IFDEF LCLCocoa}
     if gPrefs.DarkMode then SetFormDarkMode(PrefForm);
     {$ENDIF}
@@ -1964,7 +1967,7 @@ begin
   AdvancedBtn.Top := 378;
   AdvancedBtn.Parent:=PrefForm;
   AdvancedBtn.ModalResult:= mrYesToAll;
-  {$IFNDEF Darwin} ScaleDPIX(PrefForm, 96);  {$ENDIF}
+  {$IFNDEF Darwin} ScaleDPI(PrefForm, 96);  {$ENDIF}
   PrefForm.ShowModal;
   if (PrefForm.ModalResult <> mrOK) and (PrefForm.ModalResult <> mrYesToAll) then begin
     FreeAndNil(PrefForm);
@@ -2160,7 +2163,7 @@ begin
   OkBtn.Left := PrefForm.Width - OkBtn.Width - 8;
   OkBtn.Parent:=PrefForm;
   OkBtn.ModalResult:= mrOK;
-  {$IFNDEF Darwin} ScaleDPIX(PrefForm, 96);{$ENDIF}
+  {$IFNDEF Darwin} ScaleDPI(PrefForm, 96);{$ENDIF}
   {$IFDEF LCLCocoa}
   if gPrefs.DarkMode then SetFormDarkMode(PrefForm);
   {$ENDIF}
@@ -3207,7 +3210,7 @@ procedure TGLForm1.AboutMenuClick(Sender: TObject);
 const
   kSamp = 36;
 var
-  titleStr, isAtlasStr, TrackStr, MeshStr, str: string;
+  fpsStr, titleStr, isAtlasStr, TrackStr, MeshStr, str: string;
   s: dword;
   i: integer;
   scale: single;
@@ -3228,6 +3231,9 @@ begin
      gAzimuth := (gAzimuth + 10) mod 360;
      GLbox.Repaint;
   end;
+ fpsStr := '';
+ if (gettickcount<> s) then
+    fpsStr := LineEnding+' FPS ' +inttostr(round( (kSamp*1000)/(gettickcount-s)));
   origin := GetOrigin(scale);
   isAtlasStr := '';
   if (length(gMesh.vertexAtlas) > 0) then isAtlasStr := ' Indexed Atlas ';
@@ -3253,7 +3259,7 @@ begin
            {$ENDIF}
    {$ENDIF}
    +LineEnding+' www.mricro.com :: BSD 2-Clause License (opensource.org/licenses/BSD-2-Clause)'
-   +LineEnding+' FPS ' +inttostr(round( (kSamp*1000)/(gettickcount-s)))
+   +FPSstr
    +LineEnding+format(' Scale %.4f',[scale])
    +LineEnding+format(' Origin %.4fx%.4fx%.4f',[origin.X, origin.Y, origin.Z])
    +LineEnding+' Mesh Vertices '+inttostr(length(gMesh.vertices))+' Faces '+  inttostr(length(gMesh.faces)) +' Colors '+  inttostr(length(gMesh.vertexRGBA))
@@ -3552,6 +3558,10 @@ procedure TGLForm1.OpenMenuClick(Sender: TObject);
 const
      kMeshFilter = 'Mesh (GIfTI, PLY, FreeSurfer, etc)|*.*';
 begin
+ if (ssCtrl in KeyDataToShiftState(vk_Shift))  then begin
+   OpenMesh('-');
+   exit;
+ end;
  OpenDialog.Filter := kMeshFilter;
  OpenDialog.Title := 'Select mesh file';
  if Fileexists(gPrefs.PrevFilename[1]) then begin

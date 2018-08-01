@@ -2,6 +2,7 @@ unit mesh;
 {$Include opts.inc}
 {$mode objfpc}{$H+}
 interface
+{$DEFINE TREFOIL} //use Trefoil Knot as default object (instead of pyramid)
 uses
 
   {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
@@ -78,6 +79,7 @@ type
     procedure SetOverlayDescriptives(lOverlayIndex: integer);
     procedure MinMaxPct(lOverlayIndex, num_v: integer; var mx, mn: single; isExcludeZero: boolean);
     procedure SetDescriptives;
+    {$IFDEF TREFOIL} procedure MakeTrefoil; {$ENDIF}
     procedure MakeSphere;
     procedure BuildListCore(Clr: TRGBA; var f: TFaces; var v: TVertices; var vtxRGBA: TVertexRGBA);
     procedure BuildListPartialAtlas(Clr: TRGBA; vtxRGBA: TVertexRGBA);
@@ -1119,8 +1121,107 @@ begin
 end;
 {$ENDIF}
 
+{$IFDEF TREFOIL}
+procedure TMesh.MakeTrefoil;
+//http://prideout.net/blog/?p=22
+function EvaluateTrefoil(s, t: single): TPoint3f;
+function Normalized(v: TPoint3f): TPoint3f;
+var len: single;
+begin
+     len := sqrt(sqr(v.x) + sqr(v.y) + sqr(v.z));
+     result := v;
+     if len = 0 then
+        exit;
+     result.X := result.X / len;
+     result.Y := result.Y / len;
+     result.Z := result.Z / len;
+end;
+function Cross(v1, v2: TPoint3f): TPoint3f;
+begin
+ result.x:=(V1.y*V2.z)-(V1.z*V2.y);
+ result.y:=(V1.z*V2.x)-(V1.x*V2.z);
+ result.z:=(V1.x*V2.y)-(V1.y*V2.x);
+end;
+const
+     TwoPi = 2 * Pi;
+    a = 0.5;
+    b = 0.3;
+    c = 0.5;
+    d = 0.1;
+var
+   u,v,r,x,y,z: single;
+   q, qvn, ww, dv : TPoint3f;
+begin
+    u := (1 - s) * 2 * TwoPi;
+    v := t * TwoPi;
+    r := a + b * cos(1.5 * u);
+    x := r * cos(u);
+    y := r * sin(u);
+    z := c * sin(1.5 * u);
+    dv.x := -1.5 * b * sin(1.5 * u) * cos(u) -  (a + b * cos(1.5 * u)) * sin(u);
+    dv.y := -1.5 * b * sin(1.5 * u) * sin(u) +
+            (a + b * cos(1.5 * u)) * cos(u);
+    dv.z := 1.5 * c * cos(1.5 * u);
+    q := Normalized(dv);
+    qvn.X := q.y;
+    qvn.Y := -q.X;
+    qvn.z := 0;
+    qvn := Normalized(qvn);
+    ww := Cross(q, qvn);
+    result.x := x + d * (qvn.x * cos(v) + ww.x * sin(v));
+    result.y := y + d * (qvn.y * cos(v) + ww.y * sin(v));
+    result.z := z + d * ww.z * sin(v);
+end;
+const
+  kSlices = 128;
+  kStacks = 32;
+  kVertexCount = kSlices * kStacks;
+  kIndexCount = kVertexCount * 6;
+var
+   ds, dt, s, t: single;
+   i,j,k, n: integer;
+begin
+  setlength(faces, kIndexCount);
+  n := 0;
+  k := 0;
+  for i := 0 to (kSlices-1) do begin
+    for j := 0 to (kStacks-1) do begin
+        faces[k].x := n + j;
+        faces[k].z := n + (j + 1) mod kStacks;
+        faces[k].y := (n + j + kStacks) mod kVertexCount;
+        k := k + 1;
+        faces[k].x := (n + j + kStacks) mod kVertexCount;
+        faces[k].z := (n + (j + 1) mod kStacks) mod kVertexCount;
+        faces[k].y := (n + (j + 1) mod kStacks + kStacks) mod kVertexCount;
+        k := k + 1;
+      end;
+      n := n + kStacks;
+    end;
+  setlength(vertices, kVertexCount);
+  setlength(faces, kIndexCount);
+  ds := 1.0 / kSlices;
+  dt := 1.0 / kStacks;
+  // The upper bounds in these loops are tweaked to reduce the
+  // chance of precision error causing an incorrect # of iterations.
+  s := 0.0;
+  i := 0;
+  while (s < 1 - ds / 2) do begin
+    s := s + ds;
+    t := 0;
+    while (t < 1 - dt / 2) do begin
+      t := t + dt;
+      vertices[i] := EvaluateTrefoil(s, t);
+      i := i+1;
+    end;
+  end;
+end; // MakeTrefoil()
+{$ENDIF}
+
 procedure TMesh.MakePyramid;
 begin
+ {$IFDEF TREFOIL}
+   MakeTrefoil;
+ {$ELSE}
      {$IFDEF SPHERE}
      MakeSphere;
      {$ELSE}
@@ -1136,6 +1237,7 @@ begin
      faces[2] := pti(4,3,0);
      faces[3] := pti(1,4,0);
      {$ENDIF}
+   {$ENDIF}
      SetDescriptives;
 end; // MakePyramid()
 
@@ -5265,12 +5367,19 @@ var
 begin
 	result := false;
 	isEmbeddedEdge := false;
-	if not FileExistsF(FileName) then exit;
+	isNode := false;
+	isFreeSurferMesh := false;
+        if (FileName = '-') then begin
+  	   isRebuildList := true;
+  	   CloseOverlays;
+  	   self.Close;
+           MakePyramid;
+  	   //result := true;
+        end;
+        if not FileExistsF(FileName) then exit;
         FileMode := fmOpenRead;
 	if (FSize(FileName) < 9) then exit;
 	isBusy := true;
-	isNode := false;
-	isFreeSurferMesh := false;
 	ext := UpperCase(ExtractFileExt(Filename));
 	isRebuildList := true;
 	CloseOverlays;
@@ -5348,7 +5457,7 @@ begin
 	CheckMesh;
 	SetDescriptives;
 	if not isZDimIsUp then
-	SwapYZ;
+	   SwapYZ;
 	//showmessage(Filename+'  '+ inttostr(length(faces))+' '+inttostr(length(vertices)) );
 	//NormalizeSize;
 	isBusy := false;

@@ -11,7 +11,6 @@ uses
 procedure HighDPI(FromDPI: integer);
 procedure ScaleDPI(Control: TControl; FromDPI: integer);
 procedure HighDPILinux(FontSz: integer);
-procedure ScaleDPIX(Control: TControl; FromDPI: integer);
 //function getFontScale(FontSz: integer): single;
 
 implementation
@@ -237,14 +236,6 @@ begin
     ScaleDPI(Screen.Forms[i], FromDPI);
   writeln('Done scaling ...');
 end;
-
-procedure ScaleDPIX(Control: TControl; FromDPI: integer);
-begin
-  //writeln('Form scaling to '+inttostr(gLinuxEffectiveDPI)+' DPI from ' + inttostr(FromDPI));
-  //if ((gLinuxEffectiveDPI = FromDPI) or (gLinuxEffectiveDPI < 2)) then exit;
-  ScaleDPI(Control, FromDPI);
-end;
-{$ELSE}
 
 {$ENDIF}
 

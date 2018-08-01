@@ -114,7 +114,7 @@ begin
     OkBtn.Left := PrefForm.Width - OkBtn.Width - 8;
     OkBtn.Parent:=PrefForm;
     OkBtn.ModalResult:= mrOK;
-    {$IFNDEF Darwin} ScaleDPIX(PrefForm, 96);{$ENDIF}
+    {$IFNDEF Darwin} ScaleDPI(PrefForm, 96);{$ENDIF}
     PrefForm.ShowModal;
     {$IFDEF USEFLOATSPIN}
     Thresh := ThreshEdit.value;
