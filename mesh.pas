@@ -5083,6 +5083,7 @@ begin
   strlst:=TStringList.Create;
   FileMode := fmOpenRead;
   AssignFile(f, FileName);
+  num_f := 0;
   Reset(f,1);
   ReadLnBin(f, str); //signature: '# vtk DataFile'
   if pos('VTK', UpperCase(str)) <> 3 then begin
@@ -5302,8 +5303,18 @@ begin
       end;
   end; //if binary else ASCII
 666:
-   closefile(f);
-   strlst.free;
+  {$DEFINE FSLvtk} //FSL first - triangle winding reversed?
+  {$IFDEF FSLvtk}
+  if num_f > 0 then begin
+    for i := 0 to (num_f -1) do begin
+      j := faces[i].Y;
+      faces[i].Y := faces[i].X;
+      faces[i].X := j;
+    end;
+  end;
+  {$ENDIF}
+  closefile(f);
+  strlst.free;
 end; // LoadVtk()
 
 function TMesh.CheckMesh: boolean;
@@ -5440,7 +5451,7 @@ begin
 	if (ext = '.TRI') then
 	LoadTri(Filename);
 	if (ext = '.ASC') then  //https://brainder.org/category/neuroinformatics/file-types/
-	LoadAsc_Srf(Filename);
+		LoadAsc_Srf(Filename);
 	if (ext = '.OBJ') then
 	 LoadObj(Filename);
 	if (ext = '.WFR') then
@@ -5822,21 +5833,28 @@ begin
 end;
 
 function TMesh.LoadDpv(const FileName: string; lOverlayIndex: integer): boolean;
+//https://brainder.org/2011/09/25/braindering-with-ascii-files/
 label
    666;
 var
-   num_v: integer;
+   num_v, iMax, iMin: integer;
    f: TextFile;
+   idxMaxInten: single;
    idxf, v1, v2, v3, inten: single;
    idx: integer;
 begin
      result := false;
+     idxMaxInten := 0;
      if (lOverlayIndex < kMinOverlayIndex) or (lOverlayIndex > kMaxOverlays) then exit;
      num_v := length(vertices);
      setlength(overlay[lOverlayIndex].intensity, num_v); //vertices = zeros(num_f, 9);
      FileMode := fmOpenRead;
      AssignFile(f, FileName);
      Reset(f);
+     iMax := -1;
+     iMin := maxint;
+     for idx := 0 to (num_v-1) do
+         overlay[lOverlayIndex].intensity[idx] := 0;
      idx := 0;
      while not EOF(f) do begin
          try
@@ -5845,16 +5863,62 @@ begin
            continue;
          end;
          idx := round(idxf);
-         if (idx < 1) or (idx > num_v) then begin
+         if (idx < 0) or (idx > num_v) then begin //when more vertices than background image
            showmessage('DPV file does not appear to match background mesh: expected indices 1..'+inttostr(num_v)+' not '+inttostr(idx));
            goto 666;
          end;
-         overlay[lOverlayIndex].intensity[idx-1] := inten;
-
+         if idx > iMax then iMax := idx;
+         if idx < iMin then iMin := idx;
+         if idx >= num_v then begin
+         	idxMaxInten := inten;
+         end else
+         	overlay[lOverlayIndex].intensity[idx] := inten;
      end;
+     if iMax = num_v then begin //prior to 11/2018 PALM indexed from 0 not 1
+       for idx := 1 to (num_v-1) do
+     		overlay[lOverlayIndex].intensity[idx-1] := overlay[lOverlayIndex].intensity[idx];
+       overlay[lOverlayIndex].intensity[num_v-1] := idxMaxInten;
+     end;
+     idx := iMax-iMin+1;
+     if (idx <> num_v) then //when fewer vertices than background image
+        showmessage(format('DPV file reports %d vertices but background mesh has %d (%d..%d)',[idx, num_v, iMin, iMax]));
+
      result := true;
    666:
      CloseFile(f);
+end;
+
+function IsCurv(const FileName: string): boolean;
+var
+   sig : array [1..3] of byte;
+   f: File;
+   aValsPerVertex, anum_v, anum_f: LongWord;
+   sz: integer;
+begin
+     result := false;
+     AssignFile(f, FileName);
+     FileMode := fmOpenRead;
+     Reset(f,1);
+     sz := FileSize(f);
+     if (sz < 20) then begin
+        CloseFile(f);
+        exit;
+     end;
+     blockread(f, sig, 3 ); //since these files do not have a file extension, check first 3 bytes "0xFFFFFF"
+     blockread(f, anum_v, 4 ); //uint32
+     blockread(f, anum_f, 4 ); //uint32
+     blockread(f, aValsPerVertex, 4 ); //uint32
+     {$IFDEF ENDIAN_LITTLE}
+     SwapLongWord(anum_v);
+     SwapLongWord(anum_f);
+     SwapLongWord(aValsPerVertex);
+     {$ENDIF}
+     CloseFile(f);
+     if aValsPerVertex <> 1 then exit;
+     if (sig[1] <> $FF) or (sig[2] <> $FF) or (sig[3] <> $FF) then //not CURV format
+        exit;
+     if (sz <> (15 + (anum_v * 4))) then exit;
+     result := true;
 end;
 
 procedure TMesh.LoadCurv(const FileName: string; lOverlayIndex: integer);
@@ -6240,12 +6304,13 @@ begin
         exit;
      end;
   end;
-  if (ext = '.DPV') then begin
+  if (ext = '.DPV') or (ext = '.ASC') then begin
      if not LoadDPV(FileName, OpenOverlays) then begin
        OpenOverlays := OpenOverlays - 1;
        exit;
      end;
   end;
+
   if (ext = '.GII') or isCiftiNii then begin
      if isCiftiNii then begin
         nOverlays := loadCifti(FileName, OpenOverlays, 1, (origin.X < 0));
@@ -6294,9 +6359,12 @@ begin
     {$ENDIF}
        LoadNii(FileName, OpenOverlays, lLoadSmooth);
   end;
+  if (length(overlay[OpenOverlays].intensity) < 1 ) and (PosEx('.thickness.',FileName) > 1) and (IsCurv(FileName))  then begin
+     LoadCurv(FileName, OpenOverlays); //CAT12: "rh.thickness.cr" if CURV format file for "rh.central.cr.gii"  http://www.neuro.uni-jena.de/cat/
+  end;
   if (length(overlay[OpenOverlays].intensity) < 1 )  then
        LoadW(FileName, OpenOverlays);
-  if (length(overlay[OpenOverlays].intensity) < 1 )   then begin
+  if (length(overlay[OpenOverlays].intensity) < 1 ) and (IsCurv(FileName))  then begin
       LoadCurv(FileName, OpenOverlays);
       if (length(overlay[OpenOverlays].intensity) > 0 ) then
          Overlay[OpenOverlays].LUTindex := 15;//CURV file

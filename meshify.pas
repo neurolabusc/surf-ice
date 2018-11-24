@@ -5,7 +5,6 @@ unit meshify;
 interface
 
 uses
-  {$IFNDEF Darwin}uscaledpi, {$ENDIF}
   meshify_simplify, LCLintf, Classes, SysUtils, mesh, nifti_loader, meshify_marchingcubes, dialogs,
   define_types, matmath, Forms, StdCtrls, Controls, Spin, clustering, nifti_types;
 
@@ -18,6 +17,7 @@ implementation
 
 uses mainunit, prefs;
 
+(*86
 function  MeshPref(min, max: single; out Thresh, Decim: single; out SmoothStyle, MinClusterVox: integer): boolean;
 var
     PrefForm: TForm;
@@ -117,6 +117,199 @@ begin
     {$IFNDEF Darwin} ScaleDPI(PrefForm, 96);{$ENDIF}
     PrefForm.ShowModal;
     {$IFDEF USEFLOATSPIN}
+    Thresh := ThreshEdit.value;
+    {$ELSE}
+    Thresh := StrToFloatDef(ThreshEdit.Caption, Thresh);
+    {$ENDIF}
+    MinClusterVox := StrToIntDef(MinClusterVoxEdit.Caption, 1);
+    Decim := DecimateEdit.value/100.0;
+    SmoothStyle := SmoothCombo.ItemIndex;
+    result :=  PrefForm.ModalResult = mrOK;
+    FreeAndNil(PrefForm);
+    if (Decim <= 0.0) then
+       Decim := 0.01;
+  end;
+*)
+function MeshPref(min, max: single; out Thresh, Decim: single; out SmoothStyle, MinClusterVox: integer): boolean;
+var
+    PrefForm: TForm;
+    OkBtn: TButton;
+    MinClusterVoxLabel, NoteLabel, ThreshLabel, DecimateLabel: TLabel;
+    {$IFDEF USEFLOATSPIN}
+    ThreshEdit: TFloatSpinEdit; //Cocoa TFloatSpinEdit is a bit wonky
+    {$ELSE}
+    MinClusterVoxEdit, ThreshEdit: TEdit;
+    {$ENDIF}
+    DecimateEdit: TSpinEdit;
+    SmoothCombo: TComboBox;
+begin
+    PrefForm:=TForm.Create(nil);
+    //PrefForm.SetBounds(100, 100, 510, 212);
+    PrefForm.AutoSize := True;
+    PrefForm.BorderWidth := 8;
+
+    PrefForm.Caption:='Volume to mesh preferences';
+    PrefForm.Position := poScreenCenter;
+    PrefForm.BorderStyle := bsDialog;
+    //Note
+    NoteLabel:=TLabel.create(PrefForm);
+    NoteLabel.Caption:='See NITRC Surf Ice MediaWiki for usage notes';
+    //NoteLabel.Left := 8;
+    //NoteLabel.Top := 8;
+    NoteLabel.AutoSize := true;
+    NoteLabel.AnchorSide[akTop].Side := asrTop;
+    NoteLabel.AnchorSide[akTop].Control := PrefForm;
+    NoteLabel.BorderSpacing.Top := 6;
+    NoteLabel.AnchorSide[akLeft].Side := asrLeft;
+    NoteLabel.AnchorSide[akLeft].Control := PrefForm;
+    NoteLabel.BorderSpacing.Left := 6;
+    NoteLabel.Parent:=PrefForm;
+    //Threshold
+    ThreshLabel:=TLabel.create(PrefForm);
+    ThreshLabel.Caption:=format('Threshold (%.4f..%.4f)',[min, max]);
+    //ThreshLabel.Left := 8;
+    //ThreshLabel.Top := 42;
+    ThreshLabel.AutoSize := true;
+    ThreshLabel.AnchorSide[akTop].Side := asrBottom;
+    ThreshLabel.AnchorSide[akTop].Control := NoteLabel;
+    ThreshLabel.BorderSpacing.Top := 6;
+    ThreshLabel.AnchorSide[akLeft].Side := asrLeft;
+    ThreshLabel.AnchorSide[akLeft].Control := PrefForm;
+    ThreshLabel.BorderSpacing.Left := 6;
+
+    ThreshLabel.Parent:=PrefForm;
+    Thresh := min + ((max - min) * 0.5);
+    if (min < 1) and (max > 3) then
+       Thresh := 2
+    else if (min < -3) and (max > 0) then
+       Thresh := -2;
+    {$IFDEF USEFLOATSPIN}
+    ThreshEdit:=TFloatSpinEdit.create(PrefForm);
+    ThreshEdit.MaxValue := max;
+    ThreshEdit.MinValue := min;
+    ThreshEdit.Value:= Thresh;
+    ThreshEdit.DecimalPlaces:= 3;
+    {$ELSE}
+    ThreshEdit:=TEdit.create(PrefForm);
+    //ThreshEdit.Caption := FloatToStr(Thresh);
+    ThreshEdit.Caption := FloatToStrF(Thresh, ffGeneral, 4, 4);
+    {$ENDIF}
+    //ThreshEdit.Top := 42;
+    //ThreshEdit.Width := 92;
+    //ThreshEdit.Left := PrefForm.Width - ThreshEdit.Width - 8;
+   ThreshEdit.Constraints.MinWidth:= 128;
+   ThreshEdit.AutoSize := true;
+   ThreshEdit.AnchorSide[akTop].Side := asrBottom;
+   ThreshEdit.AnchorSide[akTop].Control := NoteLabel;
+   ThreshEdit.BorderSpacing.Top := 4;
+   ThreshEdit.AnchorSide[akLeft].Side := asrRight;
+   ThreshEdit.AnchorSide[akLeft].Control := ThreshLabel;
+   ThreshEdit.BorderSpacing.Left := 6;
+
+
+    ThreshEdit.Parent:=PrefForm;
+    //
+    MinClusterVoxLabel:=TLabel.create(PrefForm);
+    MinClusterVoxLabel.Caption:='Minimum Cluster Size (vox)';
+    //MinClusterVoxLabel.Left := 8;
+    //MinClusterVoxLabel.Top := 72;
+    MinClusterVoxLabel.AutoSize := true;
+    MinClusterVoxLabel.AnchorSide[akTop].Side := asrBottom;
+    MinClusterVoxLabel.AnchorSide[akTop].Control := ThreshEdit;
+    MinClusterVoxLabel.BorderSpacing.Top := 6;
+    MinClusterVoxLabel.AnchorSide[akLeft].Side := asrLeft;
+    MinClusterVoxLabel.AnchorSide[akLeft].Control := PrefForm;
+    MinClusterVoxLabel.BorderSpacing.Left := 6;
+    MinClusterVoxLabel.Parent:=PrefForm;
+    MinClusterVoxEdit:=TEdit.create(PrefForm);
+    MinClusterVoxEdit.Caption := FloatToStrF(1, ffGeneral, 4, 4);
+    //MinClusterVoxEdit.Top := 72;
+    //MinClusterVoxEdit.Width := 92;
+    //MinClusterVoxEdit.Left := PrefForm.Width - ThreshEdit.Width - 8;
+    MinClusterVoxEdit.Constraints.MinWidth:= 128;
+    MinClusterVoxEdit.AutoSize := true;
+    MinClusterVoxEdit.AnchorSide[akTop].Side := asrBottom;
+    MinClusterVoxEdit.AnchorSide[akTop].Control := ThreshEdit;
+    MinClusterVoxEdit.BorderSpacing.Top := 4;
+    MinClusterVoxEdit.AnchorSide[akLeft].Side := asrRight;
+    MinClusterVoxEdit.AnchorSide[akLeft].Control := MinClusterVoxLabel;
+    MinClusterVoxEdit.BorderSpacing.Left := 6;
+
+    MinClusterVoxEdit.Parent:=PrefForm;
+    //Decimate
+    DecimateLabel:=TLabel.create(PrefForm);
+    DecimateLabel.Caption:='Decimation (100=large files, 10=degraded/small) ';
+    //DecimateLabel.Left := 8;
+    //DecimateLabel.Top := 102;
+    DecimateLabel.AutoSize := true;
+    DecimateLabel.AnchorSide[akTop].Side := asrBottom;
+    DecimateLabel.AnchorSide[akTop].Control := MinClusterVoxEdit;
+    DecimateLabel.BorderSpacing.Top := 6;
+    DecimateLabel.AnchorSide[akLeft].Side := asrLeft;
+    DecimateLabel.AnchorSide[akLeft].Control := PrefForm;
+    DecimateLabel.BorderSpacing.Left := 6;
+    DecimateLabel.Parent:=PrefForm;
+
+    DecimateLabel.Parent:=PrefForm;
+    DecimateEdit:=TSpinEdit.create(PrefForm);
+    //DecimateEdit.Top := 102;
+    //DecimateEdit.Width := 92;
+    //DecimateEdit.Left := PrefForm.Width - DecimateEdit.Width - 8;
+    DecimateEdit.MaxValue := 100;
+    DecimateEdit.MinValue := 1;
+    DecimateEdit.Value:= 25;
+
+    DecimateEdit.Constraints.MinWidth:= 128;
+    DecimateEdit.AutoSize := true;
+    DecimateEdit.AnchorSide[akTop].Side := asrBottom;
+    DecimateEdit.AnchorSide[akTop].Control := MinClusterVoxEdit;
+    DecimateEdit.BorderSpacing.Top := 4;
+    DecimateEdit.AnchorSide[akLeft].Side := asrRight;
+    DecimateEdit.AnchorSide[akLeft].Control := DecimateLabel;
+    DecimateEdit.BorderSpacing.Left := 6;
+
+    DecimateEdit.Parent:=PrefForm;
+    //Smooth
+    SmoothCombo:=TComboBox.create(PrefForm);
+    //SmoothCombo.Left := 8;
+    //SmoothCombo.Top := 132;
+    //SmoothCombo.Width := PrefForm.Width -16;
+    SmoothCombo.Items.Add('Raw (Jagged)');
+    SmoothCombo.Items.Add('Masked smooth (Smooth except at brain mask)');
+    SmoothCombo.Items.Add('Smooth (Eroded by brain mask)');
+    SmoothCombo.ItemIndex:= 2;
+    SmoothCombo.Style := csDropDownList;
+    SmoothCombo.AutoSize := true;
+    SmoothCombo.Constraints.MinWidth:= 400;
+    SmoothCombo.AnchorSide[akTop].Side := asrBottom;
+    SmoothCombo.AnchorSide[akTop].Control := DecimateEdit;
+    SmoothCombo.BorderSpacing.Top := 6;
+    SmoothCombo.AnchorSide[akLeft].Side := asrLeft;
+    SmoothCombo.AnchorSide[akLeft].Control := PrefForm;
+    SmoothCombo.BorderSpacing.Left := 6;
+    SmoothCombo.AnchorSide[akRight].Side := asrRight;
+    SmoothCombo.AnchorSide[akRight].Control := PrefForm;
+    SmoothCombo.BorderSpacing.Right := 6;
+    SmoothCombo.Parent:=PrefForm;
+    SmoothCombo.Parent:=PrefForm;
+    //OK button
+    OkBtn:=TButton.create(PrefForm);
+    OkBtn.Caption:='OK';
+    //OkBtn.Top := 162;
+    //OkBtn.Width := 128;
+    //OkBtn.Left := PrefForm.Width - OkBtn.Width - 8;
+    OkBtn.AutoSize := true;
+    OkBtn.AnchorSide[akTop].Side := asrBottom;
+    OkBtn.AnchorSide[akTop].Control := SmoothCombo;
+    OkBtn.BorderSpacing.Top := 6;
+    OkBtn.AnchorSide[akLeft].Side := asrCenter;
+    OkBtn.AnchorSide[akLeft].Control := PrefForm;
+    //OkBtn.BorderSpacing.Left := 200;
+    OkBtn.Constraints.MinWidth:= 64;
+    OkBtn.Parent:=PrefForm;
+    OkBtn.ModalResult:= mrOK;
+    PrefForm.ShowModal;
+   {$IFDEF USEFLOATSPIN}
     Thresh := ThreshEdit.value;
     {$ELSE}
     Thresh := StrToFloatDef(ThreshEdit.Caption, Thresh);

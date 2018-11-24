@@ -27,7 +27,6 @@ uses mainunit;
 
 var
    sLabel: array [1..kMaxUniform] of integer; //control count for Labels
-   sCheck: array [1..kMaxUniform] of integer; //control count for CheckBoxes
    sTrack: array [1..kMaxUniform] of integer; //control count for TrackBars
    gUpdateGLSL: boolean = false;
 
@@ -60,15 +59,12 @@ procedure CreateAllControls;
    i, t: integer;
  begin
    for t := 1 to kMaxUniform do begin //assume we can not find control
-     sCheck[t] := 0;
      sLabel[t] := 0;
      sTrack[t] := 0;
    end;
    for i := 0 to GLForm1.ShaderBox.ControlCount - 1 do begin
        t := GLForm1.ShaderBox.Controls[i].tag;
        if (t < 1) or (t > kMaxUniform) then continue;
-       if (GLForm1.ShaderBox.Controls[i] is TCheckBox) then
-          sCheck[t] := i;
        if (GLForm1.ShaderBox.Controls[i] is TLabel) then
           sLabel[t] := i;
        if (GLForm1.ShaderBox.Controls[i] is TTrackBar) then
@@ -78,24 +74,30 @@ procedure CreateAllControls;
 
 procedure ShowUniform(N: integer; U: TUniform);
 var
-  aCheck: TCheckBox;
   aLabel: TLabel;
   aTrack: TTrackBar;
 begin
  if (n > kMaxUniform) or (n < 1) then
    exit;
- aCheck := (GLForm1.ShaderBox.Controls[sCheck[n]] as TCheckBox);
  aLabel := (GLForm1.ShaderBox.Controls[sLabel[n]] as TLabel);
  aTrack := (GLForm1.ShaderBox.Controls[sTrack[n]] as TTrackBar);
  aLabel.Caption := U.Name;
  aLabel.Visible := true;
  if U.Widget = kBool then begin
-   aCheck.Visible := true;
-   aCheck.Checked := U.Bool;
- end else
-   aCheck.visible := false;
- if (U.Widget = kInt) or (U.Widget = kFloat) then begin
    aTrack.Visible := true;
+   aTrack.Min:=0;
+   aTrack.Max:=1;
+   if (U.Bool) then
+     aTrack.Position := 1
+   else
+       aTrack.Position := 0;
+   //aTrack.Position:=;
+   //aTrack.Visible := true;
+ end else if (U.Widget = kInt) or (U.Widget = kFloat) then begin
+   aTrack.Visible := true;
+   aTrack.Max := 100;
+   aTrack.Min := 0;
+
    aTrack.position := Val2Percent(U.Min, U.DefaultV,U.Max);
  end else
    aTrack.visible := false;
@@ -105,7 +107,6 @@ end;
 var
   UpperName: string;
   i: integer;
-   aCheck: TCheckBox;
    aLabel: TLabel;
    aTrack: TTrackBar;
 begin
@@ -113,14 +114,10 @@ begin
     exit;
   UpperName := UpperCase(lProperty);
   for i := 1 to gShader.nUniform do begin
-    aCheck := (GLForm1.ShaderBox.Controls[sCheck[i]] as TCheckBox);
     aLabel := (GLForm1.ShaderBox.Controls[sLabel[i]] as TLabel);
     aTrack := (GLForm1.ShaderBox.Controls[sTrack[i]] as TTrackBar);
     if UpperName = upperCase(aLabel.Caption) then begin
-      if aCheck.visible then
-        aCheck.Checked := not (lVal = 0.0)
-      else
-          aTrack.position := Val2Percent(gShader.Uniform[i].Min, lVal,gShader.Uniform[i].Max);
+      aTrack.position := Val2Percent(gShader.Uniform[i].Min, lVal,gShader.Uniform[i].Max);
       GLForm1.UniformChange(nil);
     end;//if property matches shader's caption
   end; //for each uniform
@@ -174,8 +171,7 @@ begin
     for i := 1 to gShader.nUniform do
       ShowUniform(i, gShader.Uniform[i]);
   if gShader.nUniform < kMaxUniform then begin
-    for i :=   (gShader.nUniform+1) to kMaxUniform do begin
-      (GLForm1.ShaderBox.Controls[sCheck[i]] as TCheckBox).Visible := false;
+     for i := (gShader.nUniform+1) to kMaxUniform do begin
       (GLForm1.ShaderBox.Controls[sLabel[i]] as TLabel).Visible := false;
       (GLForm1.ShaderBox.Controls[sTrack[i]] as TTrackBar).Visible := false;
     end;//for all unused
@@ -276,20 +272,19 @@ end;
 procedure ReportUniformChange(Sender: TObject);
 var
   i: integer;
-  aCheck: TCheckBox;
   aTrack: TTrackBar;
 begin
   if gUpdateGLSL then exit;
   //GLForm1.updatetimer.enabled := true;
   if gShader.nUniform > 0  then
     for i := 1 to gShader.nUniform do begin
-      aCheck := (GLForm1.ShaderBox.Controls[sCheck[i]] as TCheckBox);
       aTrack := (GLForm1.ShaderBox.Controls[sTrack[i]] as TTrackBar);
       case gShader.Uniform[i].Widget of
         kBool: begin
-          if ACheck.visible then
-            gShader.Uniform[i].Bool := ACheck.checked;
-          GLForm1.memo1.lines.add('Bool '+ gShader.Uniform[i].name+' '+boolstr(gShader.Uniform[i].Bool) );
+
+          if aTrack.visible then
+            gShader.Uniform[i].Bool:= (aTrack.Position >0) ;
+          GLForm1.memo1.lines.add('Bool '+ gShader.Uniform[i].name+' '+ inttostr(aTrack.Position ));
 
           end;
         kInt:begin

@@ -148,7 +148,9 @@ type
     PSScript1: TPSScript;
     azimuthelevation1: TMenuItem;
     procedure AppleMenuClick(Sender: TObject);
+    function PyExecMain(): boolean;
     procedure Compile1Click(Sender: TObject);
+    procedure CompileMainClick(Sender: TObject);
     procedure File1Click(Sender: TObject);
     procedure FormActivate(Sender: TObject);
     procedure FormDeactivate(Sender: TObject);
@@ -185,9 +187,11 @@ type
     procedure DemoProgram (isPython: boolean = false);
     procedure ToPascal(s: string);
     procedure OpenStartupScript;
+
     {$IFDEF MYPY}
     function PyCreate: boolean;
     function PyIsPythonScript(): boolean;
+    function PyIsPythonScriptMain(): boolean;
     function PyExec(): boolean;
     procedure PyEngineAfterInit(Sender: TObject);
     procedure PyIOSendData(Sender: TObject; const Data: AnsiString);
@@ -199,8 +203,10 @@ type
     gchanged: Boolean;
     function SaveTest: Boolean;
   public
-    { Public declarations }
   end;
+
+  function ScriptDir: string;     { Public declarations }
+
 const
   kScriptExt = '.gls';
    {$IFDEF MYPY}
@@ -412,6 +418,53 @@ begin
     caption := 'Python Engine Failed';
   end;
   Memo2.lines.Add('Python Succesfully Executed');
+  result := true;
+end;
+
+function TScriptForm.PyIsPythonScriptMain(): boolean;
+begin
+  result := ( Pos('import gl', GLForm1.ScriptMemo.Lines.Text) > 0); //any python project must import gl
+end;
+function TScriptForm.PyExecMain(): boolean;
+begin
+  result := false; //assume code is not Python
+  if not (PyIsPythonScriptMain) then exit;
+  GLForm1.ScriptOutputMemo.lines.Clear;
+  result := true;
+  if PyEngine = nil then begin
+    if not PyCreate then begin //do this the first time
+      {$IFDEF Windows}
+      GLForm1.ScriptOutputMemo.lines.Add('Unable to find Python library [place Python .dll and .zip in Script folder]');
+      {$ENDIF}
+      {$IFDEF Unix}
+      GLForm1.ScriptOutputMemo.lines.Add('Unable to find Python library');
+      {$IFDEF Darwin}
+      GLForm1.ScriptOutputMemo.lines.Add('   For MacOS this is typically in: '+kBasePath+'');
+      {$ELSE}
+      GLForm1.ScriptOutputMemo.lines.Add('   run ''find -name "*libpython*"'' to find the library');
+      GLForm1.ScriptOutputMemo.lines.Add('   if it does not exist, install it (e.g. ''apt-get install libpython2.7'')');
+      {$ENDIF}
+      GLForm1.ScriptOutputMemo.lines.Add('   if it does exist, set use the Preferences/Advanced to set ''PyLib''');
+      {$IFDEF Darwin}
+      GLForm1.ScriptOutputMemo.lines.Add('   PyLib should be the complete path and filename of libpython*.dylib');
+      {$ELSE}
+      GLForm1.ScriptOutputMemo.lines.Add('   PyLib should be the complete path and filename of libpython*.so');
+      {$ENDIF}
+      GLForm1.ScriptOutputMemo.lines.Add('   This file should be in your LIBDIR, which you can detect by running Python from the terminal:');
+      GLForm1.ScriptOutputMemo.lines.Add('     ''import sysconfig; print(sysconfig.get_config_var("LIBDIR"))''');
+      {$ENDIF}
+      result := true;
+      exit;
+
+    end;
+  end;
+  GLForm1.ScriptOutputMemo.lines.Add('Running Python script');
+  try
+  PyEngine.ExecStrings(GLForm1.ScriptMemo.Lines);
+  except
+    caption := 'Python Engine Failed';
+  end;
+  GLForm1.ScriptOutputMemo.lines.Add('Python Succesfully Executed');
   result := true;
 end;
 
@@ -1167,27 +1220,27 @@ begin
     //AddMethod('atlasgraybg', @PyATLASGRAYBG, '');
     AddMethod('atlasmaxindex', @PyATLASMAXINDEX, '');
     AddMethod('atlassaturationalpha', @PyATLASSATURATIONALPHA, '');
-    AddMethod('azimuth', @PyAZIMUTH, '');
-    AddMethod('azimuthelevation', @PyAZIMUTHELEVATION, '');
-    AddMethod('backcolor', @PyBACKCOLOR, '');
-    AddMethod('bmpzoom', @PyBMPZOOM, '');
-    AddMethod('cameradistance', @PyCAMERADISTANCE, '');
+    AddMethod('azimuth', @PyAZIMUTH, ' azimuthe(azi) -> Rotate image by specified degrees.');
+    AddMethod('azimuthelevation', @PyAZIMUTHELEVATION, ' azimuthelevation(azi, elev) -> Sets the camera location.');
+    AddMethod('backcolor', @PyBACKCOLOR, ' backcolor(r, g, b) -> changes the background color, for example backcolor(255, 0, 0) will set a bright red background');
+    AddMethod('bmpzoom', @PyBMPZOOM, ' bmpzoom(z) -> changes resolution of savebmp(), for example bmpzoom(2) will save bitmaps at twice screen resolution');
+    AddMethod('cameradistance', @PyCAMERADISTANCE, ' cameradistance(z) -> Sets the viewing distance from the object.');
     AddMethod('camerapan', @PyCAMERAPAN, '');
-    AddMethod('clip', @PyCLIP, '');
-    AddMethod('clipazimuthelevation', @PyCLIPAZIMUTHELEVATION, '');
+    AddMethod('clip', @PyCLIP, ' clip(depth) -> Creates a clip plane that hides information close to the viewer.');
+    AddMethod('clipazimuthelevation', @PyCLIPAZIMUTHELEVATION, ' clipazimuthelevation(depth, azi, elev) -> Set a view-point independent clip plane.');
     AddMethod('colorbarposition', @PyCOLORBARPOSITION, '');
     AddMethod('colorbarvisible', @PyCOLORBARVISIBLE, '');
     AddMethod('edgecolor', @PyEDGECOLOR, '');
     AddMethod('edgeload', @PyEDGELOAD, '');
     AddMethod('edgesize', @PyEDGESIZE, '');
     AddMethod('edgethresh', @PyEDGETHRESH, '');
-    AddMethod('elevation', @PyELEVATION, '');
+    AddMethod('elevation', @PyELEVATION, ' elevation(degrees) -> Rotates volume rendering relative to camera.');
     AddMethod('exists', @PyEXISTS, '');
     AddMethod('fontname', @PyFONTNAME, '');
     AddMethod('meshcolor', @PyMESHCOLOR, '');
     AddMethod('meshcreate', @PyMESHCREATE, '');
     AddMethod('meshcurv', @PyMESHCURV, '');
-    AddMethod('meshload', @PyMESHLOAD, '');
+    AddMethod('meshload', @PyMESHLOAD, ' meshload(imageName) -> Close all open images and load new background image.');
     AddMethod('meshoverlayorder', @PyMESHOVERLAYORDER, '');
     AddMethod('meshreversefaces', @PyMESHREVERSEFACES, '');
     AddMethod('meshsave', @PyMESHSAVE, '');
@@ -1202,18 +1255,18 @@ begin
     AddMethod('nodethreshbysizenotcolor', @PyNODETHRESHBYSIZENOTCOLOR, '');
     AddMethod('orientcubevisible', @PyORIENTCUBEVISIBLE, '');
     AddMethod('overlayadditive', @PyOVERLAYADDITIVE, '');
-    AddMethod('overlaycloseall', @PyOVERLAYCLOSEALL, '');
+    AddMethod('overlaycloseall', @PyOVERLAYCLOSEALL, ' overlaycloseall() -> Close all open overlays.');
     AddMethod('overlaycolorname', @PyOVERLAYCOLORNAME, '');
     AddMethod('overlayinvert', @PyOVERLAYINVERT, '');
-    AddMethod('overlayload', @PyOVERLAYLOAD, '');
-    AddMethod('overlayminmax', @PyOVERLAYMINMAX, '');
+    AddMethod('overlayload', @PyOVERLAYLOAD, ' overlayload(filename) -> Load an image on top of prior images.');
+    AddMethod('overlayminmax', @PyOVERLAYMINMAX, ' overlayminmax(layer, min, max) -> Sets the color range for the overlay (layer 0 = background).');
     AddMethod('overlaysmoothvoxelwisedata', @PyOVERLAYSMOOTHVOXELWISEDATA, '');
     AddMethod('overlaytranslucent', @PyOVERLAYTRANSLUCENT, '');
     AddMethod('overlaytransparencyonbackground', @PyOVERLAYTRANSPARENCYONBACKGROUND, '');
     AddMethod('overlayvisible', @PyOVERLAYVISIBLE, '');
     AddMethod('quit', @PyQUIT, '');
-    AddMethod('resetdefaults', @PyRESETDEFAULTS, '');
-    AddMethod('savebmp', @PySAVEBMP, '');
+    AddMethod('resetdefaults', @PyRESETDEFAULTS, ' resetdefaults() -> Revert settings to sensible values.');
+    AddMethod('savebmp', @PySAVEBMP, ' savebmp(pngName) -> Save screen display as bitmap. For example "savebmp(''test.png'')"');
     AddMethod('savebmpxy', @PySAVEBMPXY, '');
     AddMethod('scriptformvisible', @PySCRIPTFORMVISIBLE, '');
     AddMethod('shaderadjust', @PySHADERADJUST, '');
@@ -1297,6 +1350,7 @@ end;
 procedure MyWriteln(const s: string);
 begin
   ScriptForm.Memo2.lines.add(S);
+  GLForm1.ScriptOutputMemo.lines.add(S);
   {$IFDEF Unix}writeln(s);{$ENDIF}
 end;
 
@@ -1344,6 +1398,37 @@ begin
       Sender.AddFunction(kFuncRA[i].Ptr,'function '+kFuncRA[i].Decl+kFuncRA[i].Vars+';');
   for i := 1 to knProc do
       Sender.AddFunction(kProcRA[i].Ptr,'procedure '+kProcRA[i].Decl+kProcRA[i].Vars+':');
+end;
+
+
+procedure TScriptForm.CompileMainClick(Sender: TObject);
+var
+  i: integer;
+  compiled: boolean;
+begin
+  {$IFDEF MYPY}
+  if PyExecMain() then exit;
+  if (not (AnsiContainsText(GLForm1.ScriptMemo.Lines.Text, 'begin'))) then begin
+      GLForm1.ScriptOutputMemo.Lines.Clear;
+      GLForm1.ScriptOutputMemo.Lines.Add('Error: script must contain "import gl" (for Python) or "begin" (for Pascal).');
+      exit;
+  end;
+  {$ENDIF}
+  GLForm1.ScriptOutputMemo.Lines.Clear;
+  PSScript1.Script.Text := GLForm1.ScriptMemo.Lines.Text;
+  //PSScript1.Script.Text := Memo1.Lines.GetText; //<- this will leak! requires StrDispose
+  Compiled := PSScript1.Compile;
+  for i := 0 to PSScript1.CompilerMessageCount -1 do
+    MyWriteln( PSScript1.CompilerMessages[i].MessageToString);
+  if Compiled then
+    MyWriteln('Successfully Compiled Script');
+  if Compiled then begin
+    if PSScript1.Execute then
+      MyWriteln('Succesfully Executed')
+    else
+      MyWriteln('Error while executing script: '+
+                  PSScript1.ExecErrorToString);
+  end;
 end;
 
 procedure TScriptForm.Compile1Click(Sender: TObject);

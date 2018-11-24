@@ -301,7 +301,6 @@ ScriptOpenDialog: TOpenDialog;
 LayerPopup: TPopupMenu;
 LayerInvertColorsMenu: TMenuItem;
 LayerShowHeaderMenu: TMenuItem;
-procedure LayerListClickCheck(Sender: TObject);
 procedure LayerPopupPopup(Sender: TObject);
 procedure LayerInvertColorsMenuClick(Sender: TObject);
 procedure LayerShowHeaderMenuClick(Sender: TObject);
@@ -677,8 +676,8 @@ begin
   {$ENDIF}
 end;
 
-
-function searchPy(pth: string): string;
+  {$IFDEF Darwin}
+  function searchPy(pth: string): string;
 var
    searchResult : TSearchRec;
 begin
@@ -691,45 +690,10 @@ begin
     result := IncludeTrailingPathDelimiter(pth)+(searchResult.Name);
     FindClose(searchResult);
 end;
-{$IFDEF Darwin}
+
   const
        kBasePath = '/Library/Frameworks/Python.framework/Versions/';
-{$ENDIF}
-
-  {$IFDEF UNIX}
-  function InitPyLibraryPath: string;
-    //
-    function GetMacPath(NMinorVersion: integer): string;
-    begin
-      Result:= Format('/Library/Frameworks/Python.framework/Versions/3.%d/lib/libpython3.%d.dylib',
-        [NMinorVersion, NMinorVersion]);
-    end;
-    //
-  var
-    N: integer;
-  begin
-    Result:= '';
-    {$ifdef windows}
-    exit('python35.dll');
-    {$endif}
-
-    {$ifdef linux}
-    exit('libpython3.6m.so.1.0');
-    {$endif}
-
-    {$ifdef freebsd}
-    exit('libpython3.6m.so');
-    {$endif}
-
-    {$ifdef darwin}
-    for N:= 4 to 9 do
-    begin
-      Result:= GetMacPath(N);
-      if FileExists(Result) then exit;
-    end;
-    {$endif}
-  end;
-{$ENDIF}
+  {$ENDIF}
 
   function findPythonLib(def: string): string;
   {$IFDEF WINDOWS}
@@ -747,96 +711,78 @@ end;
   {$ELSE}
   {$IFDEF Linux}
     const
-         knPaths = 8;
-         // /usr/lib/i386-linux-gnu/
-         {$IFDEF CPU64}
-         kBasePaths : array [1..knPaths] of string = ('/lib/','/lib64/','/usr/lib64/','/usr/lib/x86_64-linux-gnu/','/usr/lib/','/usr/local/lib/','/usr/lib/python2.7/config-x86_64-linux-gnu/','/opt/gitlab/embedded/lib/');
-         {$ELSE}
-         kBasePaths : array [1..knPaths] of string = ('/lib/','/lib32/','/usr/lib32/','/usr/lib/i386-linux-gnu/','/usr/lib/','/usr/local/lib/','/usr/lib/python2.7/config-i386-linux-gnu/','/opt/gitlab/embedded/lib/');
-         {$ENDIF}
+         knPaths = 6;
+         kBasePaths : array [1..knPaths] of string = ('/lib64/','/usr/lib64/','/usr/lib/x86_64-linux-gnu/','/usr/lib/','/usr/local/lib/','/usr/lib/python2.7/config-x86_64-linux-gnu/');
          kBaseName = 'libpython';
+
   {$ENDIF}
   {$IFDEF Darwin}
       const
-         knPaths = 3;
-         kBasePaths : array [1..knPaths] of string = (kBasePath, '/System'+kBasePath, '/System/Library/Frameworks/Python.framework/Versions/Current/lib/');
+         knPaths = 2;
+         kBasePaths : array [1..knPaths] of string = (kBasePath, '/System'+kBasePath);
 
   {$ENDIF}
-      var
-           searchResult : TSearchRec;
-           pth, fnm: string;
-           vers : TStringList;
-           n: integer;
-        begin
-          result := def;
-             if DirectoryExists(def) then begin //in case the user supplies libdir not the library name
-               result := searchPy(def);
-               (*{$IFDEF Darwin}
-               if FindFirst(IncludeTrailingPathDelimiter(def)+'libpython*.dylib', faDirectory, searchResult) = 0 then
-               {$ELSE}
-               if FindFirst(IncludeTrailingPathDelimiter(def)+'libpython*.so', faDirectory, searchResult) = 0 then
-               {$ENDIF}
-                  result := IncludeTrailingPathDelimiter(def)+(searchResult.Name);
-               FindClose(searchResult);  *)
-               if length(result) > 0 then exit;
-             end;
-             {$IFDEF LCLCocoa}
-             result := searchPy('/System/Library/Frameworks/Python.framework/Versions/Current/lib');
-             if fileexists(result) then exit;
-             {$ENDIF}
-             //if fileexists(def) then exit;
-             result := InitPyLibraryPath;
-             if fileexists(result) then exit;
-             vers := TStringList.Create;
-             n := 1;
-             while (n <= knPaths) and (vers.Count < 1) do begin
-               pth := kBasePaths[n];
-               n := n + 1;
-               if not DirectoryExists(pth) then continue;
-               {$IFDEF Linux}
-               if FindFirst(pth+'*.so', faDirectory, searchResult) = 0 then begin
-               {$ELSE}
-               if FindFirst(pth+'*', faDirectory, searchResult) = 0 then begin
-               {$ENDIF}
-                 repeat
-                        //showmessage('?'+searchResult.Name);
-                        if (length(searchResult.Name) < 1) or (searchResult.Name[1] = '.') then continue;
-                        {$IFDEF LINUX}
-                        if (pos(kBaseName,searchResult.Name) < 1) then continue;
-                        {$ELSE}
-                        if (not (searchResult.Name[1] in ['0'..'9'])) then continue;
-                        {$ENDIF}
-                    if (pos('libpython2.6',searchResult.Name) < 1) then
-                       vers.Add(searchResult.Name);
-                  until findnext(searchResult) <> 0;
-               end;
-              FindClose(searchResult);
-            end;
-            if vers.Count < 1 then begin
-               vers.Free;
-               result :=''; //assume failure
-               for n := 1 to knPaths do begin
-                 pth := kBasePaths[n];
-                 result := searchPy(pth);
-                 if fileexists(result) then exit;
-               end;
-               result := '';
-               exit;
-            end;
-            vers.Sort;
-            fnm := vers.Strings[vers.Count-1]; //newest version? what if 3.10 vs 3.9?
-            vers.Free;
-            {$IFDEF Darwin}
-            fnm := kBasePath+fnm+'/lib/libpython'+fnm+'.dylib';
-            {$ENDIF}
-            {$IFDEF LINUX}
-            fnm := pth+ fnm;
-            {$ENDIF}
-            if fileexists(fnm) then
-               result := fnm;
+    var
+       searchResult : TSearchRec;
+       pth, fnm: string;
+       vers : TStringList;
+       n: integer;
+    begin
+         result := def;
+        if DirectoryExists(def) then begin //in case the user supplies libdir not the library name
+          result := '';
+          {$IFDEF Darwin}
+          if FindFirst(IncludeTrailingPathDelimiter(def)+'libpython*.dylib', faDirectory, searchResult) = 0 then
+          {$ELSE}
+          if FindFirst(IncludeTrailingPathDelimiter(def)+'libpython*.so', faDirectory, searchResult) = 0 then
+          {$ENDIF}
+             result := IncludeTrailingPathDelimiter(def)+(searchResult.Name);
+          FindClose(searchResult);
+          if length(result) > 0 then exit;
         end;
+         if fileexists(result) then exit;
+         {$IFDEF LCLCocoa}
+         result := searchPy('/System/Library/Frameworks/Python.framework/Versions/Current/lib');
+         if fileexists(result) then exit;
+         {$ENDIF}
+         result :=''; //assume failure
+         vers := TStringList.Create;
+         n := 1;
+         while (n <= knPaths) and (vers.Count < 1) do begin
+           pth := kBasePaths[n];
+           n := n + 1;
+           if not DirectoryExists(pth) then continue;
+           if FindFirst(pth+'*', faDirectory, searchResult) = 0 then begin
+             repeat
+                    //showmessage('?'+searchResult.Name);
+                    if (length(searchResult.Name) < 1) or (searchResult.Name[1] = '.') then continue;
+                    {$IFDEF LINUX}
+                    if (pos(kBaseName,searchResult.Name) < 1) then continue;
+                    {$ELSE}
+                    if (not (searchResult.Name[1] in ['0'..'9'])) then continue;
+                    {$ENDIF}
+                vers.Add(searchResult.Name);
+              until findnext(searchResult) <> 0;
+           end;
+          FindClose(searchResult);
+        end;
+        if vers.Count < 1 then begin
+           vers.Free;
+           exit;
+        end;
+        vers.Sort;
+        fnm := vers.Strings[vers.Count-1]; //newest version? what if 3.10 vs 3.9?
+        vers.Free;
+        {$IFDEF Darwin}
+        fnm := kBasePath+fnm+'/lib/libpython'+fnm+'.dylib';
+        {$ENDIF}
+        {$IFDEF LINUX}
+        fnm := pth+ fnm;
+        {$ENDIF}
+        if fileexists(fnm) then
+           result := fnm;
+    end;
   {$ENDIF}
-
 function PyVERSION(Self, Args : PPyObject): PPyObject; cdecl;
 begin
   with GetPythonEngine do
@@ -1656,11 +1602,7 @@ var
   S: string;
 begin
   result := false;
-  if FileExists(gPrefs.PyLib) then begin
-     {$IFDEF UNIX}writeln('Using PyLib from preferences "'+gPrefs.PyLib+'"');{$ENDIF}
-     S := gPrefs.PyLib;
-  end else
-      S:= findPythonLib(gPrefs.PyLib);
+  S:= findPythonLib(gPrefs.PyLib);
   if (S = '') then exit;
   gPrefs.PyLib := S;
   result := true;
@@ -1919,17 +1861,6 @@ begin
   if (i < 1) or (i > gMesh.OpenOverlays) then exit;
    LayerInvertColorsMenu.Checked := gMesh.Overlay[i].LUTinvert;
 end;
-
-procedure TGLForm1.LayerListClickCheck(Sender: TObject);
-begin
-  UpdateLayerBox(false);
-  if LayerList.Checked[LayerList.ItemIndex] then
-     LayerAlphaTrack.Position := 100
-  else
-      LayerAlphaTrack.Position := 0;
-  LayerWidgetChange(sender);
-end;
-
 procedure TGLForm1.LayerShowHeaderMenuClick(Sender: TObject);
 var
    i: integer;
@@ -2053,8 +1984,7 @@ end;
 {$IFDEF LCLCocoa}
 procedure TGLForm1.SetDarkMode;
 begin
-  //setThemeMode(Self.Handle, gPrefs.DarkMode);
-  setThemeMode(Self, gPrefs.DarkMode);
+  setThemeMode(Self.Handle, gPrefs.DarkMode);
   if gPrefs.DarkMode then
      Memo1.Color := clGray
   else
@@ -2083,8 +2013,7 @@ procedure SetFormDarkMode(var f: TForm);
 begin
   f.PopupMode:= pmAuto;
   f.HandleNeeded;
-  //setThemeMode(f.Handle, true);
-  setThemeMode(f, true);
+  setThemeMode(f.Handle, true);
 end;
 
 procedure Mouse2Retina(var X,Y: integer);
@@ -2157,27 +2086,22 @@ begin
    result := ''; //failed!
 end;
 
-function FindFile(fnm: string): string;
+function FindFile(Filename: string): string;
 var
-  Filename, p,n,x: string;
+  p,n,x: string;
 begin
-  Filename := fnm;
-  {$IFDEF UNIX}
-  if Filename[1] = '~' then
-     Filename := ExpandFileName(Filename);
-  {$ENDIF}
-  result := FindFileExt(Filename);
-  if result <> '' then exit;
-  FilenameParts (Filename, p,n,x);  // if user selects 'jhu' then open 'jhu.mz3'
-  if x <> '' then exit;
-  result :=  FindFileExt(ChangeFileExt(Filename,'.mz3'));
-  if result <> '' then exit;
-  result :=  FindFileExt(ChangeFileExt(Filename,'.gii'));
-  if result <> '' then exit;
-  result :=  FindFileExt(ChangeFileExt(Filename,'.ply'));
-  if result <> '' then exit;
-  result :=  FindFileExt(ChangeFileExt(Filename,'.obj'));
-  //if result <> '' then exit;*)
+   result := FindFileExt(Filename);
+   if result <> '' then exit;
+   FilenameParts (Filename, p,n,x);  // if user selects 'jhu' then open 'jhu.mz3'
+   if x <> '' then exit;
+   result :=  FindFileExt(ChangeFileExt(Filename,'.mz3'));
+   if result <> '' then exit;
+   result :=  FindFileExt(ChangeFileExt(Filename,'.gii'));
+   if result <> '' then exit;
+   result :=  FindFileExt(ChangeFileExt(Filename,'.ply'));
+   if result <> '' then exit;
+   result :=  FindFileExt(ChangeFileExt(Filename,'.obj'));
+   //if result <> '' then exit;*)
 end;
 
 procedure TGLForm1.GLInvalidate;
@@ -2433,7 +2357,6 @@ begin
    OpenDialog.InitialDir:= ExtractFileDir(FileName);
    UpdateToolbar;
    UpdateLayerBox(true);
-   GLBoxRequestUpdate(nil);
 end;
 
 function TGLForm1.OpenTrack(FilenameIN: string): boolean;
@@ -2730,25 +2653,6 @@ begin
   gMesh.OverlayTransparency := (sender as TMenuItem).tag;
   OverlayTimerStart;
 end;
-
-(*procedure TGLForm1.SetOverlayTransparency(Sender: TObject);
-var
-   i, n, v: integer;
-begin
-   n :=  gMesh.OpenOverlays;
-   if n < 1 then exit;
-   v := (sender as TMenuItem).tag;
-   if (v > 95) then
-      v := kLUTopaque
-   else if (v > 0) then
-     v := kLUTtranslucent
-   else
-       v := kLUTinvisible;
-   for i := 1 to n do
-       gMesh.Overlay[i].LUTvisible := v;
-   //gMesh.OverlayTransparency := (sender as TMenuItem).tag;
-  OverlayTimerStart;
-end;*)
 
 procedure TGLForm1.ShaderBoxResize(Sender: TObject);
 const
@@ -4232,6 +4136,7 @@ begin
         if (length(gMesh.overlay[lI].intensity) > 0) and(gMesh.overlay[lI].LUTvisible <> kLUTinvisible) and (not isFreeSurferLUT(gMesh.overlay[lI].LUTindex)) then begin
          inc(nLUT);
          gClrbar.SetLUT(nLUT, UpdateTransferFunction(gMesh.overlay[lI].LUTindex,gMesh.overlay[lI].LUTinvert), gMesh.overlay[lI].windowScaledMin,gMesh.overlay[lI].windowScaledMax);
+
         end;
  result := nLUT;
  if (length(gNode.nodes) < 1) then exit;
@@ -4246,6 +4151,7 @@ begin
      if mn <> mx then begin
        nLUT := nLUT + 1;
        gClrbar.SetLUT(nLUT, UpdateTransferFunction(gNode.nodePrefs.NodeLUTindex,false), mn,mx);
+
      end;
  end; //nodes
  if (gNode.nodePrefs.isEdgeColorVaries) and (gNode.nodePrefs.maxEdge <> gNode.nodePrefs.minEdge) then begin
@@ -4322,7 +4228,7 @@ begin
   lMesh.SaveOverlay(SaveMeshDialog.Filename, 1);
   123:
   lMesh.Free;
-  GLBoxRequestUpdate(nil);
+
 end;
 
 {$IFDEF COREGL}

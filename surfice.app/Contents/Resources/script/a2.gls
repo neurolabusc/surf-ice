@@ -1,0 +1,7 @@
+import gl
+import sys
+print(sys.version)
+print(gl.version())
+# Note that resetdefaults() closes open meshes, overlays, track nodes
+gl.savebmpxy('ao.png', 640, 480)
+

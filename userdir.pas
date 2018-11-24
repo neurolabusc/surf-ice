@@ -264,7 +264,9 @@ end;
 {$ELSE}
 function AppDir: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app
 begin
- result := extractfilepath(paramstr(0));
+ result := extractfilepath(paramstr(0))+'Resources'+pathdelim;
+ if not DirectoryExists(result) then
+	result := extractfilepath(paramstr(0));
 end;
 
 function AppDir2: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app

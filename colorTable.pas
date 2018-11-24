@@ -159,7 +159,7 @@ begin
  setNode(0,0,0,0,0, 0, result);
  setNode(255,255,255,255,255, 1, result);
  result.isFreeSurfer:= false;
- lFilename := CLUTdir+pathdelim+GLForm1.LUTdrop.Items[lIndex]+'.clut';
+ lFilename := CLUTdir+pathdelim+GLForm1.LayerColorDrop.Items[lIndex]+'.clut';
  if not fileexists(lFilename) then begin
     lIndex := 0;
     exit;
@@ -263,9 +263,14 @@ begin
        end;
        15: begin //FreeSurferCurve - valleys dark
           result.isFreeSurfer:= true;
-          setNode(0,0,0,0,0, 0, result);
-          setNode(0,0,0,0,156, 1, result);
-          setNode(0,0,0,255,255, 2, result);
+          setNode(  0,  0,  0,  0,  0, 0, result);
+          setNode(  0,  0,  0,  0,136, 1, result);
+          setNode(  0,  0,  0,140,155, 2, result);
+          setNode(  0,  0,  0,200,255, 3, result);
+
+          //setNode(255,0,0,255,0, 0, result);
+          //setNode(0,255,0,0,156, 1, result);
+          //setNode(0,0,255,255,255, 2, result);
 
        end;
        16: begin //FreeSurferCurve  - curves (valleys and ridges) dark
@@ -335,6 +340,8 @@ begin
     result[255].A := rev[255].A;
  end;
  if lLUTNodes.isFreeSurfer then begin
+   //for lInc := 1 to 255 do
+   //    result[lInc].A := 128;
    //result[255].R := 0;
    //result[255].G := 0;
    //result[255].B := 0;

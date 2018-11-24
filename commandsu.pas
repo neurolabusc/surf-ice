@@ -159,12 +159,15 @@ knProc = 66;
 implementation
 uses
     //{$IFDEF UNIX}fileutil,{$ENDIF}
-    mainunit, define_types, shaderui, graphics, LCLintf, Forms, SysUtils, Dialogs, scriptengine, mesh, meshify;
+    mainunit, define_types, shaderui, graphics, LCLintf, Forms, SysUtils, Dialogs,  mesh, meshify;
 
 procedure SCRIPTFORMVISIBLE (VISIBLE: boolean);
 begin
-  GLForm1.ScriptMenuClick(nil);
-  ScriptForm.visible := VISIBLE;
+  //ScriptForm.visible := VISIBLE;
+  if (GLForm1.ScriptPanel.Width < 24) and (VISIBLE) then
+        GLForm1.ScriptPanel.Width := 240;
+  if (not VISIBLE) then
+     GLForm1.ScriptPanel.Width := 0;
 end;
 
 function ATLASMAXINDEX(OVERLAY: integer): integer;
@@ -174,7 +177,7 @@ begin
   else
       result := gMesh.overlay[OVERLAY].atlasMaxIndex;
   if result < 1 then
-     ScriptForm.Memo2.Lines.Add('Current mesh is not an atlas.');
+     GLForm1.ScriptOutputMemo.Lines.Add('Current mesh is not an atlas.');
 end;
 
 procedure ATLASGRAYBG(const Filt: array of integer);
@@ -327,16 +330,15 @@ begin
     STATNAME := DefaultToHomeDir(STATNAME);
     STATNAME := changefileext(STATNAME,'.mz3');
     gMesh.SaveOverlay(STATNAME, gMesh.OpenOverlays);
-    ScriptForm.Memo2.Lines.Add('Creating mesh '+STATNAME);
+    GLForm1.ScriptOutputMemo.Lines.Add('Creating mesh '+STATNAME);
   end;
   //err := gMesh.AtlasStatMapCore(AtlasName, StatName, idxs, intens);
   123:
   if err <> '' then //report error
-     ScriptForm.Memo2.Lines.Add('ATLASSTATMAP: '+err);
+     GLForm1.ScriptOutputMemo.Lines.Add('ATLASSTATMAP: '+err);
   GLForm1.GLboxRequestUpdate(nil);
   GLForm1.UpdateToolbar;
-  GLForm1.StringGrid1.RowCount := gMesh.OpenOverlays+1;
-  GLForm1.UpdateOverlaySpread;
+  GLForm1.UpdateLayerBox(true);
 end;
 
 procedure BMPZOOM(Z: byte);
@@ -454,32 +456,32 @@ var
 begin
   //Nii2MeshCore(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer): integer;
   if (niiname = '') then begin
-    ScriptForm.Memo2.Lines.Add('meshcreate error: no NIfTI name');
+    GLForm1.ScriptOutputMemo.Lines.Add('meshcreate error: no NIfTI name');
     exit;
   end;
   if (meshname = '') then begin
-    ScriptForm.Memo2.Lines.Add('meshcreate error: no mesh name');
+    GLForm1.ScriptOutputMemo.Lines.Add('meshcreate error: no mesh name');
     exit;
   end;
   meshnamePth := DefaultToHomeDir(meshname);
   nVtx := Nii2MeshCore(niiname, meshnamePth, threshold, decimateFrac, minimumClusterVox, smoothStyle);
   if (nVtx < 3) then
-     ScriptForm.Memo2.Lines.Add('meshcreate error: no mesh created')
+     GLForm1.ScriptOutputMemo.Lines.Add('meshcreate error: no mesh created')
   else
-      ScriptForm.Memo2.Lines.Add('meshcreate generated mesh with '+inttostr(nVtx)+' vertices');
+      GLForm1.ScriptOutputMemo.Lines.Add('meshcreate generated mesh with '+inttostr(nVtx)+' vertices');
 end;
 
 procedure MESHLOAD(lFilename: string);
 begin
   if not GLForm1.OpenMesh(lFilename) then begin
-     ScriptForm.Memo2.Lines.Add('Unable to load mesh named "'+lFilename+'"');
+     GLForm1.ScriptOutputMemo.Lines.Add('Unable to load mesh named "'+lFilename+'"');
    end;
 end;
 
 procedure MESHSAVE(lFilename: string);
 begin
   if not GLForm1.SaveMeshCore(lFilename) then begin
-     ScriptForm.Memo2.Lines.Add('Unable to save mesh named "'+lFilename+'"');
+     GLForm1.ScriptOutputMemo.Lines.Add('Unable to save mesh named "'+lFilename+'"');
    end;
 end;
 
@@ -492,25 +494,25 @@ end;
 procedure OVERLAYLOAD(lFilename: string);
 begin
    if not GLForm1.OpenOverlay(lFilename)then
-      ScriptForm.Memo2.Lines.Add('Unable to load overlay named "'+lFilename+'"');
+      GLForm1.ScriptOutputMemo.Lines.Add('Unable to load overlay named "'+lFilename+'"');
 end;
 
 procedure TRACKLOAD(lFilename: string);
 begin
       if not GLForm1.OpenTrack(lFilename) then
-        ScriptForm.Memo2.Lines.Add('Unable to load track named "'+lFilename+'"');
+        GLForm1.ScriptOutputMemo.Lines.Add('Unable to load track named "'+lFilename+'"');
 end;
 
 procedure NODELOAD(lFilename: string);
 begin
   if not GLForm1.OpenNode(lFilename) then
-      ScriptForm.Memo2.Lines.Add('Unable to load node named "'+lFilename+'"');
+      GLForm1.ScriptOutputMemo.Lines.Add('Unable to load node named "'+lFilename+'"');
 end;
 
 procedure EDGELOAD(lFilename: string);
 begin
   if not GLForm1.OpenEdge(lFilename)then
-      ScriptForm.Memo2.Lines.Add('Unable to load edge named "'+lFilename+'"');
+      GLForm1.ScriptOutputMemo.Lines.Add('Unable to load edge named "'+lFilename+'"');
 end;
 
 procedure SHADERNAME(lFilename: string);
@@ -601,8 +603,8 @@ end;
 
 procedure MODELESSMESSAGE(STR: string);
 begin
-   ScriptForm.Memo2.Lines.Add(STR);
-   ScriptForm.Refresh;
+   GLForm1.ScriptOutputMemo.Lines.Add(STR);
+   GLForm1.Refresh;
 end;
 
 procedure NODECOLOR(name: string; varies: boolean);
@@ -664,7 +666,7 @@ begin
     n := length(mtx);
     nRow := round(sqrt(n));
     if (n < 1) or ((nRow * nRow) <> n) then begin
-       ScriptForm.Memo2.Lines.Add('EDGECREATE expects a matrix that has a size of n*n. For example, a connectome with 3 nodes should have a matrix with 9 items.');
+       GLForm1.ScriptOutputMemo.Lines.Add('EDGECREATE expects a matrix that has a size of n*n. For example, a connectome with 3 nodes should have a matrix with 9 items.');
        exit;
     end;
     //write output
@@ -691,9 +693,9 @@ begin
     CloseFile(f);
     FileMode := fmOpenRead;
     if not GLForm1.OpenEdge(fnm) then
-       ScriptForm.Memo2.Lines.Add('EDGECREATE Unable to load edge file named "'+fnm+'" (use nodecreate or nodeload first) ')
+       GLForm1.ScriptOutputMemo.Lines.Add('EDGECREATE Unable to load edge file named "'+fnm+'" (use nodecreate or nodeload first) ')
     else
-        ScriptForm.Memo2.Lines.Add('EDGECREATE created "'+fnm+'"')
+        GLForm1.ScriptOutputMemo.Lines.Add('EDGECREATE created "'+fnm+'"')
 end;
 
 procedure NODECREATE(filename: string; const x,y,z,clr,radius: array of single);
@@ -705,15 +707,15 @@ var
 begin
     n := length(x);
     if (n < 1) or (n <> length(y)) or (n <> length(z)) then begin
-       ScriptForm.Memo2.Lines.Add('NODECREATE error: x,y,z must have same number of nodes');
+       GLForm1.ScriptOutputMemo.Lines.Add('NODECREATE error: x,y,z must have same number of nodes');
        exit;
     end;
     if (length(clr) > 1) and (length(clr) <> n) then begin
-       ScriptForm.Memo2.Lines.Add('NODECREATE error: color must have same number of items as x,y and z');
+       GLForm1.ScriptOutputMemo.Lines.Add('NODECREATE error: color must have same number of items as x,y and z');
        exit;
     end;
     if (length(radius) > 1) and (length(radius) <> n) then begin
-       ScriptForm.Memo2.Lines.Add('NODECREATE error: radius must have same number of items as x,y and z');
+       GLForm1.ScriptOutputMemo.Lines.Add('NODECREATE error: radius must have same number of items as x,y and z');
        exit;
     end;
     //set color
@@ -756,9 +758,9 @@ begin
     CloseFile(f);
     FileMode := fmOpenRead;
     if not GLForm1.OpenNode(fnm) then
-       ScriptForm.Memo2.Lines.Add('NODECREATE Unable to load node named "'+fnm+'"')
+       GLForm1.ScriptOutputMemo.Lines.Add('NODECREATE Unable to load node named "'+fnm+'"')
     else
-        ScriptForm.Memo2.Lines.Add('NODECREATE created "'+fnm+'"')
+        GLForm1.ScriptOutputMemo.Lines.Add('NODECREATE created "'+fnm+'"')
 end;
 
 procedure NODESIZE(size: single; varies: boolean);

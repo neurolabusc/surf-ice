@@ -598,58 +598,66 @@ begin
   if not lRead then FileMode := fmOpenWrite;
   if (lRead) and (not FileexistsF(lFilename)) then
         exit;
-  lIniFile := TIniFile.Create(lFilename);
-  IniBool(lRead,lIniFile, 'MultiSample',lPrefs.MultiSample);
-  IniBool(lRead,lIniFile, 'OrientCube',lPrefs.OrientCube);
-  IniBool(lRead,lIniFile, 'Perspective',lPrefs.Perspective);
-  IniBool(lRead,lIniFile, 'AdditiveOverlay',lPrefs.AdditiveOverlay);
-  IniBool(lRead,lIniFile, 'StartupScript',lPrefs.StartupScript);
-  {$IFDEF LCLCocoa}
-  IniBool(lRead,lIniFile, 'RetinaDisplay',lPrefs.RetinaDisplay);
-  IniBool(lRead,lIniFile, 'DarkMode',lPrefs.DarkMode);
+  {$IFDEF UNIX}
+  if not lRead then
+  	writeln('writing preferences "'+lFilename+'"');
   {$ENDIF}
-  IniBool(lRead,lIniFile, 'BlackDefaultBackground',lPrefs.BlackDefaultBackground);
-  //IniBool(lRead,lIniFile, 'MultiPassRendering',lPrefs.MultiPassRendering);
-  //IniBool(lRead,lIniFile, 'SaveAsObj',lPrefs.SaveAsObj);
-  IniBool(lRead,lIniFile, 'TracksAreTubes',lPrefs.TracksAreTubes);
-  IniBool(lRead,lIniFile, 'ZDimIsUp',lPrefs.ZDimIsUp);
-  IniBool(lRead,lIniFile,'GenerateSmoothCurves',lPrefs.GenerateSmoothCurves);
-  //IniBool(lRead,lIniFile, 'ShaderForBackgroundOnly',lPrefs.ShaderForBackgroundOnly);
-  IniBool(lRead,lIniFile, 'CoreTrackDisableDepth',lPrefs.CoreTrackDisableDepth);
-  IniBool(lRead,lIniFile, 'LoadTrackOnLaunch',lPrefs.LoadTrackOnLaunch);
-  IniBool(lRead,lIniFile, 'Colorbar',lPrefs.Colorbar);
-  IniBool(lRead,lIniFile, 'SmoothVoxelwiseData',lPrefs.SmoothVoxelwiseData);
-  IniBool(lRead,lIniFile, 'ScreenCaptureTransparentBackground',lPrefs.ScreenCaptureTransparentBackground);
-  IniColor(lRead,lIniFile, 'ObjColor',lPrefs.ObjColor);
-  IniColor(lRead,lIniFile, 'BackColor',lPrefs.BackColor);
-  IniStr(lRead, lIniFile, 'PrevTrackname', lPrefs.PrevTrackname);
-  IniStr(lRead, lIniFile, 'PrevNodename', lPrefs.PrevNodename);
-  IniStr(lRead, lIniFile, 'PrevOverlayname', lPrefs.PrevOverlayname);
-  IniStr(lRead,lIniFile,'PrevScript',lPrefs.PrevScript);
-  IniStrX(lRead,lIniFile,'FontName',lPrefs.FontName);
-  IniStrX(lRead,lIniFile,'PyLib',lPrefs.PyLib);
-  IniMRU(lRead,lIniFile,'PrevFilename',lPrefs.PrevFilename, lPrefs);
-  //IniMRU(lRead,lIniFile,'PrevScriptName',lPrefs.PrevScriptName);
-  IniRGBA(lRead,lIniFile, 'TextColor',lPrefs.TextColor);
-  IniRGBA(lRead,lIniFile, 'TextBorder',lPrefs.TextBorder);
-  IniRGBA(lRead,lIniFile, 'GridAndBorder',lPrefs.GridAndBorder);
-  //IniUnitRect(lRead,lIniFile, 'ColorBarPos',lPrefs.ColorBarPos);
-  IniInt(lRead,lIniFile,'TrackTubeSlices',lPrefs.TrackTubeSlices);
-  IntBound(lPrefs.TrackTubeSlices, 3,13);
-  IniInt(lRead,lIniFile,'ScreenCaptureZoom',lPrefs.ScreenCaptureZoom);
-  IntBound(lPrefs.ScreenCaptureZoom, 1,7);
-  IniInt(lRead,lIniFile,'ColorbarColor',lPrefs.ColorbarColor);
-  IntBound(lPrefs.ColorbarColor, 0,4);
-  IniInt(lRead,lIniFile,'ColorBarPosition',lPrefs.ColorBarPosition);
-  //IniInt(lRead,lIniFile,'ColorbarPosition',lPrefs.ColorbarPosition);
-  //IntBound(lPrefs.ColorbarPosition, 0,4);
-  IniInt(lRead,lIniFile,'RenderQuality',lPrefs.RenderQuality);
-  IniInt(lRead,lIniFile,'SaveAsFormat',lPrefs.SaveAsFormat);
-  IniInt(lRead,lIniFile,'SaveAsFormatTrack',lPrefs.SaveAsFormatTrack);
-  IniInt(lRead,lIniFile,'OcclusionAmount',lPrefs.OcclusionAmount);
-  IniFloat(lRead,lIniFile,'ColorbarSize',lPrefs.ColorbarSize);
-  if (lPrefs.RenderQuality < kRenderPoor) then lPrefs.RenderQuality:= kRenderPoor;
-  if (lPrefs.RenderQuality > kRenderBetter) then lPrefs.RenderQuality:= kRenderBetter;
+  lIniFile := TIniFile.Create(lFilename);
+  try
+	  IniBool(lRead,lIniFile, 'MultiSample',lPrefs.MultiSample);
+	  IniBool(lRead,lIniFile, 'OrientCube',lPrefs.OrientCube);
+	  IniBool(lRead,lIniFile, 'Perspective',lPrefs.Perspective);
+	  IniBool(lRead,lIniFile, 'AdditiveOverlay',lPrefs.AdditiveOverlay);
+	  IniBool(lRead,lIniFile, 'StartupScript',lPrefs.StartupScript);
+	  {$IFDEF LCLCocoa}
+	  IniBool(lRead,lIniFile, 'RetinaDisplay',lPrefs.RetinaDisplay);
+	  IniBool(lRead,lIniFile, 'DarkMode',lPrefs.DarkMode);
+	  {$ENDIF}
+	  IniBool(lRead,lIniFile, 'BlackDefaultBackground',lPrefs.BlackDefaultBackground);
+	  //IniBool(lRead,lIniFile, 'MultiPassRendering',lPrefs.MultiPassRendering);
+	  //IniBool(lRead,lIniFile, 'SaveAsObj',lPrefs.SaveAsObj);
+	  IniBool(lRead,lIniFile, 'TracksAreTubes',lPrefs.TracksAreTubes);
+	  IniBool(lRead,lIniFile, 'ZDimIsUp',lPrefs.ZDimIsUp);
+	  IniBool(lRead,lIniFile,'GenerateSmoothCurves',lPrefs.GenerateSmoothCurves);
+	  //IniBool(lRead,lIniFile, 'ShaderForBackgroundOnly',lPrefs.ShaderForBackgroundOnly);
+	  IniBool(lRead,lIniFile, 'CoreTrackDisableDepth',lPrefs.CoreTrackDisableDepth);
+	  IniBool(lRead,lIniFile, 'LoadTrackOnLaunch',lPrefs.LoadTrackOnLaunch);
+	  IniBool(lRead,lIniFile, 'Colorbar',lPrefs.Colorbar);
+	  IniBool(lRead,lIniFile, 'SmoothVoxelwiseData',lPrefs.SmoothVoxelwiseData);
+	  IniBool(lRead,lIniFile, 'ScreenCaptureTransparentBackground',lPrefs.ScreenCaptureTransparentBackground);
+	  IniColor(lRead,lIniFile, 'ObjColor',lPrefs.ObjColor);
+	  IniColor(lRead,lIniFile, 'BackColor',lPrefs.BackColor);
+	  IniStr(lRead, lIniFile, 'PrevTrackname', lPrefs.PrevTrackname);
+	  IniStr(lRead, lIniFile, 'PrevNodename', lPrefs.PrevNodename);
+	  IniStr(lRead, lIniFile, 'PrevOverlayname', lPrefs.PrevOverlayname);
+	  IniStr(lRead,lIniFile,'PrevScript',lPrefs.PrevScript);
+	  IniStrX(lRead,lIniFile,'FontName',lPrefs.FontName);
+	  IniStrX(lRead,lIniFile,'PyLib',lPrefs.PyLib);
+	  IniMRU(lRead,lIniFile,'PrevFilename',lPrefs.PrevFilename, lPrefs);
+	  //IniMRU(lRead,lIniFile,'PrevScriptName',lPrefs.PrevScriptName);
+	  IniRGBA(lRead,lIniFile, 'TextColor',lPrefs.TextColor);
+	  IniRGBA(lRead,lIniFile, 'TextBorder',lPrefs.TextBorder);
+	  IniRGBA(lRead,lIniFile, 'GridAndBorder',lPrefs.GridAndBorder);
+	  //IniUnitRect(lRead,lIniFile, 'ColorBarPos',lPrefs.ColorBarPos);
+	  IniInt(lRead,lIniFile,'TrackTubeSlices',lPrefs.TrackTubeSlices);
+	  IntBound(lPrefs.TrackTubeSlices, 3,13);
+	  IniInt(lRead,lIniFile,'ScreenCaptureZoom',lPrefs.ScreenCaptureZoom);
+	  IntBound(lPrefs.ScreenCaptureZoom, 1,7);
+	  IniInt(lRead,lIniFile,'ColorbarColor',lPrefs.ColorbarColor);
+	  IntBound(lPrefs.ColorbarColor, 0,4);
+	  IniInt(lRead,lIniFile,'ColorBarPosition',lPrefs.ColorBarPosition);
+	  //IniInt(lRead,lIniFile,'ColorbarPosition',lPrefs.ColorbarPosition);
+	  //IntBound(lPrefs.ColorbarPosition, 0,4);
+	  IniInt(lRead,lIniFile,'RenderQuality',lPrefs.RenderQuality);
+	  IniInt(lRead,lIniFile,'SaveAsFormat',lPrefs.SaveAsFormat);
+	  IniInt(lRead,lIniFile,'SaveAsFormatTrack',lPrefs.SaveAsFormatTrack);
+	  IniInt(lRead,lIniFile,'OcclusionAmount',lPrefs.OcclusionAmount);
+	  IniFloat(lRead,lIniFile,'ColorbarSize',lPrefs.ColorbarSize);
+	  if (lPrefs.RenderQuality < kRenderPoor) then lPrefs.RenderQuality:= kRenderPoor;
+	  if (lPrefs.RenderQuality > kRenderBetter) then lPrefs.RenderQuality:= kRenderBetter;
+  except
+  	{$IFDEF Unix}writeln('File permission error: unable to write preferences "'+lFilename+'"'); {$ENDIF}
+  end;
   lIniFile.Free;
   FileMode := fmOpenRead;
 end;
