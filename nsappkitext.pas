@@ -9,6 +9,7 @@ uses
   CocoaAll, LCLType,Classes, SysUtils, Controls, LCLClasses;
 
   procedure setThemeMode(Owner: TComponent; isDarkMode: boolean);
+  function isDarkModeSupported: boolean;
 
 implementation
 
@@ -69,6 +70,12 @@ begin
      UpdateAppearance(Owner, macOSNSAppearanceNameVibrantDark)
   else
       UpdateAppearance(Owner, DefaultAppearance);
+  //
+end;
+
+function isDarkModeSupported: boolean;
+begin
+    result :=  Assigned(NSClassFromString( NSSTR('NSAppearance')));
 end;
 
 end.
