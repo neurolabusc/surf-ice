@@ -71,8 +71,69 @@ TTrack = class
 implementation
 
 {$ifndef isTerminalApp}
-uses mainunit, shaderu, {$IFDEF COREGL} gl_core_3d {$ELSE} gl_legacy_3d {$ENDIF};
+uses {$IFDEF FASTGZ}SynZip, {$ENDIF}mainunit, shaderu, {$IFDEF COREGL} gl_core_3d {$ELSE} gl_legacy_3d {$ENDIF};
+{$else}
+  {$IFDEF FASTGZ}uses SynZip; {$ENDIF}
 {$endif}
+
+{$IFDEF FASTGZ}
+function ExtractGz(fnm: string; var mStream : TMemoryStream; magic: word = 0): boolean;
+//if magic <> 0, then a file that starts with magic will assume to uncompressed
+//if magic = 0, a file will be assumed to be uncompressed if first two bytes are not $8B1F
+var
+	gz: TGZRead;
+        sig: word;
+        F : File Of byte;
+	src : array of byte;
+	cSz : int64; //uncompressed, compressed size
+begin
+	if not fileexists(fnm) then exit(false);
+  	FileMode := fmOpenRead;
+  	Assign (F, fnm);
+  	Reset (F);
+  	cSz := FileSize(F);
+        blockread(F, sig, SizeOf(sig) );
+        seek(F,0);
+        //n.b. GZ header/footer is ALWAYS little-endian
+        {$IFDEF ENDIAN_BIG}
+        sig := Swap(sig);
+        {$ENDIF}
+        if ( ((magic = 0) and (sig <> $8B1F)) or ((magic <> 0) and (sig = magic)) ) then begin //hex: 1F 8B : gzip specific: will reject zlib format
+           Close (F);
+           mStream.LoadFromFile(fnm);
+           exit(true);
+        end;
+  	setlength(src, cSz);
+  	blockread(f, src[0], cSz );
+  	CloseFile(f);
+	result := gz.Init(@src[0], cSz);
+	if not result then begin
+	   src := nil;
+	   exit;
+	end;
+	gz.ToStream(mStream, cSz);
+	src := nil;
+	gz.ZStreamDone;
+end;
+{$ELSE}
+function ExtractGz(fnm: string; var mStream : TMemoryStream; magic: word = 0): boolean;
+const
+     kChunkSize = 65535;
+var
+   zStream : TGZFileStream;
+   bytes : array of byte;
+   i: integer;
+begin
+  zStream := TGZFileStream.create(fnm, gzopenread);
+  result := (zStream <> nil);
+  setlength(bytes, kChunkSize);
+  repeat
+        i := zStream.read(bytes[0],kChunkSize);
+        mStream.Write(bytes[0],i) ;
+  until i < kChunkSize;
+  zStream.Free;
+end;
+{$ENDIF}
 
 procedure TTrack.CenterX;
 var
@@ -1025,16 +1086,12 @@ function TTrack.LoadBfloat(const FileName: string): boolean;
 // http://camino.cs.ucl.ac.uk/index.php?n=Main.Fileformats
 label
    666;
-const
-   kChunkSize = 16384;
 var
-  bytes : array of byte;
   mStream : TMemoryStream;
-  zStream: TGZFileStream;
   ext: string;
-   f: file;
-   flt: array of single;
-   sz, nflt, i, outPos, nVtx, v : integer;
+  f: file;
+  flt: array of single;
+  sz, nflt, i, outPos, nVtx, v : integer;
 begin
      isRebuildList := true;
      result := false;
@@ -1042,13 +1099,7 @@ begin
      FileMode := fmOpenRead;
      if (ext = '.BFLOAT.GZ') then begin
        mStream := TMemoryStream.Create;
-       zStream := TGZFileStream.create(FileName, gzopenread);
-       setlength(bytes, kChunkSize);
-       repeat
-              i := zStream.read(bytes[0],kChunkSize);
-              mStream.Write(bytes[0],i) ;
-       until i < kChunkSize;
-       zStream.Free;
+       ExtractGz(FileName, mStream);
        sz :=  mStream.Size;
        if sz < 5 * sizeof(single) then begin//smallest file 3*N+2 floats
             ShowMessage(format('File too small to be Camino format: %s', [FileName]));
@@ -1091,10 +1142,11 @@ begin
          if (i + (nVtx * 3)) > nflt then begin
            //showmessage(format('%d %d', [nflt, i + (nVtx * 3)]));
            goto 666;
-
          end;
          n_count := n_count + 1;
          tracks[outPos] := asSingle(nVtx); inc(outPos);
+         if (i + (nVtx * 3)) > nflt then
+           goto 666;
          for v := 1 to nVtx do begin
              tracks[outPos] := flt[i]; inc(outPos); inc(i);
              tracks[outPos] := flt[i]; inc(outPos); inc(i);
@@ -1106,7 +1158,7 @@ begin
      Result := true;
      exit;
  666:
-     showmessage('File is not in the Camino Streamline fiber tract format '+filename);
+     showmessage('File is not in the Camino Streamline fiber tract format (maybe FreeSurfer bfloat) '+filename);
      n_count := 0;
      setlength(tracks,0);
 end; //LoadBfloat()
@@ -1460,10 +1512,7 @@ function TTrack.LoadTrk(const FileName: string): boolean;
 // for test of vox2ras https://github.com/neurolabusc/spmScripts/blob/master/nii_makeDTI.m
 label
    666;
-const
-   kChunkSize = 16384;
 var
-  bytes : array of byte;
   str: string;
    fsz, ntracks: int64;
    nVtx32: int32;
@@ -1473,19 +1522,12 @@ var
    pt: TPoint3f;
    vox2mmMat, zoomMat: TMat44;
    mStream: TMemoryStream;
-   zStream : TGZFileStream;
 begin
   isRebuildList := true;
   result := false;
   mStream := TMemoryStream.Create;
   if UpperCase(ExtractFileExt(FileName)) = '.GZ' then begin
-    zStream := TGZFileStream.create(FileName, gzopenread);
-    setlength(bytes, kChunkSize);
-    repeat
-         i := zStream.read(bytes[0],kChunkSize);
-         mStream.Write(bytes[0],i) ;
-    until i < kChunkSize;
-    zStream.Free;
+    ExtractGz(FileName, mStream);
   end else
       mStream.LoadFromFile(FileName);
   fsz :=  mStream.Size;

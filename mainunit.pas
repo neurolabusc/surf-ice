@@ -2616,8 +2616,17 @@ begin
   curvname := changefileext(Filename, '.curv');
   if fileexistsF(curvname) then
      OpenOverlay(curvname);
+  curvname := changefileext(Filename, '.thickness');
+  if fileexistsF(curvname) then
+     OpenOverlay(curvname);
+  curvname := changefileext(Filename, '.area');
+  if fileexistsF(curvname) then
+     OpenOverlay(curvname);
+  //sulc usually similar to curv
+  //curvname := changefileext(Filename, '.sulc');
+  //if fileexistsF(curvname) then
+  //   OpenOverlay(curvname);
   //end;
-
   GLBoxRequestUpdate(nil);
 end;
 
@@ -4989,8 +4998,12 @@ procedure TGLForm1.AboutMenuClick(Sender: TObject);
 const
   kSamp = 36;
 var
-  fpsStr, titleStr, isAtlasStr, TrackStr, MeshStr, str: string;
+  //{$DEFINE TIMEABOUT}
+  {$IFDEF TIMEABOUT}
+  fpsStr: string;
   s: dword;
+  {$ENDIF}
+  titleStr, isAtlasStr, TrackStr, MeshStr, str: string;
   i: integer;
   scale: single;
   origin: TPoint3f;
@@ -5005,6 +5018,7 @@ begin
        TrackStr := 'Spatial Properties Underspecified';
      TrackStr := LineEnding + format('   %s %.4f..%.4f  %.4f..%.4f %.4f..%.4f',[TrackStr, gTrack.mnV.X, gTrack.mxV.X, gTrack.mnV.Y, gTrack.mxV.Y, gTrack.mnV.Z, gTrack.mxV.Z]);
  end;
+ {$IFDEF TIMEABOUT}
  s := gettickcount();
  for i := 1 to kSamp do begin
      gAzimuth := (gAzimuth + 10) mod 360;
@@ -5013,7 +5027,8 @@ begin
  fpsStr := '';
  if (gettickcount<> s) then
     fpsStr := LineEnding+' FPS ' +inttostr(round( (kSamp*1000)/(gettickcount-s)));
-  origin := GetOrigin(scale);
+ {$ENDIF}
+ origin := GetOrigin(scale);
   isAtlasStr := '';
   if (length(gMesh.vertexAtlas) > 0) then isAtlasStr := ' Indexed Atlas ';
   str :=  'Surf Ice '+kVers+' '
@@ -5038,7 +5053,7 @@ begin
            {$ENDIF}
    {$ENDIF}
    +LineEnding+' www.mricro.com :: BSD 2-Clause License (opensource.org/licenses/BSD-2-Clause)'
-   +FPSstr
+   {$IFDEF TIMEABOUT}+FPSstr {$ENDIF}
    +LineEnding+format(' Scale %.4f',[scale])
    +LineEnding+format(' Origin %.4fx%.4fx%.4f',[origin.X, origin.Y, origin.Z])
    +LineEnding+' Mesh Vertices '+inttostr(length(gMesh.vertices))+' Faces '+  inttostr(length(gMesh.faces)) +' Colors '+  inttostr(length(gMesh.vertexRGBA))

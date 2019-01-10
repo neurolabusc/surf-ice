@@ -1,5 +1,5 @@
 REM COMPILE Surf Ice
-cd c:\pas\surfice
+cd D:\pas\surfice
 
 #NO LONGER REQUIRED: we now use glcorearb.pas for OpenGL core
 # copy new version of GLEXT that supports geometry shaders
@@ -9,19 +9,19 @@ cd c:\pas\surfice
 #create core version
 rmdir /S /Q lib
 copy /Y .\optsCore.inc .\opts.inc
-c:\lazarus\lazbuild --cpu=x86_64 -B surfice.lpi
-move /Y "C:\pas\surfice\surfice.exe" "c:\Surf_Ice\surfice.exe"
+d:\lazarus\lazbuild --cpu=x86_64 -B surfice.lpi
+move /Y "D:\pas\surfice\surfice.exe" "D:\neuro\Surf_Ice\surfice.exe"
 
 
 #create legacy version with geometry support
 rmdir /S /Q lib
 copy /Y .\optsCompat.inc .\opts.inc
-c:\lazarus\lazbuild --cpu=x86_64 -B surfice.lpi
-move /Y "C:\pas\surfice\surfice.exe" "c:\Surf_Ice\surficeOld.exe"
+d:\lazarus\lazbuild --cpu=x86_64 -B surfice.lpi
+move /Y "D:\pas\surfice\surfice.exe" "D:\neuro\Surf_Ice\surficeOld.exe"
 
 
-del c:\Surf_Ice\*.ini
-c:\Progra~1\7-Zip\7z a -tzip c:\pas\surfice_windows.zip c:\Surf_Ice
+del d:\neuro\Surf_Ice\*.ini
+c:\Progra~1\7-Zip\7z a -tzip d:\surfice_windows.zip d:\neuro\Surf_Ice
 
 #return to default libraries
 del .\glext.pp

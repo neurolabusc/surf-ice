@@ -1,12 +1,12 @@
 object GLForm1: TGLForm1
-  Left = 253
+  Left = 233
   Height = 684
   Top = 22
-  Width = 1027
+  Width = 1047
   AllowDropFiles = True
   Caption = 'Surf Ice'
   ClientHeight = 684
-  ClientWidth = 1027
+  ClientWidth = 1047
   Menu = MainMenu1
   OnChangeBounds = FormChangeBounds
   OnClose = FormClose
@@ -1518,7 +1518,7 @@ object GLForm1: TGLForm1
     Left = 267
     Height = 684
     Top = 0
-    Width = 454
+    Width = 766
     Align = alClient
     Constraints.MinHeight = 32
     Constraints.MinWidth = 32
@@ -1526,7 +1526,7 @@ object GLForm1: TGLForm1
     TabOrder = 4
   end
   object RightSplitter: TSplitter
-    Left = 721
+    Left = 1033
     Height = 684
     Top = 0
     Width = 6
@@ -1534,14 +1534,14 @@ object GLForm1: TGLForm1
     ResizeAnchor = akRight
   end
   object ScriptPanel: TPanel
-    Left = 727
+    Left = 1039
     Height = 684
     Top = 0
-    Width = 300
+    Width = 8
     Align = alRight
     BevelOuter = bvNone
     ClientHeight = 684
-    ClientWidth = 300
+    ClientWidth = 8
     Constraints.MinWidth = 2
     ParentFont = False
     TabOrder = 0
@@ -1550,11 +1550,11 @@ object GLForm1: TGLForm1
       Left = 0
       Height = 684
       Top = 0
-      Width = 300
+      Width = 8
       Align = alClient
       Caption = 'Scripting'
       ClientHeight = 666
-      ClientWidth = 292
+      ClientWidth = 0
       ParentFont = False
       TabOrder = 0
       OnDblClick = ScriptPanelDblClick
@@ -1562,7 +1562,7 @@ object GLForm1: TGLForm1
         Left = 0
         Height = 460
         Top = 0
-        Width = 292
+        Width = 0
         Align = alClient
         BorderStyle = bsNone
         Lines.Strings = (
@@ -1583,7 +1583,7 @@ object GLForm1: TGLForm1
         Left = 0
         Height = 200
         Top = 466
-        Width = 292
+        Width = 0
         Align = alBottom
         BorderStyle = bsNone
         Lines.Strings = (
@@ -1600,7 +1600,7 @@ object GLForm1: TGLForm1
         Left = 0
         Height = 6
         Top = 460
-        Width = 292
+        Width = 0
         Align = alBottom
         ResizeAnchor = akBottom
       end

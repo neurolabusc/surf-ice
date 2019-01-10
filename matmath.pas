@@ -19,7 +19,6 @@ uses
  function vectorDot (A: TPoint3f; B: TPoint3f): single;
  procedure vectorAdd (var A: TPoint3f; B: TPoint3f);  inline; overload;
  function vectorAdd (A: TPoint3i; B: integer): TPoint3i;  inline; overload;
- procedure matrixEye(var a: TMat33);
  procedure vectorSubtract (var A: TPoint3f; B: TPoint3f);  inline;
  function vectorSubtractF (A: TPoint3f; B: TPoint3f): TPoint3f;  inline;
  procedure minMax(var v, mn, mx: TPoint3f); overload;
@@ -29,6 +28,8 @@ uses
  function vectorSame(pt1, pt2: TPoint3f): boolean;
  function matrixMult(a, b: TMat33): TMat33; overload;
  function matrixMult(a, b: TMat44): TMat44; overload;
+ //function matrixEye: TMat33; overload;
+ function matrixEye: TMat44; overload;
  function matrixSet(a,b,c, d,e,f, g,h,i: single): TMat33; overload;
  function matrixSet(r1c1, r1c2, r1c3, r1c4, r2c1, r2c2, r2c3, r2c4, r3c1, r3c2, r3c3, r3c4: single): TMat44; overload;
  function matrixInvert(a: TMat33): TMat33;
@@ -325,7 +326,7 @@ begin
   end;
 end; // makeCylinderEnd()    *)
 
-procedure matrixEye(var a: TMat33);
+(*procedure matrixEye(var a: TMat33);
 var
    i,j: integer;
 begin
@@ -335,7 +336,7 @@ begin
      a[1,1] := 1.0;
      a[2,2] := 1.0;
      a[3,3] := 1.0;
-end; // matrixEve()
+end; // matrixEve() *)
 
 procedure matrixTranspose(var a: TMat44); overload;
 var
@@ -408,7 +409,11 @@ begin
  result[2,1]:=r2c1; result[2,2]:=r2c2; result[2,3]:=r2c3; result[2,4]:=r2c4;
  result[3,1]:=r3c1; result[3,2]:=r3c2; result[3,3]:=r3c3; result[3,4]:=r3c4;
  result[4,1]:=0; result[4,2]:=0; result[4,3]:=0; result[4,4]:=1;
+end;
 
+function matrixEye: TMat44; overload;
+begin
+     result := matrixSet(1,0,0,0, 0,1,0,0, 0,0,1,0);
 end;
 
 function matrixSet(a,b,c, d,e,f, g,h,i: single): TMat33; overload;
@@ -417,6 +422,11 @@ begin
      result[2,1]:=d; result[2,2]:=e; result[2,3]:=f;
      result[3,1]:=g; result[3,2]:=h; result[3,3]:=i;
 end; // matrixSet()
+
+function matrixEye: TMat33; overload;
+begin
+     result := matrixSet(1,0,0, 0,1,0, 0,0,1);
+end;
 
 function matrixMult(a, b: TMat44): TMat44; overload;
 var i,j: integer;

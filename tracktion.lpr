@@ -569,7 +569,7 @@ begin
   showmsg('Examples');
   {$IFDEF UNIX}
    showmsg(' '+xname+' -t 0.2 -o "~/out/fibers.vtk" "~/img_V1.nii.gz"');
-   showmsg(' '+xname+' -w BA44.nii -w BA44.nii "~/img_V1.nii"');
+   showmsg(' '+xname+' -w BA44.nii -w BA3.nii "~/img_V1.nii"');
    {$IFDEF BEDPOST}
    showmsg(' '+xname+' dyads1.nii.gz"');
    {$ENDIF}

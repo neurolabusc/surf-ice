@@ -19,5 +19,8 @@ begin
   Application.CreateForm(TGLForm1, GLForm1);
   ConstrainTrackBars();
   Application.Run;
+  //Windows: if you get an error "Can't find object file" you can copy the 'static' folder from
+  //  https://github.com/synopse/mORMot
+  //Alternatively, disable "FastGZ" in opts.inc
 end.
 
