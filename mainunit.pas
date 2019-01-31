@@ -31,6 +31,9 @@ LayerAlphaTrack: TTrackBar;
 LayerOptionsBtn: TButton;
  LeftSplitter: TSplitter;
  CenterPanel: TPanel;
+ NextOverlayMenu: TMenuItem;
+ PrevOverlayMenu: TMenuItem;
+ OverlaySep: TMenuItem;
  overlayload1: TMenuItem;
  overlayvisible1: TMenuItem;
   PSScript1: TPSScript;
@@ -247,7 +250,7 @@ wait1: TMenuItem;
     LightElevTrack: TTrackBar;
     ClipElevTrack: TTrackBar;
     TrackBox: TGroupBox;
-    Label2: TLabel;
+    LightLabel: TLabel;
     DepthLabel: TLabel;
     AzimuthLabel: TLabel;
     ElevationLabel: TLabel;
@@ -301,6 +304,7 @@ ScriptOpenDialog: TOpenDialog;
 LayerPopup: TPopupMenu;
 LayerInvertColorsMenu: TMenuItem;
 LayerShowHeaderMenu: TMenuItem;
+procedure CenterPanelClick(Sender: TObject);
 procedure LayerListClickCheck(Sender: TObject);
 procedure LayerPopupPopup(Sender: TObject);
 procedure LayerInvertColorsMenuClick(Sender: TObject);
@@ -317,6 +321,7 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
       var Accept: Boolean);
     procedure LeftSplitterChangeBounds(Sender: TObject);
     procedure LeftSplitterMoved(Sender: TObject);
+    procedure PrevOverlayMenuClick(Sender: TObject);
     procedure UpdateLayerBox(NewLayers: boolean);
 
 	procedure ScriptingNewMenuClick(Sender: TObject);
@@ -1930,6 +1935,11 @@ begin
   LayerWidgetChange(sender);
 end;
 
+procedure TGLForm1.CenterPanelClick(Sender: TObject);
+begin
+
+end;
+
 procedure TGLForm1.LayerShowHeaderMenuClick(Sender: TObject);
 var
    i: integer;
@@ -1955,14 +1965,15 @@ begin
  gMesh.Overlay[i].WindowScaledMin := strtofloatdef(LayerDarkEdit.Caption, gMesh.Overlay[i].WindowScaledMin);
  gMesh.Overlay[i].WindowScaledMax := strtofloatdef(LayerBrightEdit.Caption, gMesh.Overlay[i].WindowScaledMax);
  gMesh.Overlay[i].LUTvisible := LayerAlphaTrack.position;
-  if (gMesh.Overlay[i].LUTindex <> LayerColorDrop.ItemIndex) then begin
+ PrevOverlayMenu.Enabled := (gMesh.Overlay[i].volumes > 1);
+ NextOverlayMenu.Enabled := (gMesh.Overlay[i].volumes > 1);
+ if (gMesh.Overlay[i].LUTindex <> LayerColorDrop.ItemIndex) then begin
    //gMesh.Overlay[i].LUTindex := LayerColorDrop.ItemIndex;
    //UpdateLUT(intRow,GLForm1.LUTdrop.ItemIndex,true);
    UpdateLUT(i, LayerColorDrop.ItemIndex);
-
-  end;
-  UpdateImageIntensity;
-  OverlayTimerStart;
+ end;
+ UpdateImageIntensity;
+ OverlayTimerStart;
 end;
 
 procedure TGLForm1.LayerOptionsBtnClick(Sender: TObject);
@@ -2013,6 +2024,25 @@ begin
   //caption := inttostr(random(888));
 end;
 
+procedure TGLForm1.PrevOverlayMenuClick(Sender: TObject);
+var
+  i: integer;
+begin
+  i := LayerList.ItemIndex+ 1;
+  if (i < 1) or (i > gMesh.OpenOverlays) then exit;
+  if (Sender as TMenuItem).tag = 1 then
+     gMesh.Overlay[i].CurrentVolume := gMesh.Overlay[i].CurrentVolume + 1
+  else
+     gMesh.Overlay[i].CurrentVolume := gMesh.Overlay[i].CurrentVolume - 1;
+  if gMesh.Overlay[i].CurrentVolume > gMesh.Overlay[i].Volumes then
+     gMesh.Overlay[i].CurrentVolume := 1;
+  if gMesh.Overlay[i].CurrentVolume < 1 then
+     gMesh.Overlay[i].CurrentVolume := gMesh.Overlay[i].Volumes;
+  UpdateLUT(i, LayerColorDrop.ItemIndex);
+  LayerWidgetChange(nil);
+  UpdateLayerBox(true);
+end;
+
 procedure TGLForm1.LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
   //caption := format('%d %d', [ViewGPU1.width, ViewGPU1.clientWidth]);
@@ -2030,7 +2060,10 @@ begin
         if  gMesh.OpenOverlays < 1 then exit;
         for i := 1 to  gMesh.OpenOverlays do begin
             s := gMesh.Overlay[i].FileName;
-            LayerList.Items.add(s);
+            if gMesh.Overlay[i].volumes > 1 then
+                 LayerList.Items.add(format('%d/%d: %s',[gMesh.Overlay[i].CurrentVolume, gMesh.Overlay[i].volumes, s]))
+            else
+                LayerList.Items.add(s);
             LayerList.Checked[i-1] := true;
         end;
         LayerList.ItemIndex := gMesh.OpenOverlays - 1;
@@ -2040,6 +2073,8 @@ begin
      if (gMesh.OpenOverlays < 1) then exit;
      i := LayerList.ItemIndex + 1;
      if (i < 1) or (i > gMesh.OpenOverlays) then exit;
+      PrevOverlayMenu.Enabled := (gMesh.Overlay[i].volumes > 1);
+      NextOverlayMenu.Enabled := (gMesh.Overlay[i].volumes > 1);
      isAtlas := (gMesh.Overlay[i].atlasMaxIndex > 0);
      LayerDarkEdit.Enabled := not isAtlas;
      LayerBrightEdit.Enabled := not isAtlas;
@@ -2572,7 +2607,7 @@ begin
      exit;
   end;
   //ext := UpperCase(ExtractFileExt(Filename));
-  if (ext = '.NII') or (ext = '.HDR')  or (ext = '.NII.GZ') or (ext = '.DPV') or (ext = '.ANNOT') or (ext = '.W') or (ext = '.CURV')  then begin
+  if (ext = '.ANNOT') or (ext = '.MGH') or (ext = '.MGZ')  or (ext = '.NII') or (ext = '.HDR')  or (ext = '.NII.GZ') or (ext = '.DPV') or (ext = '.ANNOT') or (ext = '.W') or (ext = '.CURV')  then begin
     OpenOverlay(Filename);
     exit;
   end else if (ext = '.VTK') and (not isVtkMesh (Filename)) then begin
@@ -4886,9 +4921,10 @@ begin
        showmessage('File already exists '+fnm);
        exit;
     end;
-    if (length(gMesh.vertexRGBA) > 0) then
-    	GenerateCurvRGB(fnm, gMesh.vertexRGBA, length(gMesh.faces))
-    else
+    //1/2019: next lines cause artifacts if .annot file open on mesh - not sure of intention
+    //if (length(gMesh.vertexRGBA) > 0) then
+    //   GenerateCurvRGB(fnm, gMesh.vertexRGBA, length(gMesh.faces))
+    //else
     	GenerateCurv(fnm, gMesh.faces, gMesh.vertices, gPrefs.GenerateSmoothCurves);
     OpenOverlay(fnm);
     if isTemp then

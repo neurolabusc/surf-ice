@@ -4,7 +4,7 @@ unit nifti_loader;
 {$Include opts.inc} //FOREIGNVOL
 interface
 uses
-  {$IFDEF FOREIGNVOL}nifti_foreign, {$ENDIF} {$ifndef isTerminalApp}  dialogs, {$endif}
+  nifti_foreign, {$ifndef isTerminalApp}  dialogs, {$endif}
   Classes, SysUtils, nifti_types, define_types,  zstream;
 
 const
@@ -39,6 +39,7 @@ TNIFTI = class
     procedure Close;
     Destructor  Destroy; override;
 end;
+function readVoxHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
 
 implementation
 
@@ -166,7 +167,7 @@ var
    Xfrac1, Yfrac1, Zfrac1, Xfrac0, Yfrac0, Zfrac0, Weight : single;
    vx, sliceVx: integer;
 begin
-   if length(img) < 1 then exit;
+   if length(img) < 1 then exit(0);
    result := 0;
    Xvox := Xmm*invMat[1,1] + Xmm*invMat[1,2] + Xmm*invMat[1,3] + invMat[1,4];
    Yvox := Ymm*invMat[2,1] + Ymm*invMat[2,2] + Ymm*invMat[2,3] + invMat[2,4];
@@ -390,6 +391,99 @@ begin
   blockread(f, result, sizeof(TNIfTIhdr) ); //since these files do not have a file extension, check first 8 bytes "0xFFFFFE creat"
   CloseFile(f);
 end;
+
+function Nifti2to1(h2 : TNIFTI2hdr): TNIFTIhdr;
+type
+  tmagic = packed record
+    case byte of
+      0:(b1,b2,b3,b4 : ansichar); //word is 16 bit
+      1:(l: longint);
+  end;
+var
+  h1 : TNIFTIhdr;
+  i: integer;
+  magic: tmagic;
+begin
+  NII_Clear(h1);
+  magic.b1 := h2.magic[1];
+  magic.b2 := h2.magic[2];
+  magic.b3 := h2.magic[3];
+  magic.b4 := h2.magic[4];
+  h1.magic := magic.l;
+  h1.dim_info := h2.dim_info; //MRI slice order
+  for i := 0 to 7 do
+   h1.dim[i] := h2.dim[i];
+  h1.intent_p1 := h2.intent_p1;
+  h1.intent_p2 := h2.intent_p2;
+  h1.intent_p3 := h2.intent_p3;
+  h1.intent_code := h2.intent_code;
+  if (h2.intent_code >= 3000) and (h2.intent_code <= 3012) then begin //https://www.nitrc.org/forum/attachment.php?attachid=342&group_id=454&forum_id=1955
+     showmessage('NIfTI2 image has CIfTI intent code ('+inttostr(h2.intent_code)+'): open as an overlay with Surfice');
+  end;
+  h1.datatype := h2.datatype;
+  h1.bitpix := h2.bitpix;
+  h1.slice_start := h2.slice_start;
+  for i := 0 to 7 do
+   h1.pixdim[i] := h2.pixdim[i];
+  h1.vox_offset := h2.vox_offset;
+  h1.scl_slope := h2.scl_slope;
+  h1.slice_end := h2.slice_end;
+  h1.slice_code := h2.slice_code; //e.g. ascending
+  h1.cal_min:= h2.cal_min;
+  h1.cal_max:= h2.cal_max;
+  h1.xyzt_units := h2.xyzt_units; //e.g. mm and sec
+  h1.slice_duration := h2.slice_duration; //time for one slice
+  h1.toffset := h2.toffset; //time axis to shift
+  for i := 1 to 80 do
+   h1.descrip[i] := h2.descrip[i];
+  for i := 1 to 24 do
+   h1.aux_file[i] := h2.aux_file[i];
+  h1.qform_code := h2.qform_code;
+  h1.sform_code := h2.sform_code;
+  h1.quatern_b := h2.quatern_b;
+  h1.quatern_c := h2.quatern_c;
+  h1.quatern_d := h2.quatern_d;
+  h1.qoffset_x := h2.qoffset_x;
+  h1.qoffset_y := h2.qoffset_y;
+  h1.qoffset_z := h2.qoffset_z;
+  for i := 0 to 3 do begin
+     h1.srow_x[i] := h2.srow_x[i];
+     h1.srow_y[i] := h2.srow_y[i];
+     h1.srow_z[i] := h2.srow_z[i];
+  end;
+  for i := 1 to 16 do
+     h1.intent_name[i] := h2.intent_name[i];
+  h1.HdrSz := 348;
+  result := h1;
+end;
+
+function ReadHdr2Gz(const FileName: string; var xDim64: int64): TNIfTIhdr;
+var
+   decomp: TGZFileStream;
+   h2: TNIFTI2hdr;
+begin
+     decomp := TGZFileStream.create(FileName, gzopenread);
+     decomp.Read(h2, sizeof(TNIFTI2hdr));
+     decomp.free;
+     xDim64 := h2.Dim[1];
+     result := Nifti2to1(h2);
+end;
+
+function ReadHdr2(const FileName: string; var xDim64: int64): TNIfTIhdr;
+var
+   f: File;
+   h2: TNIFTI2hdr;
+begin
+  FileMode := fmOpenRead;
+  AssignFile(f, FileName);
+  FileMode := fmOpenRead;
+  Reset(f,1);
+  blockread(f, h2, sizeof(TNIFTI2hdr) ); //since these files do not have a file extension, check first 8 bytes "0xFFFFFE creat"
+  CloseFile(f);
+  xDim64 := h2.Dim[1];
+  result := Nifti2to1(h2);
+end;
+
 
 function FixDataType (var lHdr: TNIFTIhdr): boolean;
 var
@@ -630,13 +724,64 @@ begin
        lImg[i] := lImg[i]/lTemp01[i];
 end;
 
+//function readVoxHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
+function readVoxHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
+var
+   ext, hdrName, imgName: string;
+begin
+    result := false;
+    swapEndian := false; //assume native endian
+    gzBytes := K_gzBytes_headerAndImageUncompressed;
+     if not FileExists(fname) then exit;
+     ext := UpperCase(ExtractFileExt(fname));
+     imgName := fname;
+     hdrName := fname;
+     if (ext = '.GZ') then begin
+        nhdr := ReadHdrGz(fname);
+        xDim64 := nhdr.Dim[1];
+        gzBytes := K_gzBytes_headerAndImageCompressed;
+     end else if ((ext = '.NII') or (ext = '.HDR') or (ext = '.IMG')) then begin
+        if (ext = '.IMG') then
+           hdrName := ChangeFileExt(fname, '.hdr')
+        else if ext = '.HDR' then
+            imgName := ChangeFileExt(fname, '.img');
+        nhdr := ReadHdr(hdrName);
+        xDim64 := nhdr.Dim[1];
+     end else begin
+       if not readForeignHeader (imgName, nhdr, gzBytes, swapEndian, xDim64) then exit;
+     end;
+     //NIfTI2
+     if (nhdr.HdrSz = SizeOf (TNIFTI2hdr)) then begin
+        if (ext = '.GZ') then
+           nhdr := ReadHdr2Gz(fname, xDim64)
+        else
+            nhdr := ReadHdr2(fname, xDim64);
+     end;
+     if sizeof(TNIfTIhdr) <> nhdr.HdrSz then begin
+       NIFTIhdr_SwapBytes(nhdr);
+       if (nhdr.HdrSz = SizeOf (TNIFTI2hdr)) then begin
+          {$IFDEF ENDIAN_LITTLE}
+          showmessage('Unable to read big-endian NIfTI 2 headers.');
+          {$ELSE}
+          showmessage('Unable to read little-endian NIfTI 2 headers.');
+          {$ENDIF}
+       end;
+       swapEndian := true;
+       xDim64 := nhdr.Dim[1];
+     end;
+     if sizeof(TNIfTIhdr) <> nhdr.HdrSz then
+        exit; //not a valid nifti header
+     if not FixDataType (nhdr) then exit;
+     result := true;
+end;
+
 function TNIFTI.LoadFromFile(const FileName: string; smoothMethod: integer): boolean; //smoothMethod is one of kNiftiSmooth...  options
 var
    ext, hdrName, imgName: string;
-   gzFlag : int64;
+   gzFlag, xDim64 : int64;
    isSwap: boolean;
 begin
-    result := false;
+    (*result := false;
     isSwap := false; //assume native endian
     gzFlag := K_gzBytes_headerAndImageUncompressed;
      if not FileExists(FileName) then exit;
@@ -659,15 +804,33 @@ begin
          exit;
        {$ENDIF}
      end;
+     if (hdr.HdrSz = SizeOf (TNIFTI2hdr)) then begin
+        if (ext = '.GZ') then
+           hdr := ReadHdr2Gz(FileName, xDim64)
+        else
+            hdr := ReadHdr2(FileName, xDim64);
+
+     end;
      if sizeof(TNIfTIhdr) <> hdr.HdrSz then begin
         NIFTIhdr_SwapBytes(hdr);
+        if (hdr.HdrSz = SizeOf (TNIFTI2hdr)) then begin
+           {$IFDEF ENDIAN_LITTLE}
+           showmessage('Unable to read big-endian NIfTI 2 headers.');
+           {$ELSE}
+           showmessage('Unable to read little-endian NIfTI 2 headers.');
+           {$ENDIF}
+        end;
         isSwap := true;
      end;
+
      if sizeof(TNIfTIhdr) <> hdr.HdrSz then
         exit; //not a valid nifti header
      if not FixDataType (hdr) then exit;
-
-     if not ReadImg(imgName, isSwap, gzFlag) then exit;
+     *)
+     imgName := FileName;
+     if not readVoxHeader (imgName, hdr, gzFlag, isSwap, xDim64) then
+       exit(false);
+     if not ReadImg(imgName, isSwap, gzFlag) then exit(false);
      setMatrix;
      if smoothMethod = kNiftiSmoothMaskZero  then
         SmoothFWHM2VoxIgnoreZeros (img,  hdr.dim[1],hdr.dim[2],hdr.dim[3])

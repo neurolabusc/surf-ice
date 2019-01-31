@@ -6,7 +6,7 @@ interface
 //{$DEFINE TIMER}
 {$DEFINE TREFOIL} //use Trefoil Knot as default object (instead of pyramid)
 uses
-
+  nifti_foreign,
   {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
   {$IFDEF CTM} ctm_loader, {$ENDIF}
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, strutils, DateUtils,
@@ -83,6 +83,7 @@ type
     procedure SetDescriptives;
     {$IFDEF TREFOIL} procedure MakeTrefoil; {$ENDIF}
     procedure MakeSphere;
+    function SetLutIndex(layer:integer): integer;
     procedure BuildListCore(Clr: TRGBA; var f: TFaces; var v: TVertices; var vtxRGBA: TVertexRGBA);
     procedure BuildListPartialAtlas(Clr: TRGBA; vtxRGBA: TVertexRGBA);
     procedure BuildList(Clr: TRGBA);
@@ -105,6 +106,7 @@ type
     function LoadLwo(const FileName: string): boolean;
     function LoadMesh(const FileName: string): boolean;
     function LoadMeshAscii(const FileName: string): boolean;
+    function LoadVoxel2Vertex(const FileName: string; lOverlayIndex: integer): boolean;
     function LoadMs3d(const FileName: string): boolean;
     //function LoadVbo(const FileName: string): boolean;
     function LoadMz3(const FileName: string; lOverlayIndex : integer): boolean;
@@ -258,6 +260,7 @@ var
   vRGBA, vRGBAmx :TVertexRGBA;
   vNumNeighbor: array of integer;
   vSumRGBBA: array of TPoint4f;
+  isCurvLayer: boolean;
   isOverlayPainting : boolean = false;
 begin
   if (length(f) < 1) or (length(v) < 3) then exit;
@@ -296,7 +299,8 @@ begin
           for i := 0 to (length(v)-1) do
               vRGBAmx[i] := rgb0;
           for c :=  OpenOverlays downto 1 do begin
-             volInc :=  length(v) *  (overlay[c].currentVolume - 1);
+            if isFreeSurferLUT(overlay[c].LUTindex) then continue; //curve files ALWAYs darken
+            volInc :=  length(v) *  (overlay[c].currentVolume - 1);
             if (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then begin
                if overlay[c].LUTvisible <> kLUTopaque then
                   translucent := 2 //if translucent, halve alpha
@@ -314,11 +318,38 @@ begin
                    rgb.A := rgb.A div translucent;
                    vRGBAmx[i] := maxRGBA(vRGBAmx[i], rgb);
                end; //for i
+
             end; //if visible
           end; //for c
+          //next curve files
+          for c :=  OpenOverlays downto 1 do begin
+            if not isFreeSurferLUT(overlay[c].LUTindex) then continue; //only curve files
+            if (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then begin
+               if overlay[c].LUTvisible <> kLUTopaque then
+                  translucent := 2 //if translucent, halve alpha
+               else
+                   translucent := 1;
+               if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
+                  mn := overlay[c].windowScaledMin;
+                  mx := overlay[c].windowScaledMax;
+               end else begin
+                   mx := overlay[c].windowScaledMin;
+                   mn := overlay[c].windowScaledMax;
+               end;
+               volInc :=  length(v) *  (overlay[c].currentVolume - 1);
+
+               for i := 0 to (length(v)-1) do begin
+                   rgb := inten2rgb(overlay[c].intensity[i+volInc], mn, mx, overlay[c].LUT);
+                   rgb.A := rgb.A div translucent;
+                   vRGBA[i] := blendRGBA(vRGBA[i], rgb);
+               end; //for i
+            end; //if visible
+          end;  //for c
+          //finally composite
+
           for i := 0 to (length(v)-1) do
               vRGBA[i] := blendRGBA(vRGBA[i],vRGBAmx[i]);
-        end else begin
+        end else begin //not additive: mix overlays
             for c :=  OpenOverlays downto 1 do begin
               if (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then begin
                  if overlay[c].LUTvisible <> kLUTopaque then
@@ -2903,6 +2934,21 @@ begin
      CloseFile(f);
 end;
 
+function KeyString(key, str: string): string;
+// KeyStringInt('ExternalFileName', 'ExternalFileName="beta_0002.dat"') returns beta_0002.dat
+var
+   s, e: integer;
+begin
+     result := '';
+     s := pos(key, Str);
+     if s < 1 then exit;
+     s := posEx('"', Str, s);
+     if s < 1 then exit;
+     e := posEx('"', Str, s+1);
+     if (e < 1) then exit;
+     result := Copy(Str, s+1, e-s-1);
+end;  // KeyStringInt()
+
 function KeyStringInt(key, str: string): integer;
 // KeyStringInt('Dim0', 'Dim0="5124"') returns 5123
 var
@@ -2914,8 +2960,9 @@ begin
      if s < 1 then exit;
      s := posEx('"', Str, s);
      if s < 1 then exit;
-     e := posEx('"', Str, s+2);
+     e := posEx('"', Str, s+1);
      if (e < 1) then exit;
+     if (e-s) = 1 then exit; // ExternalFileOffset="" -> 0
      txt := Copy(Str, s+1, e-s-1);
      result := StrToIntDef(txt,0);
 end;  // KeyStringInt()
@@ -3423,12 +3470,13 @@ var
   mat: TMat44;
   f: file;
   labelTable : TGiiLabelArray;
-  Str, Hdr, debase64: string;
+  fx : File Of byte;
+  surfaceID, Str, Hdr, debase64,externalFileName, externalFilePath: string;
   dat : TLongIntArray;
   s: single;
-  volInc, i, j, k, szExpected, szRead, matStart, matEnd,  daStart, dhEnd, daEnd, ddStart,ddEnd, Dim0, Dim1, nOverlays: integer;
-  isCustomMat,
-  isRGBA, isOverlay, isAscii, isVertColor, isInt32, isFloat32, isBase64, isBase64Gz, isLEndian, isFace, isVert, isTransposed: boolean;
+  externalFileOffset, volInc, i, j, k, szExpected, szRead, matStart, matEnd,  daStart, dhEnd, daEnd, ddStart,ddEnd, Dim0, Dim1, nOverlays: integer;
+  isCustomMat, isBinary, isRGBA, isOverlay, isAscii, isVertColor, isInt32, isFloat32,
+  isBase64, isBase64Gz, isLEndian, isFace, isVert, isTransposed: boolean;
 begin
   if (lOverlayIndex = 0) then begin
      setlength(faces, 0);
@@ -3452,6 +3500,15 @@ begin
   matEnd := -1;
   mat := matrixEye();
   isCustomMat := false;
+  surfaceID := '';
+  ddStart := pos('<Name><![CDATA[SurfaceID]]></Name>', str);
+  if ddStart > 0 then ddStart := pos('<Value><![CDATA[', str);
+  if (ddStart > 0) then begin
+     ddStart := ddStart + 17;
+     ddEnd := posEx(']', Str, ddStart); // data end
+     if ddEnd > ddStart then
+        surfaceID := Copy(Str, ddStart, ddEnd-ddStart);
+  end;
   while daStart > 0 do begin //read each dataArray
     isRGBA := false;
     dhEnd := posEx('>', Str, daStart); // header end
@@ -3479,8 +3536,12 @@ begin
     isAscii :=  pos('Encoding="ASCII"', Hdr) > 0;
     isBase64Gz :=  pos('Encoding="GZipBase64Binary"', Hdr) > 0;
     isBase64 :=  pos('Encoding="Base64Binary"', Hdr) > 0;
+    isBinary := pos('Encoding="ExternalFileBinary"', Hdr) > 0;
     Dim0 := KeyStringInt('Dim0', Hdr);
     Dim1 := KeyStringInt('Dim1', Hdr);
+    externalFileName := '';
+    externalFileName := KeyString('ExternalFileName', Hdr);
+    externalFileOffset := KeyStringInt('ExternalFileOffset', Hdr);
     isInt32 :=  pos('DataType="NIFTI_TYPE_INT32"', Hdr) > 0;
     if not isInt32 then
        isInt32 :=  pos('DataType="NIFTI_TYPE_UINT32"', Hdr) > 0;
@@ -3489,13 +3550,6 @@ begin
     isVert := pos('Intent="NIFTI_INTENT_POINTSET"', Hdr) > 0; //vertices
     isVertColor := pos('Intent="NIFTI_INTENT_LABEL"', Hdr) > 0; //vertex colors
     isOverlay :=  pos('Intent="NIFTI_INTENT_NONE"', Hdr) > 0; //??? Lets hope this is a fMRI statistical map
-
-    (*if (isOverlay) and (Dim1 = 4) then begin
-       isVertColor := true;
-       isOverlay := true;
-       isRGBA := true;
-       isVert := true;
-    end;*)
     if (pos('NIFTI_INTENT_RGBA_VECTOR"', Hdr) > 0) then begin
        isVertColor := true;
        isOverlay := true;
@@ -3526,6 +3580,8 @@ begin
     //if (isOverlay) then showmessage(format('%d %d', [length(vertices), Dim0]));
     if (isOverlay) and (Dim0 <> length(vertices)) and (length(vertices) > 0) then begin
        Showmessage(format('GIFTI overlay has a different number of vertices than the background mesh (%d vs %d)',[Dim0 , length(vertices)]));
+       if surfaceID <> '' then
+          Showmessage('Hint: first open the background mesh '+ surfaceID);
        goto 666;
     end;
     if (isAscii) and ((isVert) or (isOverlay)  or (isVertColor) or (isFace)) then begin
@@ -3583,18 +3639,42 @@ begin
     end; //ascii
     if ((isVert) and (isFloat32) and (Dim1 = 3)) or ((lOverlayIndex <> 0) and (lOverlayItem = nOverlays) and (isOverlay) and (isFloat32) and (Dim1 >= 1))
       or ((isVertColor) and (isFloat32) and ((Dim1 = 4) or (Dim1 = 3)))  or ((isVertColor) and (isInt32) and (Dim1 = 1)) or ((isFace) and (isInt32) and (Dim1 = 3)) then begin
-       if  ((isBase64) or (isBase64Gz))  and (Dim0 > 0) and (ddStart > 6) and (ddEnd > ddStart) then begin
-        debase64 :=  DecodeStringBase64(Copy(Str, ddStart, ddEnd-ddStart)); //raw GZ binary, see  http://lazarus-ccr.sourceforge.net/docs/fcl/base64/decodestringbase64.html
-        if (not isRGBA) and (Dim1 <> 3) and (isVertColor) and (length(labelTable) < 1) then begin
-           showmessage('Error found Intent="NIFTI_INTENT_LABEL" without a "<LabelTable>"');
-           goto 666;
-        end;
-        if (length(debase64) < 4)  then begin
-           showmessage('Impossibly small deflated stream');
-           goto 666;
-        end;
-        szExpected :=  4 * Dim0 * Dim1;
-        if isBase64Gz then begin
+       if  ((externalFileName <> '') or (isBase64) or (isBase64Gz))  and (Dim0 > 0) and ((externalFileName <> '') or ((ddStart > 6) and (ddEnd > ddStart))) then begin
+         if externalFileName = '' then begin
+           debase64 :=  DecodeStringBase64(Copy(Str, ddStart, ddEnd-ddStart)); //raw GZ binary, see  http://lazarus-ccr.sourceforge.net/docs/fcl/base64/decodestringbase64.html
+           if (not isRGBA) and (Dim1 <> 3) and (isVertColor) and (length(labelTable) < 1) then begin
+             showmessage('Error found Intent="NIFTI_INTENT_LABEL" without a "<LabelTable>"');
+             goto 666;
+          end;
+          if (length(debase64) < 4)  then begin
+             showmessage('Impossibly small deflated stream');
+             goto 666;
+          end;
+       end;
+       szExpected :=  4 * Dim0 * Dim1;
+       if externalFileName <> '' then begin
+          if not (isBinary) then begin
+              showmessage('Unknown encoding style for external GIfTI file');
+              goto 666;
+          end;
+          externalFilePath := externalFileName;
+          if not fileexists(externalFilePath) then
+             externalFilePath := extractfilepath(FileName)+ externalFileName;
+          if not fileexists(externalFilePath) then
+             externalFilePath := extractfilepath(FileName)+ extractfilename(externalFileName);
+          if not fileexists(externalFilePath) then begin
+            showmessage('Unable to find '+externalFilePath);
+            goto 666;
+          end;
+          szRead := Dim0 * Dim1 * 4;
+          setlength(dat, Dim0 * Dim1); //check
+          Assign (fx, externalFilePath);
+          Reset (fx);
+          seek(fx,externalFileOffset);
+          blockread(fx, dat[0], Dim0 * Dim1 * 4 );
+          CloseFile(fx);
+           //ExternalFileName
+        end else if isBase64Gz then begin
           if (ord(debase64[1]) <> $78) then begin
             showmessage('Deflate compressed stream should begin with 0x78, not '+inttohex(ord(debase64[1]), 2));
             goto 666;
@@ -3684,7 +3764,7 @@ begin
                end;
              end;
           end else if (isOverlay) then begin
-              {$DEFINE ONLY1VOL}
+              //{$DEFINE ONLY1VOL}
               {$IFDEF ONLY1VOL}
               setlength(overlay[lOverlayIndex].intensity, length(vertices));
               j := 0;
@@ -4019,17 +4099,21 @@ begin
   if not result then showmessage('Error '+eStr+ ': '+FileName);
 end; //LoadPrwm()
 
-function LoadMz3Core(const FileName: string; var Faces: TFaces; var Vertices: TVertices; var vertexRGBA: TVertexRGBA; var intensity: TFloats; var vertexAtlas: TInts; var atlasMaxIndex: integer): boolean;
+function LoadMz3Core(const FileName: string; var Faces: TFaces; var Vertices: TVertices; var vertexRGBA: TVertexRGBA; var intensity: TFloats; var vertexAtlas: TInts; var atlasMaxIndex: integer; nVertBackground: integer = 0): boolean;
 const
  kMagic =  23117; //"MZ"
  kChunkSize = 16384;
 label 666;
 var
-  i: integer;
+  i, j: integer;
+  s: single;
   Magic, Attr: uint16;
   nFace, nVert, nSkip: uint32;
-  {$IFDEF SwizzleMZ}isSwizzle,{$ENDIF}
-  isFace, isVert, isRGBA, isScalar: boolean;
+  intensityDoubles: TDoubles;
+  {$IFDEF MTX}
+  mat: Tmat44;
+  isMatrix, {$ENDIF}
+  isFace, isVert, isRGBA, isScalar, isDoubleScalar: boolean;
   mStream : TMemoryStream;
 begin
      result := false;
@@ -4056,46 +4140,68 @@ begin
      isVert := (Attr and 2) > 0;
      isRGBA := (Attr and 4) > 0;
      isScalar := (Attr and 8) > 0;
-     {$IFDEF SwizzleMZ}isSwizzle := (Attr and 16) > 0;{$ENDIF}
+     isDoubleScalar := (Attr and 16) > 0;
+     {$IFDEF MTX}isMatrix := (Attr and 32) > 0;
+     if (Attr > 63) then begin
+     {$ELSE}
      if (Attr > 31) then begin
+     {$ENDIF}
         showmessage('Unsupported future format '+ inttostr(Attr));
         goto 666;
      end;
+     if (isScalar and isDoubleScalar) then begin
+        showmessage('Broken or Unsupported future format '+ inttostr(Attr));
+        goto 666;
+     end;
      if (nFace = 0) and (isFace) then goto 666;
+     if (not isVert) and (nVert = 0) then
+        nVert := nVertBackground;
      if (nVert = 0) and ((isVert) or (isRGBA) or (isScalar) ) then goto 666;
      if nSkip > 0 then
         mStream.Seek(nSkip, soFromCurrent);
      result := true;
+     {$IFDEF MTX}
+     mat := matrixEye();
+     if isMatrix then begin
+        for i := 1 to 4 do
+           for j := 1 to 4 do begin
+               mStream.Read(s,4);
+               mat[i,j] := s;
+           end;
+     end;
+     {$ENDIF}
      if isFace then begin
         setlength(Faces,  nFace);
-        {$IFDEF SwizzleMZ}if isSwizzle then
-            ReadSwizzle(mStream, addr(Faces[0]), nFace * 3 * sizeof(int32))
-        else {$ENDIF}
             mStream.Read(Faces[0], nFace * 3 * sizeof(int32));
      end;
      if isVert then begin
         setlength(Vertices,  nVert);
-        {$IFDEF SwizzleMZ}if isSwizzle then
-            ReadSwizzle(mStream, addr(Vertices[0]), nVert * 3 * sizeof(single))
-        else  {$ENDIF}
-            mStream.Read(Vertices[0], nVert * 3 * sizeof(single));
+        mStream.Read(Vertices[0], nVert * 3 * sizeof(single));
      end;
      if isRGBA then begin
         setlength(vertexRGBA, nVert);
-        {$IFDEF SwizzleMZ}if isSwizzle then
-            ReadSwizzle(mStream, addr(vertexRGBA[0]), nVert * 4 * sizeof(byte))
-        else {$ENDIF}
-            mStream.Read(vertexRGBA[0], nVert * 4 * sizeof(byte));
+        mStream.Read(vertexRGBA[0], nVert * 4 * sizeof(byte));
         if isScalar then
            for i := 1 to (nVert -1) do
                vertexRGBA[i].A := 255;
      end;
      if isScalar then begin
-        setlength(intensity, nVert);
-        {$IFDEF SwizzleMZ}if isSwizzle then
-            ReadSwizzle(mStream, addr(intensity[0]), nVert * sizeof(single))
-        else {$ENDIF}
-            mStream.Read(intensity[0], nVert * sizeof(single));
+       j := (mStream.Size - mStream.Position) div (nVert * sizeof(single));
+       if j >= 1 then begin
+          setlength(intensity, j * nVert);
+          mStream.Read(intensity[0], j * nVert * sizeof(single));
+       end;
+     end;
+     if isDoubleScalar then begin
+       j := (mStream.Size - mStream.Position) div (nVert * sizeof(double));
+       if j >= 1 then begin
+          setlength(intensity, j * nVert);
+          setlength(intensityDoubles, j * nVert);
+          mStream.Read(intensityDoubles[0], j * nVert * sizeof(double));
+          for i := 0 to ((j * nVert)-1) do
+              intensity[i] := intensityDoubles[i];
+          intensityDoubles := nil;
+       end;
      end;
      if (isRGBA) and (isScalar) then begin //atlas template the float "intensity" stores integer of index
         setlength(vertexAtlas, nVert);
@@ -4127,7 +4233,7 @@ begin
              OpenOverlays := OpenOverlays + 1;
              setlength(Overlay[OpenOverlays].intensity, length(vertices));
              Overlay[OpenOverlays].intensity := copy(floats, 0, maxint);
-             Overlay[OpenOverlays].LUTindex := OpenOverlays;
+             Overlay[OpenOverlays].LUTindex := SetLutIndex(OpenOverlays);
              Overlay[OpenOverlays].filename  := ExtractFilename(FileName);
              SetOverlayDescriptives(OpenOverlays);
              //Showmessage('>>>'+inttostr(OpenOverlays));
@@ -4138,14 +4244,21 @@ begin
      exit;
   end;
   //otherwise, load overlay
-  result := LoadMz3Core(Filename, Overlay[lOverlayIndex].Faces,Overlay[lOverlayIndex].Vertices,Overlay[lOverlayIndex].vertexRGBA,Overlay[lOverlayIndex].intensity,Overlay[lOverlayIndex].vertexAtlas, overlay[lOverlayIndex].atlasMaxIndex);
+  result := LoadMz3Core(Filename, Overlay[lOverlayIndex].Faces,Overlay[lOverlayIndex].Vertices,Overlay[lOverlayIndex].vertexRGBA,Overlay[lOverlayIndex].intensity,Overlay[lOverlayIndex].vertexAtlas, overlay[lOverlayIndex].atlasMaxIndex, length(Vertices));
   if (length(Overlay[lOverlayIndex].vertexRGBA) > 0) and (length(Overlay[lOverlayIndex].intensity) > 0) then //template with BOTH intensity and RGBA: give precedence to RGBA
      setlength(Overlay[lOverlayIndex].intensity,0);
   if not result then exit;
-  if (length(Overlay[lOverlayIndex].Vertices) < 3) and (length(Overlay[lOverlayIndex].intensity) > 0) and (length(overlay[lOverlayIndex].intensity)  <> length(Vertices)) then begin
+  i := 0;
+  if (length(overlay[lOverlayIndex].intensity)  >= length(Vertices)) and ((length(overlay[lOverlayIndex].intensity) mod length(Vertices)) = 0) then
+     i := length(overlay[lOverlayIndex].intensity) div length(Vertices);
+  if (length(Overlay[lOverlayIndex].Vertices) < 3) and (length(Overlay[lOverlayIndex].intensity) > 0) and (i < 1) then begin
      showmessage(format('This overlay has a different number of vertices (%d) than the background mesh (%d).', [length(overlay[lOverlayIndex].intensity), length(Vertices) ]));
      setlength(overlay[lOverlayIndex].intensity, 0);
      result := false;
+  end;
+  if i > 0 then begin
+     overlay[lOverlayIndex].CurrentVolume:= 1;
+     overlay[lOverlayIndex].volumes:= i;
   end;
 end; // LoadMz3()
 
@@ -6151,7 +6264,7 @@ end; *)
 
 function TMesh.LoadFromFile(const FileName: string): boolean;
 var
-   ext: string;
+   ext, fnm: string;
    isEmbeddedEdge: boolean;
    HasOverlays : boolean = false;
    {$IFDEF TIMER}startTime : TDateTime;{$ENDIF}
@@ -6261,6 +6374,17 @@ begin
 	isBusy := false;
         if HasOverlays then
            LoadOverlay(FileName, true);
+        //https://www.nitrc.org/forum/message.php?msg_id=25643
+        if (ext = '.GII') and AnsiContainsText(FileName,'rh.central') then begin
+           fnm := extractfilepath(FileName)+'rh.thickness.cr';
+           if fileexists(fnm) then
+              LoadOverlay(fnm, true);
+        end;
+        if (ext = '.GII') and AnsiContainsText(FileName,'lh.central') then begin
+           fnm := extractfilepath(FileName)+'lh.thickness.cr';
+           if fileexists(fnm) then
+              LoadOverlay(fnm, true);
+        end;
 end; // LoadFromFile()
 
 (* works, but Stc files are sparse, so better to use other routines for smoothing
@@ -6621,6 +6745,104 @@ begin
      strlst.free;
 end;
 
+function TMesh.LoadVoxel2Vertex(const FileName: string; lOverlayIndex: integer): boolean;
+//some tools, e.g. PALM use voxel image formats (e.g. MGH) to store scalar data
+// for Surfice, both voxel-based and vertex-based can be loaded.
+// here we assume that if the number of voxels is precisely the number of vertices, the data represents vertex scalars
+//load NIfTI,MGH,NRRD files where Dim[1] is equal to number of vertices
+var
+   fnm: string;
+   hdr: TNIFTIhdr;
+   i, gzFlag, x64, vol, nVal: int64;
+   swapEndian: boolean;
+   decomp: TGZFileStream;
+   f: File;
+   imgBytes: array of byte;
+   i16s: TInt16s;
+   ui16s: TUInt16s;
+   i32s: TInt32s;
+   f32s: TFloats;
+   f64s: TDoubles;
+begin
+     result := false;
+     if length(vertices) < 1 then exit;
+     fnm := FileName;
+     //if not readMGHHeader (fnm, hdr, gzFlag, swapEndian, x64) then exit;
+     if not readVoxHeader (fnm, hdr, gzFlag, swapEndian, x64) then exit;
+     if (x64 <> length(vertices)) then begin
+        //showmessage(format('Expected %d vertices, not %d.', [length(vertices), x64]));
+        exit;
+     end;
+     if (gzFlag = K_gzBytes_onlyImageCompressed) then begin
+       showmessage('Unable to read files with uncompressed headers and compressed images.');
+       exit;
+     end;
+     vol := hdr.dim[2];
+     if (vol < 1) then vol := 1;
+     overlay[lOverlayIndex].volumes := vol;
+     overlay[lOverlayIndex].currentVolume := 1;
+     setlength(overlay[lOverlayIndex].intensity,  vol*length(vertices));
+     nVal := vol*length(vertices) ;
+     if gzFlag = K_gzBytes_headerAndImageCompressed then begin
+        decomp := TGZFileStream.create(FileName, gzopenread);
+        setlength(imgBytes, round(hdr.vox_offset));
+        decomp.Read(imgBytes[0], round(hdr.vox_offset));
+        setlength(imgBytes, nVal * (hdr.bitpix div 8));
+        decomp.Read(imgBytes[0], nVal * sizeof(single));
+        decomp.free;
+     end else begin
+       setlength(imgBytes, nVal * (hdr.bitpix div 8));
+       AssignFile(f, FileName);
+       FileMode := fmOpenRead;
+       Reset(f,1);
+       Seek(f,round(hdr.vox_offset));
+       BlockRead(f, imgBytes[0],nVal * sizeof(single));
+       CloseFile(f);
+     end;
+     if (hdr.datatype = kDT_UINT8) then begin
+        for i := 0 to (nVal-1) do
+            overlay[lOverlayIndex].intensity[i] := imgBytes[i];
+     end else if (hdr.datatype = kDT_INT16) then begin
+         i16s := TInt16s(imgBytes);
+         for i := 0 to (nVal-1) do begin
+             if (swapEndian) then //data always stored big endian
+                Swap(i16s[i]);
+             overlay[lOverlayIndex].intensity[i] := i16s[i];
+         end;
+     end else if (hdr.datatype = kDT_UINT16) then begin
+         ui16s := TUInt16s(imgBytes);
+         for i := 0 to (nVal-1) do begin
+             if (swapEndian) then //data always stored big endian
+                Swap(ui16s[i]);
+             overlay[lOverlayIndex].intensity[i] := ui16s[i];
+         end;
+     end else if (hdr.datatype = kDT_INT32) then begin
+         i32s := TInt32s(imgBytes);
+         for i := 0 to (nVal-1) do begin
+             if (swapEndian) then //data always stored big endian
+                Swap(i32s[i]);
+             overlay[lOverlayIndex].intensity[i] := i32s[i];
+         end;
+     end else if (hdr.datatype = kDT_FLOAT32) then begin
+        f32s := TFloats(imgBytes);
+        for i := 0 to (nVal-1) do begin
+          if (swapEndian) then //data always stored big endian
+             SwapSingle(f32s[i]);
+          overlay[lOverlayIndex].intensity[i] := f32s[i];
+        end;
+     end else if (hdr.datatype = kDT_DOUBLE) then begin
+        f64s := TDoubles(imgBytes);
+        for i := 0 to (nVal-1) do begin
+          if (swapEndian) then
+             SwapDouble(f64s[i]);
+          overlay[lOverlayIndex].intensity[i] := f64s[i];
+        end;
+     end else
+         showmessage(format('Unsupported scalar datatype %d', [hdr.datatype]));
+     imgBytes := nil;
+     result := true;
+end;
+
 function TMesh.LoadDpv(const FileName: string; lOverlayIndex: integer): boolean;
 //https://brainder.org/2011/09/25/braindering-with-ascii-files/
 label
@@ -6671,7 +6893,6 @@ begin
      idx := iMax-iMin+1;
      if (idx <> num_v) then //when fewer vertices than background image
         showmessage(format('DPV file reports %d vertices but background mesh has %d (%d..%d)',[idx, num_v, iMin, iMax]));
-
      result := true;
    666:
      CloseFile(f);
@@ -7029,6 +7250,23 @@ end; // SetOverlayDescriptives()
 
 {$Include cifti.inc}
 
+function TMesh.SetLutIndex(layer:integer): integer;
+//count other overlays, but exclude curve maps
+var
+   i,n: integer;
+begin
+     n := 0;
+     i := kMinOverlayIndex;
+     while (i < layer) and (i <= kMaxOverlays) do begin
+           if not isFreeSurferLUT(overlay[i].LUTindex) then
+              n := n + 1;
+           i := i + 1;
+     end;
+     result := n + 1;
+     if n > 12 then
+        result := 0;
+end;
+
 function TMesh.LoadOverlay(const FileName: string; lLoadSmooth: boolean): boolean; //; isSmooth: boolean
 var
    i, nOverlays: integer;
@@ -7069,10 +7307,7 @@ begin
   setlength(Overlay[OpenOverlays].intensity,0);
   Overlay[OpenOverlays].LUTvisible:= kLUTopaque;
   Overlay[OpenOverlays].filename  := ExtractFilename(FileName);
-  if OpenOverlays > 12 then
-     Overlay[OpenOverlays].LUTindex := 0
-  else
-      Overlay[OpenOverlays].LUTindex := OpenOverlays;
+  Overlay[OpenOverlays].LUTindex := SetLutIndex(OpenOverlays);
   Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex, Overlay[OpenOverlays].LUTinvert);
   if (Filename = '') and (length(tempIntensityLUT) > 0) then begin
      errorString := LoadAtlasMapCore(OpenOverlays, tempIntensityLUT);
@@ -7102,7 +7337,6 @@ begin
        exit;
      end;
   end;
-
   if (ext = '.GII') or isCiftiNii then begin
      if isCiftiNii then begin
         nOverlays := loadCifti(FileName, OpenOverlays, 1, (origin.X < 0));
@@ -7142,14 +7376,11 @@ begin
      end;
   end;
   if not isCiftiNii then begin
-    {$IFDEF FOREIGNVOL}
-     //kVolFilter = 'Neuroimaging (*.nii)|*.hdr;*.nii;*.nii.gz;*.voi;*.HEAD;*.mgh;*.mgz;*.mha;*.mhd;*.nhdr;*.nrrd';
     if (ext = '.NII') or (ext = '.IMG') or (ext = '.HDR')  or (ext = '.GZ')  or (ext = '.VOI') or (ext = '.NHDR')
-      or (ext = '.NRRD') or (ext = '.HEAD') or (ext = '.MGH')  or (ext = '.MGZ')  or (ext = '.MHA') or (ext = '.MHD') then
-    {$ELSE}
-    if (ext = '.NII') or (ext = '.IMG') or (ext = '.HDR')  or (ext = '.GZ') then
-    {$ENDIF}
-       LoadNii(FileName, OpenOverlays, lLoadSmooth);
+      or (ext = '.NRRD') or (ext = '.HEAD') or (ext = '.MGH')  or (ext = '.MGZ')  or (ext = '.MHA') or (ext = '.MHD') then begin
+         if not LoadVoxel2Vertex(FileName, OpenOverlays) then
+            LoadNii(FileName, OpenOverlays, lLoadSmooth);
+      end;
   end;
   //if (length(overlay[OpenOverlays].intensity) < 1 ) and (PosEx('.thickness.',FileName) > 1) and (IsCurv(FileName))  then begin
   if (length(overlay[OpenOverlays].intensity) < 1 ) and (PosEx('.curv',FileName) > 1) and (IsCurv(FileName))  then begin

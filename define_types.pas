@@ -4,7 +4,7 @@ interface
 uses graphics;
 {$endif}
 const
-  kVers = 'v1.0.20181226)';
+  kVers = 'v1.0.20190131';
   NaN : double = 1/0;
   kTab = chr(9);
   kCR = chr (13);
@@ -46,7 +46,12 @@ type
  TVertexRGBA = array of TRGBA;
  TBools = array of boolean;
  TInts = array of integer;
+ TInt16s = array of int16;
+ TUInt16s = array of uint16;
+ TInt32s = array of int32;
+
  TFloats = array of single;
+ TDoubles = array of double;
  TMat33 = array [1..3, 1..3] of single;
   TMat44 = array [1..4, 1..4] of single;
   TFByte =  File of Byte;
@@ -65,6 +70,7 @@ procedure IntBound (var lVal: integer; lMin, lMax: integer);
 function UnitBound (lS: single): single;
 procedure ReadLnBin(var f: TFByte; var s: string);
 procedure SwapSingle(var s : single);
+procedure SwapDouble(var d : double);
 procedure SwapLongInt(var s : LongInt);
 procedure SwapLongWord(var s : LongWord);
 function asPt4f(x,y,z,w: single): TPoint4f;
@@ -348,6 +354,31 @@ begin
   inguy := @s; //assign address of s to inguy
   result := inguy^.Lng;
 end; // asInt()
+
+procedure SwapDouble(var d : double);
+type
+  swaptype = packed record
+    case byte of
+      0:(Word1,Word2,Word3,Word4 : word); //word is 16 bit
+      1:(float:double);
+  end;
+  swaptypep = ^swaptype;
+var
+  inguy:swaptypep;
+  outguy:swaptype;
+begin
+  inguy := @d; //assign address of s to inguy
+  outguy.Word1 := swap(inguy^.Word4);
+  outguy.Word2 := swap(inguy^.Word3);
+  outguy.Word3 := swap(inguy^.Word2);
+  outguy.Word4 := swap(inguy^.Word1);
+  try
+    d:=outguy.float;
+  except
+        d := 0;
+        exit;
+  end;
+end; //func SwapDouble
 
 procedure SwapSingle(var s : single);
 type

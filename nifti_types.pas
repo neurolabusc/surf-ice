@@ -7,6 +7,31 @@ uses
   Classes, SysUtils; //, define_types;
 
 type
+
+ TNIFTI2hdr = packed record //Next: analyze Format Header structure
+ HdrSz : longint; //MUST BE 540
+ magic: array [1..8] of ansichar; //valid sig
+ datatype, bitpix: word;
+ dim: array [0..7] of int64; //unused
+ intent_p1,intent_p2,intent_p3: double;
+ pixdim: array [0..7] of double; //unused
+ vox_offset: int64;
+ scl_slope,scl_inter,cal_max,cal_min,slice_duration,toffset: double;
+ slice_start, slice_end: int64;
+ descrip: array[1..80] of ansichar;
+ aux_file: array[1..24] of ansichar;
+ qform_code, sform_code: longint;
+ quatern_b,quatern_c,quatern_d,
+ qoffset_x,qoffset_y,qoffset_z: double;
+ srow_x: array[0..3]of double;
+ srow_y: array[0..3]of double;
+ srow_z: array[0..3]of double;
+ slice_code, xyzt_units, intent_code: longint;
+ intent_name: array[1..16] of ansichar;
+ dim_info: byte;
+ unused_str: array[1..15] of ansichar;
+end; //TNIFTI2hdr Header Structure
+
   TNIFTIhdr = packed record //Next: analyze Format Header structure
    HdrSz : longint; //MUST BE 348
    Data_Type: array [1..10] of ansichar; //unused

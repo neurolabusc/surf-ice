@@ -3,6 +3,7 @@
 function isCIfTI(fnm: string): boolean;
 var
    hdrSz, hdrSzSwap : int32; //NIFTI2 first 4 bytes MUST equal 540
+   vox_offset: int64;
    f: file;
 begin
   result := false;
@@ -13,11 +14,15 @@ begin
   FileMode := fmOpenRead;  //Set file access to read only
   Reset(f, 1);
   BlockRead(f, hdrSz, sizeof(hdrSz));
+  Seek(f, 168); //https://nifti.nimh.nih.gov/pub/dist/doc/nifti2.h
+  BlockRead(f, vox_offset, sizeof(vox_offset));
   FileMode := 2;
   CloseFile(f);
   hdrSzSwap := hdrSz;
   SwapLongInt(hdrSzSwap); //swap for big/little endian
-  if (hdrSz = 540) or (hdrSzSwap = 540) then
+  if (hdrSzSwap = 540) then
+     showmessage('Unable to read byte-swapped NIfTI2 headers.');
+  if (hdrSz = 540) and ((vox_offset - hdrSz) > 128) then
      result := true;
 end;
 

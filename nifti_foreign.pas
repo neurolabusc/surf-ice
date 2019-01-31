@@ -1,13 +1,14 @@
 unit nifti_foreign;
 
 interface
-{$H+}
+{$mode objfpc}{$H+}
 
 uses
  dialogs, nifti_types, define_types, sysutils, classes, StrUtils, zstream;
 
-function readForeignHeader (var lFilename: string; var lHdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+function readForeignHeader (var lFilename: string; var lHdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
 procedure NII_Clear (var lHdr: TNIFTIHdr);
+function readMGHHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
 procedure NII_SetIdentityMatrix (var lHdr: TNIFTIHdr); //create neutral rotation matrix
 
 implementation
@@ -488,7 +489,7 @@ begin
   sList.Free;
 end;
 
-function nii_readpic (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+function nii_readpic (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
 const
      kBIORAD_HEADER_SIZE  = 76;
      kBIORAD_NOTE_HEADER_SIZE = 16;
@@ -549,6 +550,7 @@ begin
   end;
   nhdr.dim[0]:=3;//3D
   nhdr.dim[1]:=bhdr.nx;
+  xDim64:=bhdr.nx;
   nhdr.dim[2]:=bhdr.ny;
   nhdr.dim[3]:=bhdr.npic;
   nhdr.dim[4]:=1;
@@ -595,11 +597,11 @@ begin
         setlength(skip, offset);
         decomp.Read(skip[0], offset);
      end;
-     decomp.Read(buffer[0], sz);
+     decomp.Read(buffer[0], sz); //must have mode set correctly
      decomp.free;
 end;
 
-function readMGHHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+function readMGHHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
 Type
   Tmgh = packed record //Next: MGH Format Header structure
    version, width,height,depth,nframes,mtype,dof : longint;
@@ -611,7 +613,7 @@ var
   lBuff: Bytep;
   lExt: string;
   lHdrFile: file;
-	PxyzOffset, Pcrs: vect4;
+  PxyzOffset, Pcrs: vect4;
   i,j: integer;
   base: single;
   m: mat44;
@@ -620,7 +622,7 @@ begin
   FileMode := fmOpenRead;
   lExt := ExtractFileExtGzUpper(fname);
   if (lExt = '.MGZ') then begin
-	  lBuff := @mgh;
+          lBuff := @mgh;
 	  UnGZip(fname,lBuff,0,sizeof(Tmgh)); //1388
     gzBytes := K_gzBytes_headerAndImageCompressed;
   end else begin //if MGZ, else assume uncompressed MGH
@@ -667,7 +669,7 @@ begin
     SwapSingle(mgh.cs);
   {$ENDIF}
   if ((mgh.version <> 1) or (mgh.mtype < 0) or (mgh.mtype > 4)) then begin
-        NSLog('Error: first value in a MGH header should be 1 and data type should be in the range 1..4.');
+        NSLog(format('Error: first value in a MGH header should be 1 (got %d) and data type should be in the range 1..4. (got %d)', [mgh.version, mgh.mtype] ));
         exit;
   end;
   if (mgh.mtype = 0) then
@@ -678,6 +680,7 @@ begin
         nhdr.datatype := kDT_INT32
   else if (mgh.mtype = 3)  then
         nhdr.datatype := kDT_FLOAT32;
+  xDim64 := mgh.Width;
   nhdr.dim[1]:=mgh.width;
   nhdr.dim[2]:=mgh.height;
   nhdr.dim[3]:=mgh.depth;
@@ -760,7 +763,7 @@ begin
      end;
 end;
 
-function readVTKHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+function readVTKHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
 //VTK Simple Legacy Formats : STRUCTURED_POINTS : BINARY
 // http://daac.hpc.mil/gettingStarted/VTK_DataFormats.html
 // https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bvtk/readVtk.m
@@ -807,6 +810,7 @@ begin
     strlst.DelimitedText := str;
     if pos('DIMENSIONS', UpperCase(str)) <> 0 then begin //e.g. "DIMENSIONS 128 128 128"
        nhdr.dim[1] := StrToIntDef(strlst[1],1);
+       xDim64 := StrToIntDef(strlst[1],1);
        nhdr.dim[2] := StrToIntDef(strlst[2],1);
        nhdr.dim[3] := StrToIntDef(strlst[3],1);
     end; //dimensions
@@ -871,7 +875,7 @@ begin
   strlst.Free;
 end;
 
-function readMHAHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+function readMHAHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
 //Read VTK "MetaIO" format image
 //http://www.itk.org/Wiki/ITK/MetaIO/Documentation#Reading_a_Brick-of-Bytes_.28an_N-Dimensional_volume_in_a_single_file.29
 //https://www.assembla.com/spaces/plus/wiki/Sequence_metafile_format
@@ -1003,6 +1007,7 @@ begin
                 nhdr.pixdim[i+1] := strtofloat(mArray[i]);
         end else if AnsiContainsText(tagName, 'DimSize') then begin
             if (nItems > 4) then nItems := 4;
+            xDim64 := strtoint(mArray[0]);
             for i := 0 to (nItems-1) do
                 nhdr.dim[i+1] :=  strtoint(mArray[i]);
         end else if AnsiContainsText(tagName, 'HeaderSize') then begin
@@ -1114,7 +1119,7 @@ begin
   result := true;
 end;//MHA
 
-function readNRRDHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+function readNRRDHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
 //http://www.sci.utah.edu/~gk/DTI-data/
 //http://teem.sourceforge.net/nrrd/format.html
 label
@@ -1184,6 +1189,7 @@ begin
         nhdr.pixdim[i+1] :=strtofloat(mArray.Strings[i]);
     end else if AnsiContainsText(tagName, 'sizes') then begin
       if (nItems > 6) then nItems :=6;
+      xDim64 := strtoint(mArray.Strings[0]);
       for i:=0 to (nItems-1) do
           nhdr.dim[i+1] := strtoint(mArray.Strings[i]);
     end else if AnsiContainsText(tagName, 'space directions') then begin
@@ -1369,7 +1375,7 @@ begin
     nhdr.sform_code := kNIFTI_XFORM_SCANNER_ANAT;
 end;
 
-function readAFNIHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+function readAFNIHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
 label
   666;
 var
@@ -1481,6 +1487,7 @@ begin
               end; //if acount > 0
           end else if AnsiContainsText(nameStr,'DATASET_DIMENSIONS') then begin
               if itemCount > 3 then itemCount := 3;
+              xDim64:= round(valArray[0]);
               for i := 0 to (itemCount-1) do
                   nhdr.dim[i+1] := round(valArray[i]);
           end else if AnsiContainsText(nameStr,'ORIENT_SPECIFIC') then begin
@@ -1526,25 +1533,25 @@ begin
   end;
 end;
 
-function readForeignHeader (var lFilename: string; var lHdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+function readForeignHeader (var lFilename: string; var lHdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
 var
   lExt: string;
 begin
   NII_Clear (lHdr);
-  //result := false;
+  result := false;
   lExt := ExtractFileExtGzUpper(lFilename);
   if (lExt = '.PIC') then
-    result := nii_readpic(lFilename, lHdr, gzBytes, swapEndian)
+    result := nii_readpic(lFilename, lHdr, gzBytes, swapEndian, xDim64)
   else if (lExt = '.VTK') then
-    result := readVTKHeader(lFilename, lHdr, gzBytes, swapEndian)
+    result := readVTKHeader(lFilename, lHdr, gzBytes, swapEndian, xDim64)
   else if (lExt = '.MGH') or (lExt = '.MGZ') then
-    result := readMGHHeader(lFilename, lHdr, gzBytes, swapEndian)
+    result := readMGHHeader(lFilename, lHdr, gzBytes, swapEndian, xDim64)
   else if (lExt = '.MHD') or (lExt = '.MHA') then
-    result := readMHAHeader(lFilename, lHdr, gzBytes, swapEndian)
+    result := readMHAHeader(lFilename, lHdr, gzBytes, swapEndian, xDim64)
   else if (lExt = '.NRRD') or (lExt = '.NHDR') then
-    result := readNRRDHeader(lFilename, lHdr, gzBytes, swapEndian)
+    result := readNRRDHeader(lFilename, lHdr, gzBytes, swapEndian, xDim64)
   else if (lExt = '.HEAD') then
-    result := readAFNIHeader(lFilename, lHdr, gzBytes, swapEndian);
+    result := readAFNIHeader(lFilename, lHdr, gzBytes, swapEndian, xDim64);
 end;
 
 end.

@@ -1062,7 +1062,7 @@ object GLForm1: TGLForm1
       ParentFont = False
       TabOrder = 7
       OnResize = ShaderBoxResize
-      object Label2: TLabel
+      object LightLabel: TLabel
         AnchorSideLeft.Control = ShaderBox
         AnchorSideTop.Control = LightElevTrack
         AnchorSideTop.Side = asrCenter
@@ -1096,10 +1096,11 @@ object GLForm1: TGLForm1
         Text = '0'
       end
       object LightElevTrack: TTrackBar
+        AnchorSideLeft.Control = LightLabel
+        AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = LightAziTrack
         AnchorSideTop.Side = asrCenter
-        AnchorSideRight.Control = LightAziTrack
-        Left = 61
+        Left = 37
         Height = 30
         Top = 34
         Width = 92
@@ -1108,17 +1109,18 @@ object GLForm1: TGLForm1
         OnChange = SurfaceAppearanceChange
         Position = 25
         TickStyle = tsNone
-        Anchors = [akTop, akRight]
+        BorderSpacing.Left = 4
         BorderSpacing.Right = 4
         ParentFont = False
         TabOrder = 1
       end
       object LightAziTrack: TTrackBar
+        AnchorSideLeft.Control = LightElevTrack
+        AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = ShaderDrop
         AnchorSideTop.Side = asrBottom
-        AnchorSideRight.Control = occlusionTrack
         AnchorSideRight.Side = asrBottom
-        Left = 157
+        Left = 133
         Height = 30
         Top = 34
         Width = 92
@@ -1127,7 +1129,7 @@ object GLForm1: TGLForm1
         OnChange = SurfaceAppearanceChange
         Position = 0
         TickStyle = tsNone
-        Anchors = [akTop, akRight]
+        BorderSpacing.Left = 4
         BorderSpacing.Top = 8
         ParentFont = False
         TabOrder = 2
@@ -1524,6 +1526,7 @@ object GLForm1: TGLForm1
     Constraints.MinWidth = 32
     ParentFont = False
     TabOrder = 4
+    OnClick = CenterPanelClick
   end
   object RightSplitter: TSplitter
     Left = 1033
@@ -1749,6 +1752,22 @@ object GLForm1: TGLForm1
           Caption = 'Additive'
           OnClick = AdditiveOverlayMenuClick
         end
+      end
+      object OverlaySep: TMenuItem
+        Caption = '-'
+      end
+      object PrevOverlayMenu: TMenuItem
+        Caption = 'Previous volume'
+        Enabled = False
+        ShortCut = 32848
+        OnClick = PrevOverlayMenuClick
+      end
+      object NextOverlayMenu: TMenuItem
+        Tag = 1
+        Caption = 'Next volume'
+        Enabled = False
+        ShortCut = 32846
+        OnClick = PrevOverlayMenuClick
       end
     end
     object TracksMenu: TMenuItem
