@@ -361,7 +361,7 @@ object ScriptForm: TScriptForm
         object atlasgray1: TMenuItem
           Tag = 1218
           Caption = 'atlasgray'
-          Hint = 'atlasgray (overlay: integer; const filt: array of integer) Gray atlas areas. For example atlasgray(0,[3,7]) will gray-out areas 3 and 7 of the background atlas. On the other hand, atlashide(1,[2,5]) will gray-out areas 2 and 5 of the first overlay image. For example atlashide(0,[3,7]) will gray the areas 3 and 7 of the background atlas. On the other hand, atlashide(1,[2,5]) will gray areas 2 and 5 of the first overlay image.'
+          Hint = 'atlasgray (overlay: integer; const filt: array of integer) Gray atlas areas. For example atlasgray(0,[3,7]) will gray-out areas 3 and 7 of the background atlas. On the other hand, atlasgray(1,[2,5]) will gray-out areas 2 and 5 of the first overlay image. For example atlashide(0,[3,7]) will gray the areas 3 and 7 of the background atlas. On the other hand, atlashide(1,[2,5]) will gray areas 2 and 5 of the first overlay image.'
           OnClick = InsertCommand
         end
         object atlashide1: TMenuItem

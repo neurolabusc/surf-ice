@@ -84,7 +84,8 @@ type
     {$IFDEF TREFOIL} procedure MakeTrefoil; {$ENDIF}
     procedure MakeSphere;
     function SetLutIndex(layer:integer): integer;
-    procedure BuildListCore(Clr: TRGBA; var f: TFaces; var v: TVertices; var vtxRGBA: TVertexRGBA);
+    procedure BuildListCore(Clr: TRGBA; var f: TFaces; var v: TVertices; var vtxRGBA: TVertexRGBA; vRemap: TInts = nil; isWriteToGPU: boolean = true);
+    //procedure BuildListCore(Clr: TRGBA; var f: TFaces; var v: TVertices; var vtxRGBA: TVertexRGBA; vRemap: TInts = nil);
     procedure BuildListPartialAtlas(Clr: TRGBA; vtxRGBA: TVertexRGBA);
     procedure BuildList(Clr: TRGBA);
     procedure FilterOverlay(c: integer; var f: TFaces; var v: TVertices; var vRGBA: TVertexRGBA);
@@ -118,6 +119,7 @@ type
     function LoadSrf(const FileName: string): boolean;
     function LoadSurf(const FileName: string): boolean;
     function LoadTri(const FileName: string): boolean;
+    function LoadVrml(const FileName: string): boolean;
     function LoadWfr(const FileName: string): boolean; //EMSE wireframe
     procedure LoadAsc_Srf(const FileName: string);
     procedure LoadCtm(const FileName: string);
@@ -156,11 +158,12 @@ type
     procedure CloseOverlays;
     procedure Close;
     constructor Create;
-    procedure SaveMz3(const FileName: string);
+    (*procedure SaveVrml(const FileName: string; MeshColor: TColor = clWhite);
+    procedure SaveMz3(const FileName: string; MeshColor: TColor = clWhite);
     procedure SaveGii(const FileName: string);
     procedure SaveObj(const FileName: string);
-    procedure SavePly(const FileName: string);
-    procedure SaveMesh(const FileName: string);
+    procedure SavePly(const FileName: string; MeshColor: TColor = clWhite);*)
+    procedure SaveMesh(const FileName: string; MeshColor: TColor = clWhite);
     procedure SaveOverlay(const FileName: string; OverlayIndex: integer);
     destructor  Destroy; override;
   end;
@@ -252,7 +255,7 @@ begin
      v.W := v.W + c1.a+ c2.a+ c3.a;
 end;
 
-procedure TMesh.BuildListCore(Clr: TRGBA; var f: TFaces; var v: TVertices; var vtxRGBA: TVertexRGBA);
+procedure TMesh.BuildListCore(Clr: TRGBA; var f: TFaces; var v: TVertices; var vtxRGBA: TVertexRGBA; vRemap: TInts = nil; isWriteToGPU: boolean = true);
 var
   i,volInc, c, translucent: integer;
   mn, mx: single;
@@ -260,7 +263,7 @@ var
   vRGBA, vRGBAmx :TVertexRGBA;
   vNumNeighbor: array of integer;
   vSumRGBBA: array of TPoint4f;
-  isCurvLayer: boolean;
+  //isCurvLayer: boolean;
   isOverlayPainting : boolean = false;
 begin
   if (length(f) < 1) or (length(v) < 3) then exit;
@@ -284,7 +287,9 @@ begin
                vRGBA[i] := desaturateRGBA ( vtxRGBA[i], vertexRgbaSaturation, C);
         end;
         {$IFDEF COREGL}
-        if (vertexRGBAAlpha < 1.0) then
+        //2019: required only when no overlays open - try adjusting transparency of Altas
+        //GLForm1.Caption := floattostr(vertexRGBAAlpha);
+        if (OpenOverlays < 1) and (vertexRGBAAlpha < 1.0) then
           for i := 0 to (length(v)-1) do
               vRGBA[i] := mixRGBA( Clr, vRGBA[i], vertexRGBAAlpha);
         {$ENDIF}
@@ -313,11 +318,19 @@ begin
                    mx := overlay[c].windowScaledMin;
                    mn := overlay[c].windowScaledMax;
                end;
-               for i := 0 to (length(v)-1) do begin
-                   rgb := inten2rgb(overlay[c].intensity[i+volInc], mn, mx, overlay[c].LUT);
+               if vRemap <> nil then begin //filtered atlas: vertices have been decimated
+                 for i := 0 to (length(v)-1) do begin
+                   rgb := inten2rgb(overlay[c].intensity[vRemap[i]+volInc], mn, mx, overlay[c].LUT);
                    rgb.A := rgb.A div translucent;
                    vRGBAmx[i] := maxRGBA(vRGBAmx[i], rgb);
-               end; //for i
+                 end; //for i
+               end else begin
+                 for i := 0 to (length(v)-1) do begin
+                     rgb := inten2rgb(overlay[c].intensity[i+volInc], mn, mx, overlay[c].LUT);
+                     rgb.A := rgb.A div translucent;
+                     vRGBAmx[i] := maxRGBA(vRGBAmx[i], rgb);
+                 end; //for i
+               end;
 
             end; //if visible
           end; //for c
@@ -337,16 +350,22 @@ begin
                    mn := overlay[c].windowScaledMax;
                end;
                volInc :=  length(v) *  (overlay[c].currentVolume - 1);
-
-               for i := 0 to (length(v)-1) do begin
-                   rgb := inten2rgb(overlay[c].intensity[i+volInc], mn, mx, overlay[c].LUT);
-                   rgb.A := rgb.A div translucent;
-                   vRGBA[i] := blendRGBA(vRGBA[i], rgb);
-               end; //for i
+               if vRemap <> nil then begin //filtered atlas: vertices have been decimated
+                 for i := 0 to (length(v)-1) do begin
+                     rgb := inten2rgb(overlay[c].intensity[vRemap[i]+volInc], mn, mx, overlay[c].LUT);
+                     rgb.A := rgb.A div translucent;
+                     vRGBA[i] := blendRGBA(vRGBA[i], rgb);
+                 end; //for i
+               end else begin
+                 for i := 0 to (length(v)-1) do begin
+                     rgb := inten2rgb(overlay[c].intensity[i+volInc], mn, mx, overlay[c].LUT);
+                     rgb.A := rgb.A div translucent;
+                     vRGBA[i] := blendRGBA(vRGBA[i], rgb);
+                 end; //for i
+               end;
             end; //if visible
           end;  //for c
           //finally composite
-
           for i := 0 to (length(v)-1) do
               vRGBA[i] := blendRGBA(vRGBA[i],vRGBAmx[i]);
         end else begin //not additive: mix overlays
@@ -364,12 +383,19 @@ begin
                      mn := overlay[c].windowScaledMax;
                  end;
                  volInc :=  length(v) *  (overlay[c].currentVolume - 1);
-
-                 for i := 0 to (length(v)-1) do begin
-                     rgb := inten2rgb(overlay[c].intensity[i+volInc], mn, mx, overlay[c].LUT);
-                     rgb.A := rgb.A div translucent;
-                     vRGBA[i] := blendRGBA(vRGBA[i], rgb);
-                 end; //for i
+                 if vRemap <> nil then begin //filtered atlas: vertices have been decimated
+                   for i := 0 to (length(v)-1) do begin
+                       rgb := inten2rgb(overlay[c].intensity[vRemap[i]+volInc], mn, mx, overlay[c].LUT);
+                       rgb.A := rgb.A div translucent;
+                       vRGBA[i] := blendRGBA(vRGBA[i], rgb);
+                   end; //for i
+                 end else begin
+                   for i := 0 to (length(v)-1) do begin
+                       rgb := inten2rgb(overlay[c].intensity[i+volInc], mn, mx, overlay[c].LUT);
+                       rgb.A := rgb.A div translucent;
+                       vRGBA[i] := blendRGBA(vRGBA[i], rgb);
+                   end; //for i
+                 end;
               end; //if visible
             end;  //for c
        end;
@@ -448,6 +474,13 @@ begin
          end;
      end; //for c
      {$ENDIF}
+     if not isWriteToGPU then begin
+       setlength(vtxRGBA, length(v));
+       for i := 0 to (length(v)-1) do
+           vRGBA[i].a := 255; //opaque
+       vtxRGBA := Copy(vRGBA, Low(vRGBA), Length(vRGBA));
+       exit;
+     end;
      {$IFDEF COREGL}
      BuildDisplayList(f, v, vRGBA, vao, vbo, Clr);
      {$ELSE}
@@ -456,6 +489,7 @@ begin
   end else begin
       Clr.A := 128; //just a bit less than 50% - only for hiding curvature
      setLength(vRGBA,0);
+     if not isWriteToGPU then exit;
      {$IFDEF COREGL}
      BuildDisplayList(f, v, vRGBA,vao, vbo, Clr);
      {$ELSE}
@@ -464,117 +498,7 @@ begin
   end;
 end; // BuildListCore()
 
-(*procedure FilterAtlas(Clr: TRGBA; maxROI: integer; faces: TFaces; vertices: TVertices; vertexAtlas: TInts; vtxRGBA: TVertexRGBA; atlasHideFilter: TInts; atlasTransparentFilter: TBools; var f: TFaces; var v: TVertices; var vRGBA: TVertexRGBA);
-label
-   123;
-var
-     i, j, nfOK, nvOK, nFace, nVert: integer;
-     vOK: array of integer;
-     filterLUT: array of boolean;
-     fOK: array of boolean;
-begin
-  setlength(v,0);
-  setlength(f,0);
-  setlength(vRGBA,0);
-  nVert := length(vertices);
-    nFace := length(faces);
-    if (nVert < 3) or (nFace < 1) or (maxROI < 1) or (length(vertexAtlas) <>  nVert) then exit;
-    if (length(atlasHideFilter) < 1) then begin //everything survives
-      //atlasTransparentFilter
-      goto 123;
-    end;
-    //set up lookup table - list of regions that survive
-    setlength(filterLUT, maxROI+1);
-    for i := 0 to maxROI do
-        filterLUT[i] := false; //assume we will not filter these regions
-    for i := 0 to (length(atlasHideFilter) - 1) do
-        if (atlasHideFilter[i] > 0) and (atlasHideFilter[i] <= maxROI) then
-           filterLUT[atlasHideFilter[i]] := true; //filter the specified region
-    //mark surviving vertices
-    setlength(vOK, nVert);
-    nvOK := 0;
-    for i := 0 to (nVert -1) do
-        if (vertexAtlas[i] > 0) and (not filterLUT[vertexAtlas[i]]) then begin
-             vOK[i] := nvOK;
-             nvOK := nvOK + 1;
-        end else
-            vOK[i] := -1; //does not survive
-    setlength(filterLUT, 0);
-    //conditionals for unusual situations
-    if nvOK = 0 then begin //nothing survives
-      setlength(vOK,0);
-      exit;
-    end;
-    if (nvOK = nVert) then begin //everything survives
-       //BuildListCore(Clr, faces, vertices, vtxRGBA); //show complete array
-       setlength(vOK,0);
-       goto 123;
-    end;
-    //see how many faces survive
-    setlength(fOK,nFace);
-    nfOK := 0;
-    for i := 0 to (nFace -1) do begin
-        fOK[i] := (vOK[faces[i].X] >= 0) and (vOK[faces[i].Y] >= 0) and (vOK[faces[i].Z] >= 0);
-        if fOK[i] then nfOK := nfOK + 1;
-    end;
-    //no faces survive
-    if nvOK = 0 then begin //nothing survives
-      setlength(vOK,0);
-      setlength(fOK,0);
-      exit;
-    end;
-    //copy surviving vertices
-    setlength(v,nvOK);
-    for i := 0 to (nVert -1) do
-        if (vOK[i] >= 0) then
-          v[vOK[i]] := vertices[i];
-    //copy surviving vertices
-    setlength(f,nfOK);
-    j := 0;
-    for i := 0 to (nFace -1) do
-        if fOK[i] then begin
-          f[j].X := vOK[faces[i].X];
-          f[j].Y := vOK[faces[i].Y];
-          f[j].Z := vOK[faces[i].Z];
-          j := j + 1;
-        end;
-    //set vertex colors (if loaded)
-    if length(vtxRGBA) = nVert then begin
-      setlength(vRGBA, nvOK);
-      j := 0;
-      for i := 0 to (nVert -1) do begin
-          if vOK[i] >= 0 then begin
-            vRGBA[j] := vtxRGBA[i];
-             j := j + 1;
-          end; //if vertex survives
-       end; //for each vertex
-    end; //if vertices are colored (vtxRGBA)
-    setlength(vOK,0);
-    setlength(fOK,0);
-    //>> BuildListCore(Clr, f, v, vRGBA);
-    //release filtered faces, vertices and colors
-    123:
-    if (length(v) < 1) then begin //nothing hidden
-      nVert := length(vertices);
-      nFace := length(faces);
-      setlength(f,nFace);
-      setlength(v,nVert);
-      setlength(vRGBA,nVert);
-      f := copy(faces, 0, maxint);
-      v := copy(vertices, 0, maxint);
-      vRGBA := copy(vtxRGBA, 0, maxint);
-    end;
-    if (length(atlasTransparentFilter)) < 1 then exit;
-    for i := 0 to (nVert-1) do begin
-        j := vertexAtlas[i];
-        if (j < 1) or (j >= length(atlasTransparentFilter)) then continue;
-        if atlasTransparentFilter[j] then
-           vtxRGBA[i] := Clr;
-    end;
-
-end; *)
-
-procedure FilterAtlas(Clr: TRGBA; maxROI: integer; faces: TFaces; vertices: TVertices; vertexAtlas: TInts; vtxRGBA: TVertexRGBA; atlasHideFilter: TInts; atlasTransparentFilter: TBools; var f: TFaces; var v: TVertices; var vRGBA: TVertexRGBA);
+procedure FilterAtlas(Clr: TRGBA; maxROI: integer; faces: TFaces; vertices: TVertices; vertexAtlas: TInts; vtxRGBA: TVertexRGBA; atlasHideFilter: TInts; atlasTransparentFilter: TBools; var f: TFaces; var v: TVertices; var vRGBA: TVertexRGBA; var vRemap: TInts);
 var
      i, j, nfOK, nvOK, nFace, nVert: integer;
      vOK: array of integer;
@@ -658,12 +582,14 @@ begin
           j := j + 1;
         end;
     //set vertex colors (if loaded)
+    setlength(vRemap, nVert);
     if length(vtxRGBA) = nVert then begin
       j := 0;
       for i := 0 to (nVert -1) do begin
           if vOK[i] >= 0 then begin
             vRGBA[j] := vRGBA[i]; //note we read from vRGBA not vtxRGBA to preserve gray vertices
-             j := j + 1;
+            vRemap[j] := i;
+            j := j + 1;
           end; //if vertex survives
        end; //for each vertex
       setlength(vRGBA, nvOK);
@@ -672,7 +598,6 @@ begin
     setlength(fOK,0);
     //>> BuildListCore(Clr, f, v, vRGBA);
     //release filtered faces, vertices and colors
-
 end;
 
 procedure TMesh.BuildListPartialAtlas(Clr: TRGBA; vtxRGBA: TVertexRGBA);
@@ -680,10 +605,12 @@ var
   f: TFaces;
   v: TVertices;
   vRGBA: TVertexRGBA;
+  vRemap: TInts;
 begin
-     FilterAtlas(Clr, AtlasMaxIndex, faces, vertices, vertexAtlas, vtxRGBA, atlasHideFilter, atlasTransparentFilter, f, v, vRGBA);
+     FilterAtlas(Clr, AtlasMaxIndex, faces, vertices, vertexAtlas, vtxRGBA, atlasHideFilter, atlasTransparentFilter, f, v, vRGBA, vRemap);
      if length(v) > 0 then
-        BuildListCore(Clr, f, v, vRGBA);
+        BuildListCore(Clr, f, v, vRGBA, vRemap);
+     setlength(vRemap, 0);
      setlength(f,0);
      setlength(v,0);
      setlength(vRGBA,0);
@@ -692,9 +619,9 @@ end;
 procedure TMesh.BuildList (Clr: TRGBA);
 begin
   if (length(faces) < 1) or (length(vertices) < 3) then exit;
-  if ((length(atlasTransparentFilter) > 0) or (length(atlasHideFilter) > 0)) and (length(vertexAtlas) =  length(vertices)) then
+  if ((length(atlasTransparentFilter) > 0) or (length(atlasHideFilter) > 0)) and (length(vertexAtlas) =  length(vertices)) then begin
        BuildListPartialAtlas(Clr, vertexRGBA)    //hide parts of an overlay atlas
-  else
+  end else
 	BuildListCore(Clr, faces, vertices, vertexRGBA)
 end;
 
@@ -810,6 +737,7 @@ var
   oFaces, sFaces, fFaces: TFaces;
   oVerts, sVerts, fVerts: TVertices;
   vRGBA, sRGBA, fRGBA: TVertexRGBA;
+  vRemap: TInts;
   //sFaces, sVerts, sRGBA
   //rgb: TRGBA;
 begin
@@ -837,7 +765,8 @@ begin
           fFaces := copy(overlay[c].faces, 0, maxint);
           fVerts := copy(overlay[c].vertices, 0, maxint);
           fRGBA := copy(overlay[c].vertexRGBA, 0, maxint);*)
-          FilterAtlas(overlay[c].LUT[192], overlay[c].AtlasMaxIndex, overlay[c].faces, overlay[c].vertices, overlay[c].vertexAtlas, overlay[c].vertexRGBA, overlay[c].atlasHideFilter, overlay[c].atlasTransparentFilter, fFaces, fVerts, fRGBA);
+          FilterAtlas(overlay[c].LUT[192], overlay[c].AtlasMaxIndex, overlay[c].faces, overlay[c].vertices, overlay[c].vertexAtlas, overlay[c].vertexRGBA, overlay[c].atlasHideFilter, overlay[c].atlasTransparentFilter, fFaces, fVerts, fRGBA, vRemap);
+          setlength(vRemap, 0);
           nVert := length(fVerts);
           nFace := length(fFaces);
           if (nVert < 3) or (nFace < 1) then continue;
@@ -2973,16 +2902,23 @@ begin
    SetString(Result, vms.Memory, vms.Size)
 end; // MemoryStreamAsString()
 
-procedure TMesh.SavePly(const FileName: string);
+procedure SavePly(const FileName: string; Faces: TFaces; Vertices: TVertices; vertexRGBA: TVertexRGBA);
+//procedure TMesh.SavePly(const FileName: string);
+type
+ TRGB = packed record //Next: analyze Format Header structure
+    R,G,B : byte;
+  end;
 const
   kEOLN = chr($0A);
 var
    i: integer;
-   s: string;
+   isRGB: boolean;
+   s,clrStr: string;
    f: file;
    byt: byte;
    w: array[0..2] of word;
    FileNamePly: string;
+   rgb: TRGB;
 begin
   if (length(faces) < 1) or (length(vertices) < 3) then begin
         showmessage('You need to open a mesh before you can save it');
@@ -2996,6 +2932,11 @@ begin
      s := 'property list uchar short vertex_indices'
   else
       s := 'property list uchar uint vertex_indices';
+  isRGB := length(vertexRGBA) = length(vertices);
+  clrStr := '';
+  if isRGB then
+     clrStr := 'property uchar red'+kEOLN+'property uchar green'+kEOLN+'property uchar blue'+kEOLN;
+
   s := 'ply'+kEOLN
        {$IFDEF ENDIAN_LITTLE}
        +'format binary_little_endian 1.0'+kEOLN
@@ -3007,6 +2948,7 @@ begin
        +'property float x'+kEOLN
        +'property float y'+kEOLN
        +'property float z'+kEOLN
+       + clrStr
        +'element face '+inttostr(length(faces))+kEOLN
        +s+kEOLN
        +'end_header'+kEOLN;
@@ -3014,6 +2956,15 @@ begin
   AssignFile(f, FileNamePly);
   ReWrite(f, 1);
   BlockWrite(f, s[1], length(s));
+  if (isRGB) then begin
+     for i := 0 to (length(vertices) -1) do begin
+         BlockWrite(f, vertices[i], 3 * 4);
+         RGB.R := vertexRGBA[i].R;
+         RGB.G := vertexRGBA[i].G;
+         RGB.B := vertexRGBA[i].B;
+         BlockWrite(f, RGB, 3);
+     end;
+  end else
   BlockWrite(f, vertices[0], 3 * 4 * length(vertices));
   byt := 3;
   if length(faces) < 32767 then begin
@@ -3034,7 +2985,7 @@ begin
   FileMode := fmOpenRead;
 end; // SavePly()
 
-procedure TMesh.SaveObj(const FileName: string);
+procedure SaveObj(const FileName: string; Faces: TFaces; Vertices: TVertices; vertexRGBA: TVertexRGBA);
 //create WaveFront object file
 // https://en.wikipedia.org/wiki/Wavefront_.obj_file
 var
@@ -3046,7 +2997,7 @@ begin
      showmessage('You need to open a mesh before you can save it');
      exit;
   end;
-  if not CheckMesh then exit;
+  if (length(vertices) < 3) or (length(faces) < 1) then exit;   //if not CheckMesh then exit;
   FileNameObj := changeFileExt(FileName, '.obj');
   {$IFDEF UNIX}
   FileNameObj := ExpandUNCFileNameUTF8(FileNameObj); // ~/tst.pl -> /Users/rorden/home/tst.ply
@@ -3117,15 +3068,13 @@ begin
 end;
 {$ENDIF}
 
-procedure SaveMz3Core(const FileName: string; Faces: TFaces; Vertices: TVertices; vertexRGBA: TVertexRGBA; intensity: TFloats);
+procedure SaveMz3(const FileName: string; Faces: TFaces; Vertices: TVertices; vertexRGBA: TVertexRGBA; intensity: TFloats);
 const
  kMagic =  23117; //"MZ"
 var
   {$IFDEF SwizzleMZ}isSwizzle{$ENDIF}
   isFace, isVert, isRGBA, isScalar: boolean;
   Magic, Attr: uint16;
-  //bs: TUInt8s;
-  //sz: integer;
   nFace, nVert, nSkip: uint32;
   mStream : TMemoryStream;
   zStream: TGZFileStream;
@@ -3194,27 +3143,229 @@ begin
   FileMode := fmOpenRead;
 end;
 
-procedure TMesh.SaveMz3(const FileName: string);
+procedure SaveVrml(const FileName: string; Faces: TFaces; Vertices: TVertices; vertexRGBA: TVertexRGBA);
 var
-  i: TFloats;
+  i, nFace, nVert, nRGBA: integer;
+  FileNameWrl: string;
+  f : TextFile;
 begin
-  setlength(i,0);
-  SaveMz3Core(Filename, Faces,Vertices,vertexRGBA, i);
+  nFace := length(Faces);
+  nVert := length(Vertices);
+  nRGBA := length(vertexRGBA);
+  if (nVert < 3) or (nFace < 1) then exit;
+  FileNameWrl := DefaultToHomeDir(FileName);
+  FileNameWrl := changeFileExt(FileNameWrl, '.wrl');
+  {$IFDEF UNIX} //I do not think we need to do this!
+  FileNameWrl := ExpandUNCFileNameUTF8(FileNameWrl);
+  {$ENDIF}
+  FileMode := fmOpenWrite;
+  AssignFile(f, FileNameWrl);
+  ReWrite(f);
+  WriteLn(f, '#VRML V2.0 utf8');
+  WriteLn(f, '# Generated by Surfice\n');
+  WriteLn(f, 'NavigationInfo {');
+  WriteLn(f, '	type [ "EXAMINE", "ANY" ]');
+  WriteLn(f, '}');
+  WriteLn(f, 'Transform {');
+  WriteLn(f, '  scale 1 1 1');
+  WriteLn(f, '  translation 0 0 0');
+  WriteLn(f, '  children');
+  WriteLn(f, '  [');
+  WriteLn(f, '    Shape');
+  WriteLn(f, '    {');
+  WriteLn(f, '      geometry IndexedFaceSet');
+  WriteLn(f, '      {');
+  WriteLn(f, '        creaseAngle .5');
+  WriteLn(f, '        solid FALSE');
+  WriteLn(f, '        coord Coordinate');
+  WriteLn(f, '        {');
+  WriteLn(f, '          point');
+  WriteLn(f, '          [');
+  Write(f,'            ');
+  for i := 0 to (nVert -1) do begin
+    if (i > 0) then Write(f,', ');
+    Write(f,format('%g %g %g', [Vertices[i].X, Vertices[i].Y, Vertices[i].Z]));
+  end;
+  WriteLn(f,'');
+  WriteLn(f, '          ]');
+  WriteLn(f, '        }');
+  if (nRGBA = nVert) then begin
+    WriteLn(f, '        color Color');
+    WriteLn(f, '        {');
+    WriteLn(f, '          color');
+    WriteLn(f, '          [');
+    Write(f,'            ');
+    for i := 0 to (nRGBA -1) do begin
+        if (i > 0) then Write(f,', ');
+        Write(f,format('%g %g %g', [vertexRGBA[i].R/255, vertexRGBA[i].G/255, vertexRGBA[i].B/255]));
+    end;
+    WriteLn(f,'');
+    WriteLn(f, '          ]');
+    WriteLn(f, '        }');
+  end;
+  WriteLn(f, '        coordIndex');
+  WriteLn(f, '        [');
+  //nFace := length(Faces);
+
+  Write(f,'            ');
+  for i := 0 to (nFace -1) do begin
+    if (i > 0) then Write(f,', ');
+    Write(f,format('%d,%d,%d,-1', [Faces[i].X, Faces[i].Y, Faces[i].Z]));
+  end;
+  WriteLn(f,'');
+  WriteLn(f, '        ]');
+  WriteLn(f, '      }');
+  WriteLn(f, '      appearance Appearance');
+  WriteLn(f, '      {');
+  WriteLn(f, '        material Material');
+  WriteLn(f, '        {');
+  WriteLn(f, '	       ambientIntensity 0.2');
+  WriteLn(f, '	       diffuseColor 0.9 0.9 0.9');
+  WriteLn(f, '	       specularColor .1 .1 .1');
+  WriteLn(f, '	       shininess .5');
+  WriteLn(f, '        }');
+  WriteLn(f, '      }');
+  WriteLn(f, '    }');
+  WriteLn(f, '  ]');
+  WriteLn(f, '}');
+  //for i := 0 to (length(vertices)-1) do
+  //    WriteLn(f, 'v ' + floattostr(vertices[i].X)+' '+floattostr(vertices[i].Y)+' '+ floattostr(vertices[i].Z));
+  //for i := 0 to (length(faces)-1) do
+  //    WriteLn(f, 'f ' + inttostr(faces[i].X+1)+' '+inttostr(faces[i].Y+1)+' '+ inttostr(faces[i].Z+1)); //+1 since "A valid vertex index starts from 1 "
+  //fprintf(fid, '# WaveFront Object format image created with MRIcroS\n');
+  //fprintf(fid, 'v %.12g %.12g %.12g\n', vertex');
+  //fprintf(fid, 'f %d %d %d\n', (face)');
+  CloseFile(f);
+  FileMode := fmOpenRead;
+
 end;
 
-procedure TMesh.SaveMesh(const FileName: string);
-var
-  x: string;
+function ParseStartEnd(key : string; var Str: string; out keyEnd: integer): integer;
 begin
-  x := UpperCase(ExtractFileExt(Filename));
-  if (x = '.MZ3') then
-     SaveMz3(FileName)
-  else if (x = '.GII') then
-     SaveGii(Filename)
-  else if (x = '.PLY') then
-     SavePly(Filename)
-  else
-     SaveObj(Filename);
+  keyEnd := -1;
+  result := posEx(key, Str);
+  if result < 1 then exit();
+  result := result + length(key)+1;
+  result := posEx('[', Str, result);
+  if result < 1 then exit;
+  result := result +1;
+  keyEnd := posEx(']', Str, result);
+  keyEnd := keyEnd - 1;
+  if keyEnd < 1 then exit(-1);
+end;
+
+function TMesh.LoadVrml(const FileName: string): boolean; //VRML wireframe
+//this is a very basic VRML reader
+// probably only able toread VRML files created by MeshLab and Surfice
+label
+   555, 666;
+const
+   kBlockSz = 4096;
+   kNaN : single = 1/0;
+var
+   f: file;
+   sList: TStringList;
+   Str: string;
+   isQuad : boolean;
+   fl: single;
+   i,j, n,tStart, tEnd, szRead, nFace, nVert: integer;
+begin
+     result := false;
+     FileMode := fmOpenRead;
+     AssignFile(f, FileName);
+     Reset(f,1);
+     szRead := FileSize(f);
+     SetLength(Str, szRead);
+     BlockRead(f, Str[1],szRead);
+     CloseFile(f);
+     FileMode := fmOpenRead;
+     tStart := posEx('IndexedFaceSet', Str);
+     sList := TStringList.Create;
+     if tStart < 1 then goto 666;
+     //read faces
+     tStart := ParseStartEnd('coordIndex', Str, tEnd);
+     if (tStart < 1) then goto 666;
+     sList.DelimitedText := copy(Str,tStart, tEnd-tStart+1);
+     if (sList.Count) < 3 then goto 666;
+     n := 0;
+     nFace := 0;
+     isQuad := false;
+     setlength(Faces, kBlockSz);
+     for i := 0 to (sList.Count-1) do begin
+         j := StrToIntDef(sList[i],-1);
+         if j < 0 then begin
+            n := 0;
+            continue;
+         end;
+         if n = 0 then Faces[nFace].X:=j;
+         if n = 1 then Faces[nFace].Y:=j;
+         if n = 2 then begin
+           Faces[nFace].Z:=j;
+           nFace := nFace + 1;
+           if (nFace >= length(Faces)) then
+              setLength(Faces, nFace+ kBlockSz);
+         end;
+         if n > 2 then
+            isQuad := true;
+         n := n + 1;
+     end;
+     if isQuad then showmessage('Only designed to read triangular VRML meshes.');
+     setLength(Faces, nFace);
+     //read vertices
+     tStart := ParseStartEnd('point', Str, tEnd);
+     if (tStart < 1) then goto 666;
+     sList.DelimitedText := copy(Str,tStart, tEnd-tStart+1);
+     if (sList.Count) < 3 then goto 666;
+     n := 0;
+     nVert := 0;
+     setlength(Vertices, kBlockSz);
+     for i := 0 to (sList.Count-1) do begin
+         fl := StrToFloatDef(sList[i],kNaN);
+         if specialsingle(fl) then
+           continue;
+         if n = 0 then Vertices[nVert].X:=fl;
+         if n = 1 then Vertices[nVert].Y:=fl;
+         if n = 2 then begin
+           Vertices[nVert].Z:=fl;
+           nVert := nVert + 1;
+           if (nVert >= length(Vertices)) then
+              setLength(Vertices, nVert+ kBlockSz);
+           n := -1;
+         end;
+         n := n + 1;
+     end;
+     setLength(Vertices, nVert);
+     //read colors
+     tStart := ParseStartEnd('color', Str, tEnd);
+     if (tStart < 1) then goto 555;
+     sList.DelimitedText := copy(Str,tStart, tEnd-tStart+1);
+     if (sList.Count) < (3 * nVert)  then goto 555;
+     n := 0;
+     setlength(vertexRGBA, nVert);
+     nVert := 0;
+     for i := 0 to (sList.Count-1) do begin
+         fl := StrToFloatDef(sList[i],kNaN);
+         if specialsingle(fl) then
+           continue;
+         j := round(fl * 255);
+         if (j < 0) or (j > 255) then continue;
+         if n = 0 then vertexRGBA[nVert].R:=j;
+         if n = 1 then vertexRGBA[nVert].G:=j;
+         if n = 2 then begin
+           vertexRGBA[nVert].B:=j;
+           vertexRGBA[nVert].A:=255;
+           nVert := nVert + 1;
+           n := -1;
+         end;
+         n := n + 1;
+     end;
+     555: //no color
+     result := true;
+     666:
+     sList.free;
+     if not result then begin
+        showmessage('Unable to parse VRML image. You may want to convert this to a simpler format.');
+     end;
 end;
 
 procedure TMesh.SaveOverlay(const FileName: string; OverlayIndex: integer);
@@ -3227,15 +3378,15 @@ begin
   //setlength(i,0);
   setlength(c,0);
   if (length(overlay[OverlayIndex].faces) > 0) and (length(overlay[OverlayIndex].vertices) > 0) then
-     SaveMz3Core(FileName, overlay[OverlayIndex].Faces, overlay[OverlayIndex].Vertices, c, overlay[OverlayIndex].intensity)
+     SaveMz3(FileName, overlay[OverlayIndex].Faces, overlay[OverlayIndex].Vertices, c, overlay[OverlayIndex].intensity)
   else if length(overlay[OverlayIndex].intensity) > 1 then begin
      setlength(f,0);
      setlength(v,0);
-     SaveMz3Core(FileName, f,v,c, overlay[OverlayIndex].intensity);
+     SaveMz3(FileName, f,v,c, overlay[OverlayIndex].intensity);
   end;
 end;
 
-procedure TMesh.SaveGii(const FileName: string);
+procedure SaveGii(const FileName: string; Faces: TFaces; Vertices: TVertices; vertexRGBA: TVertexRGBA);
 var
    f : TextFile;
    FileNameGii : string;
@@ -3257,8 +3408,7 @@ begin
   if (length(faces) < 1) or (length(vertices) < 3) then begin
      showmessage('You need to open a mesh before you can save it');
      exit;
-  end;
-  if not CheckMesh then exit;
+  end; //if not CheckMesh then exit;
   FileMode := fmOpenWrite;   //FileMode := fmOpenRead;
   AssignFile(f, FileNameGii);
   ReWrite(f);
@@ -4212,6 +4362,11 @@ begin
         for i := 0 to (nVert -1) do
             if vertexAtlas[i] > atlasMaxIndex then
                atlasMaxIndex := vertexAtlas[i];
+        (*atlasMinxIndex := vertexAtlas[0];
+        for i := 0 to (nVert -1) do
+            if vertexAtlas[i] < atlasMinxIndex then
+               atlasMinxIndex := vertexAtlas[i];
+        GLForm1.Caption := format('%d..%d',[atlasMinxIndex,atlasMaxIndex]);*)
      end;
      result := true;
    666 :
@@ -6352,8 +6507,10 @@ begin
 		LoadAsc_Srf(Filename);
 	if (ext = '.OBJ') then
 	 LoadObj(Filename);
+        if (ext = '.WRL') then
+           LoadVrml(Filename);
 	if (ext = '.WFR') then
-	LoadWfr(Filename);
+	   LoadWfr(Filename);
 	if length(faces) < 1 then begin//not yet loaded - see if it is freesurfer format (often saved without filename extension)
 	   LoadPial(Filename);
 	   if length(faces) > 0 then
@@ -6508,6 +6665,43 @@ begin
   result := true;
 end; // LoadGcs()
 
+function asInt(i : TRGBA): longint;
+type
+  swaptype = packed record
+    case byte of
+      0:(Lng : longint);
+      1:(rgba : TRGBA);
+  end;
+  swaptypep = ^swaptype;
+var
+  inguy:swaptypep;
+begin
+    {$IFNDEF ENDIAN_LITTLE}
+    please check byte order on big endian systems!
+    {$ENDIF}
+  inguy := @i; //assign address of s to inguy
+  result := inguy^.Lng;
+end; // asRGBA()
+
+function asIntA0(i : TRGBA): longint;
+type
+  swaptype = packed record
+    case byte of
+      0:(Lng : longint);
+      1:(rgba : TRGBA);
+  end;
+  swaptypep = ^swaptype;
+var
+  inguy:swaptypep;
+begin
+    {$IFNDEF ENDIAN_LITTLE}
+    please check byte order on big endian systems!
+    {$ENDIF}
+  inguy := @i; //assign address of s to inguy
+  inguy^.rgba.a := 0;
+  result := inguy^.Lng;
+end; // asRGBA()
+
 function asRGBA(i : longint): TRGBA;
 type
   swaptype = packed record
@@ -6526,16 +6720,132 @@ begin
   result := inguy^.rgba;
 end; // asRGBA()
 
-(*function swizzleRGBA(rgba: TRGBA): TRGBA;
-begin
-  result := rgba;
-  if rgba.b > 128 then begin
-     result.r := rgba.b;
-     result.b := rgba.r;
-     result.g := 12;
-  end;
-end;*)
 
+{$DEFINE ANNOTasTEMPLATE}
+{$IFDEF ANNOTasTEMPLATE}
+function TMesh.LoadAnnot(const FileName: string): boolean;
+//freesurfer Annotation file provides vertex colors
+//  https://surfer.nmr.mgh.harvard.edu/fswiki/LabelsClutsAnnotationFiles
+label
+   666;
+var
+   f: File;
+   v,i,j,sz: integer;
+   nVert: LongWord;
+   labelRGBA: TRGBA;
+   num_entries, tag, ctabversion, maxstruc, labelNum, len, r,g,b,a: int32;
+   idx: array of LongInt;
+begin
+  result := false;
+  AssignFile(f, FileName);
+  FileMode := fmOpenRead;
+  Reset(f,1);
+  sz := FileSize(f);
+  if (sz < 20) or (length(vertices) < 3) then  //not a valid annot file
+        goto 666;
+  blockread(f, nVert, 4);
+  {$IFDEF ENDIAN_LITTLE}  //FreeSurfer files ALWAYS big endian
+  SwapLongWord(nVert);
+  {$ENDIF}
+  if (nVert <> length(vertices)) then begin
+     showmessage('Annot file does not match currently loaded image: it describes '+inttostr(nVert)+' vertices but the mesh has '+inttostr(length(vertices)));
+     goto 666;
+  end;
+  if (sz < (4+ (nVert * 8) )) then begin //too small
+     showmessage('Annot file corrupted: file is smaller than expected');
+     goto 666;
+  end;
+  setlength(idx, 2*nVert);
+  blockread(f, idx[0], 2*4*nVert);
+  {$IFDEF ENDIAN_LITTLE}  //FreeSurfer files ALWAYS big endian
+  for i := 0 to ((2*nVert)-1) do
+      SwapLongInt(idx[i]);
+  {$ENDIF}
+  setlength(vertexRGBA, nVert);
+  j := 0;
+  for i := 0 to (nVert-1) do begin
+      v := idx[j];
+      if (v < 0) or (v >= nVert) then begin
+         showmessage(inttostr(i)+'/'+inttostr(nVert)+'Index out of range '+inttostr(v));
+         goto 666;
+      end;
+      vertexRGBA[v] := asRGBA(idx[j+1]);
+      j := j + 2;
+  end;
+  //next ATLAS data
+  //GLForm1.Caption := (format('%d %d', [filepos(f),sz]));
+  if ((filepos(f)+128)  < sz) then begin
+    blockread(f, tag, 4);
+    blockread(f, ctabversion, 4);
+    blockread(f, maxstruc, 4);
+    blockread(f, len, 4);
+    {$IFDEF ENDIAN_LITTLE}
+    SwapLongInt(ctabversion);
+    SwapLongInt(maxstruc);
+    SwapLongInt(len);
+    {$ENDIF}
+    //GLForm1.Caption := (format('%d %d %d', [sz, filepos(f),len]));
+    if (ctabversion >= 0) or ((filepos(f)+len+8)  > sz) then begin
+      showmessage('Undocumented old ctabversion not supported');
+      goto 666;
+    end;
+    seek(f, filepos(f)+len);
+    blockread(f, num_entries, 4);
+    {$IFDEF ENDIAN_LITTLE}
+    SwapLongInt(num_entries);
+    {$ENDIF}
+    if (num_entries < 1) then begin
+      showmessage('Annot file does not make sense');
+      goto 666;
+    end;
+    //GLForm1.Caption := (format('%d %d %d', [num_entries, filepos(f),len]));
+    setlength(vertexAtlas, nVert);
+    for v := 0 to (nVert -1) do
+        vertexAtlas[v] := -1;
+    for i := 0 to (num_entries-1) do begin
+      blockread(f, labelNum, 4);
+      blockread(f, len, 4);
+      {$IFDEF ENDIAN_LITTLE}
+      SwapLongInt(labelNum);
+      SwapLongInt(len);
+      {$ENDIF}
+      seek(f, filepos(f)+len);
+      blockread(f, r, 4);
+      blockread(f, g, 4);
+      blockread(f, b, 4);
+      blockread(f, a, 4);
+      {$IFDEF ENDIAN_LITTLE}
+      SwapLongInt(r);
+      SwapLongInt(g);
+      SwapLongInt(b);
+      SwapLongInt(a);
+      {$ENDIF}
+      labelNum := labelNum + 1; //index from 1 not zero!
+      //GLForm1.ScriptOutputMemo.Lines.Add(format('%d rgba %d %d %d %d',[labelNum, r, g, b, a]));
+      if i = 0 then atlasMaxIndex := labelNum;
+      if labelNum > atlasMaxIndex then atlasMaxIndex := labelNum;
+      labelRGBA := RGBA(r,g,b,a);
+      //we need to use the RGB not RGBA value to infer label number!
+      // mri_annotation2label can use a different alpha for label and vertex!
+      for v := 0 to (nVert -1) do
+          if asIntA0(labelRGBA) = asIntA0(vertexRGBA[v]) then
+             vertexAtlas[v] := labelNum;
+    end;
+  end;
+  for v := 0 to (nVert -1) do
+      if (vertexAtlas[v] < 0) then begin
+        GLForm1.ScriptOutputMemo.Lines.Add(format('annot file ERROR %d rgba %d %d %d %d',[666, vertexRGBA[v].r, vertexRGBA[v].g, vertexRGBA[v].b, vertexRGBA[v].a]));
+
+        break;
+      end;
+  result := true;
+  CloseFile(f);
+  exit;
+ 666:
+   CloseFile(f);
+ setlength(vertexRGBA, 0);
+end; // LoadAnnot()
+{$ELSE}
 function TMesh.LoadAnnot(const FileName: string): boolean;
 //freesurfer Annotation file provides vertex colors
 //  https://surfer.nmr.mgh.harvard.edu/fswiki/LabelsClutsAnnotationFiles
@@ -6591,6 +6901,7 @@ begin
    CloseFile(f);
  setlength(vertexRGBA, 0);
 end; // LoadAnnot()
+{$ENDIF}
 
 procedure RemoveNaNs(var intensity: TFloats; var faces : TFaces; var vertices: TVertices; kUndefined: single);
 //remove all faces and vertices where intensity = kUndefined
@@ -7266,6 +7577,58 @@ begin
      if n > 12 then
         result := 0;
 end;
+
+procedure SaveMeshCore(const FileName: string; Faces: TFaces; Vertices: TVertices; vertexRGBA: TVertexRGBA; intensity: TFloats);
+var
+  x: string;
+begin
+  x := UpperCase(ExtractFileExt(Filename));
+  if (x = '.WRL') then
+     SaveVrml(FileName, Faces, Vertices, vertexRGBA)
+  else if (x = '.MZ3') then
+     SaveMz3(FileName, Faces, Vertices, vertexRGBA, intensity)
+  else if (x = '.GII') then
+     SaveGii(Filename, Faces, Vertices, vertexRGBA)
+  else if (x = '.PLY') then
+     SavePly(Filename, Faces, Vertices, vertexRGBA)
+  else if (x = '.OBJ') then
+     SaveObj(Filename, Faces, Vertices, vertexRGBA)
+  else begin
+       SaveObj(Filename+'.obj', Faces, Vertices, vertexRGBA);
+       //SaveMz3(Filename+'.mz3', Faces, Vertices, vertexRGBA);
+  end;
+end;
+
+procedure TMesh.SaveMesh(const FileName: string; MeshColor: TColor = clWhite);
+var
+  intensities: TFloats;
+  i: integer;
+  isOverlayPainting : boolean = false;
+  vRGBA: TVertexRGBA;
+  clr: TRGBA;
+begin
+  if (length(Faces) < 1) or (length(Vertices) < 3) then exit;
+  setlength(intensities,0);
+  //showmessage(format ('%dx%d', [length(vertexRGBA), Self.OpenOverlays]));
+  if (length(vertexRGBA) > 0) or (Self.OpenOverlays < 1) then begin
+     SaveMeshCore(Filename, Faces,Vertices, vertexRGBA, intensities);
+     exit;
+  end;
+  for i :=  OpenOverlays downto 1 do
+      if (overlay[i].LUTvisible <> kLUTinvisible) and (length(overlay[i].intensity) >= length(Vertices)) then
+           isOverlayPainting := true;
+  if (not isOverlayPainting) then begin
+     SaveMeshCore(Filename, Faces,Vertices, vertexRGBA, intensities);
+     exit;
+  end;
+  clr := asRGBA(MeshColor);
+  vRGBA := nil;
+  //overlay painting
+  BuildListCore(Clr, Faces, Vertices, vRGBA, nil, false);
+  SaveMeshCore(Filename, Faces,Vertices, vRGBA, intensities);
+  vRGBA := nil;
+end;
+
 
 function TMesh.LoadOverlay(const FileName: string; lLoadSmooth: boolean): boolean; //; isSmooth: boolean
 var

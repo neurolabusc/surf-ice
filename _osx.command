@@ -52,6 +52,7 @@ rm *.bak
 rm surfice
 rm -rf lib
 rm -rf backup
+find . -name ‘*.DS_Store’ -type f -delete
 
 #remove Cocoa as widgetset
 awk '{gsub(/Active="MacOS"/,"");}1' surfice.lpi > surfice.tmp && mv surfice.tmp surfice.lpi

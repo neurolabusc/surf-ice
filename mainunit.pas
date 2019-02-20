@@ -416,7 +416,7 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     procedure SaveBitmap(FilenameIn: string); overload;
     procedure SaveBitmap(FilenameIn: string; lX, lY: integer); overload;
     procedure SaveMenuClick(Sender: TObject);
-    procedure SaveMz3(var mesh: TMesh; isSaveOverlays: boolean);
+    //procedure SaveMz3(var mesh: TMesh; isSaveOverlays: boolean);
     procedure SaveTrack (var lTrack: TTrack);
     function SaveMeshCore(lFilename: string): boolean;
     procedure SaveMesh(var mesh: TMesh; isSaveOverlays: boolean);
@@ -2904,6 +2904,29 @@ end;
 
 procedure TGLForm1.ClipTrackChange(Sender: TObject);
 var
+  a,e,scale: single;
+begin
+ GetOrigin(scale);
+ a := ClipAziTrack.Position;
+ e := ClipElevTrack.Position;
+ (*if not gPrefs.ObjectBasedClipPlane then begin
+    a := gAzimuth - a - 180;
+    e := gElevation - e;
+ end;*)
+ sph2cartDeg90x(a,e,1,clipPlane.X,clipPlane.Y,clipPlane.Z);
+ if ClipTrack.Position < 1 then
+    clipPlane.X := 2 //tell GLSL that plane is disabled: normalized value must be <= 1.0
+ else
+   clipPlane.W := ((ClipTrack.Position/ClipTrack.Max) - 0.5) * scale * 2.0;
+ Memo1.Lines.clear;
+ Memo1.Lines.Add(format('Clipping Amount %d',[ClipTrack.Position]));
+ Memo1.Lines.Add(format('Clipping Azimuth %d',[ClipAziTrack.Position]));
+ Memo1.Lines.Add(format('Clipping Elevation %d',[ClipElevTrack.Position]));
+ GLBox.invalidate;  //show change immediately!, for delay: GLBoxRequestUpdate(Sender);
+end;
+
+(*procedure TGLForm1.ClipTrackChange(Sender: TObject);
+var
   scale: single;
 begin
  GetOrigin(scale);
@@ -2917,7 +2940,7 @@ begin
  Memo1.Lines.Add(format('Clipping Azimuth %d',[ClipAziTrack.Position]));
  Memo1.Lines.Add(format('Clipping Elevation %d',[ClipElevTrack.Position]));
  GLBox.invalidate;  //show change immediately!, for delay: GLBoxRequestUpdate(Sender);
-end;
+end; *)
 
 procedure TGLForm1.CloseMenuClick(Sender: TObject);
 begin
@@ -4261,6 +4284,7 @@ function TGLForm1.UpdateClrBar: integer;
 var
   nLUT, lI, lJ: integer;
   mn, mx:  single;
+  isDuplicate : boolean;
 begin
  nLUT := 0;
  result := 0;
@@ -4274,7 +4298,18 @@ begin
 
  if (gMesh.OpenOverlays > 0) then
     for lI := 1 to gMesh.OpenOverlays do
-        if (length(gMesh.overlay[lI].intensity) > 0) and(gMesh.overlay[lI].LUTvisible <> kLUTinvisible) and (not isFreeSurferLUT(gMesh.overlay[lI].LUTindex)) then begin
+        //https://www.nitrc.org/forum/forum.php?thread_id=10001&forum_id=6713
+        if (length(gMesh.overlay[lI].intensity) > 0) and (gMesh.overlay[lI].LUTvisible <> kLUTinvisible) and (not isFreeSurferLUT(gMesh.overlay[lI].LUTindex)) then begin
+         isDuplicate := false;
+         lJ := 1;
+         while (lJ < lI) do begin
+			if (gMesh.overlay[lI].LUTindex = gMesh.overlay[lJ].LUTindex)  and(gMesh.overlay[lJ].LUTvisible <> kLUTinvisible)
+				and (gMesh.overlay[lI].windowScaledMin = gMesh.overlay[lJ].windowScaledMin)
+				and (gMesh.overlay[lI].windowScaledMax = gMesh.overlay[lJ].windowScaledMax) then
+					isDuplicate := true;
+			lJ := lJ + 1;
+         end;
+         if isDuplicate then continue;
          inc(nLUT);
          gClrbar.SetLUT(nLUT, UpdateTransferFunction(gMesh.overlay[lI].LUTindex,gMesh.overlay[lI].LUTinvert), gMesh.overlay[lI].windowScaledMin,gMesh.overlay[lI].windowScaledMax);
         end;
@@ -4500,6 +4535,8 @@ end;
 
 procedure TGLForm1.GLboxPaint(Sender: TObject);
 begin
+ //if not gPrefs.ObjectBasedClipPlane then
+ //  ClipTrackChange(Sender);
  CreateRender(GLBoxBackingWidth, GLboxBackingHeight, true);
  if UpdateTimer.enabled then
     UpdateTimerTimer(Sender);
@@ -5527,7 +5564,6 @@ procedure TGLForm1.SaveBitmap(FilenameIn: string; lX, lY: integer); overload;
    bmp.Free;
 end;
 
-
 procedure TGLForm1.SaveBitmap(FilenameIn: string); overload;
  var
     bmp: TBitmap;
@@ -5566,19 +5602,19 @@ begin
   SaveBitmap(SaveBitmapDialog.Filename);
 end;
 
-procedure TGLForm1.SaveMz3(var mesh: TMesh; isSaveOverlays: boolean);
+(*procedure TGLForm1.SaveMz3(var mesh: TMesh; isSaveOverlays: boolean);
 var
    i : integer;
    nam: string;
 begin
-  //showmessage(inttostr(gMesh.OpenOverlays)); exit;
-  Mesh.SaveMz3(SaveMeshDialog.Filename);
+  Mesh.SaveMz3(SaveMeshDialog.Filename, gPrefs.ObjColor);
   if not isSaveOverlays then exit;
   for i :=  1 to gMesh.OpenOverlays do begin
+        if length(gMesh.overlay[i].vertices) < 3 then continue; //only for meshes, not for colors
         nam := changefileext(SaveMeshDialog.Filename, '_'+inttostr(i)+extractfileext(SaveMeshDialog.Filename));
         gMesh.SaveOverlay(nam, i);
   end;
-end;
+end;*)
 
 //{$DEFINE XL}
 {$IFDEF XL}
@@ -5607,7 +5643,7 @@ end; *)
 {$ELSE}
 procedure TGLForm1.SaveMesh(var mesh: TMesh; isSaveOverlays: boolean);
 const
-      kMeshFilter = 'OBJ (Widely supported)|*.obj|GIfTI (Neuroimaging)|*.gii|MZ3 (Small and fast)|*.mz3|PLY (Widely supported)|*.ply';
+      kMeshFilter = 'OBJ (Widely supported)|*.obj|GIfTI (Neuroimaging)|*.gii|MZ3 (Small and fast)|*.mz3|PLY (Widely supported)|*.ply|VRML (Shapeways color printing)|*.wrl';
 var
    nam, ext, x: string;
 begin
@@ -5641,22 +5677,31 @@ begin
   if length(SaveMeshDialog.Filename) < 1 then exit;
   //caption := inttostr(SaveMeshDialog.FilterIndex)+' '+SaveMeshDialog.Filename; exit; //666
   x := UpperCase(ExtractFileExt(SaveMeshDialog.Filename));
-  if (x <> '.MZ3') and (x <> '.PLY') and (x <> '.OBJ')  and (x <> '.GII') then begin
+  if (x <> '.MZ3') and (x <> '.PLY') and (x <> '.OBJ')  and (x <> '.GII') and (x <> '.WRL') then begin
      x := ext;
      SaveMeshDialog.Filename := SaveMeshDialog.Filename + x;
   end;
-  if (x = '.MZ3') then
+  mesh.SaveMesh(SaveMeshDialog.Filename);
+  (*if (x = '.WRL') then
+     mesh.SaveVrml(SaveMeshDialog.Filename, gPrefs.ObjColor)
+  else if (x = '.MZ3') then
      SaveMz3(mesh, isSaveOverlays)
   else if (x = '.GII') then
      mesh.SaveGii(SaveMeshDialog.Filename)
   else if (x = '.PLY') then
      mesh.SavePly(SaveMeshDialog.Filename)
   else
-      mesh.SaveObj(SaveMeshDialog.Filename);
+      mesh.SaveObj(SaveMeshDialog.Filename); *)
 end;
 {$ENDIF}
 
 function TGLForm1.SaveMeshCore(lFilename: string): boolean;
+begin
+     gMesh.SaveMesh(lFilename);
+     result := true;
+end;
+
+(*function TGLForm1.SaveMeshCore(lFilename: string): boolean;
 var
    x: string;
 begin
@@ -5670,6 +5715,7 @@ begin
      x := '.MZ3';
      lFilename := lFilename + x;
   end;
+  xxx
   if (x = '.MZ3') then
      gMesh.SaveMz3(lFilename)
   else if (x = '.GII') then
@@ -5678,7 +5724,7 @@ begin
      gMesh.SavePly(lFilename)
   else
       gMesh.SaveObj(lFilename);
-end;
+end; *)
 
 
 procedure TGLForm1.SaveMeshMenuClick(Sender: TObject);
@@ -5908,7 +5954,6 @@ begin
   if (gPrefs.OcclusionAmount <> occlusionTrack.Position) and (gPrefs.OcclusionAmount >= 0) and (gPrefs.OcclusionAmount <= 100) then
      occlusionTrack.Position:= gPrefs.OcclusionAmount;
   ColorBarVisibleMenu.Checked := gPrefs.Colorbar;
-
   AdditiveOverlayMenu.Checked := gPrefs.AdditiveOverlay;
   gMesh.isAdditiveOverlay := gPrefs.AdditiveOverlay;
   if gPrefs.InitScript <> '' then

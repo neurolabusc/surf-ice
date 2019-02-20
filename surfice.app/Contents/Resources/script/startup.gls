@@ -5,10 +5,10 @@ begin
 	overlayload('motor_4t95vol.nii.gz');
 	overlayminmax(1,2,12);
 	overlayload('motor_4t95vol.nii.gz');
-	overlayminmax(2,-1,-2);
+	overlayminmax(2,2,12);
+	overlaycolorname(2, 'red-yellow');
 	colorbarvisible(true);
 	overlaytransparencyonbackground(25);
 	meshcurv();
-wait(0);
 end.
 

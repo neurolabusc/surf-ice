@@ -141,7 +141,7 @@ var
     MinClusterVoxEdit, ThreshEdit: TEdit;
     {$ENDIF}
     DecimateEdit: TSpinEdit;
-    SmoothCombo: TComboBox;
+    SmoothCombo, SingleCombo: TComboBox;
 begin
     PrefForm:=TForm.Create(nil);
     //PrefForm.SetBounds(100, 100, 510, 212);
@@ -271,9 +271,6 @@ begin
     DecimateEdit.Parent:=PrefForm;
     //Smooth
     SmoothCombo:=TComboBox.create(PrefForm);
-    //SmoothCombo.Left := 8;
-    //SmoothCombo.Top := 132;
-    //SmoothCombo.Width := PrefForm.Width -16;
     SmoothCombo.Items.Add('Raw (Jagged)');
     SmoothCombo.Items.Add('Masked smooth (Smooth except at brain mask)');
     SmoothCombo.Items.Add('Smooth (Eroded by brain mask)');
@@ -292,6 +289,25 @@ begin
     SmoothCombo.BorderSpacing.Right := 6;
     SmoothCombo.Parent:=PrefForm;
     SmoothCombo.Parent:=PrefForm;
+    //SingleCombo
+    SingleCombo:=TComboBox.create(PrefForm);
+    SingleCombo.Items.Add('Multiple objects');
+    SingleCombo.Items.Add('Largest object only');
+    SingleCombo.ItemIndex:= 0;
+    SingleCombo.Style := csDropDownList;
+    SingleCombo.AutoSize := true;
+    SingleCombo.Constraints.MinWidth:= 400;
+    SingleCombo.AnchorSide[akTop].Side := asrBottom;
+    SingleCombo.AnchorSide[akTop].Control := DecimateEdit;
+    SingleCombo.BorderSpacing.Top := 6;
+    SingleCombo.AnchorSide[akLeft].Side := asrLeft;
+    SingleCombo.AnchorSide[akLeft].Control := PrefForm;
+    SingleCombo.BorderSpacing.Left := 6;
+    SingleCombo.AnchorSide[akRight].Side := asrRight;
+    SingleCombo.AnchorSide[akRight].Control := PrefForm;
+    SingleCombo.BorderSpacing.Right := 6;
+    SingleCombo.Parent:=PrefForm;
+    SingleCombo.Parent:=PrefForm;
     //OK button
     OkBtn:=TButton.create(PrefForm);
     OkBtn.Caption:='OK';
@@ -300,7 +316,7 @@ begin
     //OkBtn.Left := PrefForm.Width - OkBtn.Width - 8;
     OkBtn.AutoSize := true;
     OkBtn.AnchorSide[akTop].Side := asrBottom;
-    OkBtn.AnchorSide[akTop].Control := SmoothCombo;
+    OkBtn.AnchorSide[akTop].Control := SingleCombo;
     OkBtn.BorderSpacing.Top := 6;
     OkBtn.AnchorSide[akLeft].Side := asrCenter;
     OkBtn.AnchorSide[akLeft].Control := PrefForm;
@@ -317,6 +333,8 @@ begin
     MinClusterVox := StrToIntDef(MinClusterVoxEdit.Caption, 1);
     Decim := DecimateEdit.value/100.0;
     SmoothStyle := SmoothCombo.ItemIndex;
+    if (SingleCombo.ItemIndex = 1) then
+       MinClusterVox := -1;
     result :=  PrefForm.ModalResult = mrOK;
     FreeAndNil(PrefForm);
     if (Decim <= 0.0) then
@@ -371,6 +389,112 @@ begin
   lMesh.Free();
 end; //Nii2MeshCore()
 
+(*Type
+  TUInt8s = array of uint8;
+
+procedure PreserveLargestCluster(var lImg: TUInt8s; Xi,Yi,Zi: integer; lClusterValue,ValueForSmallClusters: byte);
+var
+  mx, i, j, XY, XYZ, qlo, qhi: integer;
+  qimg, img32: TInt32s;
+procedure checkPixel(vxl: integer);
+begin
+     if img32[vxl] <> -1 then exit; //already found or not a target
+     qhi := qhi + 1;
+     img32[vxl] := 1; //found
+     qimg[qhi] := vxl; //location
+end;//nested checkPixel()
+procedure retirePixel();
+var
+  vxl: integer;
+begin
+     vxl := qimg[qlo];
+     checkPixel(vxl-1);
+     checkPixel(vxl+1);
+     checkPixel(vxl-Xi);
+     checkPixel(vxl+Xi);
+     checkPixel(vxl-XY);
+     checkPixel(vxl+XY);
+     qlo := qlo + 1;
+end;//nested retirePixel()
+begin //main PreserveLargestCluster()
+  if (Zi < 1) then exit;
+  XY := Xi * Yi;
+  XYZ := XY * Zi;
+  setlength(img32, XYZ);
+  setlength(qimg, XYZ);
+  //set target voxels
+  for i := 0 to (XYZ-1) do begin
+      img32[i] := 0;
+      if lImg[i] = lClusterValue then
+         img32[i] := -1;
+  end;
+  //clear bottom and top slices
+  for i := 0 to (XY-1) do
+    img32[i] := 0;
+  for i := (XYZ-1-XY) to (XYZ-1) do
+    img32[i] := 0;
+  //now seed each voxel
+  mx := 0;
+  for i := (XY) to (XYZ-1-XY) do begin
+      if (img32[i] < 0) then begin //voxels not yet part of any region
+         qlo := 0;
+         qhi := -1;
+         checkPixel(i);
+         while qlo <= qhi do
+           retirePixel();
+         for j := 0 to qhi do
+             img32[qimg[j]] := qhi + 1;
+         if (qhi+1) > mx then mx := qhi + 1;
+      end;
+  end;
+  if mx < 2 then begin
+     qimg := nil;
+     img32 := nil;
+     exit;
+  end;
+  //delete voxels not part of largest cluster
+  for i := 0 to (XYZ-1) do
+      if img32[i] <> mx then
+         img32[i] := 0;
+  //recover bottom and top slices
+  for i := 0 to (XY-1) do
+      if (img32[i+XY] = mx) then
+         img32[i] := mx;
+  for i := (XYZ-1-XY) to (XYZ-1) do
+      if (img32[i-XY] = mx) then
+         img32[i] := mx;
+  //apply filter to input image
+  for i := 0 to (XYZ-1) do
+      if img32[i] = 0 then
+         lImg[i] := 0;
+  qimg := nil;
+  img32 := nil;
+end;// PreserveLargestCluster()
+
+procedure PreserveLargestObjectOnly(var nii: TNIFTI; lThresh: single);
+var
+  i,vx: integer;
+  vol8: TUInt8s;
+  halfThresh : single;
+begin
+   vx := nii.hdr.dim[1] * nii.hdr.dim[2] * nii.hdr.dim[3];
+   if (vx < 1) then exit;
+   SetLength(vol8, vx);
+   for i := 0 to (vx-1) do begin
+       vol8[i] := 0;
+       if (nii.img[i] >= lThresh) then
+          vol8[i] := 255;
+   end;
+   PreserveLargestCluster(vol8, nii.hdr.dim[1], nii.hdr.dim[2], nii.hdr.dim[3],255,0 );
+   halfThresh := lThresh * 0.5;
+   for i := 0 to (vx-1) do begin
+       if ((nii.img[i] >= lThresh) and (vol8[i] < 255)) then
+          nii.img[i] := halfThresh; //voxel does not survive
+   end;
+   SetLength(vol8, 0);
+
+end;*)
+
 function Nii2Mesh(const FileName: string): boolean;
 var
   nii: TNIFTI;
@@ -416,8 +540,10 @@ begin
       nii.Free;
       exit;
    end;
-   IsoSurfaceEx := TIsoSurfaceExtractor.Create(nii.hdr.dim[1], nii.hdr.dim[2],nii.hdr.dim[3], nii.img);
-   lMesh := TMesh.Create;
+  //if singleObject then
+  //   PreserveLargestObjectOnly(nii, lThresh);
+  IsoSurfaceEx := TIsoSurfaceExtractor.Create(nii.hdr.dim[1], nii.hdr.dim[2],nii.hdr.dim[3], nii.img);
+  lMesh := TMesh.Create;
   //IsoSurfaceEx.MarchingTetrahedra(Threshold,lMesh.vertices, lMesh.faces);
   IsoSurfaceEx.MarchingCubes(lThresh,lMesh.vertices, lMesh.faces);
   //showmessage( Format('converted= %d   f= %d', [length(lMesh.vertices), length(lMesh.faces)]));
@@ -469,17 +595,14 @@ begin
  //GLForm1.SaveMesh(lMesh, false);
  if gPrefs.SaveAsFormat = 4 then begin
     GLForm1.SaveMeshDialog.Filename := changefileext(GLForm1.SaveMeshDialog.Filename, '.ply');
-    lMesh.SavePly(GLForm1.SaveMeshDialog.Filename);
 end else if gPrefs.SaveAsFormat = 0 then begin
     GLForm1.SaveMeshDialog.Filename := changefileext(GLForm1.SaveMeshDialog.Filename, '.obj');
-    lMesh.SaveObj(GLForm1.SaveMeshDialog.Filename);
 end else if gPrefs.SaveAsFormat = 1 then begin
     GLForm1.SaveMeshDialog.Filename := changefileext(GLForm1.SaveMeshDialog.Filename, '.gii');
-    lMesh.SaveGii(GLForm1.SaveMeshDialog.Filename);
 end else begin
     GLForm1.SaveMeshDialog.Filename := changefileext(GLForm1.SaveMeshDialog.Filename, '.mz3');
-    lMesh.SaveMz3(GLForm1.SaveMeshDialog.Filename);
 end;
+lMesh.SaveMesh(GLForm1.SaveMeshDialog.Filename);
  lMesh.Free();
 end;
 

@@ -18,7 +18,7 @@ const
 
 type
   TMRU =  array [1..knMRU] of string;
-  TPrefs = record
+  TPrefs = record //ObjectBasedClipPlane,
     SmoothVoxelwiseData,
     OverlayClip, StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube, MultiSample, BlackDefaultBackground,
      Colorbar,TracksAreTubes, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,ColorBarPrecedenceTracksNotOverlays,
@@ -345,6 +345,7 @@ begin
     BlackDefaultBackground := false;
     OverlayClip := false;
     StartupScript := false;
+    //ObjectBasedClipPlane := false;
     ScreenCaptureTransparentBackground := true;
     SmoothVoxelwiseData := true;
     PrevTrackname := '';
@@ -609,6 +610,7 @@ begin
 	  IniBool(lRead,lIniFile, 'Perspective',lPrefs.Perspective);
 	  IniBool(lRead,lIniFile, 'AdditiveOverlay',lPrefs.AdditiveOverlay);
 	  IniBool(lRead,lIniFile, 'StartupScript',lPrefs.StartupScript);
+          //IniBool(lRead,lIniFile, 'ObjectBasedClipPlane',lPrefs.ObjectBasedClipPlane);
 	  {$IFDEF LCLCocoa}
 	  IniBool(lRead,lIniFile, 'RetinaDisplay',lPrefs.RetinaDisplay);
 	  IniBool(lRead,lIniFile, 'DarkMode',lPrefs.DarkMode);

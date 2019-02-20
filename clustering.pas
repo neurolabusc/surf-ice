@@ -10,6 +10,9 @@ uses
   Classes, SysUtils, define_types, nifti_loader, dialogs;
 
 function ApplyClusterThreshold(nii: TNIFTI; lThresh: single; lMinClusterVox: integer): boolean;
+//lMinClusterVox = 0 : do not filter data
+//lMinClusterVox = -1 : preserve largest cluster only
+
 
 implementation
 type
@@ -17,7 +20,7 @@ type
 
 procedure FindClusters (lXDim, lYDim, lZDim, lMinClusterVox: integer; var lClusterBuff0: TIntImg);
 var
-   lClusterSign,lClusterSz,lClusterFillValue,lQTail,lQHead,lSliceSz,lQSz,lInc,lVolSz: integer;//lScaledThresh
+   lClusterSign,lClusterSz,lClusterFillValue,lQTail,lQHead,lSliceSz,lQSz,lInc,lVolSz, lMaxClusterVox: integer;//lScaledThresh
    lQra0: TIntImg;
 const
      kFillValue = -2;
@@ -129,7 +132,7 @@ begin
 end;
 
 begin
-     if (lMinClusterVox < 2) then exit;
+     if (lMinClusterVox = 0) or (lMinClusterVox = 1) then exit;
      lVolSz := lXdim*lYdim*lZdim;
      lSliceSz := lXdim * lYdim;
      if (lXDim < 4) or (lYDim < 4) or (lZDim < 4) or (lVolSz < 1)  then exit;
@@ -140,9 +143,22 @@ begin
      SelectClusters(1);
      Setlength(lQra0, 0);
      //NEXT: mask image data with cluster size
-     for lInc := 0 to (lVolSz-1) do
-         if lClusterBuff0[lInc] < lMinClusterVox then
-            lClusterBuff0[lInc] := 0;
+     if (lMinClusterVox < 0) then begin
+        //find largest cluster
+        lMaxClusterVox  := lClusterBuff0[0];
+        for lInc := 0 to (lVolSz-1) do
+            if lClusterBuff0[lInc] > lMaxClusterVox then
+               lMaxClusterVox := lClusterBuff0[lInc];
+        //only preservelargest cluster
+        for lInc := 0 to (lVolSz-1) do
+            if lClusterBuff0[lInc] < lMaxClusterVox then
+               lClusterBuff0[lInc] := 0;
+     end else begin
+       for lInc := 0 to (lVolSz-1) do
+           if lClusterBuff0[lInc] < lMinClusterVox then
+              lClusterBuff0[lInc] := 0;
+
+     end;
 end;
 
 
@@ -156,7 +172,7 @@ var
 begin
      result := true;
      nVox := nii.hdr.dim[1] * nii.hdr.dim[2] * nii.hdr.dim[3];
-     if (lThresh = 0) or (lMinClusterVox < 2) or (nVox < lMinClusterVox) or (nVox <> length(nii.img)) then exit; //clustering has no effect
+     if (lThresh = 0) or (lMinClusterVox = 0) or (lMinClusterVox = 1) or (nVox < lMinClusterVox) or (nVox <> length(nii.img)) then exit; //clustering has no effect
      lThreshAbs := abs(lThresh);
      setlength(intimg, nVox);
      if lThresh < 0 then begin
@@ -179,9 +195,10 @@ begin
      FindClusters (nii.hdr.dim[1], nii.hdr.dim[2], nii.hdr.dim[3], lMinClusterVox, intimg);
      nSurvive2 := 0;
      for i := 0 to (nVox -1) do
-            if(intimg[i] >= lMinClusterVox) then
+            if(intimg[i] >= 0) then
                nSurvive2 := nSurvive2 + 1;
-     showmessage(format('%d voxels exceed %g, of which %d are part of clusters larger than %d voxels',[nSurvive, lThresh, nSurvive2, lMinClusterVox]));
+     if lMinClusterVox > 0 then
+        showmessage(format('%d voxels exceed %g, of which %d are part of clusters larger than %d voxels',[nSurvive, lThresh, nSurvive2, lMinClusterVox]));
      for i := 0 to (nVox -1) do
          if (intimg[i] = 0) and (nii.img[i] > lThreshAbs) then
               nii.img[i] := lAlmostThresh;
