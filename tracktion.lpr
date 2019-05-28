@@ -486,8 +486,8 @@ begin
      negTrk.len := 0;
      posTrk.len := 0;
      RandSeed := 123; //make sure "random" seed placement is precisely repeated across runs
-     for z := 1 to (msk.hdr.dim[3]-2) do //for each slice [except edge]
-         for y := 1 to (msk.hdr.dim[2]-2) do //for each row [except edge]
+     for z := 1 to (msk.hdr.dim[3]-2) do begin //for each slice [except edge]
+         for y := 1 to (msk.hdr.dim[2]-2) do begin //for each row [except edge]
              for x := 1 to (msk.hdr.dim[1]-2) do begin //for each column [except edge]
                  vx := XYZ2vox(x,y,z);
                  if (mskMap[vx] = 1) then begin
@@ -503,6 +503,10 @@ begin
                     end; //for each seed
                  end; //FA above threshold: create new fiber
              end; //for x
+         end; //for y
+         showmsg('xxx');
+         showmsg(format('Completed %d/%d', [z, msk.hdr.dim[3])]));
+     end; //for z
     setlength(Trk.tracks, TrkPos);
     //smooth tracks and simplify
     if length(Trk.tracks) < 1 then begin

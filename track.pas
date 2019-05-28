@@ -247,16 +247,16 @@ var
   isScalarPerVertexColor: boolean = false;
 begin
   randomize;
-  //GLForm1.Caption := inttostr(random(666));
- if (ScalarSelected >= 0) and (length(Scalars) > ScalarSelected) then begin
-   // GLForm1.Caption := format('%d %d %d %d %d',[ScalarSelected, length(Scalars), length(Scalars[ScalarSelected].scalar), n_count, random(666)]);
+  //if length(Scalars) > 0 then
+  //   GLForm1.Caption := format('selected %d available %d count %d streamline count %d',[ScalarSelected,length(Scalars), length(Scalars[0].scalar), n_count ]);
+  if (ScalarSelected >= 0) and (length(Scalars) > ScalarSelected) then begin
    if  length(Scalars[ScalarSelected].scalar) = n_count then
        isScalarPerFiberColor := true //one color per fiber
    else
        isScalarPerVertexColor := true;
- end;
- //if isScalarPerVertexColor then
- //   GLForm1.Caption := format('%d %d %d %d %d',[ScalarSelected, length(Scalars), length(Scalars[ScalarSelected].scalar), n_count, random(666)]);
+  end;
+
+  //  exit;
   maxLinks := 0;
   n_faces := 0;
   n_vertices := 0;
@@ -298,8 +298,10 @@ begin
     end; //len >= minFiberLength
     i := i + 1 + (3 * m);
   end;
+
   if (maxLinks < 1) then exit;
   //allocate memory
+  //GLForm1.Caption := format('%d %d %d %d', [maxLinks, n_vertices, n_indices, random(9)]);
   setlength(pts, maxLinks);
   setlength(norms, maxLinks);
   setlength(vRGBA, n_vertices);
@@ -307,6 +309,8 @@ begin
   setlength(Verts, n_vertices);
   setlength(vNorms, n_vertices);
   setlength(Indices, n_indices);
+
+
   //second pass: fill arrays
   i := 0;
   n_vertices := 0;
@@ -353,7 +357,6 @@ begin
           for mi := 0 to (m-2) do begin
               if isScalarPerVertexColor then
                  normRGBA :=  inten2rgb1(Scalars[ScalarSelected].scalar[nvertex+mi], Scalars[ScalarSelected].mnView, Scalars[ScalarSelected].mxView,  scalarLUT );
-
               Verts[n_vertices] := pts[mi];
               vNorms[n_vertices] := norms[mi];
               vType[n_vertices] := 0;
@@ -369,7 +372,6 @@ begin
           end;
           if isScalarPerVertexColor then
              normRGBA :=  inten2rgb1(Scalars[ScalarSelected].scalar[nvertex+m-1], Scalars[ScalarSelected].mnView, Scalars[ScalarSelected].mxView,  scalarLUT );
-
           //The normal for the last vestice is different
           Verts[n_vertices] := pts[m-1];
           vNorms[n_vertices] := norms[m-2];
@@ -383,9 +385,7 @@ begin
           vRGBA[n_vertices] := normRGBA;
           Indices[n_indices] := n_vertices;inc(n_indices);
           inc(n_vertices);
-
           Indices[n_indices] := kPrimitiveRestart;inc(n_indices);
-
 	  //Add the Last end imposter
           for mi:=0 to 3 do begin
               Verts[n_vertices] := pts[m-1];
@@ -396,9 +396,7 @@ begin
               Indices[n_indices] := n_vertices;inc(n_indices);
               inc(n_vertices);
           end;
-
           Indices[n_indices] := kPrimitiveRestart;inc(n_indices);
-
         end else
             i := i + 1 + (3 * m);
         nfiber := nfiber + 1;
@@ -1550,9 +1548,13 @@ begin
      goto 666;
   end;
   if (hdr.hdr_size <> sizeof(TTrackhdr)) or (hdr.n_count < 1) or (hdr.n_properties < 0) or (hdr.n_scalars < 0) then begin
-     showmessage('Not a valid TrakVis format file (invalid properties)');
+     showmessage(format('Not a valid TrakVis format file: invalid properties (count %d, properties %d, scalars %d)', [hdr.n_count, hdr.n_properties, hdr.n_scalars]) );
      goto 666;
   end;
+  //showmessage(format('properties %d scalars %d', [hdr.n_properties, hdr.n_scalars]));
+  //showmessage(format('%g %g %g %g %g %g', [hdr.image_orientation_patient[1], hdr.image_orientation_patient[2], hdr.image_orientation_patient[3],
+
+  //     hdr.image_orientation_patient[4], hdr.image_orientation_patient[5], hdr.image_orientation_patient[6]]) );
   str := UpperCase(hdr.voxel_order[1]+hdr.voxel_order[2]+hdr.voxel_order[3]);
   (*if ((str[1] <> 'L') and (str[1] <> 'R')) or ((str[2] <> 'A') and (str[2] <> 'P')) or ((str[3] <> 'S') and (str[3] <> 'I')) then begin
      Showmessage('Unsupported TRK voxel order "'+str+'"');
@@ -1582,9 +1584,19 @@ begin
         SetString(str, PChar(@hdr.property_name[i*20]), 20);
         str := UpperCase(trim(str));
         scalars[hdr.n_scalars+i].name := str;
+        //setlength(scalars[hdr.n_scalars+i].scalar, nVtx); //one per fiber
         setlength(scalars[hdr.n_scalars+i].scalar, hdr.n_count); //one per fiber
       end;
     end;
+
+    (*if (hdr.n_properties > 0) then begin
+      for i := 0 to (hdr.n_properties-1) do begin
+        SetString(str, PChar(@hdr.property_name[i*20]), 20);
+        str := UpperCase(trim(str));
+        scalars[hdr.n_scalars+i].name := str;
+        setlength(scalars[hdr.n_scalars+i].scalar, hdr.n_count); //one per fiber
+      end;
+    end;*)
     //now read data
     outPos := 0;
     nVtx := 0;
@@ -1611,10 +1623,12 @@ begin
           for m := 0 to (hdr.n_properties-1) do begin
               //blockread(f, scalarS32, SizeOf(single)  );
               mStream.Read(scalarS32, SizeOf(single) );
-              scalars[hdr.n_scalars+m].scalar[i] := scalarS32;
+              scalars[hdr.n_scalars+m].scalar[i-1] := scalarS32;
           end;
     end;
+    //showmessage(format('+properties %d scalars %d', [hdr.n_properties, hdr.n_scalars]));
     SetScalarDescriptives;
+    //showmessage(format('-properties %d scalars %d', [hdr.n_properties, hdr.n_scalars]));
   end else begin //we can read much faster if there are no properties or scalars
       ntracks := (fsz - sizeof(TTrackhdr)) div sizeof(single);
       if ntracks < 4 then exit;
@@ -1770,7 +1784,7 @@ end; // SetDescriptives()
 function TTrack.SimplifyMM(Tol, minLength: float): boolean;
 var
    pos: TPoint3f;
-   i, m, mi, xi, xm, n_countOut: integer;
+   i, nDiv10, m, mi, xi, xm, n_countOut: integer;
    dx: single;
    Orig, Simple: array of TPoint3f;
    xTracks: array of single;
@@ -1787,12 +1801,17 @@ begin
   if (n_count < 1) or (length(tracks) < 4) then exit;
   setlength(xTracks, length(tracks));
   i := 0;
+  nDiv10 := length(tracks) div 10;
   xi := 0;
   n_countOut := 0;
   while i < length(tracks) do begin
         m :=   asInt( tracks[i]);
         xm := 0;
         inc(i);
+        {$ifdef isTerminalApp}
+        if (i mod nDiv10) = 0 then
+           writeln(format('Simplify: proportion completed %f', [i/length(tracks)] ));
+        {$endif}
         setlength(Orig, m);
         setlength(Simple, m);
         for mi := 0 to (m-1) do begin
@@ -1882,7 +1901,14 @@ begin
   fillchar(hdr.reserved[1], sizeof(hdr.reserved), 0);
   hdr.voxel_order[1] := 'R'; hdr.voxel_order[2] := 'A'; hdr.voxel_order[3] := 'S'; hdr.voxel_order[4] := chr(0);
   fillchar(hdr.pad2[1], sizeof(hdr.pad2), 0);
-  fillchar(hdr.image_orientation_patient[1], sizeof(hdr.image_orientation_patient), 0);
+  //fillchar(hdr.image_orientation_patient[1], sizeof(hdr.image_orientation_patient), 0);
+  hdr.image_orientation_patient[1] := 1;
+  hdr.image_orientation_patient[2] := 0;
+  hdr.image_orientation_patient[3] := 0;
+  hdr.image_orientation_patient[4] := 0;
+  hdr.image_orientation_patient[5] := 1;
+  hdr.image_orientation_patient[6] := 0;
+
   fillchar(hdr.pad1[1], sizeof(hdr.pad1), 0);
   hdr.invert_x:= 0; hdr.invert_y:= 0; hdr.invert_z:= 0;
   hdr.swap_xy := 0; hdr.swap_yz := 0; hdr.swap_zx := 0;

@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
-  Left = 137
+  Left = 233
   Height = 684
-  Top = 45
+  Top = 94
   Width = 1047
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -422,6 +422,7 @@ object GLForm1: TGLForm1
         BorderSpacing.Top = 2
         DropDownCount = 22
         ItemHeight = 26
+        ItemIndex = 0
         Items.Strings = (
           'a'
           'b'
@@ -435,7 +436,7 @@ object GLForm1: TGLForm1
         ParentFont = False
         Style = csDropDownList
         TabOrder = 3
-        Text = '0'
+        Text = 'a'
       end
       object TrackScalarNameDrop: TComboBox
         AnchorSideLeft.Control = TrackLengthLabel
@@ -516,6 +517,7 @@ object GLForm1: TGLForm1
         BorderSpacing.Right = 2
         DropDownCount = 22
         ItemHeight = 26
+        ItemIndex = 0
         Items.Strings = (
           'a'
           'b'
@@ -529,7 +531,7 @@ object GLForm1: TGLForm1
         ParentFont = False
         Style = csDropDownList
         TabOrder = 0
-        Text = '0'
+        Text = 'a'
       end
       object NodeColorVariesCheck: TCheckBox
         AnchorSideLeft.Control = NodeColorLabel
@@ -723,6 +725,7 @@ object GLForm1: TGLForm1
         BorderSpacing.Top = 2
         DropDownCount = 22
         ItemHeight = 26
+        ItemIndex = 0
         Items.Strings = (
           'a'
           'b'
@@ -736,7 +739,7 @@ object GLForm1: TGLForm1
         ParentFont = False
         Style = csDropDownList
         TabOrder = 0
-        Text = '0'
+        Text = 'a'
       end
       object EdgeColorVariesCheck: TCheckBox
         AnchorSideLeft.Control = EdgeColorLabel
@@ -1021,7 +1024,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = MeshBlendTrack
         AnchorSideRight.Side = asrBottom
-        Left = 180
+        Left = 177
         Height = 18
         Hint = 'If checked, edge size varies'
         Top = 34
@@ -1043,8 +1046,8 @@ object GLForm1: TGLForm1
         Left = 2
         Height = 16
         Top = 35
-        Width = 174
-        Caption = 'Shader For Background Only'
+        Width = 171
+        Caption = 'Shader For Background only'
         ParentColor = False
         ParentFont = False
       end
@@ -1616,6 +1619,10 @@ object GLForm1: TGLForm1
     object LayerInvertColorsMenu: TMenuItem
       Caption = 'Invert Colors'
       OnClick = LayerInvertColorsMenuClick
+    end
+    object LayerAOMapMenu: TMenuItem
+      Caption = 'Darkening layer'
+      OnClick = LayerAOMapMenuClick
     end
     object LayerShowHeaderMenu: TMenuItem
       Caption = 'Show Header'

@@ -320,7 +320,7 @@ var
   fNorm : TPoint3f;
 begin
   //glDeleteLists(mesh.displayList, 1);
-  if  (length(vertices) < 3) or (length(faces) < 1) then exit;
+  if  (length(vertices) < 3) or (length(faces) < 1) then exit(0);
   setlength(vNorm, length(vertices) );
   //compute vertex normals
   fNorm := ptf(0,0,0);

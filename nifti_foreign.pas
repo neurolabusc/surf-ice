@@ -4,7 +4,8 @@ interface
 {$mode objfpc}{$H+}
 
 uses
- dialogs, nifti_types, define_types, sysutils, classes, StrUtils, zstream;
+{$ifndef isTerminalApp}  dialogs, {$endif}
+ nifti_types, define_types, sysutils, classes, StrUtils, zstream;
 
 function readForeignHeader (var lFilename: string; var lHdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
 procedure NII_Clear (var lHdr: TNIFTIHdr);

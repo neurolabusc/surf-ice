@@ -1,0 +1,258 @@
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - loaders - MZ3 loader</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			html, body {
+				padding:0;
+				margin:0;
+				background:#AAAAAA;
+			}
+
+			.models {
+				position:absolute;
+				top:10px;
+				left:12px;
+				z-index:2;
+				font-family: "Arial", "Helvetica Neue", "Helvetica", sans-serif;
+				font-size:13px;
+			}
+
+			.notes {
+				position:absolute;
+				left:12px;
+				bottom:10px;
+				z-index:2;
+				font-family: "Arial", "Helvetica Neue", "Helvetica", sans-serif;
+				font-size:13px;
+				text-align:left;
+				color:#FFFFFF;
+				max-width:300px;
+			}
+
+			.notes a, .notes a:visited {
+				color:#FFFFFF;
+			}
+
+			.models strong {
+				color:#FFFFFF;
+				text-transform: uppercase;
+			}
+
+			.models a, .models a:visited {
+				color:#FFFFFF;
+				margin-left:12px;
+				text-decoration: none;
+			}
+
+			.models a:hover, .models a:focus {
+				text-decoration: underline;
+			}
+		</style>
+	</head>
+
+	<body>
+
+
+		<div class="models">
+			<strong>Models</strong>
+			<a class="model" href="https://raw.githubusercontent.com/neurolabusc/surf-ice/master/mz3/3Mesh.mz3">NoColors</a>
+			<a class="model" href="https://raw.githubusercontent.com/neurolabusc/surf-ice/master/mz3/7ColoredMeshPerFace.mz3">ColorPerFace</a>
+			<a class="model" href="https://raw.githubusercontent.com/neurolabusc/surf-ice/master/mz3/7ColoredMeshPerVertex.mz3">ColorPerVertex</a>
+			<a  class="model" href="https://raw.githubusercontent.com/neurolabusc/surf-ice/master/BrainNet/BrainMesh_ICBM152Left.mz3">Brain</a>
+		</div>
+		<div class="notes">
+			MZ3 format is associated with smaller file sizes than other simple formats.<br><br>
+			<a href="https://github.com/neurolabusc/surf-ice/tree/master/mz3" target="_blank" rel="noopener noreferrer">Specifications and implementations</a>
+		</div>
+		<script src="http://cdn.jsdelivr.net/gh/mrdoob/three.js/build/three.min.js"></script>
+		<script src="http://cdn.jsdelivr.net/gh/mrdoob/three.js/examples/js/libs/gunzip.min.js"></script>
+		<script src="MZ3Loader.js"></script>
+
+		<script>
+
+			var container;
+
+			var camera, scene, renderer;
+
+			var mouseX = 0, mouseY = 0;
+
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+
+
+			init();
+			animate();
+
+
+			function init() {
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
+				camera.position.z = 100;
+
+				// scene
+
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0xAAAAAA );
+
+				var ambient = new THREE.AmbientLight( 0x101030 );
+				scene.add( ambient );
+
+				var directionalLight = new THREE.DirectionalLight( 0xffeedd );
+				directionalLight.position.set( 0, 0, 1 );
+				scene.add( directionalLight );
+
+				// model
+
+				var loader = new THREE.MZ3Loader();
+				var busy = false;
+				var mesh = null;
+
+				var onProgress = function ( xhr ) {
+
+					if ( xhr.lengthComputable ) {
+
+						var percentComplete = xhr.loaded / xhr.total * 100;
+						console.log( Math.round( percentComplete, 2 ) + '% downloaded' );
+
+						if ( xhr.loaded === xhr.total ) {
+
+							console.log( 'File size: ' + ( xhr.total / 1024 ).toFixed( 2 ) + 'kB' );
+							console.timeEnd( 'Download' );
+
+						}
+
+					}
+
+				};
+
+				var onError = function () {
+
+					busy = false;
+
+				};
+
+				function loadGeometry( url ) {
+
+					if ( busy ) return;
+
+					busy = true;
+
+					if ( mesh !== null ) {
+
+						scene.remove( mesh );
+						mesh.geometry.dispose();
+
+					}
+
+					console.log( '-- Loading', url );
+					console.time( 'Download' );
+
+					loader.load( url, function ( geometry ) {
+						var material = new THREE.MeshStandardMaterial();
+						if (typeof geometry.attributes.color !== 'undefined') {
+							material.vertexColors = THREE.VertexColors;
+						}
+						mesh = new THREE.Mesh( geometry, material );
+						setScale(mesh);
+						scene.add( mesh );
+
+						console.log( geometry.index ? 'indexed geometry' : 'non-indexed geometry' );
+						console.log( '# of vertices: ' + geometry.attributes.position.count );
+						console.log( '# of polygons: ' + ( geometry.index ? geometry.index.count / 3 : geometry.attributes.position.count / 3 ) );
+						busy = false;
+
+					}, onProgress, onError );
+
+				}
+
+				//
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( 1 );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+				//
+
+				document.querySelectorAll( 'a.model' ).forEach( function ( anchor ) {
+
+					anchor.addEventListener( 'click', function ( e ) {
+
+						e.preventDefault();
+
+						loadGeometry( anchor.href );
+
+					} );
+
+				} );
+
+				//
+
+				loadGeometry( 'https://raw.githubusercontent.com/neurolabusc/surf-ice/master/mz3/3Mesh.mz3' );
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+
+			function onWindowResize() {
+
+				windowHalfX = window.innerWidth / 2;
+				windowHalfY = window.innerHeight / 2;
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function onDocumentMouseMove( event ) {
+
+				mouseX = ( event.clientX - windowHalfX ) / 2;
+				mouseY = ( event.clientY - windowHalfY ) / 2;
+
+			}
+
+			//
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+				render();
+
+			}
+
+			function setScale(mesh) {
+				var sz = new THREE.Vector3();
+				var box = new THREE.Box3().setFromObject( mesh );
+				sz = box.getSize(sz);
+				var maxSz = sz.length();
+				var scaleZoom = 1.0/maxSz;
+				scaleZoom = scaleZoom * 100;
+				mesh.scale.set( scaleZoom, scaleZoom, scaleZoom );
+			}
+
+			function render() {
+
+				camera.position.x += ( mouseX - camera.position.x ) * .05;
+				camera.position.y += ( - mouseY - camera.position.y ) * .05;
+
+				camera.lookAt( scene.position );
+
+				renderer.render( scene, camera );
+
+			}
+
+		</script>
+
+	</body>
+</html>

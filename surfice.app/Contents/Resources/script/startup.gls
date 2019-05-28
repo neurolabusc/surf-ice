@@ -1,14 +1,8 @@
 begin
 	resetdefaults();
 	azimuthelevation(70, 15);
-	meshload('BrainMesh_ICBM152Right.mz3');
-	overlayload('motor_4t95vol.nii.gz');
-	overlayminmax(1,2,12);
-	overlayload('motor_4t95vol.nii.gz');
-	overlayminmax(2,2,12);
-	overlaycolorname(2, 'red-yellow');
-	colorbarvisible(true);
-	overlaytransparencyonbackground(25);
-	meshcurv();
+	meshload('FU_lh_ld141_mappedSmWm.gii');
+	overlayload('lh_ld141_smoothcol2.1D.col');
+
 end.
 

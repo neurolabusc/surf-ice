@@ -31,6 +31,7 @@ LayerAlphaTrack: TTrackBar;
 LayerOptionsBtn: TButton;
  LeftSplitter: TSplitter;
  CenterPanel: TPanel;
+ LayerAOMapMenu: TMenuItem;
  NextOverlayMenu: TMenuItem;
  PrevOverlayMenu: TMenuItem;
  OverlaySep: TMenuItem;
@@ -38,6 +39,7 @@ LayerOptionsBtn: TButton;
  overlayvisible1: TMenuItem;
   PSScript1: TPSScript;
   S3Label: TLabel;
+  BGShader: TLabel;
   SaveScriptDialog: TSaveDialog;
  ScriptingInsertMenu: TMenuItem;
 mesh1: TMenuItem;
@@ -138,7 +140,6 @@ wait1: TMenuItem;
     ColorbarSep: TMenuItem;
     meshAlphaTrack: TTrackBar;
     MeshBlendTrack: TTrackBar;
-    BGShader: TLabel;
     ROImeshMenu: TMenuItem;
     XRayLabel: TLabel;
     TransBlackClrbarMenu: TMenuItem;
@@ -321,6 +322,7 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
       var Accept: Boolean);
     procedure LeftSplitterChangeBounds(Sender: TObject);
     procedure LeftSplitterMoved(Sender: TObject);
+    procedure LayerAOMapMenuClick(Sender: TObject);
     procedure PrevOverlayMenuClick(Sender: TObject);
     procedure UpdateLayerBox(NewLayers: boolean);
 
@@ -1838,6 +1840,7 @@ begin
      if not fileexists(scriptname) then exit;
      if (ScriptPanel.Width < 24) and (isShowScriptPanel) then
         ScriptPanel.Width := 240;
+     gPrefs.PrevScript :=  scriptname;
      ScriptMemo.Lines.LoadFromFile(scriptname);
      gPrefs.InitScript:='';
      ScriptingRunMenuClick(nil);
@@ -1923,6 +1926,8 @@ begin
   i := LayerList.ItemIndex+ 1;
   if (i < 1) or (i > gMesh.OpenOverlays) then exit;
    LayerInvertColorsMenu.Checked := gMesh.Overlay[i].LUTinvert;
+   LayerAOMapMenu.Checked := gMesh.Overlay[i].aoMap;
+
 end;
 
 procedure TGLForm1.LayerListClickCheck(Sender: TObject);
@@ -2024,6 +2029,16 @@ begin
   //caption := inttostr(random(888));
 end;
 
+procedure TGLForm1.LayerAOMapMenuClick(Sender: TObject);
+ var
+    i: integer;
+ begin
+   i := LayerList.ItemIndex+ 1;
+   if (i < 1) or (i > gMesh.OpenOverlays) then exit;
+   gMesh.Overlay[i].aoMap := not gMesh.Overlay[i].aoMap;
+   LayerWidgetChange(sender);
+end;
+
 procedure TGLForm1.PrevOverlayMenuClick(Sender: TObject);
 var
   i: integer;
@@ -2064,7 +2079,7 @@ begin
                  LayerList.Items.add(format('%d/%d: %s',[gMesh.Overlay[i].CurrentVolume, gMesh.Overlay[i].volumes, s]))
             else
                 LayerList.Items.add(s);
-            LayerList.Checked[i-1] := true;
+            LayerList.Checked[i-1] := gMesh.Overlay[i].LUTvisible <>  kLUTinvisible;//true;
         end;
         LayerList.ItemIndex := gMesh.OpenOverlays - 1;
      end;
@@ -2306,6 +2321,17 @@ begin
   AOLabel.Visible:= lBetter;
   occlusionTrack.Visible:= lBetter;
   ShaderForBackgroundOnlyCheck.Visible:= lBetter;
+  if lBetter then begin
+   XRayLabel.Caption := 'XRay';
+   BGShader.Caption := 'Shader For Background Only';
+  end else begin
+      XRayLabel.Caption := 'Disabled: ';
+
+      if not gPrefs.SupportBetterRenderQuality then
+         BGShader.Caption := 'Poor Hardware'
+      else
+          BGShader.Caption := 'Poor Quality (see Preferences)';
+  end;
   MeshBlendTrack.Visible:= lBetter;
   meshAlphaTrack.visible :=  lBetter;
 end;
@@ -2348,10 +2374,19 @@ begin
 end;
 
 procedure TGLForm1.UpdateToolbar;
+//var
+//  isOverlayNodeTrack : boolean;
 begin
  OverlayBox.Visible := (gMesh.OpenOverlays > 0);
- //OverlayBox.Top := 0;
- BackgroundBox.Visible := (length(gNode.nodes) > 0) or (gTrack.n_count > 0) or ((gMesh.OpenOverlays > 0) and (meshBackgroundOpen));
+ //isOverlays  := (length(gNode.nodes) > 0) or (gTrack.n_count > 0) or ((gMesh.OpenOverlays > 0) and (meshBackgroundOpen));
+ //BGShader.Enabled := isOverlays;
+ //ShaderForBackgroundOnlyCheck.Enabled := isOverlays;
+ //MeshBlendTrack.Enabled := isOverlays;
+ //isOverlayNodeTrack := (length(gNode.nodes) > 0) or (gTrack.n_count > 0) or ((gMesh.OpenOverlays > 0) and (meshBackgroundOpen));
+ //MeshBlendTrack.Visible := isOverlayNodeTrack;
+ //BGShader.Visible := isOverlayNodeTrack;
+ //ShaderForBackgroundOnlyCheck.Visible := isOverlayNodeTrack;
+ //BackgroundBox.Visible := (length(gNode.nodes) > 0) or (gTrack.n_count > 0) or ((gMesh.OpenOverlays > 0) and (meshBackgroundOpen));
  NodeBox.Visible:= (length(gNode.nodes) > 0) ;
  if (length(gNode.edges) > 0) and (EdgeBox.Visible = false) and (BackgroundBox.Visible) then begin
     //this keeps node and edge boxes next to each other
@@ -2607,7 +2642,7 @@ begin
      exit;
   end;
   //ext := UpperCase(ExtractFileExt(Filename));
-  if (ext = '.ANNOT') or (ext = '.MGH') or (ext = '.MGZ')  or (ext = '.NII') or (ext = '.HDR')  or (ext = '.NII.GZ') or (ext = '.DPV') or (ext = '.ANNOT') or (ext = '.W') or (ext = '.CURV')  then begin
+  if (ext = '.COL') or (ext = '.ANNOT') or (ext = '.MGH') or (ext = '.MGZ')  or (ext = '.NII') or (ext = '.HDR')  or (ext = '.NII.GZ') or (ext = '.DPV') or (ext = '.ANNOT') or (ext = '.W') or (ext = '.CURV')  then begin
     OpenOverlay(Filename);
     exit;
   end else if (ext = '.VTK') and (not isVtkMesh (Filename)) then begin
@@ -4299,7 +4334,7 @@ begin
  if (gMesh.OpenOverlays > 0) then
     for lI := 1 to gMesh.OpenOverlays do
         //https://www.nitrc.org/forum/forum.php?thread_id=10001&forum_id=6713
-        if (length(gMesh.overlay[lI].intensity) > 0) and (gMesh.overlay[lI].LUTvisible <> kLUTinvisible) and (not isFreeSurferLUT(gMesh.overlay[lI].LUTindex)) then begin
+        if (length(gMesh.overlay[lI].intensity) > 0) and (not gMesh.overlay[lI].aoMap) and (gMesh.overlay[lI].LUTvisible <> kLUTinvisible) and (not isFreeSurferLUT(gMesh.overlay[lI].LUTindex)) then begin
          isDuplicate := false;
          lJ := 1;
          while (lJ < lI) do begin
@@ -5643,10 +5678,13 @@ end; *)
 {$ELSE}
 procedure TGLForm1.SaveMesh(var mesh: TMesh; isSaveOverlays: boolean);
 const
-      kMeshFilter = 'OBJ (Widely supported)|*.obj|GIfTI (Neuroimaging)|*.gii|MZ3 (Small and fast)|*.mz3|PLY (Widely supported)|*.ply|VRML (Shapeways color printing)|*.wrl';
+     //kMeshFilter = 'OBJ (Widely supported)|*.obj|GIfTI (Neuroimaging)|*.gii|MZ3 (Small and fast)|*.mz3|PLY (Widely supported)|*.ply|VRML (Shapeways color printing)|*.wrl|WebGL PRWM|*.prwm';
+     //prwm expects normals
+     kMeshFilter = 'OBJ (Widely supported)|*.obj|GIfTI (Neuroimaging)|*.gii|MZ3 (Small and fast)|*.mz3|PLY (Widely supported)|*.ply|VRML (Shapeways color printing)|*.wrl|STL (Large and slow)|*.stl';
 var
    nam, ext, x: string;
 begin
+  //mesh.SaveMesh('/Users/rorden/nrrdify/tst.prwm'); exit;
   if length(mesh.Faces) < 1 then begin
      showmessage('Unable to save: no mesh is loaded (use File/Open).');
      exit;
@@ -5660,7 +5698,7 @@ begin
   else if gPrefs.SaveAsFormat = 1 then
     ext := '.gii'
   else
-    ext := '.mz3';
+    ext := '.mz3'; //2
   SaveMeshDialog.DefaultExt := ext;
   if (fileexists(gPrefs.PrevFilename[1])) or (not isSaveOverlays) then begin
      if isSaveOverlays then
@@ -5677,7 +5715,7 @@ begin
   if length(SaveMeshDialog.Filename) < 1 then exit;
   //caption := inttostr(SaveMeshDialog.FilterIndex)+' '+SaveMeshDialog.Filename; exit; //666
   x := UpperCase(ExtractFileExt(SaveMeshDialog.Filename));
-  if (x <> '.MZ3') and (x <> '.PLY') and (x <> '.OBJ')  and (x <> '.GII') and (x <> '.WRL') then begin
+  if (x <> '.STL') and (x <> '.MZ3') and (x <> '.PLY') and (x <> '.OBJ')  and (x <> '.GII') and (x <> '.WRL') and (x <> '.PRWM')then begin
      x := ext;
      SaveMeshDialog.Filename := SaveMeshDialog.Filename + x;
   end;

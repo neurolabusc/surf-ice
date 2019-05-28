@@ -411,7 +411,9 @@ begin
 
   glUniform1f(glGetUniformLocation(gShader.programTrackID, pAnsiChar('Ambient')), gShader.TrackAmbient) ;
   glUniform1f(glGetUniformLocation(gShader.programTrackID, pAnsiChar('Diffuse')), gShader.TrackDiffuse) ;
-  glUniform1f(glGetUniformLocation(gShader.programTrackID, pAnsiChar('Specular')), gShader.TrackSpecular) ;
+  //glUniform1f(glGetUniformLocation(gShader.programTrackID, pAnsiChar('Specular')), gShader.TrackSpecular * 0.75) ; //<<<<<<<<<
+  glUniform1f(glGetUniformLocation(gShader.programTrackID, pAnsiChar('Specular')), gShader.TrackSpecular) ; //full glisten
+
   {$ENDIF}
 
 end;

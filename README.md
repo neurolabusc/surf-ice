@@ -8,6 +8,10 @@ Supported mesh formats include 3DO, 3DS, AC, BYU, CTM, DAE, DXF, FreeSurfer, GII
 
 ![alt tag](https://github.com/neurolabusc/surf-ice/blob/master/Surfice.jpg)
 
+##### Installing
+
+You can get the latest release from [github](https://github.com/neurolabusc/surf-ice/releases) or [NITRC](https://www.nitrc.org/projects/surfice). Releases are provided for Linux, MacOS and Windows. Each release includes two versions of Surf Ice: "Surfice" requires OpenGL 3.3 or later, while "SurficeOld" runs on older computers (requiring OpenGL 2.1). A [wiki](https://www.nitrc.org/plugins/mwiki/index.php/surfice:MainPage) provides a full manual and troubleshooting advice.
+
 ##### Compiling
 
 This project is built using the open source [FreePascal Lazarus](http://www.lazarus-ide.org/) compiler and integrated development environment. You will need to have the LazOpenGLContext and PascalScript packages installed. To do this, launch the Lazarus application and choose Packages/InstallPackages. You will want to select these two packages from the "Available for installation" list. Finally, click the "Save and rebuild" button. Once these are installed, you can load this package and compile it using the Run/Run menu option.
@@ -42,36 +46,9 @@ You can also build this project from the command line (assuming you have FPC Laz
  lazbuild surfice.lpr
 ```
 
-##### Recent Versions
+##### Versions
 
-2-February-2018 (v1.0.20180202)
- - [Atlas-based regions of interest](https://www.nitrc.org/plugins/mwiki/index.php/surfice:MainPage#Atlas-based_Region_of_interest_Analyses).
- - [Python scripting](https://github.com/neurolabusc/surf-ice/blob/master/PYTHON.md).
- - [Outline, ](https://www.nitrc.org/plugins/mwiki/index.php/surfice:MainPage#Atlas-based_Region_of_interest_Analyses)[Grid and HideCurves shaders added](https://www.nitrc.org/plugins/mwiki/index.php/surfice:MainPage#Gallery).
-
-20-December-2017 (v1.0.20171220)
- - Support [PALM](https://github.com/andersonwinkler/PALM) format [DPV](https://brainder.org/2011/09/25/braindering-with-ascii-files/).
-
-21-June-2017
- - [Smooth](https://github.com/neurolabusc/OpenGLCoreTutorials) numbers in colorbars.
- - Conversion of images from voxels to mesh now allows the user to specify a minimum cluster size.
- - Pan image by [shift-dragging](https://www.nitrc.org/forum/forum.php?thread_id=7857&forum_id=6713).
- - MacOS retina support (better but slower, use Preferences window to disable).
-
-7-February-2017
- - Ability to individually adjust translucency of overlays (rather than having one value for all).
- - Looks better on Linux high-DPI screens.
- - New command Advanced/ComputeCurvature creates FreeSurfer Format CURV file.
- - Control-clicking overlay name in the overlay panel reverses the overlay colors (and the name is displayed in black instead of blue). Control-click again to switch to normal mode.
- - Support for several variations of the [CIfTI format](https://www.humanconnectome.org/software/get-connectome-workbench.html)(dscalar.nii, dlabel.nii, dtseries.nii).
-
-30-September-2016
- - Add support for the TRK.GZ (DSI studio), DAT (MRI studio) formats.
- - Support for tracks with [scalars](https://github.com/johncolby/along-tract-stats) and [properties](http://trackvis.org/blog/tag/track_merge/).
- - "Faster" track viewing mode looks better (Lucas Nesi's imposter method).
-
-20-April-2016
- - Add support for the 3DS, MS3D, LWO2, DXF and GTS formats.
+The [releases](https://github.com/neurolabusc/surf-ice/releases) page provides version notes.
 
 ##### License
 
