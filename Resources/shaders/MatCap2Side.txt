@@ -1,0 +1,49 @@
+//pref
+Brighten|float|0.5|1.5|2.5
+SurfaceColor|float|0.0|1.0|1.0
+Edge|float|0|0.2|1.0
+PenWidth|float|0.01|1|1
+MatCap|set|1|1|1
+Material Capture Shader http://www.alecjacobson.com/weblog/?p=4827l|note
+//vert
+#version 330
+layout(location = 0) in vec3 Vert;
+layout(location = 3) in vec3 Norm;
+layout(location = 6) in vec4 Clr;
+out vec3 vN, vV;
+out vec4 vClr, vP;
+uniform mat4 ModelViewProjectionMatrix;
+uniform mat4 ModelViewMatrix;
+uniform mat3 NormalMatrix;
+void main() {
+    vN = normalize((NormalMatrix * Norm));
+    vP = vec4(Vert, 1.0);
+    gl_Position = ModelViewProjectionMatrix * vec4(Vert, 1.0);
+    vV = -vec3(ModelViewMatrix*vec4(Vert,1.0));
+    vClr = Clr;
+}
+//frag
+#version 330
+in vec4 vClr, vP;
+in vec3 vN, vV;
+out vec4 color;
+uniform float Brighten = 0.2;
+uniform float SurfaceColor = 0.5;
+uniform float Edge = 0.1;
+uniform float PenWidth = 0.75;
+uniform vec4 ClipPlane = vec4(2.0, 0.0, 0.0, 0.0);
+uniform sampler2D MatCap;
+
+void main() {
+	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
+	vec3 n = normalize(vN);
+	vec3 v = normalize(vV);
+	float lightNormDot = abs(dot(n,v)); //with respect to viewer
+	if (PenWidth < lightNormDot) discard;
+	vec2 uv = n.xy * 0.5 + 0.5;
+	vec3 clr = texture(MatCap,uv.xy).rgb;
+	vec3 surf = mix(vec3(0.67, 0.67, 0.67), vClr.rgb, SurfaceColor); //0.67 as default Brighten is 1.5
+	clr = clr * surf * Brighten;
+	clr *= min((lightNormDot - 0.5) * Edge, 0.0) + 1.0;
+	color = vec4(clr, 1.0);
+}

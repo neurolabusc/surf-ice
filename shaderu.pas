@@ -2,6 +2,7 @@ unit shaderu;
 {$Include opts.inc}
 {$IFDEF FPC}{$mode objfpc}{$H+}{$ENDIF}
 {$D-,O+,Q-,R-,S-}
+
 interface
 uses
  {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, glext, {$IFDEF GEOM_GLEXT}glext2, {$ENDIF} {$ENDIF}  {$ENDIF DGL}
@@ -43,6 +44,10 @@ type
     f1, f2,  fScreenShot: TFrameBuffer;
     lightPos : TPoint3f;
     {$IFDEF COREGL} TrackAmbient, TrackDiffuse, TrackSpecular : single; {$ENDIF}
+    {$IFDEF MATCAP}
+    matcap: GLuint;
+    isMatCap: boolean;
+    {$ENDIF}
     isGeometryShaderSupported: boolean;
     AOradiusU: integer;
     FragmentProgram,VertexProgram, GeometryProgram, Note, Vendor: AnsiString;
@@ -65,7 +70,7 @@ procedure freeFrame (var f : TFrameBuffer);
 //procedure Set2DDraw (w,h: integer; r,g,b: byte);
 
 implementation
-uses mainunit;
+uses mainunit, shaderui;
 
 {$IFDEF COREGL}
 const kVert2D ='#version 330'
@@ -979,6 +984,7 @@ begin
       initFrame(gShader.f1);
       initFrame(gShader.f2);
       initFrame(gShader.fScreenShot);
+      {$IFDEF MATCAP}gShader.matcap := 0;{$ENDIF}
   end;
 
   //glGetError(); //clear errors
@@ -1108,6 +1114,7 @@ begin
   Shader.GeometryProgram:= '';
   Shader.nUniform := 0;
   Shader.OverlayVolume := 0;//false;
+  {$IFDEF MATCAP}Shader.isMatCap := false;{$ENDIF}
   Shader.FragmentProgram :=  kFrag3d;
 end;
 
@@ -1135,6 +1142,7 @@ var
 begin
   result := false;
   Shader.Note := '';
+  {$IFDEF MATCAP}Shader.isMatCap := false;{$ENDIF}
   Shader.AOradiusU := 0;
   Shader.VertexProgram := '';
   Shader.GeometryProgram := '';
@@ -1164,7 +1172,11 @@ begin
       mode := kfrag
     else if mode = kpref then begin
       U := StrToUniform(S);
-      if U.Widget = kSet then begin
+       if U.Widget = kSet then begin
+        {$IFDEF MATCAP}
+        if U.Name = 'MatCap' then
+          Shader.isMatCap := true;
+        {$ENDIF}
         if U.Name = 'overlayVolume' then
           Shader.OverlayVolume:= round(U.min) ; //U.Bool;
       end else if U.Widget = kNote then
@@ -1209,6 +1221,7 @@ end;
 procedure RunMeshGLSL (clipPlane: TPoint4f;  UseDefaultShader: boolean);
 var
   lProg: gluint;
+  {$IFDEF MATCAP}matcap: GLuint;{$ENDIF}
 begin
 
   if UseDefaultShader then begin
@@ -1219,6 +1232,14 @@ begin
     glUseProgram(lProg);
     AdjustShaders(gShader);
   end;
+  {$IFDEF MATCAP}
+  matcap := glGetUniformLocation(lProg, pAnsiChar('MatCap'));
+  if (gShader.matcap > 0) and (gShader.isMatCap) then begin
+   glActiveTexture(GL_TEXTURE1);
+   glBindTexture(GL_TEXTURE_2D, gShader.matcap);
+   glUniform1i(matcap, 1);
+  end;
+  {$ENDIF}
   uniform4fx(lProg, 'ClipPlane', clipPlane);
   {$IFDEF COREGL}
   uniform3fx(lProg, 'LightPos',gShader.lightPos.X, gShader.lightPos.Y, gShader.lightPos.Z);

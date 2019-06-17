@@ -1,8 +1,11 @@
 unit define_types;
 interface
+
+
 {$ifndef isTerminalApp}
-uses graphics;
+ uses graphics;
 {$endif}
+
 const
   kVers = 'v1.0.20190518';
   NaN : double = 1/0;
@@ -86,6 +89,8 @@ function ChangeFileExtX( lFilename: string; lExt: string): string;
 function ReadNumBin(var f: TFByte): string; //read next ASCII number in binary file
 function float2str(Avalue:double; ADigits:integer):string; //e.g x:single=2.6; floattostrf(x,8,4);
 function DefaultToHomeDir(FileName: string; Force: boolean = false): string; //set path to home if not provided
+function UpCaseExt(lFileName: string): string; // "file.gii.dset" -> ".DSET"
+function UpCaseExt2(lFileName: string): string; // "file.gii.dset" -> ".GII.DSET"
 {$ifdef isTerminalApp}
 function RGBToColor(R, G, B: Byte): TColor;
 procedure ShowMessage(msg: string);
@@ -100,7 +105,23 @@ implementation
 
 uses
   {$IFDEF UNIX} BaseUnix, {$ELSE} windows, shlobj, {$ENDIF}
-  sysutils, math;
+    fileutil, sysutils, math;
+function UpCaseExt(lFileName: string): string; // "file.gii.dset" -> ".GII.DSET"
+var
+   fnm : string;
+begin
+  result := UpperCase(ExtractFileExt(lFileName));
+end;
+
+
+function UpCaseExt2(lFileName: string): string; // "file.gii.dset" -> ".GII.DSET"
+var
+   fnm : string;
+begin
+  result := UpperCase(ExtractFileExt(lFileName));
+  fnm :=  ExtractFileNameWithoutExt(lFileName);
+  result := UpperCase(ExtractFileExt(fnm))+ result;
+end;
 
 function StrToFloatX(Const S : String) : Extended;
 //like StrToFloat but accepts either decimal separator: '1.23' or '1,23'

@@ -1,0 +1,16 @@
+with regards to mc01.jpg...mc24.jpg
+ https://github.com/martijnberger/blender/tree/master/release/datafiles/matcaps
+ These matcap images are licensed as GNU GPL 2 or later, like the rest of Blender's code.
+ Thanks to Kent Trammell, Aidy Burrows, John Herreno , Terry Wallwork and David Silverman for making the pictures.
+
+carpaint from
+ https://blog.mikepan.com/post/137759885931/realistic-car-paint-brdf-material
+
+with regards to fubax.jpg
+ https://github.com/Fubaxiusz/fubax-shaders/blob/master/Textures/matcap.png
+
+cortex and red plastic matcaps from
+ http://www.alecjacobson.com/weblog/?p=4827
+
+remaining matcaps from
+ https://devtalk.blender.org/t/call-for-content-matcaps/737/203

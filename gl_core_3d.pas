@@ -448,9 +448,18 @@ TVtxNormClr = Packed Record
   clr : TRGBA;
 end;
 
-
-
-function Float2Int16(fv: single): int16;
+function Float2Int16(f: single): int16;
+begin
+     if f > 1 then
+        exit(32767);
+     if f < -1 then
+        exit(-32768);
+     if f > 0 then
+        result := round(f * 32767)
+     else
+         result := round(f * 32768);
+end;
+(*function Float2Int16(fv: single): int16;
 var
    f: single;
 begin
@@ -463,7 +472,7 @@ begin
         result := round(f * 32767)
      else
          result := round(f * 32768);
-end;
+end;*)
 
 function AsGL_INT_2_10_10_10_REV(f: TPoint3f): int32;
 //pack 3 32-bit floats as 10 bit signed integers, assumes floats normalized to -1..1

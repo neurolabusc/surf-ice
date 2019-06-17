@@ -29,4 +29,6 @@ REM  del .\glext.pp
 copy /Y .\optsCompat.inc .\opts.inc
 rmdir /S /Q lib
 
+c:\Progra~1\7-Zip\7z a -tzip d:\surfice_windows.zip d:\neuro\Surf_Ice
+
 

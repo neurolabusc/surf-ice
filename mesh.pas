@@ -6,7 +6,7 @@ interface
 //{$DEFINE TIMER}
 {$DEFINE TREFOIL} //use Trefoil Knot as default object (instead of pyramid)
 uses
-  nifti_foreign,
+  //nifti_foreign,
   {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
   {$IFDEF CTM} ctm_loader, {$ENDIF}
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, strutils, DateUtils,
@@ -90,6 +90,7 @@ type
     procedure BuildList(Clr: TRGBA);
     procedure FilterOverlay(c: integer; var f: TFaces; var v: TVertices; var vRGBA: TVertexRGBA);
     procedure BuildListOverlay(Clr: TRGBA);
+    function Load1D(const FileName: string; lOverlayIndex: integer): boolean;
     function Load3Do(const FileName: string): boolean;
     function Load3ds(const FileName: string): boolean;
     function LoadAc(const FileName: string): boolean;
@@ -121,7 +122,8 @@ type
     function LoadTri(const FileName: string): boolean;
     function LoadVrml(const FileName: string): boolean;
     function LoadWfr(const FileName: string): boolean; //EMSE wireframe
-    procedure LoadAsc_Srf(const FileName: string);
+    function LoadAsc_Srf(const FileName: string): boolean;
+    function LoadAsc_Sparse(const FileName: string): boolean;
     procedure LoadCtm(const FileName: string);
     function LoadDpv(const FileName: string; lOverlayIndex: integer): boolean;
     function LoadCol(const FileName: string; lOverlayIndex, lOverlayItem: integer): integer; //AFNI https://afni.nimh.nih.gov/afni/community/board/read.php?1,44391,44410
@@ -191,6 +193,7 @@ begin
   	Assign (F, fnm);
   	Reset (F);
   	cSz := FileSize(F);
+        sig := 0; //only to hide compiler warning
         blockread(F, sig, SizeOf(sig) );
         seek(F,0);
         //n.b. GZ header/footer is ALWAYS little-endian
@@ -1592,7 +1595,6 @@ begin
   while not EOF(f) do begin
         ReadLn(f, str); //make sure to run CheckMesh after this, as these are indexed from 1!
         if (length(str) > 0) and (str[1] <> '#') then begin
-
            strlst.DelimitedText := str;
            if strlst.Count < 1 then continue;
            v1 := strtofloatdef(strlst[0],0);
@@ -1879,14 +1881,25 @@ begin
 end;
 {$ENDIF}
 
-// ascii format created by FreeSurfers' mris_convert
-procedure TMesh.LoadASC_SRF(const FileName: string);
+function TMesh.LoadASC_Sparse(const FileName: string): boolean;
 //Freesurfer ascii format (almost identical to LoadNV)
 // see SPM's read_freesurfer_file or http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm
+//be aware AFNI includes the file "lh.flat.patch.asc" that breaks FreeSurfer
+//  https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/demos/SmallInstalls/DemoData.html#suma-demo
+//Note, while this reads sparse patch files successfully, it renumbers the vertices
+// this may disrupt overlays that assume the full range of vertices
+label 123;
+const
+  kBlockSz = 8192;
 var
    f: TextFile;
-   i, num_v, num_f: integer;
+   i, j, vno, num_v, num_f, maxVno: integer;
+   vertexRenumbers: TInts;
+   str, strTrim: string;
+   strlst : TStringList;
 begin
+     result := false;
+     maxVno := -1;
      if (FSize(FileName) < 64) then exit;
      FileMode := fmOpenRead;
      AssignFile(f, FileName);
@@ -1903,12 +1916,118 @@ begin
           exit;
        end;
        setlength(vertices, num_v);
-       for i := 0 to (num_v - 1) do
-           ReadLn(f, vertices[i].X, vertices[i].Y, vertices[i].Z);
+       setlength(vertexRenumbers, num_v);
+       for i := 0 to (num_v -1) do
+           vertexRenumbers[i] := i; //input => output
+       strlst:=TStringList.Create;
+       i := 0;
+       while not eof(f) and (i < num_v) do begin
+             ReadLn(f, str);
+             if length(str) < 1 then continue;
+             if str[1] = '#' then continue;
+             j := posex('vno=', str);
+             if j > 0 then begin
+               strTrim := copy(str, j+4, maxint);
+               vno := StrToIntDef(strTrim, -1);
+               if vno < 0 then begin
+                  showmessage('"'+strTrim+'"Unable to parse AFNI patch file: '+str);
+                  goto 123;
+               end;
+               if vno > maxVno then begin
+                 maxVno := vno;
+                 if vno >= length(vertexRenumbers) then
+                    setlength(vertexRenumbers, vno + kBlockSz);
+               end;
+               vertexRenumbers[vno] := i;
+               continue;
+             end;
+             strlst.DelimitedText := str;
+             if strlst.Count < 3 then continue;
+             vertices[i].x := strtofloatdef(strlst[0],0);
+             vertices[i].y := strtofloatdef(strlst[1],0);
+             vertices[i].z := strtofloatdef(strlst[2],0);
+             i := i + 1;
+       end;
+       if (i < num_v) then
+          goto 123;
+
+       setlength(faces, num_f);
+       i := 0;
+       while not eof(f) and (i < num_f) do begin
+             ReadLn(f, str);
+             if length(str) < 1 then continue;
+             if str[1] = '#' then continue;
+             strlst.DelimitedText := str;
+             if strlst.Count < 3 then continue;
+             faces[i].x := strtointdef(strlst[0],0);
+             faces[i].y := strtointdef(strlst[1],0);
+             faces[i].z := strtointdef(strlst[2],0);
+             if maxVno > 0 then begin
+                faces[i].x := vertexRenumbers[faces[i].x];
+                faces[i].y := vertexRenumbers[faces[i].y];
+                faces[i].z := vertexRenumbers[faces[i].z];
+             end;
+             i := i + 1;
+       end;
+       if (i < num_f) then goto 123;
+       result := true;
+     123:
+       CloseFile(f);
+       strlst.free;
+     if not (result) then begin
+       setlength(vertices, 0);
+       setlength(faces, 0);
+     end;
+end; // LoadASC_Sparse()
+
+// ascii format created by FreeSurfers' mris_convert
+function TMesh.LoadASC_SRF(const FileName: string): boolean;
+//simple Freesurfer ascii format (almost identical to LoadNV) reader
+//  complicated sparse "PATCH" format will cause an exception that will use the
+//  slower but more robust LoadASC_Sparse reader than can handle patch files
+label 123;
+var
+   f: TextFile;
+   i, num_v, num_f: integer;
+begin
+     result := false;
+     if (FSize(FileName) < 64) then exit;
+     FileMode := fmOpenRead;
+     AssignFile(f, FileName);
+       Reset(f);
+       Readln(f);  //% #!ascii
+       try
+          ReadLn(f, num_v, num_f);
+       except
+         num_v := 0;
+       end;
+       if (num_v < 3) or (num_f < 1) then begin
+          showmessage('Corrupt file: must have at least 3 vertices and one face');
+          CloseFile(f);
+          exit;
+       end;
+       setlength(vertices, num_v);
+       for i := 0 to (num_v - 1) do begin
+           try
+              ReadLn(f, vertices[i].X, vertices[i].Y, vertices[i].Z);
+           except
+             CloseFile(f);
+             setlength(vertices, 0);
+             setlength(faces, 0);
+             result := LoadASC_Sparse(FileName);
+             exit;
+           end;
+       end;
        setlength(faces, num_f);
        for i := 0 to (num_f - 1) do
            ReadLn(f, faces[i].X, faces[i].Y, faces[i].Z); //make sure to run CheckMesh after this, as these are indexed from 1!
+       result := true;
+     123:
        CloseFile(f);
+     if not (result) then begin
+       setlength(vertices, 0);
+       setlength(faces, 0);
+     end;
 end; // LoadASC_SRF()
 
 procedure ScaleTranslate (var lMesh: TMesh; Scale, X, Y, Z: single);
@@ -2178,13 +2297,13 @@ var
 begin
      isEmbeddedEdge := false;
      if (FSize(FileName) < 9) then exit;
+     num_node := 0;
      if LoadCluster(FileName) then
         goto 555;
      strlst:=TStringList.Create;
      FileMode := fmOpenRead;
      AssignFile(f, FileName);
      Reset(f);
-     num_node := 0;
      while not EOF(f) do begin
            ReadLn(f, str); //make sure to run CheckMesh after this, as these are indexed from 1!
            if (length(str) > 0) and (str[1] <> '#') then
@@ -2217,15 +2336,17 @@ begin
      nodePrefs.maxNodeColor := nodes[0].Clr;
      nodePrefs.minNodeSize := nodes[0].radius;
      nodePrefs.maxNodeSize := nodes[0].radius;
-     for i := 0 to (num_node -1) do begin
-        if nodes[i].Clr < nodePrefs.minNodeColor then
-           nodePrefs.minNodeColor := nodes[i].Clr;
-        if nodes[i].Clr > nodePrefs.maxNodeColor then
-           nodePrefs.maxNodeColor := nodes[i].Clr;
-        if nodes[i].radius < nodePrefs.minNodeSize then
-           nodePrefs.minNodeSize := nodes[i].radius;
-        if nodes[i].radius > nodePrefs.maxNodeSize then
-           nodePrefs.maxNodeSize := nodes[i].radius;
+     if num_node > 0 then begin
+       for i := 0 to (num_node -1) do begin
+          if nodes[i].Clr < nodePrefs.minNodeColor then
+             nodePrefs.minNodeColor := nodes[i].Clr;
+          if nodes[i].Clr > nodePrefs.maxNodeColor then
+             nodePrefs.maxNodeColor := nodes[i].Clr;
+          if nodes[i].radius < nodePrefs.minNodeSize then
+             nodePrefs.minNodeSize := nodes[i].radius;
+          if nodes[i].radius > nodePrefs.maxNodeSize then
+             nodePrefs.maxNodeSize := nodes[i].radius;
+       end;
      end;
      if (nodePrefs.minNodeSize = nodePrefs.maxNodeSize) then begin
         NodePrefs.isNodeThresholdBySize := false;
@@ -3833,6 +3954,7 @@ begin
   end;
   result := 0;
   if (FSize(FileName) < 64) then exit;
+  debase64 := '';
   nOverlays := 0;
   HasOverlays := false;
   gz := TMemoryStream.Create;
@@ -4024,7 +4146,7 @@ begin
           CloseFile(fx);
            //ExternalFileName
         end else if isBase64Gz then begin
-          if (ord(debase64[1]) <> $78) then begin
+          if (length(debase64) < 1) or (ord(debase64[1]) <> $78) then begin
             showmessage('Deflate compressed stream should begin with 0x78, not '+inttohex(ord(debase64[1]), 2));
             goto 666;
           end;
@@ -4194,7 +4316,7 @@ begin
      goto 666;
   end;
   if (length(vertexRGBA) > 0) and (length(vertexRGBA) <> length(vertices)) then begin
-     showmessage('Number of vertices in NIFTI_INTENT_LABEL does not match number of vertices in NIFTI_INTENT_POINTSET (use File/Open to load the correct background image before loading your overlay).');
+     showmessage(format('Number of vertices in NIFTI_INTENT_LABEL (%d) does not match number of vertices in NIFTI_INTENT_POINTSET (%d). Use File/Open to load the correct background image before loading your overlay.', [length(vertexRGBA), length(vertices)]));
      setlength(vertexRGBA,0);
   end;
   if  (length(vertices) < 3) and (length(faces) > 0) then begin
@@ -5724,6 +5846,7 @@ begin
 end; //nested ReadVX()
 begin
   result := false;
+  chunk.ID := 'ERRO';
   AssignFile(f, FileName);
   FileMode := fmOpenRead;
   Reset(f,1);
@@ -6601,7 +6724,7 @@ begin
      end;
      if not result then
         MakePyramid;
-     result := true;
+     //result := true;
 end; //CheckMesh()
 
 (*procedure TMesh.NormalizeSize;
@@ -6635,14 +6758,14 @@ begin
   	   CloseOverlays;
   	   self.Close;
            MakePyramid;
-  	   //result := true;
         end;
         if not FileExistsF(FileName) then exit;
         FileMode := fmOpenRead;
 	if (FSize(FileName) < 9) then exit;
 	isBusy := true;
 	ext := UpperCase(ExtractFileExt(Filename));
-	isRebuildList := true;
+        //ext2 := UpCaseExt2(FileName); // "file.gii.dset" -> ".GII.DSET"
+        isRebuildList := true;
 	CloseOverlays;
 	self.Close;
 	if (ext = '.3DO') then
@@ -6701,11 +6824,11 @@ begin
 		LoadEdge(Filename, isEmbeddedEdge);
 	end;
 	if (ext = '.SRF') and (not LoadSrf(Filename)) then
-	LoadAsc_Srf(Filename);
+	   LoadAsc_Srf(Filename);
 	if (ext = '.TRI') then
-	LoadTri(Filename);
-	if (ext = '.ASC') then  //https://brainder.org/category/neuroinformatics/file-types/
-		LoadAsc_Srf(Filename);
+	   LoadTri(Filename);
+        if (ext = '.ASC') then  //https://brainder.org/category/neuroinformatics/file-types/
+	   LoadAsc_Srf(Filename);
 	if (ext = '.OBJ') then
 	 LoadObj(Filename);
         if (ext = '.WRL') then
@@ -6713,18 +6836,21 @@ begin
 	if (ext = '.WFR') then
 	   LoadWfr(Filename);
 	if length(faces) < 1 then begin//not yet loaded - see if it is freesurfer format (often saved without filename extension)
-	   LoadPial(Filename);
+          LoadPial(Filename);
+          //maybe someday read FreeSurfer patch files - a point cloud file without triangle indice
+          //  p = read_patch('rh.cortex.patch.3d')
 	   if length(faces) > 0 then
 	      isFreeSurferMesh := true;
 	end;
         if length(faces) < 1 then //error loading file
-		MakePyramid
+	   MakePyramid
 	else
-	 result := true;
+	    result := true;
         {$IFDEF TIMER}GLForm1.ClipBox.Caption :=  inttostr(MilliSecondsBetween(Now,StartTime)); {$ENDIF}
         //MakePyramid;
-        CheckMesh;
-	SetDescriptives;
+        if not CheckMesh then
+           result := false; //note: prior "MakePyramid" will pass CheckMesh but should still return "false"
+        SetDescriptives;
 	if not isZDimIsUp then
 	   SwapYZ;
 	//showmessage(Filename+'  '+ inttostr(length(faces))+' '+inttostr(length(vertices)) );
@@ -7169,7 +7295,7 @@ var
 begin
      num_v := length(vertices);
      maxROI := length(intensityLUT) - 1; // 0..maxROI
-     if (num_v < 3) or (lOverlayIndex < kMinOverlayIndex) or (lOverlayIndex > kMaxOverlays) or (maxROI < 1) then exit;
+     if (num_v < 3) or (lOverlayIndex < kMinOverlayIndex) or (lOverlayIndex > kMaxOverlays) or (maxROI < 1) then exit('Corrupt LoadAtlasMapCore');
      setlength(overlay[lOverlayIndex].intensity, num_v); //vertices = zeros(num_f, 9);
      minInten := 0;
      maxInten := 0;
@@ -7410,6 +7536,78 @@ begin
    end;
    //GLForm1.Caption := ('COL file does not appear to match background mesh: expected '+inttostr(num_v)+' vertices not '+inttostr(nOK));
 
+end;
+
+function TMesh.Load1D(const FileName: string; lOverlayIndex: integer): boolean;
+//ConvertDset -o_1D -input lh.aparc.a2009s.annot.niml.dset -prefix lh.aparc
+//
+//# <SPARSE_DATA
+//#  ni_type = "int"
+//#  ni_dimen = "168098"
+//#  data_type = "Node_Label_data"
+//# >
+// 3937420
+// 3937420
+// 3937420
+// 3937420
+label
+   666;
+const
+     kNaN : single = 1/0;
+var
+   num_v: integer;
+   f: TextFile;
+   v: single;
+   str: string;
+   i, idx: integer;
+   strlst : TStringList;
+
+begin
+     result := false;
+     if (lOverlayIndex < kMinOverlayIndex) or (lOverlayIndex > kMaxOverlays) then exit;
+     num_v := length(vertices);
+     setlength(overlay[lOverlayIndex].intensity, num_v);
+     FileMode := fmOpenRead;
+     AssignFile(f, FileName);
+     Reset(f);
+     idx := 0;
+     while not EOF(f) do begin
+         try
+            ReadLn(f, str);
+         except
+           continue;
+         end;
+         if (length(str) < 1) then continue;
+         if (str[1] = '#') then continue;
+         v := strtofloatdef(str, kNaN);
+         if (v = kNaN) then continue;
+         if (idx >= num_v) then continue;
+         overlay[lOverlayIndex].intensity[idx] := v;
+         idx := idx + 1;
+     end;
+     if (idx = 0) and (length(str) >= (2*num_v)) and (str[1] <> '#') then begin
+        //?transposed file created with ConvertDset -o_1Dpt -input lh.aparc.a2009s.annot.niml.dset -prefix lh.pt
+        strlst:=TStringList.Create;
+        strlst.DelimitedText := str;
+        if strlst.Count = num_v then begin
+           idx := 0;
+           for i := 0 to (num_v-1) do begin
+              v := strtofloatdef(strlst[i], kNaN);
+              if (v = kNaN) then continue;
+              overlay[lOverlayIndex].intensity[idx] := v;
+              idx := idx + 1;
+           end;
+        end;
+        strlst.free;
+     end;
+     if (idx <> num_v) then //when fewer vertices than background image
+        showmessage(format('1D file reports %d vertices but background mesh has %d',[idx, num_v]))
+     else
+         result := true;
+   666:
+     CloseFile(f);
+    if not result then
+       setlength(overlay[lOverlayIndex].intensity, 0);
 end;
 
 
@@ -8011,7 +8209,7 @@ function TMesh.LoadOverlay(const FileName: string; lLoadSmooth: boolean): boolea
 var
    i, nOverlays: integer;
    isLUTinvert: boolean = false;
-   ext: string;
+   ext, ext2: string;
    isCiftiNii, HasOverlays: boolean;
 begin
   result := false;
@@ -8020,6 +8218,7 @@ begin
   nOverlays := 1;
   isCiftiNii := false;
   ext := UpperCase(ExtractFileExt(Filename));
+  ext2 := UpCaseExt2(FileName); // "file.gii.dset" -> ".GII.DSET"
   if (ext = '.NII') then
      isCiftiNii := isCIfTI(FileName);
   if (length(vertices) < 3) then begin
@@ -8086,19 +8285,29 @@ begin
             Overlay[OpenOverlays].LUTindex := SetLutIndex(OpenOverlays);
             Overlay[OpenOverlays].LUTvisible := kLUTinvisible;
             Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex, Overlay[OpenOverlays].LUTinvert);
-
         end;
      end;
-
   end;
-
   if (ext = '.DPV') or (ext = '.ASC') then begin
      if not LoadDPV(FileName, OpenOverlays) then begin
        OpenOverlays := OpenOverlays - 1;
        exit;
      end;
   end;
-  if (ext = '.GII') or isCiftiNii then begin
+  if (ext2 = '.NIML.DSET') then begin
+    Showmessage('.NIML.DSET format not supported: use ConvertDset to convert to GIfTI.');
+    OpenOverlays := OpenOverlays - 1;
+    exit;
+  end;
+  if (ext2 = '.1D.DSET') or (ext = '.1D') then begin
+     if not Load1D(FileName, OpenOverlays) then begin
+       OpenOverlays := OpenOverlays - 1;
+       exit;
+     end;
+
+  end;
+  if (ext2 = '.GII.DSET') or (ext = '.GII') or (isCiftiNii) then begin
+    // for example of "filename.gii.dset" see http://andysbrainblog.blogspot.com/2012/04/suma-demo.html
      if isCiftiNii then begin
         nOverlays := loadCifti(FileName, OpenOverlays, 1, (origin.X < 0));
         Overlay[OpenOverlays].LUTindex := 1;

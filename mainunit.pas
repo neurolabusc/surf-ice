@@ -32,6 +32,7 @@ LayerOptionsBtn: TButton;
  LeftSplitter: TSplitter;
  CenterPanel: TPanel;
  LayerAOMapMenu: TMenuItem;
+ shadermatcap1: TMenuItem;
  NextOverlayMenu: TMenuItem;
  PrevOverlayMenu: TMenuItem;
  OverlaySep: TMenuItem;
@@ -74,6 +75,7 @@ ndepolarity1: TMenuItem;
 nodesize1: TMenuItem;
 nodethresh1: TMenuItem;
 nodethreshbysizenotcolor1: TMenuItem;
+MatCapDrop: TComboBox;
 Tracks1: TMenuItem;
 trackload1: TMenuItem;
 trackprefs1: TMenuItem;
@@ -323,7 +325,9 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     procedure LeftSplitterChangeBounds(Sender: TObject);
     procedure LeftSplitterMoved(Sender: TObject);
     procedure LayerAOMapMenuClick(Sender: TObject);
+    procedure MatCapDropChange(Sender: TObject);
     procedure PrevOverlayMenuClick(Sender: TObject);
+    procedure Shaders1Click(Sender: TObject);
     procedure UpdateLayerBox(NewLayers: boolean);
 
 	procedure ScriptingNewMenuClick(Sender: TObject);
@@ -1407,6 +1411,22 @@ begin
     end;
 end;
 
+function PySHADERMATCAP(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  PtrName: PChar;
+  StrName: string;
+  V: integer;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 's:shadermatcap', @PtrName)) then
+    begin
+      StrName:= string(PtrName);
+      SHADERMATCAP(StrName);
+      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+    end;
+end;
+
 function PySHADERADJUST(Self, Args : PPyObject): PPyObject; cdecl;
 var
   PtrName: PChar;
@@ -1632,6 +1652,7 @@ begin
     AddMethod('shaderambientocclusion', @PySHADERAMBIENTOCCLUSION, ' shaderambientocclusion(amount) -> Specify a value in the range 0..1 to set the strength of the crevice shadows');
     AddMethod('shaderforbackgroundonly', @PySHADERFORBACKGROUNDONLY, ' shaderforbackgroundonly(onlybg) -> If true (1) selected shader only influeces background image, otherwise shader influences background, overlays, tracks and nodes.');
     AddMethod('shaderlightazimuthelevation', @PySHADERLIGHTAZIMUTHELEVATION, ' shaderlightazimuthelevation (azimuth, elevation) -> Changes location of light source.');
+    AddMethod('shadermatcap', @PySHADERMATCAP, ' shadermatcap(name) -> Set material capture file (assumes "matcap" shader. For example, "shadermatcap(''mc01'')" selects mc01 matcap.');
     AddMethod('shadername', @PySHADERNAME, ' shadername(name) -> Choose rendering shader function. For example, "shadername(''phong'')" renders using Phong shading.');
     AddMethod('shaderxray', @PySHADERXRAY, ' shaderxray (object, overlay) -> See occluded overlays/tracks/nodes by making either object transparent (0..1) or overlay/tracks/nodes emphasized (0..1)');
     AddMethod('trackload', @PyTRACKLOAD, ' trackload (filename) -> Load fiber steam lines from a file.');
@@ -2056,6 +2077,11 @@ begin
   UpdateLUT(i, LayerColorDrop.ItemIndex);
   LayerWidgetChange(nil);
   UpdateLayerBox(true);
+end;
+
+procedure TGLForm1.Shaders1Click(Sender: TObject);
+begin
+
 end;
 
 procedure TGLForm1.LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -2627,7 +2653,7 @@ end; //isMz3Mesh
 
 function TGLForm1.OpenMesh(FilenameIN: string): boolean;
 var
-    Filename, curvname, ext: string;
+    Filename, curvname, ext, ext2: string;
 begin
   result := false;
   if FilenameIN <> '-' then
@@ -2637,12 +2663,17 @@ begin
   if Filename = '' then exit;
   result := true;
   ext := ExtractFileExtGzUpper(Filename);
+  ext2 := UpCaseExt2(FileName); // "file.gii.dset" -> ".GII.DSET"
   if (ext = '.GLS') then begin
      OpenScript(Filename);
      exit;
   end;
+  if (ext2 = '.NIML.DSET') then begin
+    Showmessage('.NIML.DSET format not supported: use ConvertDset to convert to GIfTI.');
+    exit;
+  end;
   //ext := UpperCase(ExtractFileExt(Filename));
-  if (ext = '.COL') or (ext = '.ANNOT') or (ext = '.MGH') or (ext = '.MGZ')  or (ext = '.NII') or (ext = '.HDR')  or (ext = '.NII.GZ') or (ext = '.DPV') or (ext = '.ANNOT') or (ext = '.W') or (ext = '.CURV')  then begin
+  if (ext2 = '.1D.DSET') or (ext = '.COL') or (ext = '.ANNOT') or (ext = '.MGH') or (ext = '.MGZ')  or (ext = '.NII') or (ext = '.HDR')  or (ext = '.NII.GZ') or (ext = '.DPV') or (ext = '.ANNOT') or (ext = '.W') or (ext = '.CURV')  then begin
     OpenOverlay(Filename);
     exit;
   end else if (ext = '.VTK') and (not isVtkMesh (Filename)) then begin
@@ -2651,7 +2682,7 @@ begin
   end else if (length(gMesh.Faces) > 0) and (ext = '.MZ3') and (not isMz3Mesh (Filename)) then begin
     OpenOverlay(Filename);  //GIfTI files can be meshes or overlays - autodetect
     exit;
-  end else if (length(gMesh.Faces) > 0) and (ext = '.GII') and (not isGiiMesh (Filename)) then begin
+  end else if (length(gMesh.Faces) > 0) and ((ext2 = '.GII.DSET') or (ext = '.GII')) and (not isGiiMesh (Filename)) then begin
     OpenOverlay(Filename);  //GIfTI files can be meshes or overlays - autodetect
     exit;
   end else if (ext = '.DAT') or  (ext = '.TRK') or  (ext = '.TRK.GZ') or (ext = '.FIB') or (ext = '.PDB') or (ext = '.TCK') or (ext = '.BFLOAT') or (ext = '.BFLOAT.GZ')  then begin
@@ -2871,6 +2902,20 @@ begin
   SetShader(ShaderDir+pathdelim+ShaderDrop.Items[ShaderDrop.ItemIndex]+'.txt');
   ShaderBoxResize(Sender);
   GLBoxRequestUpdate(Sender);
+end;
+
+
+procedure TGLForm1.MatCapDropChange(Sender: TObject);
+begin
+ {$IFDEF MATCAP}
+ if MatCapDrop.Items.Count < 1 then exit;
+ if MatCapDrop.ItemIndex < 0 then
+    MatCapDrop.ItemIndex := 0;
+ GLBox.MakeCurrent;
+ SetMatCap(MatCapDir+pathdelim+MatCapDrop.Items[MatCapDrop.ItemIndex]+'.jpg');
+ GLBox.ReleaseContext;
+ GLBoxRequestUpdate(Sender);
+ {$ENDIF}
 end;
 
 procedure TGLForm1.GLboxMouseMove(Sender: TObject; Shift: TShiftState; lX, lY: Integer);
@@ -5519,7 +5564,7 @@ begin
      gnLUT := -1; //refresh colorbar
      GLbox.Invalidate;
 end;
-
+{$DEFINE JPG}
 {$IFDEF JPG}
 {$IFDEF FPC}
 procedure SaveImgAsJPGCore (lImage: TBitmap; lFilename: string);

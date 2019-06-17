@@ -1,0 +1,54 @@
+//pref
+Amount|float|0.0|0.2|1
+Occlusion|float|0.0|0.0|1
+MatCap|set|1|1|1
+Material Capture Shader http://www.alecjacobson.com/weblog/?p=4827l|note
+//vert
+#version 330
+layout(location = 0) in vec3 Vert;
+layout(location = 3) in vec3 Norm;
+layout(location = 6) in vec4 Clr;
+out vec3 vN, vV;
+out vec4 vClr, vP;
+uniform mat4 ModelViewProjectionMatrix;
+uniform mat4 ModelViewMatrix;
+uniform mat3 NormalMatrix;
+void main() {
+    vN = normalize((NormalMatrix * Norm));
+    vP = vec4(Vert, 1.0);
+    gl_Position = ModelViewProjectionMatrix * vec4(Vert, 1.0);
+    vV = -vec3(ModelViewMatrix*vec4(Vert,1.0));
+    vClr = Clr;
+}
+//frag
+#version 330
+in vec4 vClr, vP;
+in vec3 vN, vV;
+out vec4 color;
+uniform float Amount = 0.2;
+uniform float Occlusion = 0.2;
+uniform vec4 ClipPlane = vec4(2.0, 0.0, 0.0, 0.0);
+uniform sampler2D MatCap;
+
+
+vec3 desaturate(vec3 color, float amount) {
+    vec3 gray = vec3(dot(vec3(0.2126,0.7152,0.0722), color));
+    return vec3(mix(color, gray, amount));
+}
+
+void main() {
+	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
+	vec3 n = normalize(vN);
+
+	vec2 uv = normalize(n).xy * 0.5 + 0.5;
+	uv.y = 1.0-uv.y;
+	vec4 clr4 = texture(MatCap,uv.xy);
+	vec3 clr = clr4.gra;
+
+	clr = mix(clr, vClr.rgb,  Amount);
+	clr *= (1.0 - (Occlusion * (vClr.a)));
+
+	vec3 backclr = desaturate(clr, 0.75);
+	float backface = step(0.0, n.z);
+	color = vec4(mix(backclr.rgb, clr.rgb,  backface), 1.0);
+}

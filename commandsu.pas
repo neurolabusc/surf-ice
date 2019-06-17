@@ -65,6 +65,7 @@ procedure SHADERAMBIENTOCCLUSION(lVal: single);
 procedure SHADERFORBACKGROUNDONLY(BGONLY: boolean);
 procedure SHADERLIGHTAZIMUTHELEVATION (AZI, ELEV: integer);
 procedure SHADERNAME(lFilename: string);
+procedure SHADERMATCAP(lFilename: string);
 procedure SHADERXRAY(lObject, lOverlay: single);
 procedure TRACKLOAD(lFilename: string);
 procedure TRACKPREFS(lLength,lWidth,lDither: single);
@@ -86,7 +87,7 @@ const
                (Ptr:@VERSION;Decl:'VERSION';Vars:'(): string')
              );
 
-knProc = 66;
+knProc = 67;
   kProcRA : array [1..knProc] of TScriptRec = (
   (Ptr:@ATLASSTATMAP;Decl:'ATLASSTATMAP';Vars:'(ATLASNAME, STATNAME: string; const Intensities: array of integer; const Intensities: array of single)'),
   (Ptr:@ATLASSATURATIONALPHA;Decl:'ATLASSATURATIONALPHA';Vars:'(lSaturation, lTransparency: single)'),
@@ -145,6 +146,7 @@ knProc = 66;
    (Ptr:@SHADERADJUST;Decl:'SHADERADJUST';Vars:'(lProperty: string; lVal: single)'),
    (Ptr:@SHADERAMBIENTOCCLUSION;Decl:'SHADERAMBIENTOCCLUSION';Vars:'(lVal: single)'),
    (Ptr:@SHADERFORBACKGROUNDONLY;Decl:'SHADERFORBACKGROUNDONLY';Vars:'(BGONLY: boolean)'),
+   (Ptr:@SHADERMATCAP;Decl:'SHADERMATCAP';Vars:'(lFilename: string)'),
    (Ptr:@SHADERNAME;Decl:'SHADERNAME';Vars:'(lFilename: string)'),
    (Ptr:@SHADERLIGHTAZIMUTHELEVATION;Decl:'SHADERLIGHTAZIMUTHELEVATION';Vars:'(AZI, ELEV: integer)'),
    (Ptr:@SHADERXRAY;Decl:'SHADERXRAY';Vars:'(lObject, lOverlay: single)'),
@@ -518,6 +520,24 @@ end;
 procedure SHADERNAME(lFilename: string);
 begin
    SetShaderAndDrop(lFilename);
+end;
+
+procedure SHADERMATCAP(lFilename: string);
+var
+  i: integer;
+begin
+     i := GLForm1.MatCapDrop.Items.IndexOf(lFilename);
+     if i < 0 then begin
+        if GLForm1.MatCapDrop.Items.Count < 1 then
+           GLForm1.ScriptOutputMemo.Lines.Add('No matcap images available: reinstall Surfice.')
+        else
+            GLForm1.ScriptOutputMemo.Lines.Add('Unable to find matcap named '+lFilename+'. Solution: choose an available matcap, e.g. "'+GLForm1.MatCapDrop.Items[0]+'"');
+        exit;
+     end;
+     GLForm1.MatCapDrop.ItemIndex := i;
+     GLForm1.MatCapDropChange(nil);
+     if not GLForm1.MatCapDrop.visible then
+        GLForm1.ScriptOutputMemo.Lines.Add('Hint: shadermatcap() requires using a shader that supports matcaps (use shadername() to select a new shader).')
 end;
 
 procedure SHADERFORBACKGROUNDONLY(BGONLY: boolean);

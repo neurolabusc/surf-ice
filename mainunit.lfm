@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
   Left = 233
   Height = 684
-  Top = 94
+  Top = 41
   Width = 1047
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -23,10 +23,11 @@ object GLForm1: TGLForm1
     Width = 261
     HorzScrollBar.Page = 1
     HorzScrollBar.Visible = False
-    VertScrollBar.Page = 682
+    VertScrollBar.Page = 684
     Align = alLeft
-    ClientHeight = 682
-    ClientWidth = 244
+    BorderStyle = bsNone
+    ClientHeight = 684
+    ClientWidth = 246
     Constraints.MaxWidth = 272
     Constraints.MinWidth = 4
     ParentFont = False
@@ -36,12 +37,12 @@ object GLForm1: TGLForm1
       Height = 187
       Hint = 'Click on name to hide, control+click to reverse palette'
       Top = 0
-      Width = 244
+      Width = 246
       Align = alTop
       AutoSize = True
       Caption = 'Overlays'
       ClientHeight = 169
-      ClientWidth = 236
+      ClientWidth = 238
       Constraints.MinHeight = 2
       ParentFont = False
       ParentShowHint = False
@@ -53,7 +54,7 @@ object GLForm1: TGLForm1
         Height = 72
         Hint = 'Right-click for options'
         Top = 0
-        Width = 236
+        Width = 238
         Align = alTop
         Constraints.MaxHeight = 72
         ItemHeight = 0
@@ -191,12 +192,12 @@ object GLForm1: TGLForm1
       Left = 0
       Height = 114
       Top = 317
-      Width = 244
+      Width = 246
       Align = alTop
       AutoSize = True
       Caption = 'Clipping'
       ClientHeight = 96
-      ClientWidth = 236
+      ClientWidth = 238
       ParentFont = False
       TabOrder = 0
       OnDblClick = DepthLabelDblClick
@@ -305,12 +306,12 @@ object GLForm1: TGLForm1
       Left = 0
       Height = 130
       Top = 187
-      Width = 244
+      Width = 246
       Align = alTop
       AutoSize = True
       Caption = 'Tracks'
       ClientHeight = 112
-      ClientWidth = 236
+      ClientWidth = 238
       ParentFont = False
       TabOrder = 2
       Visible = False
@@ -479,12 +480,12 @@ object GLForm1: TGLForm1
       Left = 0
       Height = 117
       Top = 431
-      Width = 244
+      Width = 246
       Align = alTop
       AutoSize = True
       Caption = 'Nodes'
       ClientHeight = 99
-      ClientWidth = 236
+      ClientWidth = 238
       ParentFont = False
       TabOrder = 3
       Visible = False
@@ -689,12 +690,12 @@ object GLForm1: TGLForm1
       Left = 0
       Height = 95
       Top = 548
-      Width = 244
+      Width = 246
       Align = alTop
       AutoSize = True
       Caption = 'Edges'
       ClientHeight = 77
-      ClientWidth = 236
+      ClientWidth = 238
       ParentFont = False
       TabOrder = 4
       Visible = False
@@ -874,12 +875,12 @@ object GLForm1: TGLForm1
       Left = 0
       Height = 82
       Top = 643
-      Width = 244
+      Width = 246
       Align = alTop
       AutoSize = True
       Caption = 'Mesh Color'
       ClientHeight = 64
-      ClientWidth = 236
+      ClientWidth = 238
       ParentFont = False
       TabOrder = 6
       Visible = False
@@ -949,12 +950,12 @@ object GLForm1: TGLForm1
       Left = 0
       Height = 70
       Top = 725
-      Width = 244
+      Width = 246
       Align = alTop
       AutoSize = True
       Caption = 'Background Mesh'
       ClientHeight = 52
-      ClientWidth = 236
+      ClientWidth = 238
       ParentFont = False
       TabOrder = 5
       object meshAlphaTrack: TTrackBar
@@ -1054,14 +1055,14 @@ object GLForm1: TGLForm1
     end
     object ShaderBox: TGroupBox
       Left = 0
-      Height = 402
+      Height = 397
       Top = 795
-      Width = 244
+      Width = 246
       Align = alClient
       AutoSize = True
-      Caption = 'Shader'
-      ClientHeight = 384
-      ClientWidth = 236
+      Caption = 'Render'
+      ClientHeight = 379
+      ClientWidth = 238
       ParentFont = False
       TabOrder = 7
       OnResize = ShaderBoxResize
@@ -1183,19 +1184,19 @@ object GLForm1: TGLForm1
       object S1Track: TTrackBar
         Tag = 1
         AnchorSideLeft.Control = occlusionTrack
-        AnchorSideTop.Control = LightAziTrack
+        AnchorSideTop.Control = LightLabel
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = ShaderBox
         AnchorSideRight.Side = asrBottom
         Left = 157
         Height = 30
-        Top = 66
+        Top = 61
         Width = 88
         Max = 100
         OnChange = UniformChange
         Position = 51
         TickStyle = tsNone
-        BorderSpacing.Top = 2
+        BorderSpacing.Top = 4
         BorderSpacing.Right = 2
         ParentFont = False
         TabOrder = 5
@@ -1207,7 +1208,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrCenter
         Left = 2
         Height = 16
-        Top = 73
+        Top = 68
         Width = 14
         BorderSpacing.Left = 2
         Caption = 'S1'
@@ -1222,7 +1223,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrCenter
         Left = 2
         Height = 16
-        Top = 105
+        Top = 100
         Width = 16
         Caption = 'S2'
         ParentColor = False
@@ -1236,7 +1237,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrBottom
         Left = 157
         Height = 30
-        Top = 98
+        Top = 93
         Width = 88
         Max = 100
         OnChange = UniformChange
@@ -1253,7 +1254,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrBottom
         Left = 157
         Height = 30
-        Top = 130
+        Top = 125
         Width = 88
         Max = 100
         OnChange = UniformChange
@@ -1270,7 +1271,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrCenter
         Left = 2
         Height = 16
-        Top = 169
+        Top = 164
         Width = 16
         Caption = 'S4'
         ParentColor = False
@@ -1284,7 +1285,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrBottom
         Left = 157
         Height = 30
-        Top = 162
+        Top = 157
         Width = 88
         Max = 100
         OnChange = UniformChange
@@ -1301,7 +1302,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrCenter
         Left = 2
         Height = 16
-        Top = 201
+        Top = 196
         Width = 16
         Caption = 'S5'
         ParentColor = False
@@ -1315,7 +1316,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrBottom
         Left = 157
         Height = 30
-        Top = 194
+        Top = 189
         Width = 88
         Max = 100
         OnChange = UniformChange
@@ -1332,7 +1333,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrCenter
         Left = 2
         Height = 16
-        Top = 233
+        Top = 228
         Width = 16
         Caption = 'S6'
         ParentColor = False
@@ -1346,7 +1347,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrCenter
         Left = 2
         Height = 16
-        Top = 265
+        Top = 260
         Width = 16
         Caption = 'S7'
         ParentColor = False
@@ -1360,7 +1361,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrCenter
         Left = 2
         Height = 16
-        Top = 297
+        Top = 292
         Width = 16
         Caption = 'S8'
         ParentColor = False
@@ -1374,7 +1375,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrCenter
         Left = 2
         Height = 16
-        Top = 329
+        Top = 324
         Width = 16
         Caption = 'S9'
         ParentColor = False
@@ -1388,7 +1389,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrCenter
         Left = 2
         Height = 16
-        Top = 359
+        Top = 354
         Width = 22
         Caption = 'S10'
         ParentColor = False
@@ -1402,7 +1403,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrBottom
         Left = 157
         Height = 30
-        Top = 226
+        Top = 221
         Width = 88
         Max = 100
         OnChange = UniformChange
@@ -1419,7 +1420,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrBottom
         Left = 157
         Height = 30
-        Top = 258
+        Top = 253
         Width = 88
         Max = 100
         OnChange = UniformChange
@@ -1436,7 +1437,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrBottom
         Left = 157
         Height = 30
-        Top = 290
+        Top = 285
         Width = 88
         Max = 100
         OnChange = UniformChange
@@ -1453,7 +1454,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrBottom
         Left = 157
         Height = 30
-        Top = 322
+        Top = 317
         Width = 88
         Max = 100
         OnChange = UniformChange
@@ -1470,7 +1471,7 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrBottom
         Left = 157
         Height = 30
-        Top = 352
+        Top = 347
         Width = 88
         Max = 100
         OnChange = UniformChange
@@ -1483,8 +1484,8 @@ object GLForm1: TGLForm1
       object Memo1: TMemo
         Left = 0
         Height = 54
-        Top = 330
-        Width = 236
+        Top = 325
+        Width = 238
         Align = alBottom
         Lines.Strings = (
           ''
@@ -1500,12 +1501,31 @@ object GLForm1: TGLForm1
         AnchorSideTop.Side = asrCenter
         Left = 2
         Height = 16
-        Top = 137
+        Top = 132
         Width = 16
         Caption = 'S3'
         ParentColor = False
         ParentFont = False
         ParentShowHint = False
+      end
+      object MatCapDrop: TComboBox
+        AnchorSideLeft.Control = LightLabel
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = LightLabel
+        AnchorSideTop.Side = asrCenter
+        Left = 41
+        Height = 20
+        Top = 39
+        Width = 127
+        BorderSpacing.Left = 8
+        DropDownCount = 36
+        ItemHeight = 26
+        OnChange = MatCapDropChange
+        ParentFont = False
+        Style = csDropDownList
+        TabOrder = 15
+        Text = '0'
+        Visible = False
       end
     end
   end
@@ -2329,6 +2349,7 @@ object GLForm1: TGLForm1
         end
         object Shaders1: TMenuItem
           Caption = 'Shaders'
+          OnClick = Shaders1Click
           object shaderadjust1: TMenuItem
             Tag = 1413
             Caption = 'shaderadjust'
@@ -2339,6 +2360,12 @@ object GLForm1: TGLForm1
             Tag = 3
             Caption = 'shaderambientocclusion'
             Hint = 'shaderambientocclusion (amount: float) Specify a value in the range 0..1 to set the strength of the crevice shadows'
+            OnClick = InsertCommand
+          end
+          object shadermatcap1: TMenuItem
+            Tag = 4
+            Caption = 'shadermatcap'
+            Hint = 'shadermatcap (Filename: string) Loads the requested matcap.'
             OnClick = InsertCommand
           end
           object shadername1: TMenuItem
