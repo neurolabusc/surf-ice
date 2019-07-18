@@ -1,12 +1,12 @@
 object GLForm1: TGLForm1
-  Left = 233
-  Height = 684
-  Top = 41
-  Width = 1047
+  Left = 553
+  Height = 514
+  Top = 103
+  Width = 691
   AllowDropFiles = True
   Caption = 'Surf Ice'
-  ClientHeight = 684
-  ClientWidth = 1047
+  ClientHeight = 514
+  ClientWidth = 691
   Menu = MainMenu1
   OnChangeBounds = FormChangeBounds
   OnClose = FormClose
@@ -18,15 +18,15 @@ object GLForm1: TGLForm1
   LCLVersion = '2.1.0.0'
   object ToolPanel: TScrollBox
     Left = 0
-    Height = 684
+    Height = 514
     Top = 0
     Width = 261
     HorzScrollBar.Page = 1
     HorzScrollBar.Visible = False
-    VertScrollBar.Page = 684
+    VertScrollBar.Page = 514
     Align = alLeft
     BorderStyle = bsNone
-    ClientHeight = 684
+    ClientHeight = 514
     ClientWidth = 246
     Constraints.MaxWidth = 272
     Constraints.MinWidth = 4
@@ -161,8 +161,8 @@ object GLForm1: TGLForm1
         Height = 25
         Top = 144
         Width = 116
-        Max = 2
-        Position = 2
+        Max = 100
+        Position = 100
         TickStyle = tsNone
         BorderSpacing.Left = 122
         BorderSpacing.Top = 2
@@ -1531,7 +1531,7 @@ object GLForm1: TGLForm1
   end
   object LeftSplitter: TSplitter
     Left = 261
-    Height = 684
+    Height = 514
     Top = 0
     Width = 6
     OnCanOffset = LeftSplitterCanOffset
@@ -1541,9 +1541,9 @@ object GLForm1: TGLForm1
   end
   object CenterPanel: TPanel
     Left = 267
-    Height = 684
+    Height = 514
     Top = 0
-    Width = 766
+    Width = 410
     Align = alClient
     Constraints.MinHeight = 32
     Constraints.MinWidth = 32
@@ -1552,21 +1552,21 @@ object GLForm1: TGLForm1
     OnClick = CenterPanelClick
   end
   object RightSplitter: TSplitter
-    Left = 1033
-    Height = 684
+    Left = 677
+    Height = 514
     Top = 0
     Width = 6
     Align = alRight
     ResizeAnchor = akRight
   end
   object ScriptPanel: TPanel
-    Left = 1039
-    Height = 684
+    Left = 683
+    Height = 514
     Top = 0
     Width = 8
     Align = alRight
     BevelOuter = bvNone
-    ClientHeight = 684
+    ClientHeight = 514
     ClientWidth = 8
     Constraints.MinWidth = 2
     ParentFont = False
@@ -1574,19 +1574,19 @@ object GLForm1: TGLForm1
     OnDblClick = ScriptPanelDblClick
     object ScriptBox: TGroupBox
       Left = 0
-      Height = 684
+      Height = 514
       Top = 0
       Width = 8
       Align = alClient
       Caption = 'Scripting'
-      ClientHeight = 666
+      ClientHeight = 496
       ClientWidth = 0
       ParentFont = False
       TabOrder = 0
       OnDblClick = ScriptPanelDblClick
       object ScriptMemo: TMemo
         Left = 0
-        Height = 460
+        Height = 290
         Top = 0
         Width = 0
         Align = alClient
@@ -1608,7 +1608,7 @@ object GLForm1: TGLForm1
       object ScriptOutputMemo: TMemo
         Left = 0
         Height = 200
-        Top = 466
+        Top = 296
         Width = 0
         Align = alBottom
         BorderStyle = bsNone
@@ -1625,7 +1625,7 @@ object GLForm1: TGLForm1
         Cursor = crVSplit
         Left = 0
         Height = 6
-        Top = 460
+        Top = 290
         Width = 0
         Align = alBottom
         ResizeAnchor = akBottom
@@ -1647,6 +1647,49 @@ object GLForm1: TGLForm1
     object LayerShowHeaderMenu: TMenuItem
       Caption = 'Show Header'
       OnClick = LayerShowHeaderMenuClick
+    end
+    object LayerPainHideMenu: TMenuItem
+      Caption = 'Extreme Values'
+      object PaintModeAutomatic: TMenuItem
+        Tag = -1
+        AutoCheck = True
+        Caption = 'Automatic'
+        Checked = True
+        GroupIndex = 197
+        RadioItem = True
+        OnClick = PaintModeAutomaticMenu
+      end
+      object PaintModeHideBrightHideDarkMenu: TMenuItem
+        AutoCheck = True
+        Caption = 'Hide Dark and Bright'
+        GroupIndex = 197
+        RadioItem = True
+        OnClick = PaintModeAutomaticMenu
+      end
+      object PaintModeHideDarkShowBrightMenu: TMenuItem
+        Tag = 1
+        AutoCheck = True
+        Caption = 'Hide Dark, Show Bright'
+        GroupIndex = 197
+        RadioItem = True
+        OnClick = PaintModeAutomaticMenu
+      end
+      object PaintModeShowDarkHideBrightMenu: TMenuItem
+        Tag = 2
+        AutoCheck = True
+        Caption = 'Show Dark, Hide Bright'
+        GroupIndex = 197
+        RadioItem = True
+        OnClick = PaintModeAutomaticMenu
+      end
+      object PaintModeShowBirghtShowDark: TMenuItem
+        Tag = 3
+        AutoCheck = True
+        Caption = 'Show Dark and Bright'
+        GroupIndex = 197
+        RadioItem = True
+        OnClick = PaintModeAutomaticMenu
+      end
     end
   end
   object ColorDialog1: TColorDialog
@@ -2025,7 +2068,6 @@ object GLForm1: TGLForm1
       end
       object SwapYZMenu: TMenuItem
         Caption = 'Rotate mesh'
-        ShortCut = 16472
         OnClick = SwapYZMenuClick
       end
       object CenterMeshMenu: TMenuItem

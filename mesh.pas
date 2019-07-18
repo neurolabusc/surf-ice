@@ -16,8 +16,8 @@ const
   kMinOverlayIndex = 1;
   kMaxOverlays = 256;
   kLUTinvisible = 0;
-  kLUTtranslucent = 1;
-  kLUTopaque = 2;
+  kLUTtranslucent = 50;
+  kLUTopaque = 100;
 type
   TSphere = packed record
      X: single;
@@ -29,7 +29,9 @@ type
 
  TOverlay = record
     LUTinvert, AOmap: boolean;
-    LUTvisible: integer; //0=invisible, 1=translucent, 2=opaque
+    PaintMode: integer;
+    OpacityPercent: integer;
+    //LUTvisible: integer; //0=invisible, 1=translucent, 2=opaque
     LUTindex,atlasMaxIndex, volumes, CurrentVolume : integer;
     LUT: TLUT;
     minIntensity, maxIntensity, windowScaledMin, windowScaledMax: single;
@@ -295,8 +297,8 @@ end;
 
 procedure TMesh.BuildListCore(Clr: TRGBA; var f: TFaces; var v: TVertices; var vtxRGBA: TVertexRGBA; vRemap: TInts = nil; isWriteToGPU: boolean = true);
 var
-  i,volInc, c, translucent: integer;
-  mn, mx: single;
+  i,volInc, c: integer;
+  mn, mx, frac: single;
   rgb, rgb0: TRGBA;
   vRGBA, vRGBAmx :TVertexRGBA;
   vNumNeighbor: array of integer;
@@ -309,7 +311,7 @@ begin
   isOverlayPainting := false;
   if  (OpenOverlays > 0)  then  //ignore overlays if they are all meshes rather than vertex colors
        for c :=  OpenOverlays downto 1 do
-           if (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then
+           if (overlay[c].OpacityPercent <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then
               isOverlayPainting := true;
   if  (isOverlayPainting) or (length(vtxRGBA) = length(v)) then begin
      rgb := RGBA(Clr.R, Clr.G, Clr.B, 0);
@@ -318,7 +320,10 @@ begin
        c := round(vertexRgbaAlpha * 255);
         if vertexRgbaSaturation >= 1 then begin
           for i := 0 to (length(v)-1) do begin
-                vRGBA[i].r := vtxRGBA[i].r; vRGBA[i].g := vtxRGBA[i].g;  vRGBA[i].b := vtxRGBA[i].b;  vRGBA[i].a := c;
+                vRGBA[i].r := vtxRGBA[i].r;
+                vRGBA[i].g := vtxRGBA[i].g;
+                vRGBA[i].b := vtxRGBA[i].b;
+                vRGBA[i].a := c;
           end;
         end else begin
             for i := 0 to (length(v)-1) do
@@ -344,11 +349,9 @@ begin
           for c :=  OpenOverlays downto 1 do begin
             if isFreeSurferLUT(overlay[c].LUTindex) then continue; //curve files ALWAYs darken
             volInc :=  length(v) *  (overlay[c].currentVolume - 1);
-            if (not overlay[c].aoMap) and (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then begin
-               if overlay[c].LUTvisible <> kLUTopaque then
-                  translucent := 2 //if translucent, halve alpha
-               else
-                   translucent := 1;
+            if (not overlay[c].aoMap) and (overlay[c].OpacityPercent <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then begin
+               frac :=  overlay[c].OpacityPercent/100;
+               if (frac > 1) or (frac < 0) then frac := 1;
                if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
                   mn := overlay[c].windowScaledMin;
                   mx := overlay[c].windowScaledMax;
@@ -358,14 +361,14 @@ begin
                end;
                if vRemap <> nil then begin //filtered atlas: vertices have been decimated
                  for i := 0 to (length(v)-1) do begin
-                   rgb := inten2rgb(overlay[c].intensity[vRemap[i]+volInc], mn, mx, overlay[c].LUT);
-                   rgb.A := rgb.A div translucent;
+                   rgb := inten2rgb(overlay[c].intensity[vRemap[i]+volInc], mn, mx, overlay[c].LUT, overlay[c].PaintMode);
+                   rgb.A := round(rgb.A * frac);
                    vRGBAmx[i] := maxRGBA(vRGBAmx[i], rgb);
                  end; //for i
                end else begin
                  for i := 0 to (length(v)-1) do begin
-                     rgb := inten2rgb(overlay[c].intensity[i+volInc], mn, mx, overlay[c].LUT);
-                     rgb.A := rgb.A div translucent;
+                     rgb := inten2rgb(overlay[c].intensity[i+volInc], mn, mx, overlay[c].LUT, overlay[c].PaintMode);
+                     rgb.A := round(rgb.A * frac);
                      vRGBAmx[i] := maxRGBA(vRGBAmx[i], rgb);
                  end; //for i
                end;
@@ -375,11 +378,9 @@ begin
           //next curve files
           for c :=  OpenOverlays downto 1 do begin
             if not isFreeSurferLUT(overlay[c].LUTindex) then continue; //only curve files
-            if (not overlay[c].aoMap) and (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then begin
-               if overlay[c].LUTvisible <> kLUTopaque then
-                  translucent := 2 //if translucent, halve alpha
-               else
-                   translucent := 1;
+            if (not overlay[c].aoMap) and (overlay[c].OpacityPercent <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then begin
+               frac := overlay[c].OpacityPercent / 100;
+               if (frac < 0) or (frac > 1) then frac := 1;
                if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
                   mn := overlay[c].windowScaledMin;
                   mx := overlay[c].windowScaledMax;
@@ -390,14 +391,14 @@ begin
                volInc :=  length(v) *  (overlay[c].currentVolume - 1);
                if vRemap <> nil then begin //filtered atlas: vertices have been decimated
                  for i := 0 to (length(v)-1) do begin
-                     rgb := inten2rgb(overlay[c].intensity[vRemap[i]+volInc], mn, mx, overlay[c].LUT);
-                     rgb.A := rgb.A div translucent;
+                     rgb := inten2rgb(overlay[c].intensity[vRemap[i]+volInc], mn, mx, overlay[c].LUT, overlay[c].PaintMode);
+                     rgb.A := round(rgb.A * frac);
                      vRGBA[i] := blendRGBA(vRGBA[i], rgb);
                  end; //for i
                end else begin
                  for i := 0 to (length(v)-1) do begin
-                     rgb := inten2rgb(overlay[c].intensity[i+volInc], mn, mx, overlay[c].LUT);
-                     rgb.A := rgb.A div translucent;
+                     rgb := inten2rgb(overlay[c].intensity[i+volInc], mn, mx, overlay[c].LUT, overlay[c].PaintMode);
+                     rgb.A := round(rgb.A * frac);
                      vRGBA[i] := blendRGBA(vRGBA[i], rgb);
                  end; //for i
                end;
@@ -408,11 +409,8 @@ begin
               vRGBA[i] := blendRGBA(vRGBA[i],vRGBAmx[i]);
         end else begin //not additive: mix overlays
             for c :=  OpenOverlays downto 1 do begin
-              if (not overlay[c].aoMap) and (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then begin
-                 if overlay[c].LUTvisible <> kLUTopaque then
-                    translucent := 2 //if translucent, halve alpha
-                 else
-                     translucent := 1;
+              if (not overlay[c].aoMap) and (overlay[c].OpacityPercent <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then begin
+                 frac := overlay[c].OpacityPercent / 100;
                  if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
                     mn := overlay[c].windowScaledMin;
                     mx := overlay[c].windowScaledMax;
@@ -423,14 +421,14 @@ begin
                  volInc :=  length(v) *  (overlay[c].currentVolume - 1);
                  if vRemap <> nil then begin //filtered atlas: vertices have been decimated
                    for i := 0 to (length(v)-1) do begin
-                       rgb := inten2rgb(overlay[c].intensity[vRemap[i]+volInc], mn, mx, overlay[c].LUT);
-                       rgb.A := rgb.A div translucent;
+                       rgb := inten2rgb(overlay[c].intensity[vRemap[i]+volInc], mn, mx, overlay[c].LUT, overlay[c].PaintMode);
+                       rgb.A := round(rgb.A * frac);
                        vRGBA[i] := blendRGBA(vRGBA[i], rgb);
                    end; //for i
                  end else begin
                    for i := 0 to (length(v)-1) do begin
-                       rgb := inten2rgb(overlay[c].intensity[i+volInc], mn, mx, overlay[c].LUT);
-                       rgb.A := rgb.A div translucent;
+                       rgb := inten2rgb(overlay[c].intensity[i+volInc], mn, mx, overlay[c].LUT, overlay[c].PaintMode);
+                       rgb.A := round(rgb.A * frac);
                        vRGBA[i] := blendRGBA(vRGBA[i], rgb);
                    end; //for i
                  end;
@@ -518,7 +516,7 @@ begin
      //for i := 0 to (length(v)-1) do
      //    vRGBA[i].R := 0;
      for c :=  OpenOverlays downto 1 do begin
-            if (overlay[c].aoMap) and (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then begin
+            if (overlay[c].aoMap) and (overlay[c].OpacityPercent <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then begin
                if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
                   mn := overlay[c].windowScaledMin;
                   mx := overlay[c].windowScaledMax;
@@ -527,8 +525,8 @@ begin
                    mn := overlay[c].windowScaledMax;
                end;
                volInc :=  length(v) *  (overlay[c].currentVolume - 1);
-               if overlay[c].LUTvisible = kLUTtranslucent then
-                  mx := ((mx - mn) * 0.5) + mn;
+               if (overlay[c].OpacityPercent < 100) then
+                  mx := ((mx - mn) * (overlay[c].OpacityPercent/100)) + mn;
                 if (overlay[c].LUTinvert) then begin
                     if vRemap <> nil then begin //filtered atlas: vertices have been decimated
                       for i := 0 to (length(v)-1) do
@@ -715,7 +713,7 @@ begin
   setlength(f,0);
   nVert := length(overlay[c].vertices);
   nFace := length(overlay[c].faces);
-  if (overlay[c].atlasMaxIndex > 0) or (overlay[c].LUTvisible = kLUTinvisible) or (nVert < 3) or (nFace < 1) then exit;
+  if (overlay[c].atlasMaxIndex > 0) or (overlay[c].OpacityPercent = kLUTinvisible) or (nVert < 3) or (nFace < 1) then exit;
   //if length(overlay[c].intensity) <> nVert then exit; //requires intensity values
   if length(overlay[c].intensity) < nVert then exit; //requires intensity values 2019
   if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
@@ -756,7 +754,7 @@ begin
      setlength(vRGBA, nvOK);
      rgba192 := overlay[c].LUT[192];
      for i := 0 to (nvOK -1) do begin
-          rgb := inten2rgb(overlay[c].intensity[i], mn, mx, overlay[c].LUT);
+          rgb := inten2rgb(overlay[c].intensity[i], mn, mx, overlay[c].LUT, overlay[c].PaintMode);
           vRGBA[i].r := rgb.r;
           vRGBA[i].g := rgb.g;
           vRGBA[i].b := rgb.b;
@@ -794,7 +792,7 @@ begin
   j := 0;
   for i := 0 to (nVert -1) do begin
       if vOK[i] >= 0 then begin
-         rgb := inten2rgb(overlay[c].intensity[i], mn, mx, overlay[c].LUT);
+         rgb := inten2rgb(overlay[c].intensity[i], mn, mx, overlay[c].LUT, overlay[c].PaintMode);
          vRGBA[j].r := rgb.r;
          vRGBA[j].g := rgb.g;
          vRGBA[j].b := rgb.b;
@@ -822,7 +820,7 @@ begin
      exit;
   nMeshOverlay := 0;
   for c := 1 to OpenOverlays do
-      if (overlay[c].LUTvisible <> kLUTinvisible) and (length(overlay[c].vertices) > 2) then
+      if (overlay[c].OpacityPercent <> kLUTinvisible) and (length(overlay[c].vertices) > 2) then
          nMeshOverlay := nMeshOverlay + 1;
   if nMeshOverlay < 1 then exit;
   nMeshOverlay := 0;
@@ -831,7 +829,7 @@ begin
   for c := 1 to OpenOverlays do begin
       nVert := length(overlay[c].vertices);
       nFace := length(overlay[c].faces);
-      if (overlay[c].LUTvisible = kLUTinvisible) or (nVert < 3) or (nFace < 1) then continue;
+      if (overlay[c].OpacityPercent = kLUTinvisible) or (nVert < 3) or (nFace < 1) then continue;
       //isIntensityColored := length(overlay[c].intensity) = nVert;
       isIntensityColored := length(overlay[c].intensity) >= nVert; //2019
       if (not isIntensityColored) then begin
@@ -2592,12 +2590,14 @@ begin
            faces[num_f].X := strtointDef(strlst[1], 1);
            faces[num_f].Y := strtointDef(strlst[j+1], 1);
            faces[num_f].Z := strtointDef(strlst[j+2], 1);
-           if faces[num_f].X < 0 then
-              faces[num_f].X := 1 + num_v - faces[num_f].X;
+           //showmessage(format('%d:%d= %d %d %d', [num_v, num_f, faces[num_f].x, faces[num_f].y, faces[num_f].z]));
+       //20:6 -4 -3 -2
+         if faces[num_f].X < 0 then
+              faces[num_f].X := 1 + num_v + faces[num_f].X;
            if faces[num_f].Y < 0 then
-              faces[num_f].Y := 1 + num_v - faces[num_f].Y;
+              faces[num_f].Y := 1 + num_v + faces[num_f].Y;
            if faces[num_f].Z < 0 then
-              faces[num_f].Z := 1 + num_v - faces[num_f].Z;
+              faces[num_f].Z := 1 + num_v + faces[num_f].Z;
            faces[num_f] := vectorAdd(faces[num_f],-1);//-1 since "A valid vertex index starts from 1"
            inc(num_f);
        end;
@@ -4708,7 +4708,7 @@ begin
             Overlay[OpenOverlays].filename  := ExtractFilename(FileName);
             Overlay[OpenOverlays].volumes := length(floats) div length(Vertices);
             Overlay[OpenOverlays].CurrentVolume := 1;
-            Overlay[OpenOverlays].LUTvisible:= kLUTopaque;
+            Overlay[OpenOverlays].OpacityPercent:= kLUTopaque;
             SetOverlayDescriptives(OpenOverlays);
             Overlay[OpenOverlays].aoMap := isAOMap;
             if isAOMap then  Overlay[OpenOverlays].LUTindex := 0;
@@ -7977,6 +7977,7 @@ var
 begin
   overlay[lOverlayIndex].LUTinvert := false;
   overlay[lOverlayIndex].aoMap := false;
+  overlay[lOverlayIndex].PaintMode := kPaintHideDefaultBehavior;
   num_v := length(overlay[lOverlayIndex].intensity);
   if (num_v < 3) then exit;
   mn := overlay[lOverlayIndex].intensity[0];
@@ -7996,8 +7997,8 @@ begin
      if mnNot0 < mx then
         mn := mnNot0;
   end;
-  overlay[lOverlayIndex].minIntensity := mn;
-  overlay[lOverlayIndex].maxIntensity := mx;
+  overlay[lOverlayIndex].minIntensity := (mn);
+  overlay[lOverlayIndex].maxIntensity := (mx);
   lLog10 := trunc(log10( mx-mn))-1;
   if (mx > 4) and (mn < -1) then begin
      overlay[lOverlayIndex].windowScaledMin:= 2;
@@ -8159,6 +8160,7 @@ begin
   vRGBA := nil;
   if (length(vertexRGBA) > 0) and (x = '.MZ3') and (PosEx('AOMap',Filename) > 0) then begin
      //save RGB as ambient occlusion map
+    //showmessage('xx');
      setlength(intensities, length(Vertices));
      for i := 0 to (length(Vertices)-1) do
          intensities[i] := vertexRGBA[i].G / 255.0;
@@ -8190,7 +8192,7 @@ begin
     exit;
   end;
   for i :=  OpenOverlays downto 1 do
-      if (overlay[i].LUTvisible <> kLUTinvisible) and (length(overlay[i].intensity) >= length(Vertices)) then
+      if (overlay[i].OpacityPercent <> kLUTinvisible) and (length(overlay[i].intensity) >= length(Vertices)) then
            isOverlayPainting := true;
   if (not isOverlayPainting) then begin
      SaveMeshCore(Filename, Faces,Vertices, vertexRGBA);
@@ -8244,7 +8246,7 @@ begin
   Overlay[OpenOverlays].volumes := 1;
   Overlay[OpenOverlays].CurrentVolume := 1;
   setlength(Overlay[OpenOverlays].intensity,0);
-  Overlay[OpenOverlays].LUTvisible:= kLUTopaque;
+  Overlay[OpenOverlays].OpacityPercent:= kLUTopaque;
   Overlay[OpenOverlays].filename  := ExtractFilename(FileName);
   Overlay[OpenOverlays].LUTindex := SetLutIndex(OpenOverlays);
   Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex, Overlay[OpenOverlays].LUTinvert);
@@ -8283,7 +8285,7 @@ begin
             LoadCol(FileName, OpenOverlays, i);
             Overlay[OpenOverlays].filename  := ExtractFilename(FileName)+':'+inttostr(i);
             Overlay[OpenOverlays].LUTindex := SetLutIndex(OpenOverlays);
-            Overlay[OpenOverlays].LUTvisible := kLUTinvisible;
+            Overlay[OpenOverlays].OpacityPercent := kLUTinvisible;
             Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex, Overlay[OpenOverlays].LUTinvert);
         end;
      end;
@@ -8323,9 +8325,9 @@ begin
             OpenOverlays := OpenOverlays + 1;
             setlength(Overlay[OpenOverlays].intensity,0);
             if isCiftiNii then
-               Overlay[OpenOverlays].LUTvisible := kLUTinvisible
+               Overlay[OpenOverlays].OpacityPercent := kLUTinvisible
             else
-                Overlay[OpenOverlays].LUTvisible := kLUTopaque;
+                Overlay[OpenOverlays].OpacityPercent := kLUTopaque;
             Overlay[OpenOverlays].filename  := ExtractFilename(FileName);
             if isCiftiNii then
                nOverlays := loadCifti(FileName, OpenOverlays, i, (origin.X < 0))

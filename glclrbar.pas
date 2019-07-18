@@ -6,6 +6,7 @@ unit glclrbar;
 interface
 
 uses
+  {$IFNDEF OLD}graphTicks,   {$ENDIF}
   {$IFDEF COREGL}shaderu,glcorearb,  gl_core_matrix,  {$ELSE}gl, glext, {$ENDIF}
   glmtext,Classes, SysUtils, Graphics, OpenGLContext, math, dialogs, define_types,colorTable;
 
@@ -322,6 +323,7 @@ begin
 
 end;
 
+{$IFDEF OLD}
 type
   TTicks = record
     stepSize, remainder: single;
@@ -374,12 +376,18 @@ begin
   if result.remainder < (0.001* result.stepSize) then
      result.remainder := 0;
 end;
+{$ENDIF}
 
 procedure TGLClrbar.CreateTicksText(mn,mx: single; BarLength, BarTop, BarThick, fntScale: single);
 var
   lStep,lRange, t, MarkerSzX,MarkerSzY, lPosX, lPosY, StWid: double;
   isInvert: boolean;
+  {$IFDEF OLD}
   tic, ticAlt: TTicks;
+  {$ELSE}
+  stepSize: double;
+  ticDecimals: integer;
+  {$ENDIF}
   St: string;
 begin
   if (mx = mn) or (BarThick = 0) or (BarLength = 0) then exit;
@@ -404,6 +412,7 @@ begin
      lRange := max(abs(mn),mx);// + (0.5 * min(abs(mn),mx));
   if lRange < 0.000001 then exit;
   //glform1.caption := inttostr(random(888))+' '+floattostr(min(abs(mn),mx) / lRange);
+  {$IFDEF OLD}
   if ((mn < 0) and (mx > 0)) and ((min(abs(mn),mx)/lRange) > 0.65)  then  begin
     tic := setStepSize(lRange, 2);
     //now try forcing other values
@@ -435,6 +444,10 @@ begin
   //if (rem < (lStepSize * 0.001)) then //e.g. 0.2..3.0 can be evenly spanned
   //      lStep := mn;
   if (lStep < (mn)) and ((mn -lStep) > (lStep * 0.001) ) then lStep := lStep+tic.stepSize;
+  {$ELSE}
+  SelectTicks(mn, mx, lStep, stepSize, ticDecimals);
+  {$ENDIF}
+
   lRange := abs(mx - mn); //full range, in case mn < 0 and mx > 0
   nglColor4ub (FontClr.r,FontClr.g,FontClr.b,255);//outline
   repeat
@@ -459,15 +472,25 @@ begin
           nglVertex2fr(lPosX+MarkerSzX,lPosY+MarkerSzY);
         nglEnd;
         if fntScale > 0 then begin
+           {$IFDEF OLD}
            St := FloatToStrF(lStep, ffFixed,7,tic.decimals);
+           {$ELSE}
+           St := FloatToStrF(lStep, ffFixed,7,ticDecimals);
+           {$ENDIF}
            StWid := Txt.TextWidth(fntScale, St);
            if not fisVertical then
               Txt.TextOut(lPosX-(StWid*0.5),BarTop-(BarThick*0.88),fntScale, St)
            else
                Txt.TextOut(lPosX+(BarThick*0.88),lPosY-(StWid*0.5),fntScale,90, St)
         end;
-        lStep := lStep + tic.stepSize;
+        {$IFDEF OLD}
+         lStep := lStep + tic.stepSize;
   until lStep > (mx+(tic.stepSize*0.01));
+        {$ELSE}
+        lStep := lStep + stepSize;
+    until lStep > (mx+(stepSize*0.01));
+    {$ENDIF}
+
 end; //CreateTicksText()
 
 procedure TGLClrbar.CreateClrbar;

@@ -52,6 +52,9 @@ TTrack = class
     {$endif}
   public
     constructor Create;
+    {$ifndef isTerminalApp}
+    function HasScalarPerFiberColor: boolean;
+    {$endif}
     function SimplifyMM(Tol, minLength: float): boolean;
     function LoadFromFile(const FileName: string): boolean;
     procedure SaveBfloat(const FileName: string);
@@ -190,7 +193,7 @@ begin
      end;
 end;
 
-function vector2RGB(pt1, pt2: TPoint3F; var len: single): TPoint3f;
+function vector2RGB(pt1, pt2: TPoint3F; out len: single): TPoint3f;
 begin
   len := sqrt (sqr(pt1.X - pt2.X)  + sqr(pt1.Y - pt2.Y)  + sqr(pt1.Z - pt2.Z)  );
   if (len = 0) then begin
@@ -245,8 +248,10 @@ var
   startPt, endPt:TPoint3f;
   isScalarPerFiberColor : boolean = false;
   isScalarPerVertexColor: boolean = false;
+  hideFiber: boolean;
 begin
   randomize;
+
   //if length(Scalars) > 0 then
   //   GLForm1.Caption := format('selected %d available %d count %d streamline count %d',[ScalarSelected,length(Scalars), length(Scalars[0].scalar), n_count ]);
   if (ScalarSelected >= 0) and (length(Scalars) > ScalarSelected) then begin
@@ -255,7 +260,6 @@ begin
    else
        isScalarPerVertexColor := true;
   end;
-
   //  exit;
   maxLinks := 0;
   n_faces := 0;
@@ -271,6 +275,7 @@ begin
   //first pass: find mesh size
   setlength(trackLinks, ntracks);
   i := 0;
+  nfiber := 0;
   while i < ntracks do begin
     trackLinks[i] := 0;
     m := asInt( tracks[i]);
@@ -283,7 +288,13 @@ begin
        endPt.Y := tracks[j+i+2];
        endPt.Z := tracks[j+i+3];
        normRGB := vector2RGB(startPt, endPt, len);
-       if len >= minFiberLength then begin
+       hideFiber := false;
+       if len < minFiberLength then hideFiber := true;
+       if (isScalarPerFiberColor) and (gPrefs.HideDarkTracks) and (Scalars[ScalarSelected].scalar[nfiber] < Scalars[ScalarSelected].mnView) then
+          hideFiber := true;
+       if (isScalarPerFiberColor) and (gPrefs.HideBrightTracks) and (Scalars[ScalarSelected].scalar[nfiber] > Scalars[ScalarSelected].mxView) then
+          hideFiber := true;
+       if not hideFiber then begin
           trackLinks[i] := m;
           n_vertices := n_vertices + 2*m+8; //Duplicate vertices + 8 for the Begin and End Imposter
           n_indices := n_indices + 2*m+11; //Same as Above + 3 Primitive Restart
@@ -297,6 +308,7 @@ begin
        end;
     end; //len >= minFiberLength
     i := i + 1 + (3 * m);
+    nfiber := nfiber + 1;
   end;
 
   if (maxLinks < 1) then exit;
@@ -449,6 +461,17 @@ begin
   n_faces := 0;
 end; // BuildList()
 
+function TTrack.HasScalarPerFiberColor: boolean;
+begin
+  result := false;
+  if (ScalarSelected >= 0) and (length(Scalars) > ScalarSelected) then begin
+    if  length(Scalars[ScalarSelected].scalar) = n_count then
+        result  := true; //one color per fiber
+    //else
+    //    isScalarPerVertexColor := true;
+  end;
+end;
+
 procedure TTrack.BuildListTubes ;
 // create displaylist where tracks are drawn as connected cylinders
 //const
@@ -469,6 +492,7 @@ var
   perVertexScalars: array of single;
   isScalarPerFiberColor : boolean = false;
   isScalarPerVertexColor: boolean = false;
+  hideFiber : boolean;
 begin
   if (ScalarSelected >= 0) and (length(Scalars) > ScalarSelected) then begin
     if  length(Scalars[ScalarSelected].scalar) = n_count then
@@ -493,6 +517,7 @@ begin
   //first pass: find mesh size
   setlength(trackLinks, ntracks);
   i := 0;
+  nfiber := 0;
   while i < ntracks do begin
     trackLinks[i] := 0;
     m := asInt( tracks[i]);
@@ -505,7 +530,13 @@ begin
        endPt.Y := tracks[j+i+2];
        endPt.Z := tracks[j+i+3];
        normRGB := vector2RGB(startPt, endPt, len);  //here only used for length
-       if len >= minFiberLength then begin
+       hideFiber := false;
+       if len < minFiberLength then hideFiber := true;
+       if (isScalarPerFiberColor) and (gPrefs.HideDarkTracks) and (Scalars[ScalarSelected].scalar[nfiber] < Scalars[ScalarSelected].mnView) then
+          hideFiber := true;
+       if (isScalarPerFiberColor) and (gPrefs.HideBrightTracks) and (Scalars[ScalarSelected].scalar[nfiber] > Scalars[ScalarSelected].mxView) then
+          hideFiber := true;
+       if not HideFiber then begin
           trackLinks[i] := m;
           n_vertices := n_vertices + (m * numCylVert);
           n_faces := n_faces + ((m - 1) * numCylFace); //fence post problem
@@ -514,6 +545,7 @@ begin
        end;
     end; //len >= minFiberLength
     i := i + 1 + (3 * m);
+    nfiber := nfiber + 1;
   end;
   //GLForm1.Caption := inttostr(n_faces);
   if (n_faces < 1) then exit;

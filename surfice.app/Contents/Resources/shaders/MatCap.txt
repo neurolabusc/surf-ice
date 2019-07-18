@@ -3,6 +3,7 @@ Brighten|float|0.5|1.5|2.5
 SurfaceColor|float|0.0|1.0|1.0
 Edge|float|0|0.2|1.0
 PenWidth|float|0.01|1|1
+AOradius|float|0|16|32
 MatCap|set|1|1|1
 Material Capture Shader http://www.alecjacobson.com/weblog/?p=4827l|note
 //vert

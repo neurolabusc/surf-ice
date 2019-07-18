@@ -247,7 +247,7 @@ const kAoShaderFrag = '#version 330'
 +#10'bool noise = true; //use noise instead of pattern for sample dithering'
 +#10'float noiseamount = 0.0002; //dithering amount'
 +#10'float diffarea = 0.5; //self-shadowing reduction'
-+#10'float gdisplace = 0.4; //gauss bell center'
++#10'float gdisplace = 0.35; //gauss bell center'
 +#10'vec2 rand(vec2 coord) {'
 +#10'	float noiseX = ((fract(1.0-coord.s*(texture_size.x/2.0))*0.25)+(fract(coord.t*(texture_size.y/2.0))*0.75))*2.0-1.0;'
 +#10'	float noiseY = ((fract(1.0-coord.s*(texture_size.x/2.0))*0.75)+(fract(coord.t*(texture_size.y/2.0))*0.25))*2.0-1.0;'
@@ -1343,9 +1343,12 @@ begin
  end;
  //GLForm1.ShaderBox.Caption := inttostr(round(mxXY));
  if gShader.AOradiusU > 0 then begin
-  uniform1fx(gShader.programAoID, 'aoRadius', aoScale * gShader.Uniform[gShader.AOradiusU].DefaultV);
+  //uniform1fx(gShader.programAoID, 'aoRadius', aoScale * gShader.Uniform[gShader.AOradiusU].DefaultV);
+  uniform1fx(gShader.programAoID, 'aoRadius', aoScale * gShader.Uniform[gShader.AOradiusU].DefaultV / distance );
   if gShader.Uniform[gShader.AOradiusU].DefaultV <= 0 then
     uniform1fx(gShader.programAoID, 'fracAO', 0.0);
+  uniform1fx(gShader.programAoID, 'aoRadiusPx', gShader.Uniform[gShader.AOradiusU].DefaultV);
+  uniform1fx(gShader.programAoID, 'aoRadiusDx', distance);
  end else begin
    uniform1fx(gShader.programAoID, 'aoRadius', aoScale * 16.0 / distance);
  end;

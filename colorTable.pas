@@ -8,6 +8,11 @@ uses
 
 const  //maximum number of control points for color schemes...
   maxNodes = 32;
+     kPaintHideDefaultBehavior = -1;
+     kPaintHideDarkHideBright = 0;
+     kPaintHideDarkShowBright = 1;
+     kPaintShowDarkHideBright = 2;
+     kPaintShowDarkShowBright = 3;
 
 type
 
@@ -22,7 +27,9 @@ function UpdateTransferFunction (var lIndex: integer; isInvert: boolean): TLUT;/
 function CLUTDir: string;
 function blendRGBA(c1, c2: TRGBA ): TRGBA;
 function maxRGBA(c1, c2: TRGBA ): TRGBA;
-function inten2rgb(intensity, mn, mx: single; lut: TLUT): TRGBA;
+//function inten2rgb(intensity, mn, mx: single; lut: TLUT): TRGBA;
+function inten2rgb(intensity, mn, mx: single; lut: TLUT; mode: integer): TRGBA; overload;
+//function inten2rgb(intensity, mn, mx: single; lut: TLUT): TRGBA; overload;
 function inten2rgb1(intensity, mn, mx: single; lut: TLUT): TRGBA; //use 1st not 0th LUT color (0 is transparent)
 function desaturateRGBA ( rgba: TRGBA; frac: single; alpha: byte): TRGBA;
 function isFreeSurferLUT(lIndex: integer): boolean;
@@ -69,7 +76,44 @@ begin
      result.A := c2.A;
 end;
 
-function inten2rgb(intensity, mn, mx: single; lut: TLUT): TRGBA;
+
+
+function inten2rgb(intensity, mn, mx: single; lut: TLUT; mode: integer): TRGBA; overload;
+var
+ i: byte;
+ isInvert : boolean;
+begin
+  if  (mn < 0) and (mx < 0) and (mode = kPaintHideDefaultBehavior) then begin
+    if intensity >= mx then
+      exit( lut[0])
+    else if intensity <= mn then
+      exit( lut[255])
+    else
+       exit( lut[round(255* (1.0-   (intensity-mn)/(mx-mn)))]);
+  end;
+  if intensity > mx then begin
+     i := 255;
+     if (mode = kPaintHideDarkHideBright) or (mode = kPaintShowDarkHideBright) then //hide bright
+            i := 0;
+  end else if intensity < mn then begin
+     i := 0;
+     if (mode = kPaintShowDarkHideBright) or (mode = kPaintShowDarkShowBright) then //hide dark
+        i := 1;
+  end else begin
+      i := round(255*(intensity-mn)/(mx-mn));
+      if (i = 0) and ((mode = kPaintHideDefaultBehavior) or (mode = kPaintShowDarkHideBright) or (mode = kPaintShowDarkShowBright)) then //hide dark
+           i := 1;
+  end;
+  result := lut[i];
+end;
+
+function inten2rgb(intensity, mn, mx: single; lut: TLUT): TRGBA; overload;
+begin
+  //result := inten2rgb(intensity, mn, mx, lut, kPaintHideDefaultBehavior);
+  result := inten2rgb(intensity, mn, mx, lut,kPaintHideDarkHideBright);
+end;
+
+(*function inten2rgb(intensity, mn, mx: single; lut: TLUT): TRGBA;
 begin
   if  (mn < 0) and (mx < 0) then begin
     if intensity >= mx then begin
@@ -91,7 +135,7 @@ begin
      else
           result := lut[round(255*(intensity-mn)/(mx-mn))];
   end;
-end;
+end; *)
 
 function inten2rgb1(intensity, mn, mx: single; lut: TLUT): TRGBA; //use 1st not 0th LUT color (0 is transparent)
 var i :integer;

@@ -32,6 +32,12 @@ LayerOptionsBtn: TButton;
  LeftSplitter: TSplitter;
  CenterPanel: TPanel;
  LayerAOMapMenu: TMenuItem;
+ LayerPainHideMenu: TMenuItem;
+ PaintModeAutomatic: TMenuItem;
+ PaintModeHideBrightHideDarkMenu: TMenuItem;
+ PaintModeHideDarkShowBrightMenu: TMenuItem;
+ PaintModeShowDarkHideBrightMenu: TMenuItem;
+ PaintModeShowBirghtShowDark: TMenuItem;
  shadermatcap1: TMenuItem;
  NextOverlayMenu: TMenuItem;
  PrevOverlayMenu: TMenuItem;
@@ -326,6 +332,8 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     procedure LeftSplitterMoved(Sender: TObject);
     procedure LayerAOMapMenuClick(Sender: TObject);
     procedure MatCapDropChange(Sender: TObject);
+    procedure PaintModeAutomaticMenu(Sender: TObject);
+    procedure PaintModeMenuClick(Sender: TObject);
     procedure PrevOverlayMenuClick(Sender: TObject);
     procedure Shaders1Click(Sender: TObject);
     procedure UpdateLayerBox(NewLayers: boolean);
@@ -1948,7 +1956,17 @@ begin
   if (i < 1) or (i > gMesh.OpenOverlays) then exit;
    LayerInvertColorsMenu.Checked := gMesh.Overlay[i].LUTinvert;
    LayerAOMapMenu.Checked := gMesh.Overlay[i].aoMap;
+   LayerPainHideMenu.Enabled :=  (not gMesh.Overlay[i].aoMap) and (length(gMesh.Overlay[i].intensity) > 0);
+   if not LayerPainHideMenu.Enabled  then exit;
+   case gMesh.Overlay[i].PaintMode of
+        //kPaintHideDefaultBehavior = -1;
+        kPaintHideDarkHideBright: PaintModeHideBrightHideDarkMenu.Checked := true;
+        kPaintHideDarkShowBright: PaintModeHideDarkShowBrightMenu.Checked := true;
+        kPaintShowDarkHideBright: PaintModeShowDarkHideBrightMenu.Checked := true;
+        kPaintShowDarkShowBright: PaintModeShowBirghtShowDark.Checked := true;
+        else PaintModeAutomatic.Checked := true;
 
+   end;
 end;
 
 procedure TGLForm1.LayerListClickCheck(Sender: TObject);
@@ -1990,7 +2008,7 @@ begin
  if (i < 1) or (i > gMesh.OpenOverlays) then exit;
  gMesh.Overlay[i].WindowScaledMin := strtofloatdef(LayerDarkEdit.Caption, gMesh.Overlay[i].WindowScaledMin);
  gMesh.Overlay[i].WindowScaledMax := strtofloatdef(LayerBrightEdit.Caption, gMesh.Overlay[i].WindowScaledMax);
- gMesh.Overlay[i].LUTvisible := LayerAlphaTrack.position;
+ gMesh.Overlay[i].OpacityPercent := LayerAlphaTrack.position;
  PrevOverlayMenu.Enabled := (gMesh.Overlay[i].volumes > 1);
  NextOverlayMenu.Enabled := (gMesh.Overlay[i].volumes > 1);
  if (gMesh.Overlay[i].LUTindex <> LayerColorDrop.ItemIndex) then begin
@@ -2084,6 +2102,15 @@ begin
 
 end;
 
+function  DefuzzX(const x:  single):  single;
+//instead of "5.9e-6" write "0.0"
+const
+ fuzz = 1.0E-5;
+begin
+  if  ABS(x) < fuzz then exit(0.0);
+  exit(x);
+end {Defuzz};
+
 procedure TGLForm1.LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
   //caption := format('%d %d', [ViewGPU1.width, ViewGPU1.clientWidth]);
@@ -2105,7 +2132,7 @@ begin
                  LayerList.Items.add(format('%d/%d: %s',[gMesh.Overlay[i].CurrentVolume, gMesh.Overlay[i].volumes, s]))
             else
                 LayerList.Items.add(s);
-            LayerList.Checked[i-1] := gMesh.Overlay[i].LUTvisible <>  kLUTinvisible;//true;
+            LayerList.Checked[i-1] := gMesh.Overlay[i].OpacityPercent <>  kLUTinvisible;//true;
         end;
         LayerList.ItemIndex := gMesh.OpenOverlays - 1;
      end;
@@ -2122,8 +2149,9 @@ begin
      LayerColorDrop.Enabled := not isAtlas;
      LayerDarkEdit.Text := format('%.6g', [gMesh.Overlay[i].WindowScaledMin]);
      LayerBrightEdit.Text := format('%.6g', [gMesh.Overlay[i].WindowScaledMax]);
+     OverlayBox.Hint := format('image intensity range %g..%g',[DefuzzX(gMesh.Overlay[i].minIntensity), DefuzzX(gMesh.Overlay[i].maxIntensity)]);
      LayerColorDrop.ItemIndex := gMesh.Overlay[i].LUTindex;
-     LayerAlphaTrack.Position := gMesh.Overlay[i].LUTvisible;
+     LayerAlphaTrack.Position := gMesh.Overlay[i].OpacityPercent;
 end;
 
 {$IFDEF LCLCocoa}
@@ -2536,6 +2564,7 @@ function TGLForm1.OpenTrack(FilenameIN: string): boolean;
 var
   Filename: string;
   i: integer;
+  isMultiProperties: boolean = false;
 begin
    result := false;
  Filename := FindFile(FilenameIN);
@@ -2562,12 +2591,24 @@ begin
     TrackScalarLUTdrop.ItemIndex := 1;
     TrackScalarLUTdrop.Enabled := false;
     TrackScalarRangeBtn.Enabled := false;
- end else
- {$IFDEF LCLcocoa}
- TrackBox.Height := 105;
- {$ELSE}
- TrackBox.ClientHeight := TrackDitherTrack.Top + TrackDitherTrack.Height;
- {$ENDIF}
+    isMultiProperties := true;
+ end else begin
+   TrackScalarNameDrop.Items.Clear;
+   TrackScalarNameDrop.Items.Add('Direction');
+   TrackScalarNameDrop.ItemIndex := 0;
+   TrackScalarLUTdrop.Enabled := false;
+   TrackScalarRangeBtn.Enabled := false;
+   isMultiProperties := false;
+
+ end;
+ TrackScalarNameDrop.Visible := isMultiProperties;
+ TrackScalarLUTdrop.Visible := isMultiProperties;
+ TrackScalarRangeBtn.Visible := isMultiProperties;
+ //{$IFDEF LCLcocoa}
+ //TrackBox.Height := 105;
+ //{$ELSE}
+ //TrackBox.ClientHeight := TrackDitherTrack.Top + TrackDitherTrack.Height;
+ //{$ENDIF}
  UpdateToolbar;
  GLBoxRequestUpdate(nil);
 end;
@@ -2904,7 +2945,6 @@ begin
   GLBoxRequestUpdate(Sender);
 end;
 
-
 procedure TGLForm1.MatCapDropChange(Sender: TObject);
 begin
  {$IFDEF MATCAP}
@@ -2916,6 +2956,22 @@ begin
  GLBox.ReleaseContext;
  GLBoxRequestUpdate(Sender);
  {$ENDIF}
+end;
+
+procedure TGLForm1.PaintModeAutomaticMenu(Sender: TObject);
+var
+   i: integer;
+begin
+  i := LayerList.ItemIndex+ 1;
+  if (i < 1) or (i > gMesh.OpenOverlays) then exit;
+  gMesh.Overlay[i].PaintMode := (Sender as TMenuItem).Tag;
+  caption := format('%d -> %d', [i, gMesh.Overlay[i].PaintMode]);
+  LayerWidgetChange(sender);
+end;
+
+procedure TGLForm1.PaintModeMenuClick(Sender: TObject);
+begin
+
 end;
 
 procedure TGLForm1.GLboxMouseMove(Sender: TObject; Shift: TShiftState; lX, lY: Integer);
@@ -3393,26 +3449,24 @@ begin
     result :=  PrefForm.ModalResult = mrOK;
     FreeAndNil(PrefForm);
   end;*)
-function  ScalarPref(var min, max: single; var ColorBarPrecedenceTracksNotOverlays: boolean): boolean;
+function  ScalarPref(var min, max, viewMin, viewmax: single; var ColorBarPrecedenceTracksNotOverlays, HideDark, HideBright: boolean; isScalarPerFiberColor: boolean): boolean;
 var
     PrefForm: TForm;
     OkBtn: TButton;
     minLabel, maxLabel: TLabel;
     minEdit, maxEdit: TEdit;
-    ColorBarCheck: TCheckBox;
+    DarkCheck, BrightCheck, ColorBarCheck: TCheckBox;
 begin
     PrefForm:=TForm.Create(nil);
     //PrefForm.SetBounds(100, 100, 520, 142);
     PrefForm.AutoSize := True;
     PrefForm.BorderWidth := 8;
-    PrefForm.Caption:='Track simplification preferences';
+    PrefForm.Caption:=format('Track  preferences (%g..%g)', [min, max]);
     PrefForm.Position := poScreenCenter;
     PrefForm.BorderStyle := bsDialog;
-    //Tolerance
+    //minEdit
     minLabel:=TLabel.create(PrefForm);
     minLabel.Caption:= 'Minimum intensity';
-    //minLabel.Left := 8;
-    //minLabel.Top := 12;
     minLabel.AutoSize := true;
     minLabel.AnchorSide[akTop].Side := asrTop;
     minLabel.AnchorSide[akTop].Control := PrefForm;
@@ -3422,9 +3476,7 @@ begin
     minLabel.BorderSpacing.Left := 6;
     minLabel.Parent:=PrefForm;
     minEdit:=TEdit.create(PrefForm);
-    minEdit.Caption := FloatToStrF(min, ffGeneral, 8, 4);
-    //minEdit.Top := 12;
-    //minEdit.Width := 92;
+    minEdit.Caption := FloatToStrF(viewMin, ffGeneral, 8, 4);
     minEdit.Constraints.MinWidth:= 128;
     minEdit.AutoSize := true;
     minEdit.AnchorSide[akTop].Side := asrTop;
@@ -3435,48 +3487,69 @@ begin
     minEdit.BorderSpacing.Left := 6;
     minEdit.Left := PrefForm.Width - minEdit.Width - 8;
     minEdit.Parent:=PrefForm;
-    //minLength
+    //DarkCheck
+    DarkCheck:=TCheckBox.create(PrefForm);
+    DarkCheck.Checked := HideDark;
+    DarkCheck.Caption:='Hide tracks darker than minimum';
+    DarkCheck.AutoSize := true;
+    DarkCheck.AnchorSide[akTop].Side := asrBottom;
+    DarkCheck.AnchorSide[akTop].Control := minEdit;
+    DarkCheck.BorderSpacing.Top := 6;
+    DarkCheck.AnchorSide[akLeft].Side := asrLeft;
+    DarkCheck.AnchorSide[akLeft].Control := PrefForm;
+    DarkCheck.BorderSpacing.Left := 6;
+    DarkCheck.enabled := isScalarPerFiberColor;
+    if not isScalarPerFiberColor then
+       DarkCheck.Checked := false;
+    DarkCheck.Parent:=PrefForm;
+    //maxEdit
     maxLabel:=TLabel.create(PrefForm);
     maxLabel.Caption:= 'Maximum intensity';
-    //maxLabel.Left := 8;
-    //maxLabel.Top := 42;
     maxLabel.AutoSize := true;
     maxLabel.AnchorSide[akTop].Side := asrBottom;
-    maxLabel.AnchorSide[akTop].Control := minEdit;
+    maxLabel.AnchorSide[akTop].Control := DarkCheck;
     maxLabel.BorderSpacing.Top := 6;
     maxLabel.AnchorSide[akLeft].Side := asrLeft;
     maxLabel.AnchorSide[akLeft].Control := PrefForm;
     maxLabel.BorderSpacing.Left := 6;
-
     maxLabel.Parent:=PrefForm;
     maxEdit:=TEdit.create(PrefForm);
-    maxEdit.Caption := FloatToStrF(max, ffGeneral, 8, 4);
-    //maxEdit.Top := 42;
-    //maxEdit.Width := 92;
-    //maxEdit.Left := PrefForm.Width - maxEdit.Width - 8;
+    maxEdit.Caption := FloatToStrF(viewMax, ffGeneral, 8, 4);
     maxEdit.Constraints.MinWidth:= 128;
     maxEdit.AutoSize := true;
     maxEdit.AnchorSide[akTop].Side := asrBottom;
-    maxEdit.AnchorSide[akTop].Control := minEdit;
+    maxEdit.AnchorSide[akTop].Control := DarkCheck;
     maxEdit.BorderSpacing.Top := 4;
     maxEdit.AnchorSide[akLeft].Side := asrRight;
     maxEdit.AnchorSide[akLeft].Control := maxLabel;
     maxEdit.BorderSpacing.Left := 6;
     maxEdit.Parent:=PrefForm;
-    //Precedence   ColorBarPrecedenceTracksNotOverlays
+    //BrightCheck
+    BrightCheck:=TCheckBox.create(PrefForm);
+    BrightCheck.Checked := HideBright;
+    BrightCheck.Caption:='Hide tracks brighter than maximum';
+    BrightCheck.AutoSize := true;
+    BrightCheck.AnchorSide[akTop].Side := asrBottom;
+    BrightCheck.AnchorSide[akTop].Control := maxEdit;
+    BrightCheck.BorderSpacing.Top := 6;
+    BrightCheck.AnchorSide[akLeft].Side := asrLeft;
+    BrightCheck.AnchorSide[akLeft].Control := PrefForm;
+    BrightCheck.BorderSpacing.Left := 6;
+    BrightCheck.Enabled := isScalarPerFiberColor;
+    if not isScalarPerFiberColor then
+       BrightCheck.Checked := false;
+    BrightCheck.Parent:=PrefForm;
+    //ColorBarCheck
     ColorBarCheck:=TCheckBox.create(PrefForm);
     ColorBarCheck.Checked := ColorBarPrecedenceTracksNotOverlays;
     ColorBarCheck.Caption:='Colorbar for tracks, even if overlay loaded';
-    //ColorBarCheck.Left := 8;
-    //ColorBarCheck.Top := 72;
     ColorBarCheck.AutoSize := true;
     ColorBarCheck.AnchorSide[akTop].Side := asrBottom;
-    ColorBarCheck.AnchorSide[akTop].Control := maxEdit;
+    ColorBarCheck.AnchorSide[akTop].Control := BrightCheck;
     ColorBarCheck.BorderSpacing.Top := 6;
     ColorBarCheck.AnchorSide[akLeft].Side := asrLeft;
     ColorBarCheck.AnchorSide[akLeft].Control := PrefForm;
     ColorBarCheck.BorderSpacing.Left := 6;
-
     ColorBarCheck.Parent:=PrefForm;
     //OK button
     OkBtn:=TButton.create(PrefForm);
@@ -3491,15 +3564,16 @@ begin
     OkBtn.AnchorSide[akLeft].Side := asrCenter;
     OkBtn.AnchorSide[akLeft].Control := PrefForm;
     OkBtn.Constraints.MinWidth:= 64;
-
     OkBtn.Parent:=PrefForm;
     OkBtn.ModalResult:= mrOK;
     {$IFDEF LCLCocoa}
     if gPrefs.DarkMode then SetFormDarkMode(PrefForm);
     {$ENDIF}
     PrefForm.ShowModal;
-    min := StrToFloatDef(minEdit.Caption, min);
-    max := StrToFloatDef(maxEdit.Caption, max);
+    viewMin := StrToFloatDef(minEdit.Caption, viewMin);
+    HideBright := BrightCheck.Checked;
+    HideDark := DarkCheck.Checked;
+    viewMax := StrToFloatDef(maxEdit.Caption, viewMax);
     ColorBarPrecedenceTracksNotOverlays := ColorBarCheck.Checked;
     result :=  PrefForm.ModalResult = mrOK;
     FreeAndNil(PrefForm);
@@ -3509,7 +3583,7 @@ begin
 procedure TGLForm1.TrackScalarRangeBtnClick(Sender: TObject);
 begin
  if (gTrack.scalarSelected < 0) or (gTrack.scalarSelected >= length(gTrack.scalars)) then exit;
- ScalarPref(gTrack.scalars[gTrack.scalarSelected].mnView, gTrack.scalars[gTrack.scalarSelected].mxView, gPrefs.ColorBarPrecedenceTracksNotOverlays);
+ ScalarPref(gTrack.scalars[gTrack.scalarSelected].mn, gTrack.scalars[gTrack.scalarSelected].mx, gTrack.scalars[gTrack.scalarSelected].mnView, gTrack.scalars[gTrack.scalarSelected].mxView, gPrefs.ColorBarPrecedenceTracksNotOverlays, gPrefs.HideDarkTracks, gPrefs.HideBrightTracks,gTrack.HasScalarPerFiberColor);
  gTrack.isRebuildList:= true;
  gnLUT := -1; //refresh colorbar
  GLBoxRequestUpdate(Sender);
@@ -3557,10 +3631,11 @@ begin
   if (lOverlay > gMesh.OpenOverlays) or (lOverlay < 1) then
     exit;
   if (lVisible < kLUTinvisible) or (lVisible > kLUTopaque) then
-     gMesh.Overlay[lOverlay].LUTvisible := kLUTopaque
+     gMesh.Overlay[lOverlay].OpacityPercent := kLUTopaque
   else
-     gMesh.Overlay[lOverlay].LUTvisible := lVisible;
+     gMesh.Overlay[lOverlay].OpacityPercent := lVisible;
   UpdateLayerBox(false);
+  OverlayTimerStart;
 end;
 
 procedure TGLForm1.OverlayInvert(lOverlay: integer; lInvert: boolean);
@@ -4096,8 +4171,17 @@ begin
      MeshBlendTrack.Position:= 0;
      LightElevTrack.Position:= 25;
      LightAziTrack.Position := 0;
-     ShaderDrop.ItemIndex:= 0;
-     ShaderDropChange(Sender);
+     if (ShaderDrop.ItemIndex <> 0) then begin
+        ShaderDrop.ItemIndex:= 0;
+        ShaderDropChange(Sender);
+     end;
+     {$IFDEF MATCAP}
+     if (MatCapDrop.Items.Count > 1) and (MatCapDrop.ItemIndex <> 0) then begin
+        MatCapDrop.ItemIndex := 0;
+        MatCapDropChange(Sender);
+
+     end;
+     {$ENDIF}
 end;
 
 procedure TGLForm1.RestrictEdgeMenuClick(Sender: TObject);
@@ -4379,11 +4463,11 @@ begin
  if (gMesh.OpenOverlays > 0) then
     for lI := 1 to gMesh.OpenOverlays do
         //https://www.nitrc.org/forum/forum.php?thread_id=10001&forum_id=6713
-        if (length(gMesh.overlay[lI].intensity) > 0) and (not gMesh.overlay[lI].aoMap) and (gMesh.overlay[lI].LUTvisible <> kLUTinvisible) and (not isFreeSurferLUT(gMesh.overlay[lI].LUTindex)) then begin
+        if (length(gMesh.overlay[lI].intensity) > 0) and (not gMesh.overlay[lI].aoMap) and (gMesh.overlay[lI].OpacityPercent <> kLUTinvisible) and (not isFreeSurferLUT(gMesh.overlay[lI].LUTindex)) then begin
          isDuplicate := false;
          lJ := 1;
          while (lJ < lI) do begin
-			if (gMesh.overlay[lI].LUTindex = gMesh.overlay[lJ].LUTindex)  and(gMesh.overlay[lJ].LUTvisible <> kLUTinvisible)
+			if (gMesh.overlay[lI].LUTindex = gMesh.overlay[lJ].LUTindex)  and(gMesh.overlay[lJ].OpacityPercent <> kLUTinvisible)
 				and (gMesh.overlay[lI].windowScaledMin = gMesh.overlay[lJ].windowScaledMin)
 				and (gMesh.overlay[lI].windowScaledMax = gMesh.overlay[lJ].windowScaledMax) then
 					isDuplicate := true;
@@ -5332,10 +5416,7 @@ end;
 
 procedure TGLForm1.DepthLabelClick(Sender: TObject);
 begin
-     if ClipTrack.Position > 900 then
-        ClipTrack.Position := 0
-     else
-          ClipTrack.Position := 100 * ((ClipTrack.Position +100) div 100);
+     IncTrackBar(ClipTrack, true);
 end;
 
 procedure TGLForm1.DisplayMenuClick(Sender: TObject);
@@ -6094,6 +6175,7 @@ procedure TGLForm1.FormDropFiles(Sender: TObject;
   const FileNames: array of String);
 begin
    OpenMesh(Filenames[0]);
+   //caption := 'abba'+inttostr(random(888));
 end;
 
 procedure TGLForm1.GLBoxClick(Sender: TObject);

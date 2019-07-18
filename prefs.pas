@@ -21,7 +21,7 @@ type
   TPrefs = record //ObjectBasedClipPlane,
     SmoothVoxelwiseData,
     OverlayClip, StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube, MultiSample, BlackDefaultBackground,
-     Colorbar,TracksAreTubes, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,ColorBarPrecedenceTracksNotOverlays,
+     Colorbar,TracksAreTubes, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,ColorBarPrecedenceTracksNotOverlays,HideDarkTracks, HideBrightTracks,
      ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting, isFlipMeshOverlay, DarkMode, RetinaDisplay, GenerateSmoothCurves : boolean;
     TrackTubeSlices, ScreenCaptureZoom,ColorbarColor,ColorBarPosition,
     window_width, window_height, RenderQuality, SaveAsFormat,SaveAsFormatTrack, OcclusionAmount: integer;
@@ -318,6 +318,8 @@ begin
   with lPrefs do begin
     RenderQuality := kRenderBetter;
     ColorBarPrecedenceTracksNotOverlays := false;
+    HideDarkTracks := false;
+    HideBrightTracks := false;
     SupportBetterRenderQuality := false;
     Colorbar := true;
     ColorbarColor := 4;
