@@ -1512,14 +1512,17 @@ procedure TMesh.LoadPial(const FileName: string);
 //simple format used by Freesurfer  BIG-ENDIAN
 // https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bpial/readPial.m
 // http://www.grahamwideman.com/gw/brain/fs/surfacefileformats.htm
+{$DEFINE FASTPIAL} //800 -> 16ms
 var
    f: File;
    i, sz, num_EOLN: integer;
    b: byte;
    num_v, num_f : LongWord;
    sig : Int64;
+   {$IFNDEF FASTPIAL}
    vValues: array [1..3] of single;
    fValues: array [1..3] of LongWord;
+   {$ENDIF}
 begin
      if (FSize(FileName) < 64) then exit;
      AssignFile(f, FileName);
@@ -1560,6 +1563,20 @@ begin
      setlength(vertices, num_v); //vertices = zeros(num_f, 9);
      setlength(faces, num_f);
      {$IFDEF ENDIAN_LITTLE}
+     {$IFDEF FASTPIAL}
+     blockread(f, vertices[0], num_v * sizeof(TPoint3f));
+     for i := 0 to (num_v-1) do begin
+         SwapSingle(vertices[i].x);
+         SwapSingle(vertices[i].y);
+         SwapSingle(vertices[i].z);
+     end;
+     blockread(f, faces[0], num_f * sizeof(TPoint3i));
+     for i := 0 to (num_f-1) do begin
+         SwapLongInt(faces[i].x);
+         SwapLongInt(faces[i].y);
+         SwapLongInt(faces[i].z);
+     end;
+     {$ELSE}
      for i := 0 to (num_v-1) do begin
          blockread(f, vValues, 4 * 3 );
          SwapSingle(vValues[1]);
@@ -1574,6 +1591,7 @@ begin
          SwapLongWord(fValues[3]);
          faces[i] := pti(fValues[1], fValues[2], fValues[3]);
      end;
+     {$ENDIF}//fast pial
      {$ELSE}
      warning following two lines not tested on big endian computers!
      blockread(f, vertices[0], 4 * 3 * num_v);
@@ -6227,13 +6245,27 @@ procedure TMesh.LoadStl(const FileName: string);
 // https://en.wikipedia.org/wiki/STL_(file_format)
 // https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bstl/readStl.m
 // similar to Doron Harlev http://www.mathworks.com/matlabcentral/fileexchange/6678-stlread
+{$DEFINE FASTSTL}
+
+{$IFDEF FASTSTL}
+type
+    TSTL = packed record
+       norm, v0,v1,v2: TPoint3f;
+       clr: uint16;
+    end;
+{$ENDIF}
 var
    f: file;
-   triValues: array [1..9] of single;//float32
    txt80: array [1 .. 80] of char; //header
    num_f : LongWord; //uint32
-   colorBytes: word; //uint16
    i, v, sz, min_sz: integer;
+   {$IFDEF TIMER}startTime : TDateTime;{$ENDIF}
+   {$IFDEF FASTSTL}
+   vs : array of TSTL;
+   {$ELSE}
+   triValues: array [1..9] of single;//float32
+   colorBytes: word; //uint16
+   {$ENDIF}
 begin
      if (FSize(FileName) < 64) then exit;
      AssignFile(f, FileName);
@@ -6262,6 +6294,17 @@ begin
     end;
     setlength(vertices, num_f * 3);  //vertices = zeros(num_f, 9);
     v := 0;
+    {$IFDEF FASTSTL}
+    setlength(vs, num_f);
+    blockread(f, vs[0], num_f * sizeof(TSTL));
+    for i := 0 to (num_f-1) do begin
+        vertices[v+0] := vs[i].V0;
+        vertices[v+1] := vs[i].V1;
+        vertices[v+2] := vs[i].V2;
+        v := v + 3;
+    end;
+    vs := nil;
+    {$ELSE}
     triValues[1] := 0;//unused: this line prevents compiler warning
     colorBytes := 0;//unused: this line prevents compiler warning
     for i := 1 to num_f do begin
@@ -6273,6 +6316,7 @@ begin
         v := v + 3;
         blockread(f, colorBytes, 2);//fread(fid,1,'uint16'); % color bytes
     end;
+    {$ENDIF}
     setlength(faces, num_f);
     v := 0;
     for i := 0 to (num_f-1) do begin
@@ -6281,7 +6325,10 @@ begin
     end;
     CloseFile(f);
     CheckMesh; //Since STL requires vertex unification, make sure vertices and faces are valid
+    {$IFDEF TIMER}startTime := Now;{$ENDIF}
     UnifyVertices(faces, vertices);
+    {$IFDEF TIMER}GLForm1.ShaderBox.Caption :=  inttostr(MilliSecondsBetween(Now,StartTime)); {$ENDIF}
+
 end; // LoadStl()
 
 function TMesh.LoadIdtf(const FileName: string): boolean;
@@ -6376,7 +6423,11 @@ begin
        showmessage('Only able to read VTK images saved as POLYDATA, not '+ str);
        goto 666;
     end;
-    ReadLn(f, str); // number of vertices, e.g. "POINTS 685462 float"
+    i := 0;
+    while (pos('POINTS', UpperCase(str)) <> 1 ) and (i < 65) and (not eof(f)) do begin
+            ReadLn(f, str); // number of vertices, e.g. "POINTS 685462 float"
+            i := i + 1;
+    end;
     if pos('POINTS', UpperCase(str)) <> 1 then begin
        showmessage('Expected header to report "POINTS" not '+ str);
        goto 666;
@@ -6431,6 +6482,14 @@ label
    666;
 const
   kBlockSz = 4096;
+type
+  TPoint4i = packed record
+  N: longint;
+  X: longint; //ensure 32-bit for simple GIfTI writing
+  Y: longint;
+  Z: longint;
+end;
+
 var
    f: TFByte;//TextFile;
    strlst: TStringList;
@@ -6438,6 +6497,7 @@ var
    strips: array of int32;
    c, i, j, k, num_v, num_f, num_f_allocated, num_strip, cnt: integer;
    nV: LongInt;
+   faces4: array of TPoint4i;
    isBinary: boolean = true;
 begin
   if (FSize(FileName) < 64) then exit;
@@ -6472,7 +6532,12 @@ begin
     showmessage('Only able to read VTK images saved as POLYDATA, not '+ str);
     goto 666;
   end;
-  ReadLnBin(f, str); // number of vertices, e.g. "POINTS 685462 float"
+  c := 0;
+  while (pos('POINTS', UpperCase(str)) <> 1 ) and (c < 65) and (not eof(f)) do begin
+          ReadLnBin(f, str); // number of vertices, e.g. "POINTS 685462 float"
+          c := c + 1;
+  end;
+  //ReadLnBin(f, str); // number of vertices, e.g. "POINTS 685462 float"
   if pos('POINTS', UpperCase(str)) <> 1 then begin
     showmessage('Expected header to report "POINTS" not '+ str);
     goto 666;
@@ -6547,43 +6612,28 @@ begin
               num_f_allocated := num_f_allocated + cnt + kBlockSz;
               setlength(faces, num_f_allocated);
            end;
-           faces[num_f].X := strips[k];
-           faces[num_f].Y := strips[k+1];
-           faces[num_f].Z := strips[k+2];
-           k := k + 3;
-           num_f := num_f + 1;
-           if (cnt > 3) then begin
-              for j := 4 to cnt do begin
-                  //http://ogldev.atspace.co.uk/www/tutorial27/tutorial27.html
-                  //  winding order is reversed on the odd triangles
-                  if odd(j) then begin //ITK snap triangle winding reverses with each new point
-                     faces[num_f].X := strips[k-2];
-                     faces[num_f].Y := strips[k-1];
-                  end else begin
-                    faces[num_f].X := strips[k-1];
-                    faces[num_f].Y := strips[k-2];
-                  end;
-                faces[num_f].Z := strips[k];
-                k := k + 1;
-                num_f := num_f + 1;
+            faces[num_f].X := strips[k];
+            faces[num_f].Y := strips[k+1];
+            faces[num_f].Z := strips[k+2];
+            k := k + 3;
+            num_f := num_f + 1;
+            if (cnt > 3) then begin
+               for j := 4 to cnt do begin
+                   //http://ogldev.atspace.co.uk/www/tutorial27/tutorial27.html
+                   //  winding order is reversed on the odd triangles
+                   if odd(j) then begin //ITK snap triangle winding reverses with each new point
+                      faces[num_f].X := strips[k-2];
+                      faces[num_f].Y := strips[k-1];
+                   end else begin
+                     faces[num_f].X := strips[k-1];
+                     faces[num_f].Y := strips[k-2];
+                   end;
+                 faces[num_f].Z := strips[k];
+                 k := k + 1;
+                 num_f := num_f + 1;
               end; //for j: each additional strip point
            end; //cnt > 3
        end; //for i: each strip
-       (*k := faces[0].X;
-       c := faces[0].X;
-       for i := 0 to (num_f -1) do
-           if faces[i].X > k then k := faces[i].X;
-       for i := 0 to (num_f -1) do
-           if faces[i].X < c then c := faces[i].X;
-       for i := 0 to (num_f -1) do
-           if faces[i].Y > k then k := faces[i].Y;
-       for i := 0 to (num_f -1) do
-           if faces[i].Y < c then c := faces[i].Y;
-       for i := 0 to (num_f -1) do
-           if faces[i].Z > k then k := faces[i].Z;
-       for i := 0 to (num_f -1) do
-           if faces[i].Z < c then c := faces[i].Z;
-       showmessage(format('faces %d triangle indices %d..%d', [num_f,c,k])); *)
      end else begin
        for i := 0 to (num_strip -1) do begin
            ReadLnBin(f, str);
@@ -6636,6 +6686,17 @@ begin
   end;
   setlength(faces, num_f);
   if isBinary then begin
+    {$DEFINE FASTVTK}
+    {$IFDEF FASTVTK}
+    setlength(faces4, num_f);
+    blockread(f, faces4[0], num_f*sizeof(TPoint4i));
+    for i := 0 to (num_f -1) do begin
+        faces[i].X := faces4[i].X;
+        faces[i].Y := faces4[i].Y;
+        faces[i].Z := faces4[i].Z;
+    end;
+    faces4 := nil;
+    {$ELSE}
     for i := 0 to (num_f -1) do begin
         blockread(f, nV, sizeof(LongInt));
         {$IFDEF ENDIAN_LITTLE}
@@ -6647,6 +6708,7 @@ begin
         end;
         blockread(f, faces[i],  3 * 4);
     end;
+    {$ENDIF}
     {$IFDEF ENDIAN_LITTLE} // VTK is ALWAYS big endian!
     for i := 0 to (num_f -1) do begin
            SwapLongInt(faces[i].X);
@@ -6670,14 +6732,14 @@ begin
   end; //if binary else ASCII
 666:
   {$DEFINE FSLvtk} //FSL first - triangle winding reversed?
-  {$IFDEF FSLvtk}
-  if num_f > 0 then begin
+  {$IFDEF FSLvtk}  //Slicer appears to use conventional triangle winding, while FSL is reversed
+  (*if num_f > 0 then begin
     for i := 0 to (num_f -1) do begin
       j := faces[i].Y;
       faces[i].Y := faces[i].X;
       faces[i].X := j;
     end;
-  end;
+  end;*)
   {$ENDIF}
   closefile(f);
   strlst.free;

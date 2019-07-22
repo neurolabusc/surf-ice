@@ -6137,6 +6137,7 @@ begin
   isBusy := false;
 
   {$IFDEF Darwin}
+  ExitMenu.Visible := false;
   //CopyMenu.enabled := false; //https://bugs.freepascal.org/view.php?id=33632
   ScriptingNewMenu.ShortCut := ShortCut(Word('N'), [ssMeta]);
   ScriptingRunMenu.ShortCut := ShortCut(Word('R'), [ssMeta]);
@@ -6145,7 +6146,6 @@ begin
   SwapYZMenu.ShortCut :=  ShortCut(Word('X'), [ssMeta]);
   //ScriptMenu.ShortCut :=  ShortCut(Word('Z'), [ssMeta]);
   //ScriptMenu.ShortCut :=  ShortCut(Word('J'), [ssMeta]);
-
   OpenMenu.ShortCut :=  ShortCut(Word('O'), [ssMeta]);
   SaveMenu.ShortCut :=  ShortCut(Word('S'), [ssMeta]);
   CopyMenu.ShortCut :=  ShortCut(Word('C'), [ssMeta]);

@@ -52,7 +52,6 @@ type
  TInt16s = array of int16;
  TUInt16s = array of uint16;
  TInt32s = array of int32;
-
  TFloats = array of single;
  TDoubles = array of double;
  TMat33 = array [1..3, 1..3] of single;

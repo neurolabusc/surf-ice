@@ -211,11 +211,12 @@ begin
 		end;
 end; //end RemoveDegenerateTriangles()
 
-
 procedure ClusterVertex( var faces: TFaces; var vertices: TVertices; Radius: single);
+label
+  666;
 var
  s: TSortArray;
- j,i, nv,nc,nvPost: integer;
+ j,i, nv,nc,nvPost,nf: integer;
  z, dz, dx: TSortType;
  pt,sum: TPoint3f;
  face: TPoint3i;
@@ -226,9 +227,10 @@ var
 begin
    nv := length(vertices);
    if (nv < 3) or (Radius < 0) then exit;
-   setlength(s,nv);
-   setlength(remap,nv);
-   setlength(cluster,nv);
+   setlength(s,nv); //indices sorted by Z-position
+   setlength(remap,nv); //maps old index to new index
+   setlength(cluster,nv); //identifies if vertex has already been matched
+   setLength(newVert, nv); //newly ordered vertices
    for i := 0 to (nv -1) do begin
        s[i].value := vertices[i].Z;
        cluster[i] := i;
@@ -236,12 +238,11 @@ begin
    end;
    SortArrayIndices(s);
    nvPost := 0;
-   setLength(newVert, nv);
    if Radius <= 0 then begin
       for i := 0 to (nv - 1) do begin
           if cluster[i] = i then begin //not part of previous cluster
              pt := vertices[s[i].index];
-             j := i + 1;
+             j := i;
              while (j < nv) and (vertices[s[j].index].Z = pt.Z) do begin  //i.Z==j.Z
                    if (vertices[s[j].index].X = pt.X) and (vertices[s[j].index].Y = pt.Y) then begin//i.X==j.X, i.Y==j.Y
                       cluster[j] := nvPost;
@@ -250,9 +251,7 @@ begin
                    j := j + 1;
              end;
              newVert[nvPost] := pt;
-             cluster[i] := nvPost;
-             remap[s[i].index] := nvPost;
-             nvPost := nvPost + 1; //no neighbors
+             nvPost := nvPost + 1; //yet another vertex survives
           end; //not yet clustered
       end; //for each vertex
    end else begin //Radius > 0
@@ -284,23 +283,28 @@ begin
          end; //not yet clustered
      end; //for each vertex
    end;
-   if nvPost = nv then exit; //no clusters - no change!
+   if nvPost = nv then goto 666; //no clusters - no change!
    vertices := Copy(newVert, Low(newVert), nvPost);
+   newVert := nil;
    //remap faces to new vertices
    oldFaces := Copy(faces, Low(faces), Length(faces));
-   setlength(faces,0);
+   nf := 0;
    for i := 0 to (length(oldFaces) - 1) do begin
         face.X := remap[oldFaces[i].X];
         face.Y := remap[oldFaces[i].Y];
         face.Z := remap[oldFaces[i].Z];
-        if (face.X <> face.Y) and (face.X <> face.Z) and (face.Y <> face.Z) then begin  //exclude degenerate faces
-             setlength(Faces,length(Faces)+1);
-             Faces[High(Faces)].X :=  face.X;
-             Faces[High(Faces)].Y :=  face.Y;
-             Faces[High(Faces)].Z :=  face.Z;
-        end;
+        if (face.X = face.Y) or (face.X = face.Z) or (face.Y = face.Z) then continue;  //exclude degenerate faces
+        Faces[nf] :=  face;
+        nf := nf + 1;
    end;
-   RemoveDegenerateTriangles(faces);
+   oldFaces := nil;
+   setlength(faces, nf);
+   //RemoveDegenerateTriangles(faces);  //not required, done as we built new faces
+666:
+    s  := nil;
+    remap := nil;
+    cluster := nil;
+    newVert := nil;
 end;
 
 procedure UnifyVertices(var faces: TFaces;  var vertices: TVertices);
