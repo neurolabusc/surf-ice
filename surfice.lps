@@ -3,7 +3,7 @@
   <ProjectSession>
     <Version Value="12"/>
     <BuildModes Active="Default"/>
-    <Units Count="46">
+    <Units Count="47">
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -18,8 +18,8 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <TopLine Value="6130"/>
-        <CursorPos X="59" Y="6148"/>
+        <TopLine Value="843"/>
+        <CursorPos X="37" Y="862"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -123,7 +123,6 @@
       </Unit13>
       <Unit14>
         <Filename Value="mesh.pas"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="2"/>
         <CursorPos X="3" Y="6"/>
         <UsageCount Value="108"/>
@@ -155,9 +154,9 @@
       </Unit17>
       <Unit18>
         <Filename Value="define_types.pas"/>
-        <EditorIndex Value="4"/>
-        <TopLine Value="28"/>
-        <CursorPos X="28" Y="47"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="5"/>
+        <CursorPos X="25" Y="10"/>
         <UsageCount Value="110"/>
         <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
@@ -328,7 +327,7 @@
       </Unit39>
       <Unit40>
         <Filename Value="meshify_simplify.pas"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="4"/>
         <TopLine Value="226"/>
         <CursorPos X="34" Y="250"/>
         <UsageCount Value="30"/>
@@ -375,127 +374,135 @@
         <CursorPos X="3" Y="115"/>
         <UsageCount Value="6"/>
       </Unit45>
+      <Unit46>
+        <Filename Value="uscale.pas"/>
+        <EditorIndex Value="3"/>
+        <TopLine Value="10"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit46>
     </Units>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="mesh.pas"/>
-        <Caret Line="5205" Column="16" TopLine="5174"/>
+        <Caret Line="5337" Column="19" TopLine="5306"/>
       </Position1>
       <Position2>
         <Filename Value="mesh.pas"/>
-        <Caret Line="5266" Column="19" TopLine="5235"/>
+        <Caret Line="5949" Column="16" TopLine="5918"/>
       </Position2>
       <Position3>
         <Filename Value="mesh.pas"/>
-        <Caret Line="5337" Column="19" TopLine="5306"/>
+        <Caret Line="6006" Column="16" TopLine="5990"/>
       </Position3>
       <Position4>
         <Filename Value="mesh.pas"/>
-        <Caret Line="5949" Column="16" TopLine="5918"/>
+        <Caret Line="6092" Column="16" TopLine="5997"/>
       </Position4>
       <Position5>
         <Filename Value="mesh.pas"/>
-        <Caret Line="6006" Column="16" TopLine="5990"/>
+        <Caret Line="6240" Column="17" TopLine="6209"/>
       </Position5>
       <Position6>
         <Filename Value="mesh.pas"/>
-        <Caret Line="6092" Column="16" TopLine="5997"/>
+        <Caret Line="6326" Column="7" TopLine="6295"/>
       </Position6>
       <Position7>
         <Filename Value="mesh.pas"/>
-        <Caret Line="6240" Column="17" TopLine="6209"/>
+        <Caret Line="6812" Column="9" TopLine="6788"/>
       </Position7>
       <Position8>
         <Filename Value="mesh.pas"/>
-        <Caret Line="6326" Column="7" TopLine="6295"/>
+        <Caret Line="6908" Column="9" TopLine="6876"/>
       </Position8>
       <Position9>
         <Filename Value="mesh.pas"/>
-        <Caret Line="6812" Column="9" TopLine="6788"/>
+        <Caret Line="6326" Column="45" TopLine="6308"/>
       </Position9>
       <Position10>
         <Filename Value="mesh.pas"/>
-        <Caret Line="6908" Column="9" TopLine="6876"/>
+        <Caret Line="6"/>
       </Position10>
       <Position11>
-        <Filename Value="mesh.pas"/>
-        <Caret Line="6326" Column="45" TopLine="6308"/>
+        <Filename Value="meshify_simplify.pas"/>
+        <Caret Line="233" Column="4" TopLine="216"/>
       </Position11>
       <Position12>
-        <Filename Value="mesh.pas"/>
-        <Caret Line="6"/>
+        <Filename Value="meshify_simplify.pas"/>
+        <Caret Line="234" Column="8" TopLine="216"/>
       </Position12>
       <Position13>
         <Filename Value="meshify_simplify.pas"/>
-        <Caret Line="233" Column="4" TopLine="216"/>
+        <Caret Line="304" Column="29" TopLine="277"/>
       </Position13>
       <Position14>
         <Filename Value="meshify_simplify.pas"/>
-        <Caret Line="234" Column="8" TopLine="216"/>
+        <Caret Line="187" Column="35" TopLine="168"/>
       </Position14>
       <Position15>
         <Filename Value="meshify_simplify.pas"/>
-        <Caret Line="304" Column="29" TopLine="277"/>
+        <Caret Line="212" Column="37" TopLine="180"/>
       </Position15>
       <Position16>
         <Filename Value="meshify_simplify.pas"/>
-        <Caret Line="187" Column="35" TopLine="168"/>
+        <Caret Line="290" Column="7" TopLine="277"/>
       </Position16>
       <Position17>
         <Filename Value="meshify_simplify.pas"/>
-        <Caret Line="212" Column="37" TopLine="180"/>
+        <Caret Line="230" Column="12" TopLine="220"/>
       </Position17>
       <Position18>
         <Filename Value="meshify_simplify.pas"/>
-        <Caret Line="290" Column="7" TopLine="277"/>
+        <Caret Line="235" Column="19" TopLine="219"/>
       </Position18>
       <Position19>
         <Filename Value="meshify_simplify.pas"/>
-        <Caret Line="230" Column="12" TopLine="220"/>
+        <Caret Line="233" Column="52" TopLine="224"/>
       </Position19>
       <Position20>
         <Filename Value="meshify_simplify.pas"/>
-        <Caret Line="235" Column="19" TopLine="219"/>
+        <Caret Line="253" Column="18" TopLine="224"/>
       </Position20>
       <Position21>
         <Filename Value="meshify_simplify.pas"/>
-        <Caret Line="233" Column="52" TopLine="224"/>
+        <Caret Line="281" Column="17" TopLine="271"/>
       </Position21>
       <Position22>
         <Filename Value="meshify_simplify.pas"/>
-        <Caret Line="253" Column="18" TopLine="224"/>
+        <Caret Line="289" Column="38" TopLine="271"/>
       </Position22>
       <Position23>
         <Filename Value="meshify_simplify.pas"/>
-        <Caret Line="281" Column="17" TopLine="271"/>
+        <Caret Line="290" Column="8" TopLine="271"/>
       </Position23>
       <Position24>
-        <Filename Value="meshify_simplify.pas"/>
-        <Caret Line="289" Column="38" TopLine="271"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="6" Column="3"/>
       </Position24>
       <Position25>
-        <Filename Value="meshify_simplify.pas"/>
-        <Caret Line="290" Column="8" TopLine="271"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="118" Column="21" TopLine="88"/>
       </Position25>
       <Position26>
         <Filename Value="mesh.pas"/>
-        <Caret Line="6" Column="3"/>
+        <Caret Line="140" Column="22" TopLine="110"/>
       </Position26>
       <Position27>
         <Filename Value="mesh.pas"/>
-        <Caret Line="118" Column="21" TopLine="88"/>
+        <Caret Line="2492" Column="23" TopLine="2460"/>
       </Position27>
       <Position28>
         <Filename Value="mesh.pas"/>
-        <Caret Line="140" Column="22" TopLine="110"/>
+        <Caret Line="2559" Column="16" TopLine="2528"/>
       </Position28>
       <Position29>
-        <Filename Value="mesh.pas"/>
-        <Caret Line="2492" Column="23" TopLine="2460"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="6132" Column="27" TopLine="6130"/>
       </Position29>
       <Position30>
-        <Filename Value="mesh.pas"/>
-        <Caret Line="2559" Column="16" TopLine="2528"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="862" Column="37" TopLine="843"/>
       </Position30>
     </JumpHistory>
     <RunParams>
