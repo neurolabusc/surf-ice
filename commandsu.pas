@@ -53,6 +53,7 @@ procedure OVERLAYMINMAX (lOverlay: integer; lMin,lMax: single);
 procedure OVERLAYTRANSPARENCYONBACKGROUND(lPct: integer);
 procedure OVERLAYVISIBLE(lOverlay: integer; VISIBLE: boolean);
 procedure OVERLAYTRANSLUCENT(lOverlay: integer; TRANSLUCENT: boolean);
+procedure OVERLAYOPACITY(lOverlay: integer; OPACITY: byte);
 procedure OVERLAYINVERT(lOverlay: integer; INVERT: boolean);
 procedure OVERLAYSMOOTHVOXELWISEDATA (SMOOTH: boolean);
 procedure QUIT;
@@ -87,7 +88,7 @@ const
                (Ptr:@VERSION;Decl:'VERSION';Vars:'(): string')
              );
 
-knProc = 67;
+knProc = 68;
   kProcRA : array [1..knProc] of TScriptRec = (
   (Ptr:@ATLASSTATMAP;Decl:'ATLASSTATMAP';Vars:'(ATLASNAME, STATNAME: string; const Intensities: array of integer; const Intensities: array of single)'),
   (Ptr:@ATLASSATURATIONALPHA;Decl:'ATLASSATURATIONALPHA';Vars:'(lSaturation, lTransparency: single)'),
@@ -133,6 +134,7 @@ knProc = 67;
    (Ptr:@OVERLAYCOLORNAME;Decl:'OVERLAYCOLORNAME';Vars:'(lOverlay: integer; lFilename: string)'),
    (Ptr:@OVERLAYLOAD;Decl:'OVERLAYLOAD';Vars:'(lFilename: string)'),
    (Ptr:@OVERLAYMINMAX;Decl:'OVERLAYMINMAX';Vars:'(lOverlay: integer; lMin,lMax: single)'),
+   (Ptr:@OVERLAYOPACITY;Decl:'OVERLAYOPACITY';Vars:'(lOverlay: integer; OPACITY: byte)'),
    (Ptr:@OVERLAYTRANSPARENCYONBACKGROUND;Decl:'OVERLAYTRANSPARENCYONBACKGROUND';Vars:'(lPct: integer)'),
    (Ptr:@OVERLAYVISIBLE;Decl:'OVERLAYVISIBLE';Vars:'(lOverlay: integer; VISIBLE: boolean)'),
    (Ptr:@OVERLAYTRANSLUCENT;Decl:'OVERLAYTRANSLUCENT';Vars:'(lOverlay: integer; TRANSLUCENT: boolean)'),
@@ -862,6 +864,14 @@ begin
      else
          GLForm1.OverlayVisible(lOverlay, kLUTopaque);
 end;
+
+procedure OVERLAYOPACITY(lOverlay: integer; OPACITY: byte);
+begin
+     if OPACITY > 100 then
+        OPACITY := 100;
+     GLForm1.OverlayVisible(lOverlay, OPACITY);
+end;
+
 procedure OVERLAYVISIBLE(lOverlay: integer; VISIBLE: boolean);
 begin
      if VISIBLE then

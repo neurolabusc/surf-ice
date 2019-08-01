@@ -17,7 +17,7 @@ begin
   Application.Title:='Surf Ice';
   Application.Initialize;
   Application.CreateForm(TGLForm1, GLForm1);
-  ConstrainTrackBars();
+  //ConstrainTrackBars(); //if unpatched: https://bugs.freepascal.org/view.php?id=35861
   Application.Run;
   //Windows: if you get an error "Can't find object file" you can copy the 'static' folder from
   //  https://github.com/synopse/mORMot

@@ -750,21 +750,26 @@ begin
 end;*)
 
 type TFByte =  File of Byte;
-procedure ReadLnBin(var f: TFByte; var s: string);
-const
-  kEOLN = $0A;
-var
-   bt : Byte;
-begin
-     s := '';
-     while (not  EOF(f)) do begin
-           Read(f,bt);
-           if bt = kEOLN then exit;
-           s := s + Chr(bt);
-     end;
-end;
+  function ReadLnBin(var f: TFByte; var s: string; skipEmptyLines: boolean = false): boolean;
+  const
+    kEOLN = $0A;
+    kCR = $0D;
+  var
+     bt : Byte;
+  begin
+       s := '';
+       if EOF(f) then exit(false);
+       while (not  EOF(f)) do begin
+             Read(f,bt);
+             if (bt = kCR) then continue;
+             if (bt = kEOLN) and ((not skipEmptyLines) or (s <> '' )) then exit(true);
+             if (bt = kEOLN) then continue;
+             s := s + Chr(bt);
+       end;
+       exit(true);
+  end;
 
-function readVTKHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
+(*function readVTKHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
 //VTK Simple Legacy Formats : STRUCTURED_POINTS : BINARY
 // http://daac.hpc.mil/gettingStarted/VTK_DataFormats.html
 // https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bvtk/readVtk.m
@@ -778,6 +783,7 @@ var
    strlst: TStringList;
    str: string;
    i, num_vox: integer;
+   ok: boolean;
 begin
   gzBytes := 0;
   {$IFDEF ENDIAN_BIG}
@@ -796,18 +802,19 @@ begin
     goto 666;
   end;
   ReadLnBin(f, str); //comment: 'Comment: created with MRIcroS'
-  ReadLnBin(f, str); //kind: 'BINARY' or 'ASCII'
-  if pos('BINARY', UpperCase(str)) <> 1 then begin  // '# vtk DataFile'
-     showmessage('Only able to read binary VTK file:'+str);
+  ReadLnBin(f, str, true); //kind: 'BINARY' or 'ASCII'
+  if pos('BINARY', UpperCase(str)) < 1 then begin  // '# vtk DataFile'
+     showmessage('Only able to read binary VTK file: "'+str+'"');
      goto 666;
   end;
-  ReadLnBin(f, str); // kind, e.g. "DATASET POLYDATA" or "DATASET STRUCTURED_ POINTS"
+  ReadLnBin(f, str, true); // kind, e.g. "DATASET POLYDATA" or "DATASET STRUCTURED_ POINTS"
   if pos('STRUCTURED_POINTS', UpperCase(str)) = 0 then begin
     showmessage('Only able to read VTK images saved as STRUCTURED_POINTS, not '+ str);
     goto 666;
   end;
-  while (str <> '') and (pos('POINT_DATA', UpperCase(str)) = 0) do begin
-    ReadLnBin(f, str);
+  ok := true;
+  while (ok) and (pos('POINT_DATA', UpperCase(str)) = 0) do begin
+    ok := ReadLnBin(f, str, true);
     strlst.DelimitedText := str;
     if pos('DIMENSIONS', UpperCase(str)) <> 0 then begin //e.g. "DIMENSIONS 128 128 128"
        nhdr.dim[1] := StrToIntDef(strlst[1],1);
@@ -834,7 +841,127 @@ begin
      showmessage(format('Expected POINT_DATA to equal %dx%dx%d',[nhdr.dim[1], nhdr.dim[2], nhdr.dim[3] ]));
      goto 666;
   end;
-  ReadLnBin(f, str);
+  ReadLnBin(f, str, true);
+  if pos('SCALARS', UpperCase(str)) = 0 then goto 666; //"SCALARS scalars unsigned_char"
+  strlst.DelimitedText := str;
+  str := UpperCase(strlst[2]);
+  //dataType is one of the types bit, unsigned_char, char, unsigned_short, short, unsigned_int, int, unsigned_long, long, float, or double
+  if pos('UNSIGNED_CHAR', str) <> 0 then
+      nhdr.datatype := kDT_UINT8 //
+  else if pos('SHORT', str) <> 0 then
+       nhdr.datatype := kDT_INT16 //
+  else if pos('UNSIGNED_SHORT', str) <> 0 then
+       nhdr.datatype := kDT_UINT16 //
+  else if pos('INT', str) <> 0 then
+       nhdr.datatype := kDT_INT32 //
+  else  if pos('FLOAT', str) <> 0 then
+      nhdr.datatype := kDT_FLOAT
+  else  if pos('DOUBLE', str) <> 0 then
+      nhdr.datatype := kDT_DOUBLE
+  else begin
+        showmessage('Unknown VTK scalars type '+str);
+        goto 666;
+  end;
+  convertForeignToNifti(nhdr);
+  //showmessage(inttostr(nhdr.datatype));
+  ReadLnBin(f, str, true);
+  if pos('LOOKUP_TABLE', UpperCase(str)) = 0 then goto 666; //"LOOKUP_TABLE default"
+  nhdr.vox_offset := filepos(f);
+  //fill matrix
+  for i := 0 to 2 do begin
+    nhdr.srow_x[i] := 0;
+    nhdr.srow_y[i] := 0;
+    nhdr.srow_z[i] := 0;
+  end;
+  nhdr.srow_x[0] := nhdr.pixdim[1];
+  nhdr.srow_y[1] := nhdr.pixdim[2];
+  nhdr.srow_z[2] := nhdr.pixdim[3];
+  //showmessage('xx' +inttostr( filepos(f) ));
+  result := true;
+  666:
+  closefile(f);
+  strlst.Free;
+end;*)
+function readVTKHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
+//VTK Simple Legacy Formats : STRUCTURED_POINTS : BINARY
+// http://daac.hpc.mil/gettingStarted/VTK_DataFormats.html
+// https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bvtk/readVtk.m
+// http://www.ifb.ethz.ch/education/statisticalphysics/file-formats.pdf
+// ftp://ftp.tuwien.ac.at/visual/vtk/www/FileFormats.pdf
+//  "The VTK data files described here are written in big endian form"
+//Some VTK datasets seem to insert empty lines (e.g. 0x0A0A instead of 0x0A: "ironProt.vtk"
+//   https://www.aliza-dicom-viewer.com/download/datasets
+//   https://vtk.org/vtk-textbook-examples-and-data/
+label
+   666;
+var
+   f: TFByte;//TextFile;
+   strlst: TStringList;
+   str: string;
+   i, num_vox: integer;
+   ok: boolean;
+begin
+  gzBytes := 0;
+  xDim64 := 0;
+  {$IFDEF ENDIAN_BIG}
+  swapEndian := false;
+  {$ELSE}
+  swapEndian := true;
+  {$ENDIF}
+  result := false;
+  strlst:=TStringList.Create;
+  AssignFile(f, fname);
+  FileMode := fmOpenRead;
+  {$IFDEF FPC} Reset(f,1); {$ELSE} Reset(f); {$ENDIF}
+  ReadLnBin(f, str); //signature: '# vtk DataFile'
+  if pos('VTK', UpperCase(str)) <> 3 then begin
+    showmessage('Not a VTK file');
+    goto 666;
+  end;
+  ReadLnBin(f, str); //comment: 'Comment: created with MRIcroS'
+  showmessage(str);
+  ReadLnBin(f, str, true); //kind: 'BINARY' or 'ASCII'
+  showmessage(str);
+  if pos('BINARY', UpperCase(str)) < 1 then begin  // '# vtk DataFile'
+     showmessage('Only able to read binary VTK files, not "'+str+'"');
+     goto 666;
+  end;
+  ReadLnBin(f, str, true); // kind, e.g. "DATASET POLYDATA" or "DATASET STRUCTURED_ POINTS"
+  if pos('STRUCTURED_POINTS', UpperCase(str)) = 0 then begin
+    showmessage('Only able to read VTK images saved as STRUCTURED_POINTS, not '+ str);
+    goto 666;
+  end;
+  //while (str <> '') and (pos('POINT_DATA', UpperCase(str)) = 0) do begin
+  ok := true;
+  while (ok) and (pos('POINT_DATA', UpperCase(str)) = 0) do begin
+    ok := ReadLnBin(f, str, true);
+    strlst.DelimitedText := str;
+    if pos('DIMENSIONS', UpperCase(str)) <> 0 then begin //e.g. "DIMENSIONS 128 128 128"
+       nhdr.dim[1] := StrToIntDef(strlst[1],1);
+       xDim64 := StrToIntDef(strlst[1],1);
+       nhdr.dim[2] := StrToIntDef(strlst[2],1);
+       nhdr.dim[3] := StrToIntDef(strlst[3],1);
+    end; //dimensions
+    if (pos('ASPECT_RATIO', UpperCase(str)) <> 0) or (pos('SPACING', UpperCase(str)) <> 0) then begin //e.g. "ASPECT_RATIO 1.886 1.886 1.913"
+      nhdr.pixdim[1] := StrToFloatDef(strlst[1],1);
+      nhdr.pixdim[2] := StrToFloatDef(strlst[2],1);
+      nhdr.pixdim[3] := StrToFloatDef(strlst[3],1);
+      //showmessage(format('%g %g %g',[nhdr.pixdim[1], nhdr.pixdim[2], nhdr.pixdim[3] ]));
+    end; //aspect ratio
+    if (pos('ORIGIN', UpperCase(str)) <> 0) then begin //e.g. "ASPECT_RATIO 1.886 1.886 1.913"
+      nhdr.srow_x[3] := -StrToFloatDef(strlst[1],1);
+      nhdr.srow_y[3] := -StrToFloatDef(strlst[2],1);
+      nhdr.srow_z[3] := -StrToFloatDef(strlst[3],1);
+      //showmessage(format('%g %g %g',[nhdr.pixdim[1], nhdr.pixdim[2], nhdr.pixdim[3] ]));
+    end; //aspect ratio
+  end; //not POINT_DATA
+  if pos('POINT_DATA', UpperCase(str)) = 0 then goto 666;
+  num_vox :=  StrToIntDef(strlst[1],0);
+  if num_vox <> (nhdr.dim[1] * nhdr.dim[2] * nhdr.dim[3]) then begin
+     showmessage(format('Expected POINT_DATA to equal %dx%dx%d',[nhdr.dim[1], nhdr.dim[2], nhdr.dim[3] ]));
+     goto 666;
+  end;
+  ReadLnBin(f, str, true);
   if pos('SCALARS', UpperCase(str)) = 0 then goto 666; //"SCALARS scalars unsigned_char"
   strlst.DelimitedText := str;
   str := UpperCase(strlst[2]);

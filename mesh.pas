@@ -1698,7 +1698,7 @@ begin
   FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f,1);
-  ReadLnBin(f, str); //signature: '# vtk DataFile'
+  ReadLnBin(f, str); //signature
   if (not AnsiContainsText(str, 'OFF')) or (not AnsiContainsText(str, 'BINARY')) then begin
     showmessage('Does not appear to be a OFF BINARY file.');
     goto 666;
@@ -6388,14 +6388,27 @@ begin
     CloseFile(f);
 end; //LoaIdtfTxt()
 
+function ReadLnVtk(var f: TextFile; out str: string): boolean;
+begin
+     str := '';
+     while (str = '') or (str = ' ') do begin
+           if EOF(f) then exit(false);
+           Readln(f,str);
+     end;
+     result := true;
+end;
+
 function TMesh.LoadVtkTxt(const FileName: string): boolean;
 label
    666;
+const
+  kBlockSz = 4096;
 var
   f: TextFile;
   str: string;
   strlst: TStringList;
-  num_v, num_f, i, n, nMax: integer;
+  num_v, num_f, i, n, sz, nx, num_fx: integer;
+  face: TPoint3i;
 begin
     result := false;
     if (FSize(FileName) < 64) then exit;
@@ -6414,7 +6427,7 @@ begin
        showmessage('Use LoadVtk() to read binary files');
        goto 666;
     end else if pos('ASCII', UpperCase(str)) = 0 then begin
-       showmessage('VTK data should be ASCII or BINARY, not '+str);
+       showmessage('VTK data should be ASCII or BINARY, not "'+str+'"');
        goto 666;
     end;
     ReadLn(f, str); // kind, e.g. "DATASET POLYDATA" or "DATASET STRUCTURED_ POINTS"
@@ -6439,28 +6452,50 @@ begin
       goto 666;
     end;
     setlength(vertices, num_v);
-    for i := 0 to (num_v-1) do
-        Readln(f,vertices[i].X, vertices[i].Y, vertices[i].Z);
-    Readln(f,str);
+    for i := 0 to (num_v-1) do begin
+        //see Honolulu.vtk where 6 vertices are saved on each line! https://vtk.org/vtk-textbook-examples-and-data/
+           //Readln(f,vertices[i].X, vertices[i].Y, vertices[i].Z);
+           Read(f,vertices[i].X, vertices[i].Y, vertices[i].Z);
+    end;
+    ReadLnVtk(f,str);
     if pos('POLYGONS', UpperCase(str)) <> 1 then begin
-       showmessage('Expected header to report "POLYGONS" (hint: binary reader can read more variations) '+ str);
+       showmessage('Expected header to report "POLYGONS" (hint: open with Slicer and save as conventional format) "'+ str+'"');
        goto 666;
     end;
     strlst.DelimitedText := str;
     num_f := StrToIntDef(strlst[1],0);
+    sz := StrToIntDef(strlst[2],0);
     //showmessage(inttostr());
     if (num_f < 1) then begin
        showmessage('Expected at least 1 polygon not '+ str);
        goto 666;
     end;
     setlength(faces, num_f);
-    nMax := 0;
-    for i := 0 to (num_f-1) do begin
-        Readln(f,n,faces[i].X, faces[i].Y, faces[i].Z);
-        if n > nMax then nMax := n;
+    if (sz = (num_f * 4)) then begin //special case: all triangles
+      //unlike binary data, there is virtually no benefit in detecting triangular ASCII data
+      for i := 0 to (num_f-1) do begin
+          Readln(f,n,faces[i].X, faces[i].Y, faces[i].Z);
+          if n <> 3 then goto 666; //not all triangles
+      end;
+    end else begin //if all triangles else some ngons
+      num_fx := 0;
+      for i := 0 to (num_f-1) do begin
+          Read(f,n,face.X, face.Y);
+          if n < 3 then goto 666; //minimum n-gon is a triangle
+          nx := n - 2; //e.g. if "3", one triangle, if "4" then quad = 2 triangles
+          if (num_fx + nx) > length(faces) then
+             setlength(faces, num_fx+nx+kBlockSz);
+          for n := 1 to nx do begin
+              Read(f, face.Z);
+              faces[num_fx] := face;
+              //face.X := face.Y;
+              face.Y := face.Z;
+              num_fx := num_fx + 1;
+          end;
+          //num_fx := num_fx + nx; //e.g.
+      end;
+      setlength(faces, num_fx);
     end;
-    if nMax > 3 then
-       showmessage('Warning: expected a mesh of triangles.');
     result := true;
   666:
     if not result then begin
@@ -6471,6 +6506,297 @@ begin
     CloseFile(f);
 end; //LoadVtkTxt()
 
+function ReadLnBinVTK(var f: TFByte; var s: string; skipEmptyLines: boolean = true): boolean;
+const
+  kEOLN = $0A;
+  kCR = $0D;
+var
+   bt : Byte;
+begin
+     s := '';
+     if EOF(f) then exit(false);
+     while (not  EOF(f)) do begin
+           Read(f,bt);
+           if (bt = kCR) then continue;
+           if (bt = kEOLN) and ((not skipEmptyLines) or (s <> '' )) then exit(true);
+           if (bt = kEOLN) then continue;
+           s := s + Chr(bt);
+     end;
+     exit(true);
+end;
+
+{$DEFINE NEWVTK}
+{$IFDEF NEWVTK}
+procedure TMesh.LoadVtk(const FileName: string);
+//Read VTK mesh
+// https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bvtk/readVtk.m
+// http://www.ifb.ethz.ch/education/statisticalphysics/file-formats.pdf
+// ftp://ftp.tuwien.ac.at/visual/vtk/www/FileFormats.pdf
+//  "The VTK data files described here are written in big endian form"
+//n.b. ASCII reading is slow - strlst.DelimitedText much slower than readln!
+label
+   666;
+const
+  kBlockSz = 4096;
+type
+  TPoint4i = packed record
+  N: longint;
+  X: longint; //ensure 32-bit for simple GIfTI writing
+  Y: longint;
+  Z: longint;
+end;
+
+var
+   f: TFByte;//TextFile;
+   strlst: TStringList;
+   str: string;
+   strips: array of int32;
+   c, i, j, k, num_v, num_f, num_f_allocated, num_strip, cnt: integer;
+   //nV: LongInt;
+   faces4: array of TPoint4i;
+   ok: boolean;
+   isBinary: boolean = true;
+begin
+  if (FSize(FileName) < 64) then exit;
+  strlst:=TStringList.Create;
+  FileMode := fmOpenRead;
+  AssignFile(f, FileName);
+  num_f := 0;
+  Reset(f,1);
+  ReadLnBinVTK(f, str); //signature: '# vtk DataFile'
+  if pos('VTK', UpperCase(str)) <> 3 then begin
+    showmessage('Not a VTK file');
+    goto 666;
+  end;
+  ReadLnBinVTK(f, str); //comment: 'Comment: created with MRIcroS'
+  ReadLnBinVTK(f, str); //kind: 'BINARY' or 'ASCII'
+  if pos('BINARY', UpperCase(str)) <> 0 then
+     isBinary := true
+  else if pos('ASCII', UpperCase(str)) <> 0 then begin
+     isBinary := false;
+     //next lines optional but faster!
+     closefile(f);
+     strlst.free;
+     LoadVtkTxt(FileName);
+     exit;
+  end else begin  // '# vtk DataFile'
+     showmessage('VTK data should be ASCII or binary, not "'+str+'"');
+     goto 666;
+  end;
+  ok := ReadLnBinVTK(f, str); // kind, e.g. "DATASET POLYDATA" or "DATASET STRUCTURED_ POINTS"
+  if not ok then goto 666;
+  while (str='') and (not eof(f)) do ReadLnBinVTK(f, str);
+  if pos('POLYDATA', UpperCase(str)) = 0 then begin
+    showmessage('Only able to read VTK images saved as POLYDATA, not '+ str);
+    goto 666;
+  end;
+  ReadLnBin(f, str); // number of vertices, e.g. "POINTS 685462 float"
+  if pos('POINTS', UpperCase(str)) <> 1 then begin
+    showmessage('Expected header to report "POINTS" not '+ str);
+    goto 666;
+  end;
+  num_v := 0;
+  strlst.DelimitedText := str;
+  num_v := StrToIntDef(strlst[1],0);
+  if (num_v < 1) or (pos('FLOAT', UpperCase(strlst[2])) <> 1) then begin
+    showmessage('Expected at least 1 point of type FLOAT, not '+ str);
+    goto 666;
+  end;
+  setlength(vertices, num_v); //vertices = zeros(num_f, 9);
+  if isBinary then begin
+     blockread(f, vertices[0], 3 * 4 * num_v);
+     {$IFDEF ENDIAN_LITTLE} // VTK is ALWAYS big endian!
+     for i := 0 to (num_v -1) do begin
+            SwapSingle(vertices[i].X);
+            SwapSingle(vertices[i].Y);
+            SwapSingle(vertices[i].Z);
+     end;
+     {$ENDIF}
+  end else begin //if binary else ASCII
+       for i := 0 to (num_v-1) do begin
+         //n.b. ParaView and Mango pack multiple vertices per line, so we can not use ReadLnBin(f, str);
+           vertices[i].X := StrToFloatDef(ReadNumBin(f),0);
+           vertices[i].Y := StrToFloatDef(ReadNumBin(f),0);
+           vertices[i].Z := StrToFloatDef(ReadNumBin(f),0);
+       end;
+  end;
+  ReadLnBin(f, str); // number of vertices, e.g. "POLYGONS 1380 5520"
+  while (str = '') and (not EOF(f)) do ReadLnBin(f, str);
+  if pos('LINES', UpperCase(str)) > 0 then begin
+    showmessage('This is a fiber file: rename with a ".fib" extension and use Tracks/Open to view: '+ str);
+    goto 666;
+  end;
+  if pos('METADATA', UpperCase(str)) = 1 then begin //ParaView inserts a metadata block
+    //http://www.vtk.org/doc/nightly/html/IOLegacyInformationFormat.html
+    while (str <> '') and (not EOF(f)) do ReadLnBin(f, str); // The metadata block is terminated by an empty line
+    ReadLnBin(f, str);
+  end;
+  if pos('TRIANGLE_STRIPS', UpperCase(str)) = 1 then begin
+     strlst.DelimitedText := str;
+     num_strip := StrToIntDef(strlst[1],0);
+     cnt := StrToIntDef(strlst[2],0);
+     num_f_allocated := cnt;
+     (*if isBinary then begin
+        showmessage(format('Unable to read VTK binary "TRIANGLE_STRIPS" %d %d', [num_strip, cnt]));
+        goto 666;
+     end;*)
+     setlength(faces, num_f_allocated); //not sure how many triangles, lets guess
+     num_f := 0;
+     if isBinary then begin
+       //Harvard Surgical Planning Laboratory MRB files are zip files with binary VTK Triangle_Strips
+       c := cnt;
+       setlength(strips, cnt); //vertices = zeros(num_f, 9);
+       blockread(f, strips[0], 4 * cnt);
+       {$IFDEF ENDIAN_LITTLE} // VTK is ALWAYS big endian!
+       for i := 0 to (cnt -1) do
+           SwapLongInt(strips[i]);
+       {$ENDIF}
+       k := 0;
+       for i := 0 to (num_strip -1) do begin
+           cnt := strips[k];
+           k := k + 1;
+           if ((cnt < 3) or (k > c)) then begin
+              setlength(faces,0);
+              num_f := 0;
+              goto 666;
+           end;
+           if ((num_f+cnt) > num_f_allocated) then begin //need to allocate more faces
+              num_f_allocated := num_f_allocated + cnt + kBlockSz;
+              setlength(faces, num_f_allocated);
+           end;
+            faces[num_f].X := strips[k];
+            faces[num_f].Y := strips[k+1];
+            faces[num_f].Z := strips[k+2];
+            k := k + 3;
+            num_f := num_f + 1;
+            if (cnt > 3) then begin
+               for j := 4 to cnt do begin
+                   //http://ogldev.atspace.co.uk/www/tutorial27/tutorial27.html
+                   //  winding order is reversed on the odd triangles
+                   if odd(j) then begin //ITK snap triangle winding reverses with each new point
+                      faces[num_f].X := strips[k-2];
+                      faces[num_f].Y := strips[k-1];
+                   end else begin
+                     faces[num_f].X := strips[k-1];
+                     faces[num_f].Y := strips[k-2];
+                   end;
+                 faces[num_f].Z := strips[k];
+                 k := k + 1;
+                 num_f := num_f + 1;
+              end; //for j: each additional strip point
+           end; //cnt > 3
+       end; //for i: each strip
+     end else begin
+       for i := 0 to (num_strip -1) do begin
+           ReadLnBinVTK(f, str);
+           strlst.DelimitedText := str;
+           cnt := StrToIntDef(strlst[0],0);
+           if (cnt < 3) then begin
+              setlength(faces,0);
+              num_f := 0;
+              goto 666;
+           end;
+           if ((num_f+cnt) > num_f_allocated) then begin //need to allocate more faces
+              num_f_allocated := num_f_allocated + cnt + kBlockSz;
+              setlength(faces, num_f_allocated);
+           end;
+           faces[num_f].Y := StrToIntDef(strlst[1],0);
+           faces[num_f].X := StrToIntDef(strlst[2],0);
+           faces[num_f].Z := StrToIntDef(strlst[3],0);
+           num_f := num_f + 1;
+           if (cnt > 3) then begin
+              for j := 4 to cnt do begin
+                  //http://ogldev.atspace.co.uk/www/tutorial27/tutorial27.html
+                  //  winding order is reversed on the odd triangles
+                  if odd(j) then begin //ITK snap triangle winding reverses with each new point
+                     faces[num_f].X := StrToIntDef(strlst[j-1],0);
+                     faces[num_f].Y := StrToIntDef(strlst[j-2],0);
+                  end else begin
+                    faces[num_f].X := StrToIntDef(strlst[j-2],0);
+                    faces[num_f].Y := StrToIntDef(strlst[j-1],0);
+                  end;
+                faces[num_f].Z := StrToIntDef(strlst[j],0);
+                  num_f := num_f + 1;
+              end; //for j: each additional strip point
+           end; //cnt > 3
+       end; //for i: each strip
+     end; //if binary else ASCII
+     setlength(faces, num_f);
+     goto 666;
+
+  end;
+  if pos('POLYGONS', UpperCase(str)) <> 1 then begin
+    showmessage('Expected header to report "TRIANGLE_STRIPS" or "POLYGONS" not '+ str);
+    goto 666;
+  end;
+  strlst.DelimitedText := str;
+  num_f := StrToIntDef(strlst[1],0);
+  cnt := StrToIntDef(strlst[2],0);
+  if cnt <> (num_f * 4) then begin
+     showmessage('Only able to read triangular meshes, not '+ str);
+     goto 666;
+  end;
+  setlength(faces, num_f);
+  if isBinary then begin
+    {$DEFINE FASTVTK}
+    {$IFDEF FASTVTK}
+    setlength(faces4, num_f);
+    blockread(f, faces4[0], num_f*sizeof(TPoint4i));
+    for i := 0 to (num_f -1) do begin
+        faces[i].X := faces4[i].X;
+        faces[i].Y := faces4[i].Y;
+        faces[i].Z := faces4[i].Z;
+    end;
+    faces4 := nil;
+    {$ELSE}
+    for i := 0 to (num_f -1) do begin
+        blockread(f, nV, sizeof(LongInt));
+        {$IFDEF ENDIAN_LITTLE}
+        SwapLongInt(nV);
+        {$ENDIF}
+        if (nV <> 3) then begin
+           showmessage('VTK file is borked');
+           goto 666;
+        end;
+        blockread(f, faces[i],  3 * 4);
+    end;
+    {$ENDIF}
+    {$IFDEF ENDIAN_LITTLE} // VTK is ALWAYS big endian!
+    for i := 0 to (num_f -1) do begin
+           SwapLongInt(faces[i].X);
+           SwapLongInt(faces[i].Y);
+           SwapLongInt(faces[i].Z);
+    end;
+    (*for i := 0 to (num_v -1) do begin
+           SwapSingle(vertices[i].X);
+           SwapSingle(vertices[i].Y);
+           SwapSingle(vertices[i].Z);
+    end;*)
+    {$ENDIF}
+  end else begin //if binary else ASCII - indexed from 0
+      for i := 0 to (num_f -1) do begin
+          ReadLnBinVTK(f, str);
+           strlst.DelimitedText := str;
+           faces[i].X := StrToIntDef(strlst[1],0);
+           faces[i].Y := StrToIntDef(strlst[2],0);
+           faces[i].Z := StrToIntDef(strlst[3],0);
+      end;
+  end; //if binary else ASCII
+666:
+  {$DEFINE FSLvtk} //FSL first - triangle winding reversed?
+  {$IFDEF FSLvtk}  //Slicer appears to use conventional triangle winding, while FSL is reversed
+  (*if num_f > 0 then begin
+    for i := 0 to (num_f -1) do begin
+      j := faces[i].Y;
+      faces[i].Y := faces[i].X;
+      faces[i].X := j;
+    end;
+  end;*)
+  {$ENDIF}
+  closefile(f);
+  strlst.free;
+end; // LoadVtk()
+{$ELSE}
 procedure TMesh.LoadVtk(const FileName: string);
 //Read VTK mesh
 // https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bvtk/readVtk.m
@@ -6551,6 +6877,7 @@ begin
   end;
   setlength(vertices, num_v); //vertices = zeros(num_f, 9);
   if isBinary then begin
+    showmessage(inttostr(filepos(f)));
      blockread(f, vertices[0], 3 * 4 * num_v);
      {$IFDEF ENDIAN_LITTLE} // VTK is ALWAYS big endian!
      for i := 0 to (num_v -1) do begin
@@ -6744,6 +7071,9 @@ begin
   closefile(f);
   strlst.free;
 end; // LoadVtk()
+
+
+{$ENDIF}
 
 function TMesh.CheckMesh: boolean;
 //faces should be indexed for range 0..[number of triangles -1]

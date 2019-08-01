@@ -828,7 +828,7 @@ begin
   ReadLn(f, str); //comment: 'Comment: created with MRIcroS'
   if not ReadLnSkipBlank(str) then goto 666; //kind: 'BINARY' or 'ASCII'
   if (pos('ASCII', UpperCase(str)) <> 1) then begin  // '# vtk DataFile'
-     showmessage('Only able to read ASCII or binary VTK files: '+str);
+     showmessage('Only able to read ASCII or binary VTK tracks: '+str);
      goto 666;
   end;
   if not ReadLnSkipBlank(str) then goto 666;// kind, e.g. "DATASET POLYDATA" or "DATASET STRUCTURED_ POINTS"

@@ -33,6 +33,7 @@ LayerOptionsBtn: TButton;
  CenterPanel: TPanel;
  LayerAOMapMenu: TMenuItem;
  LayerPainHideMenu: TMenuItem;
+ overlayopacity1: TMenuItem;
  PaintModeAutomatic: TMenuItem;
  PaintModeHideBrightHideDarkMenu: TMenuItem;
  PaintModeHideDarkShowBrightMenu: TMenuItem;
@@ -1100,6 +1101,16 @@ begin
       OVERLAYTRANSLUCENT(I,Bool(B));
 end;
 
+function PyOVERLAYOPACITY(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  B,I: integer;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 'ii:overlaytranslucent', @I,@B)) then
+      OVERLAYOPACITY(I,B);
+end;
+
 function PyEDGETHRESH(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A,B: single;
@@ -1647,6 +1658,7 @@ begin
     AddMethod('overlayinvert', @PyOVERLAYINVERT, ' overlayinvert(overlaLayer, invert) -> Toggle whether overlay color scheme is inverted.');
     AddMethod('overlayload', @PyOVERLAYLOAD, ' overlayload(filename) -> Load an image on top of prior images.');
     AddMethod('overlayminmax', @PyOVERLAYMINMAX, ' overlayminmax(layer, min, max) -> Sets the color range for the overlay (layer 0 = background).');
+    AddMethod('overlayopacity', @PyOVERLAYOPACITY, ' overlayopacity(overlayLayer, opacity) -> This feature allows you to adjust individual overlays transparency from transparent (0) to opaque (100).');
     AddMethod('overlaysmoothvoxelwisedata', @PyOVERLAYSMOOTHVOXELWISEDATA, ' overlaysmoothvoxelwisedata(smooth) -> Determines if overlays are loaded using interpolation (smooth, 1) or nearest neighbor (un-smoothed, 0) interpolation.');
     AddMethod('overlaytranslucent', @PyOVERLAYTRANSLUCENT, ' overlaytranslucent(overlayLayer, translucent) -> This feature allows you to make individual overlays translucent or opaque.');
     AddMethod('overlaytransparencyonbackground', @PyOVERLAYTRANSPARENCYONBACKGROUND, ' overlaytransparencyonbackground(percent) -> Controls the opacity of the overlays on the background.');
@@ -2633,6 +2645,45 @@ begin
      if (pos('TRIANGLE_STRIPS ', Str) > 0) then result := true; //faces
 end;
 
+function isVtkTrack (filename: string): boolean; //vtk files can be volumes(DATASET STRUCTURED_POINTS) tracks (" LINES" ->Tracks/Open) or meshes ("POLYGONS " -> File/Open, Overlay/Open)
+var
+      f: file;
+      Str: string;
+      szRead: integer;
+begin
+     result := false;
+     if not fileexistsF(filename) then exit;
+     FileMode := fmOpenRead;
+     AssignFile(f, FileName);
+     Reset(f,1);
+     FileMode := fmOpenRead;
+     szRead := FileSize(f);
+     SetLength(Str, szRead);
+     BlockRead(f, Str[1],szRead);
+     CloseFile(f);
+     if (pos('POINTS ', Str) > 0)and (pos('LINES ', Str) > 0) then result := true; //faces
+end;
+
+
+function isVtkVolume (filename: string): boolean; //vtk files can be volumes(DATASET STRUCTURED_POINTS) tracks (" LINES" ->Tracks/Open) or meshes ("POLYGONS " -> File/Open, Overlay/Open)
+var
+      f: file;
+      Str: string;
+      szRead: integer;
+begin
+     result := false;
+     if not fileexistsF(filename) then exit;
+     FileMode := fmOpenRead;
+     AssignFile(f, FileName);
+     Reset(f,1);
+     FileMode := fmOpenRead;
+     szRead := FileSize(f);
+     SetLength(Str, szRead);
+     BlockRead(f, Str[1],szRead);
+     CloseFile(f);
+     if ((pos('STRUCTURED_POINTS', Str) > 0) and (pos('POINT_DATA ', Str) > 0)) then result := true;
+end;
+
 function isGiiMesh (filename: string): boolean;
 //returns true if file is a valid mesh (faces+vertices), returns false if overlay map
 var
@@ -2717,8 +2768,11 @@ begin
   if (ext2 = '.1D.DSET') or (ext = '.COL') or (ext = '.ANNOT') or (ext = '.MGH') or (ext = '.MGZ')  or (ext = '.NII') or (ext = '.HDR')  or (ext = '.NII.GZ') or (ext = '.DPV') or (ext = '.ANNOT') or (ext = '.W') or (ext = '.CURV')  then begin
     OpenOverlay(Filename);
     exit;
-  end else if (ext = '.VTK') and (not isVtkMesh (Filename)) then begin
+  end else if (ext = '.VTK') and (isVtkTrack (Filename)) then begin
     OpenTrack(Filename);  //.vtk files can be either meshes or tracks - autodetect
+    exit;
+  end else if (ext = '.VTK') and (length(gMesh.Faces) > 0) and (isVtkVolume (Filename))then begin
+    OpenOverlay(Filename);  //.vtk files can be either meshes or tracks - autodetect
     exit;
   end else if (length(gMesh.Faces) > 0) and (ext = '.MZ3') and (not isMz3Mesh (Filename)) then begin
     OpenOverlay(Filename);  //GIfTI files can be meshes or overlays - autodetect

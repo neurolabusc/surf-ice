@@ -2189,10 +2189,23 @@ object GLForm1: TGLForm1
             Hint = 'overlaycloseall () This function has no parameters. All open overlays will be closed.'
             OnClick = InsertCommand
           end
+          object overlaycolorfromzero1: TMenuItem
+            Tag = 1
+            Caption = 'overlaycolorfromzero'
+            Hint = 'overlaycolorfromzero (fromzero: boolean) If set to false, then the full color range is used to show the overlay.'
+            Visible = False
+            OnClick = InsertCommand
+          end
           object overlaycolorname1: TMenuItem
             Tag = 1214
             Caption = 'overlaycolorname'
             Hint = 'overlaycolorname (overlay: integer; filename: string) Set the colorscheme for the target overlay to a specified name.'
+            OnClick = InsertCommand
+          end
+          object overlayinvert1: TMenuItem
+            Tag = 1211
+            Caption = 'overlayinvert'
+            Hint = 'overlayinvert (overlay: integer; invert: boolean) toggle whether overlay color scheme is inverted.'
             OnClick = InsertCommand
           end
           object overlayminmax1: TMenuItem
@@ -2201,16 +2214,16 @@ object GLForm1: TGLForm1
             Hint = 'overlayminmax (overlay: integer; min, max: float) Sets the color range for the overlay.'
             OnClick = InsertCommand
           end
-          object overlaytransparencyonbackground1: TMenuItem
-            Tag = 2
-            Caption = 'overlaytransparencyonbackground'
-            Hint = 'overlaytransparencyonbackground (percent: integer) Controls the opacity of the overlays on the background.'
+          object overlayopacity1: TMenuItem
+            Tag = 22
+            Caption = 'overlayopacity'
+            Hint = 'overlayopacity (overlay, opacity: integer) This feature allows you to make individual overlays range from transparent (0) to opaque (100).'
             OnClick = InsertCommand
           end
-          object overlaycolorfromzero1: TMenuItem
-            Tag = 1
-            Caption = 'overlaycolorfromzero'
-            Hint = 'overlaycolorfromzero (fromzero: boolean) If set to false, then the full color range is used to show the overlay.'
+          object overlaytranslucent1: TMenuItem
+            Tag = 1211
+            Caption = 'overlaytranslucent'
+            Hint = 'overlaytranslucent (overlay: integer; translucent: boolean) This feature allows you to make individual overlays translucent or opaque.'
             Visible = False
             OnClick = InsertCommand
           end
@@ -2220,22 +2233,16 @@ object GLForm1: TGLForm1
             Hint = 'overlayvisible (overlay: integer; visible: boolean) This feature allows you to make individual overlays visible or invisible.'
             OnClick = InsertCommand
           end
-          object overlaytranslucent1: TMenuItem
-            Tag = 1211
-            Caption = 'overlaytranslucent'
-            Hint = 'overlaytranslucent (overlay: integer; translucent: boolean) This feature allows you to make individual overlays translucent or opaque.'
-            OnClick = InsertCommand
-          end
-          object overlayinvert1: TMenuItem
-            Tag = 1211
-            Caption = 'overlayinvert'
-            Hint = 'overlayinvert (overlay: integer; invert: boolean) toggle whether overlay color scheme is inverted.'
-            OnClick = InsertCommand
-          end
           object overlaysmoothvoxelwisedata1: TMenuItem
             Tag = 1
             Caption = 'overlaysmoothvoxelwisedata'
             Hint = 'overlaysmoothvoxelwisedata (smooth: boolean) Determines if overlays are loaded using interpolation (smooth) or nearest neighbor (un-smoothed) interpolation.'
+            OnClick = InsertCommand
+          end
+          object overlaytransparencyonbackground1: TMenuItem
+            Tag = 2
+            Caption = 'overlaytransparencyonbackground'
+            Hint = 'overlaytransparencyonbackground (percent: integer) Controls the opacity of the overlays on the background.'
             OnClick = InsertCommand
           end
           object meshoverlayorder1: TMenuItem
