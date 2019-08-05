@@ -13,6 +13,9 @@ uses
   Classes, SysUtils, matmath, dialogs, define_types;
 
 function ReducePatch( var faces: TFaces; var vertices: TVertices; R: single):boolean;
+//UnifyVertices/UnifyVertices2/UnifyVertices3 virtually identical, 2 and 3 use a bit less RAM, 2 collapses vertex colors
+procedure UnifyVertices2(var faces: TFaces;  var vertices: TVertices; var vRGBA : TVertexRGBA);//merge identical vertices, i.e. ClusterVertex with Radius = 0
+procedure UnifyVertices3(var faces: TFaces;  var vertices: TVertices);//merge identical vertices, i.e. ClusterVertex with Radius = 0
 procedure UnifyVertices(var faces: TFaces;  var vertices: TVertices); //merge identical vertices, i.e. ClusterVertex with Radius = 0
 procedure ClusterVertex( var faces: TFaces; var vertices: TVertices; Radius: single); //merge nearby vertices
 
@@ -64,6 +67,12 @@ begin
 end;  *)
 
 type
+TSortTypeI = uint32; //can be integer, single, double, etc
+TSortI = record
+   index:  integer;
+   value: TSortTypeI;
+end;
+TSortArrayI = array of TSortI;
 TSortType = single; //can be integer, single, double, etc
 TSort = record
    index:  integer;
@@ -74,6 +83,36 @@ TSortArray = array of TSort;
 {$DEFINE QSORT} //QuickSort is fast and simple, but very recursive
 {$IFDEF QSORT}
 //http://stackoverflow.com/questions/24335585/quicksort-drama
+
+procedure QuickSortI(left, right: integer; var s: TSortArrayI);
+// left:      Index des 1. Elements, right: Index des letzten Elements
+var
+  l, r, lswap: integer;
+  pivot: TSortType;
+begin
+  if (right > left) then begin
+    l := left;
+    r := right;
+    pivot := s[s[(right + left) div 2].index].value;
+    while (l < r) do begin
+      while s[s[l].index].value < pivot do
+        l := l + 1;
+      while s[s[r].index].value > pivot do
+        r := r - 1;
+      if (l <= r) then begin
+        lswap := s[r].index;
+        s[r].index := s[l].index;
+        s[l].index := lswap;
+        l := l + 1;
+        r := r - 1;
+      end;
+    end;
+    if (left < r) then
+      QuickSortI(left, r, s);
+    if (right > l) then
+      QuickSortI(l, right, s);
+  end;
+end;
 procedure QuickSort(left, right: integer; var s: TSortArray);
 // left:      Index des 1. Elements, right: Index des letzten Elements
 var
@@ -183,6 +222,16 @@ begin
      {$ENDIF}
 end;
 
+procedure SortArrayIndicesI(var s: TSortArrayI); //sorts indices, not values!
+var
+ i : integer;
+begin
+     if length(s) < 1 then exit;
+     for i := 0 to (length(s)-1) do  //set indices
+         s[i].index := i;
+     quicksortI(low(s), high(s), s);
+end;
+
 
 function RemoveDegenerateTriangles(var faces: TFaces): integer;
 var
@@ -210,6 +259,165 @@ begin
 			nOK := nOK + 1;
 		end;
 end; //end RemoveDegenerateTriangles()
+
+procedure UnifyVertices3(var faces: TFaces;  var vertices: TVertices);
+var vRGBA : TVertexRGBA;
+begin
+     vRGBA := nil;
+     UnifyVertices2(faces, vertices, vRGBA);
+end;
+//{$DEFINE FX}
+{$IFDEF FX}
+//something is not right here - try STL created by slicer
+procedure UnifyVertices2(var faces: TFaces;  var vertices: TVertices;  var vRGBA : TVertexRGBA);//merge identical vertices, i.e. ClusterVertex with Radius = 0
+//{$DEFINE HASH3D} //hash3d Teschner http://www.beosil.com/download/CollisionDetectionHashing_VMV03.pdf
+//HASH3D slower (820ms vs 480)
+label
+  666;
+var
+ oldRGBA : TVertexRGBA;
+ s: TSortArrayI;
+ j,i, nv,nvPost,nf: integer;
+ pt: TPoint3f;
+ face: TPoint3i;
+ oldVert: TVertices;
+ oldFaces: TFaces;
+ remap: TInts;
+begin
+   nv := length(vertices);
+   if (nv < 3) then exit;
+   setlength(s,nv); //indices sorted by Z-position
+   setlength(remap,nv); //maps old index to new index
+   for i := 0 to (nv -1) do begin
+       {$IFDEF HASH3D}
+       s[i].value := uint32(uint32(vertices[i].Z) * 73856093) xor uint32(uint32(vertices[i].Y) * 19349663) xor uint32(uint32(vertices[i].X) * 83492791);
+       {$ELSE}
+       s[i].value := uint32(vertices[i].Z);//, 19349663, 83492791
+       {$ENDIF}
+       remap[i] := -1;
+   end;
+   SortArrayIndicesI(s);
+   nvPost := 0;
+      for i := 0 to (nv - 1) do begin
+         if remap[s[i].index] < 0 then begin
+             pt := vertices[s[i].index];
+             j := i;
+             while (j < nv) and (vertices[s[j].index].Z = pt.Z) do begin  //i.Z==j.Z
+                   {$IFDEF HASH3D}
+                   if (vertices[s[j].index].X = pt.X) and (vertices[s[j].index].Y = pt.Y) and (vertices[s[j].index].Z = pt.Z) then//i.X==j.X, i.Y==j.Y
+                   {$ELSE}
+                   if (vertices[s[j].index].X = pt.X) and (vertices[s[j].index].Y = pt.Y) then//i.X==j.X, i.Y==j.Y
+                   {$ENDIF}
+                      remap[s[j].index] := nvPost;
+                   j := j + 1;
+             end;
+             nvPost := nvPost + 1; //yet another vertex survives
+          end; //not yet clustered
+      end; //for each vertex
+   if nvPost = nv then goto 666; //no clusters - no change!
+   //remap vertices
+   oldVert := Copy(vertices, Low(vertices), MaxInt);
+   for i := 0 to (nv -1) do
+       vertices[remap[i]] := oldVert[i];
+   setlength(vertices, nvPost);
+   oldVert := nil;
+   //remap vertex colors
+   if length(vRGBA) = nv then begin
+      oldRGBA := Copy(vRGBA, 0, MaxInt);
+      for i := 0 to (nv-1) do
+          vRGBA[remap[i]]:= oldRGBA[i];
+      setlength(vRGBA, nvPost);
+      oldRGBA := nil;
+   end;
+   //remap faces to new vertices
+   oldFaces := Copy(faces, Low(faces), Length(faces));
+   nf := 0;
+   for i := 0 to (length(oldFaces) - 1) do begin
+        face.X := remap[oldFaces[i].X];
+        face.Y := remap[oldFaces[i].Y];
+        face.Z := remap[oldFaces[i].Z];
+        if (face.X = face.Y) or (face.X = face.Z) or (face.Y = face.Z) then continue;  //exclude degenerate faces
+        Faces[nf] :=  face;
+        nf := nf + 1;
+   end;
+   oldFaces := nil;
+   setlength(faces, nf);
+   //RemoveDegenerateTriangles(faces);  //not required, done as we built new faces
+666:
+    s  := nil;
+    remap := nil;
+end;
+
+{$ELSE}
+procedure UnifyVertices2(var faces: TFaces;  var vertices: TVertices;  var vRGBA : TVertexRGBA);//merge identical vertices, i.e. ClusterVertex with Radius = 0
+label
+  666;
+var
+  oldRGBA : TVertexRGBA;
+ s: TSortArray;
+ j,i, nv,nvPost,nf: integer;
+ pt: TPoint3f;
+ face: TPoint3i;
+ oldVert: TVertices;
+ oldFaces: TFaces;
+ remap: TInts;
+begin
+   nv := length(vertices);
+   if (nv < 3) then exit;
+   setlength(s,nv); //indices sorted by Z-position
+   setlength(remap,nv); //maps old index to new index
+   for i := 0 to (nv -1) do begin
+       s[i].value := vertices[i].Z;
+       remap[i] := -1;
+   end;
+   SortArrayIndices(s);
+   nvPost := 0;
+      for i := 0 to (nv - 1) do begin
+         if remap[s[i].index] < 0 then begin
+             pt := vertices[s[i].index];
+             j := i;
+             while (j < nv) and (vertices[s[j].index].Z = pt.Z) do begin  //i.Z==j.Z
+                   if (vertices[s[j].index].X = pt.X) and (vertices[s[j].index].Y = pt.Y) then//i.X==j.X, i.Y==j.Y
+                      remap[s[j].index] := nvPost;
+                   j := j + 1;
+             end;
+             nvPost := nvPost + 1; //yet another vertex survives
+          end; //not yet clustered
+      end; //for each vertex
+   if nvPost = nv then goto 666; //no clusters - no change!
+   //remap vertices
+   oldVert := Copy(vertices, Low(vertices), MaxInt);
+   for i := 0 to (nv -1) do
+       vertices[remap[i]] := oldVert[i];
+   setlength(vertices, nvPost);
+   oldVert := nil;
+   //remap vertex colors
+   if length(vRGBA) = nv then begin
+      oldRGBA := Copy(vRGBA, 0, MaxInt);
+      for i := 0 to (nv-1) do
+          vRGBA[remap[i]]:= oldRGBA[i];
+      setlength(vRGBA, nvPost);
+      oldRGBA := nil;
+   end;
+   //remap faces to new vertices
+   oldFaces := Copy(faces, Low(faces), Length(faces));
+   nf := 0;
+   for i := 0 to (length(oldFaces) - 1) do begin
+        face.X := remap[oldFaces[i].X];
+        face.Y := remap[oldFaces[i].Y];
+        face.Z := remap[oldFaces[i].Z];
+        if (face.X = face.Y) or (face.X = face.Z) or (face.Y = face.Z) then continue;  //exclude degenerate faces
+        Faces[nf] :=  face;
+        nf := nf + 1;
+   end;
+   oldFaces := nil;
+   setlength(faces, nf);
+   //RemoveDegenerateTriangles(faces);  //not required, done as we built new faces
+666:
+    s  := nil;
+    remap := nil;
+end;
+{$ENDIF}
 
 procedure ClusterVertex( var faces: TFaces; var vertices: TVertices; Radius: single);
 label

@@ -33,6 +33,7 @@ LayerOptionsBtn: TButton;
  CenterPanel: TPanel;
  LayerAOMapMenu: TMenuItem;
  LayerPainHideMenu: TMenuItem;
+ overlayoverlapoverwrite1: TMenuItem;
  overlayopacity1: TMenuItem;
  PaintModeAutomatic: TMenuItem;
  PaintModeHideBrightHideDarkMenu: TMenuItem;
@@ -1191,6 +1192,16 @@ begin
       OVERLAYSMOOTHVOXELWISEDATA(BOOL(A));
 end;
 
+function PyOVERLAYOVERLAPOVERWRITE(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  A: integer;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 'i:overlayoverlapoverwrite', @A)) then
+      OVERLAYOVERLAPOVERWRITE(BOOL(A));
+end;
+
 function PySHADERFORBACKGROUNDONLY(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
@@ -1659,6 +1670,7 @@ begin
     AddMethod('overlayload', @PyOVERLAYLOAD, ' overlayload(filename) -> Load an image on top of prior images.');
     AddMethod('overlayminmax', @PyOVERLAYMINMAX, ' overlayminmax(layer, min, max) -> Sets the color range for the overlay (layer 0 = background).');
     AddMethod('overlayopacity', @PyOVERLAYOPACITY, ' overlayopacity(overlayLayer, opacity) -> This feature allows you to adjust individual overlays transparency from transparent (0) to opaque (100).');
+    AddMethod('overlayoverlapoverwrite', @PyOVERLAYOVERLAPOVERWRITE, ' overlayoverlapoverwrite(overwrite) -> Does an overlapping overlay overwrite existing color (1) or are the colors blanded (0).');
     AddMethod('overlaysmoothvoxelwisedata', @PyOVERLAYSMOOTHVOXELWISEDATA, ' overlaysmoothvoxelwisedata(smooth) -> Determines if overlays are loaded using interpolation (smooth, 1) or nearest neighbor (un-smoothed, 0) interpolation.');
     AddMethod('overlaytranslucent', @PyOVERLAYTRANSLUCENT, ' overlaytranslucent(overlayLayer, translucent) -> This feature allows you to make individual overlays translucent or opaque.');
     AddMethod('overlaytransparencyonbackground', @PyOVERLAYTRANSPARENCYONBACKGROUND, ' overlaytransparencyonbackground(percent) -> Controls the opacity of the overlays on the background.');
@@ -3799,14 +3811,14 @@ var
   PrefForm: TForm;
   OkBtn, AdvancedBtn: TButton;
   {$IFDEF LCLCocoa} DarkModeCheck, RetinaCheck,{$ENDIF}
-  BlackDefaultBackgroundCheck, BitmapAlphaCheck, SmoothVoxelwiseDataCheck, TracksAreTubesCheck: TCheckBox;
+  OverlappingOverlaysOverwriteCheck, BlackDefaultBackgroundCheck, BitmapAlphaCheck, SmoothVoxelwiseDataCheck, TracksAreTubesCheck: TCheckBox;
   bmpEdit: TEdit;
   s: string;
   Quality: integer;
   searchRec: TSearchRec;
   FontCombo, ZDimIsUpCombo, QualityCombo, SaveAsFormatCombo: TComboBox;
   bmpLabel, QualityLabel: TLabel;
-  isFontChanged, isAdvancedPrefs {$IFDEF LCLCocoa}, isDarkModeChanged, isRetinaChanged {$ENDIF} : boolean;
+  isOverlappingOverlaysOverwriteChanged, isFontChanged, isAdvancedPrefs {$IFDEF LCLCocoa}, isDarkModeChanged, isRetinaChanged {$ENDIF} : boolean;
 begin
   PrefForm:=TForm.Create(nil);
   //PrefForm.SetBounds(100, 100, 520, 422);
@@ -4023,8 +4035,6 @@ begin
   BlackDefaultBackgroundCheck:=TCheckBox.create(PrefForm);
   BlackDefaultBackgroundCheck.Checked := gPrefs.BlackDefaultBackground;
   BlackDefaultBackgroundCheck.Caption:='Black Default Background';
-  //BlackDefaultBackgroundCheck.Left := 8;
-  //BlackDefaultBackgroundCheck.Top := 278;
   BlackDefaultBackgroundCheck.AutoSize := true;
   BlackDefaultBackgroundCheck.AnchorSide[akTop].Side := asrBottom;
   BlackDefaultBackgroundCheck.AnchorSide[akTop].Control := SaveAsFormatCombo;
@@ -4032,8 +4042,19 @@ begin
   BlackDefaultBackgroundCheck.AnchorSide[akLeft].Side := asrLeft;
   BlackDefaultBackgroundCheck.AnchorSide[akLeft].Control := PrefForm;
   BlackDefaultBackgroundCheck.BorderSpacing.Left := 6;
-
   BlackDefaultBackgroundCheck.Parent:=PrefForm;
+  //
+  OverlappingOverlaysOverwriteCheck:=TCheckBox.create(PrefForm);
+  OverlappingOverlaysOverwriteCheck.Checked := gPrefs.OverlappingOverlaysOverwrite;
+  OverlappingOverlaysOverwriteCheck.Caption:='Overlapping Overlays Overwrite (Order Matters)';
+  OverlappingOverlaysOverwriteCheck.AutoSize := true;
+  OverlappingOverlaysOverwriteCheck.AnchorSide[akTop].Side := asrBottom;
+  OverlappingOverlaysOverwriteCheck.AnchorSide[akTop].Control := BlackDefaultBackgroundCheck;
+  OverlappingOverlaysOverwriteCheck.BorderSpacing.Top := 6;
+  OverlappingOverlaysOverwriteCheck.AnchorSide[akLeft].Side := asrLeft;
+  OverlappingOverlaysOverwriteCheck.AnchorSide[akLeft].Control := PrefForm;
+  OverlappingOverlaysOverwriteCheck.BorderSpacing.Left := 6;
+  OverlappingOverlaysOverwriteCheck.Parent:=PrefForm;
   {$IFDEF LCLCocoa}
   RetinaCheck:=TCheckBox.create(PrefForm);
   RetinaCheck.Checked := gPrefs.RetinaDisplay;
@@ -4042,7 +4063,7 @@ begin
   //RetinaCheck.Top := 308;
   RetinaCheck.AutoSize := true;
   RetinaCheck.AnchorSide[akTop].Side := asrBottom;
-  RetinaCheck.AnchorSide[akTop].Control := BlackDefaultBackgroundCheck;
+  RetinaCheck.AnchorSide[akTop].Control := OverlappingOverlaysOverwriteCheck;
   RetinaCheck.BorderSpacing.Top := 6;
   RetinaCheck.AnchorSide[akLeft].Side := asrLeft;
   RetinaCheck.AnchorSide[akLeft].Control := PrefForm;
@@ -4133,6 +4154,9 @@ begin
       gPrefs.ZDimIsUp := true;
   gMesh.isZDimIsUp := gPrefs.ZDimIsUp;
   gNode.isZDimIsUp := gPrefs.ZDimIsUp;
+  isOverlappingOverlaysOverwriteChanged := gPrefs.OverlappingOverlaysOverwrite <> OverlappingOverlaysOverwriteCheck.Checked;
+  gPrefs.OverlappingOverlaysOverwrite := OverlappingOverlaysOverwriteCheck.Checked;
+  gMesh.OverlappingOverlaysOverwrite := gPrefs.OverlappingOverlaysOverwrite;
   if isFontChanged then
        GLForm1.UpdateFont(false);
   //gPrefs.SaveAsFormat := SaveAsCombo.ItemIndex;
@@ -4167,6 +4191,8 @@ begin
       GLBoxRequestUpdate(Sender);
   if  isAdvancedPrefs then
      Quit2TextEditor;
+  if isOverlappingOverlaysOverwriteChanged then
+     OverlayTimer.Enabled := true;
 end; // PrefMenuClick()
 procedure TGLForm1.QuickColorClick(Sender: TObject);
 begin
@@ -5862,7 +5888,8 @@ const
      //prwm expects normals
      kMeshFilter = 'OBJ (Widely supported)|*.obj|GIfTI (Neuroimaging)|*.gii|MZ3 (Small and fast)|*.mz3|PLY (Widely supported)|*.ply|VRML (Shapeways color printing)|*.wrl|STL (Large and slow)|*.stl';
 var
-   nam, ext, x: string;
+   pth, nam, ext, x: string;
+   i: integer;
 begin
   //mesh.SaveMesh('/Users/rorden/nrrdify/tst.prwm'); exit;
   if length(mesh.Faces) < 1 then begin
@@ -5900,6 +5927,14 @@ begin
      SaveMeshDialog.Filename := SaveMeshDialog.Filename + x;
   end;
   mesh.SaveMesh(SaveMeshDialog.Filename);
+  if (x = '.MZ3') and (isSaveOverlays) and (mesh.OpenOverlays > 0) then begin
+     FilenameParts (SaveMeshDialog.Filename, pth,nam,ext);
+     for i := 1 to mesh.OpenOverlays do begin
+         if (length(mesh.overlay[i].intensity) > 1) and (length(mesh.overlay[i].faces) < 1) then begin
+            mesh.SaveOverlay(pth+nam+inttostr(i)+'.mz3', i);
+         end;
+     end;
+  end;
   (*if (x = '.WRL') then
      mesh.SaveVrml(SaveMeshDialog.Filename, gPrefs.ObjColor)
   else if (x = '.MZ3') then
@@ -6079,9 +6114,10 @@ begin
   CreateMRU;
   FormCreateShaders;
   gPrefs.RenderQuality:= kRenderBetter;// kRenderPoor; ;
-  if (not ResetIniDefaults) and (not forceReset) then
-    IniFile(true,IniName,gPrefs)
-  else begin
+  if (not ResetIniDefaults) and (not forceReset) then  begin
+     {$IFDEF UNIX} writeln('Loading preferences: '+IniName);{$ENDIF}
+     IniFile(true,IniName,gPrefs)
+  end else begin
     SetDefaultPrefs(gPrefs,true, true);//reset everything to defaults!
     if MessageDlg('Use advanced graphics? Press "Yes" for better quality. Press "Cancel" for old hardware.', mtConfirmation, [mbYes, mbCancel], 0) = mrCancel then
       gPrefs.RenderQuality:= kRenderPoor;
@@ -6111,6 +6147,7 @@ begin
   gMesh := TMesh.Create;
   gMesh.isBusy := true;
   gNode := TMesh.Create;
+  gMesh.OverlappingOverlaysOverwrite:= gPrefs.OverlappingOverlaysOverwrite;
   gMesh.isZDimIsUp := gPrefs.ZDimIsUp;
   gNode.isZDimIsUp := gPrefs.ZDimIsUp;
   gTrack := TTrack.Create;

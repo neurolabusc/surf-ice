@@ -6,10 +6,12 @@
   <string>English</string>
   <key>CFBundleExecutable</key>
   <string>surfice</string>
+    <key>CFBundleIconFile</key>
+  <string>surfice</string>
   <key>CFBundleName</key>
   <string>Surf Ice</string>
   <key>CFBundleIdentifier</key>
-  <string>com.company.surfice</string>
+  <string>www.mricro.com.surfice</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundlePackageType</key>
@@ -17,7 +19,7 @@
   <key>CFBundleSignature</key>
   <string>surf</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.1</string>
+  <string>1.0.20190803</string>
   <key>CFBundleVersion</key>
   <string>1</string>
   <key>CSResourcesFileMapped</key>
@@ -29,8 +31,32 @@
       <string>Viewer</string>
       <key>CFBundleTypeExtensions</key>
       <array>
-        <string>*</string>
+            <string>3ds</string>
+            <string>asc</string>
+            <string>ctm</string>
+            <string>dxf</string>
+            <string>edge</string>
+            <string>gii</string>
+            <string>gts</string>
+            <string>lwo</string>
+            <string>ms3d</string>
+            <string>mz3</string>
+            <string>node</string>
+            <string>nodez</string>
+            <string>nv</string>
+            <string>obj</string>
+            <string>off</string>
+            <string>ply</string>
+            <string>srf</string>
+            <string>stl</string>
+            <string>trk</string>
+            <string>vtk</string>
+            <string>vtk</string>
       </array>
+      <key>CFBundleTypeName</key>
+      <string>Surfice Mesh</string>
+      <key>CFBundleTypeIconFile</key>
+      <string>surfice_doc.icns</string>
       <key>CFBundleTypeOSTypes</key>
       <array>
         <string>fold</string>

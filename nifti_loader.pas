@@ -29,6 +29,7 @@ TNIFTI = class
     procedure setMatrix;
     procedure SetDescriptives;
   public
+    isBinary: boolean;
     function mm2intensity( Xmm, Ymm, Zmm: single; isInterpolate: boolean): single;
     function mm2vox0(Xmm, Ymm, Zmm: single): TPoint3i; //rounded, voxels indexed from 0! e.g. if dim[0]=50 then output will range 0..49
     function validVox0(vox: TPoint3i): boolean; //returns true if voxel [indexed from 0] is inside volume, e.g. if dim[0]=50 then vox.X must be in range 0..49
@@ -302,6 +303,7 @@ end; //func swap8r
 constructor  TNIFTI.Create;
 begin
   isZeroMasked := false;
+  isBinary := false;
   isLoad4D := false;
   setlength(img,0);
      //
@@ -589,6 +591,9 @@ end;
 // K_gzBytes_headerAndImageUncompressed= 0;
 
 function TNIFTI.readImg(const FileName: string; isSwap: boolean; gzFlag: int64): boolean; //read first volume
+const
+  k0 : single = 0.0;
+  k1 : single = 1.0;
 var
    f: File;
    i,nVol, nVox, nByte: integer;
@@ -626,6 +631,14 @@ begin
        exit;
   end;
   if not ImgRawToSingle(imgBytes, isSwap) then exit;
+  isBinary := true;
+  //nVox:= hdr.dim[1] * hdr.dim[2] * hdr.dim[3] * hdr.dim[4];
+  i := 0;
+  while (i < nVox) and (isBinary) do begin
+        if (img[i] <> k0) and (img[i] <> k1) then
+          isBinary := false;
+        i := i + 1;
+  end;
   result := true;
 end;
 

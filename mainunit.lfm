@@ -27,22 +27,22 @@ object GLForm1: TGLForm1
     Align = alLeft
     BorderStyle = bsNone
     ClientHeight = 514
-    ClientWidth = 246
+    ClientWidth = 261
     Constraints.MaxWidth = 272
     Constraints.MinWidth = 4
     ParentFont = False
     TabOrder = 2
     object OverlayBox: TGroupBox
       Left = 0
-      Height = 181
+      Height = 182
       Hint = 'Click on name to hide, control+click to reverse palette'
       Top = 0
-      Width = 246
+      Width = 261
       Align = alTop
       AutoSize = True
       Caption = 'Overlays'
       ClientHeight = 163
-      ClientWidth = 238
+      ClientWidth = 251
       Constraints.MinHeight = 2
       ParentFont = False
       ParentShowHint = False
@@ -54,7 +54,7 @@ object GLForm1: TGLForm1
         Height = 72
         Hint = 'Right-click for options'
         Top = 0
-        Width = 238
+        Width = 251
         Align = alTop
         Constraints.MaxHeight = 72
         ItemHeight = 0
@@ -190,14 +190,14 @@ object GLForm1: TGLForm1
     end
     object ClipBox: TGroupBox
       Left = 0
-      Height = 81
-      Top = 284
-      Width = 246
+      Height = 82
+      Top = 286
+      Width = 261
       Align = alTop
       AutoSize = True
       Caption = 'Clipping'
       ClientHeight = 63
-      ClientWidth = 238
+      ClientWidth = 251
       ParentFont = False
       TabOrder = 0
       OnDblClick = DepthLabelDblClick
@@ -304,14 +304,14 @@ object GLForm1: TGLForm1
     object TrackBox: TGroupBox
       Tag = 270
       Left = 0
-      Height = 103
-      Top = 181
-      Width = 246
+      Height = 104
+      Top = 182
+      Width = 261
       Align = alTop
       AutoSize = True
       Caption = 'Tracks'
       ClientHeight = 85
-      ClientWidth = 238
+      ClientWidth = 251
       ParentFont = False
       TabOrder = 2
       Visible = False
@@ -478,14 +478,14 @@ object GLForm1: TGLForm1
     object NodeBox: TGroupBox
       Tag = 270
       Left = 0
-      Height = 106
-      Top = 365
-      Width = 246
+      Height = 107
+      Top = 368
+      Width = 261
       Align = alTop
       AutoSize = True
       Caption = 'Nodes'
       ClientHeight = 88
-      ClientWidth = 238
+      ClientWidth = 251
       ParentFont = False
       TabOrder = 3
       Visible = False
@@ -688,14 +688,14 @@ object GLForm1: TGLForm1
     object EdgeBox: TGroupBox
       Tag = 270
       Left = 0
-      Height = 84
-      Top = 471
-      Width = 246
+      Height = 85
+      Top = 475
+      Width = 261
       Align = alTop
       AutoSize = True
       Caption = 'Edges'
       ClientHeight = 66
-      ClientWidth = 238
+      ClientWidth = 251
       ParentFont = False
       TabOrder = 4
       Visible = False
@@ -873,14 +873,14 @@ object GLForm1: TGLForm1
     object MeshColorBox: TGroupBox
       Tag = 270
       Left = 0
-      Height = 60
-      Top = 555
-      Width = 246
+      Height = 61
+      Top = 560
+      Width = 261
       Align = alTop
       AutoSize = True
       Caption = 'Mesh Color'
       ClientHeight = 42
-      ClientWidth = 238
+      ClientWidth = 251
       ParentFont = False
       TabOrder = 6
       Visible = False
@@ -948,14 +948,14 @@ object GLForm1: TGLForm1
     end
     object BackgroundBox: TGroupBox
       Left = 0
-      Height = 59
-      Top = 615
-      Width = 246
+      Height = 60
+      Top = 621
+      Width = 261
       Align = alTop
       AutoSize = True
       Caption = 'Background Mesh'
       ClientHeight = 41
-      ClientWidth = 238
+      ClientWidth = 251
       ParentFont = False
       TabOrder = 5
       object meshAlphaTrack: TTrackBar
@@ -1055,14 +1055,14 @@ object GLForm1: TGLForm1
     end
     object ShaderBox: TGroupBox
       Left = 0
-      Height = 281
-      Top = 674
-      Width = 246
+      Height = 282
+      Top = 681
+      Width = 261
       Align = alClient
       AutoSize = True
       Caption = 'Render'
       ClientHeight = 263
-      ClientWidth = 238
+      ClientWidth = 251
       ParentFont = False
       TabOrder = 7
       OnResize = ShaderBoxResize
@@ -1485,7 +1485,7 @@ object GLForm1: TGLForm1
         Left = 0
         Height = 54
         Top = 209
-        Width = 238
+        Width = 251
         Align = alBottom
         Lines.Strings = (
           ''
@@ -1579,14 +1579,14 @@ object GLForm1: TGLForm1
       Width = 8
       Align = alClient
       Caption = 'Scripting'
-      ClientHeight = 496
+      ClientHeight = 495
       ClientWidth = 0
       ParentFont = False
       TabOrder = 0
       OnDblClick = ScriptPanelDblClick
       object ScriptMemo: TMemo
         Left = 0
-        Height = 290
+        Height = 289
         Top = 0
         Width = 0
         Align = alClient
@@ -1608,7 +1608,7 @@ object GLForm1: TGLForm1
       object ScriptOutputMemo: TMemo
         Left = 0
         Height = 200
-        Top = 296
+        Top = 295
         Width = 0
         Align = alBottom
         BorderStyle = bsNone
@@ -1625,7 +1625,7 @@ object GLForm1: TGLForm1
         Cursor = crVSplit
         Left = 0
         Height = 6
-        Top = 290
+        Top = 289
         Width = 0
         Align = alBottom
         ResizeAnchor = akBottom
@@ -2231,6 +2231,12 @@ object GLForm1: TGLForm1
             Tag = 1211
             Caption = 'overlayvisible'
             Hint = 'overlayvisible (overlay: integer; visible: boolean) This feature allows you to make individual overlays visible or invisible.'
+            OnClick = InsertCommand
+          end
+          object overlayoverlapoverwrite1: TMenuItem
+            Tag = 1
+            Caption = 'overlayoverlapoverwrite'
+            Hint = 'overlayoverlapoverwrite (overwrite: boolean) Will overlapping overlays by blended together or will the top overlay hide overlays beneath it.'
             OnClick = InsertCommand
           end
           object overlaysmoothvoxelwisedata1: TMenuItem

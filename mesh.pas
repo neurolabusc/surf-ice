@@ -36,11 +36,12 @@ type
     LUT: TLUT;
     minIntensity, maxIntensity, windowScaledMin, windowScaledMax: single;
     filename: string;
+    isBinary: boolean;
     intensity: TFloats;
     //next: if loaded as mesh...
     faces : TFaces;
     vertices: TVertices;
-    vertexRGBA : array of TRGBA;
+    vertexRGBA : TVertexRGBA; //array of TRGBA;
     vertexAtlas: TInts; //what atlss regions does this vertex belong to, e.g. [7, 8, 17...] the 3rd vertex belongs to region 17
     atlasTransparentFilter: TBools;
     atlasHideFilter: TInts; //atlas show these atlas regions, e.g. if [7, 8, 22] then only regions 7,8 and 22 will be visible
@@ -119,6 +120,7 @@ type
     function LoadOff(const FileName: string): boolean;
     function LoadOffBin(const FileName: string): boolean;
     function LoadPly2(const FileName: string): boolean;
+    function CullUnusedVertices(): boolean;
     function LoadSrf(const FileName: string): boolean;
     function LoadSurf(const FileName: string): boolean;
     function LoadTri(const FileName: string): boolean;
@@ -147,6 +149,7 @@ type
     procedure LoadVtk(const FileName: string);
     procedure LoadW(const FileName: string; lOverlayIndex: integer);
   public
+    OverlappingOverlaysOverwrite: boolean;
     procedure MakePyramid;
     //function AtlasStatMapCore(AtlasName, StatName: string; Indices: TInts; Intensities: TFloats): string;
     //function AtlasMaxIndex: integer;
@@ -303,7 +306,6 @@ var
   vRGBA, vRGBAmx :TVertexRGBA;
   vNumNeighbor: array of integer;
   vSumRGBBA: array of TPoint4f;
-  //isCurvLayer: boolean;
   isOverlayPainting : boolean = false;
 begin
   if (length(f) < 1) or (length(v) < 3) then exit;
@@ -331,7 +333,6 @@ begin
         end;
         {$IFDEF COREGL}
         //2019: required only when no overlays open - try adjusting transparency of Altas
-        //GLForm1.Caption := floattostr(vertexRGBAAlpha);
         if (OpenOverlays < 1) and (vertexRGBAAlpha < 1.0) then
           for i := 0 to (length(v)-1) do
               vRGBA[i] := mixRGBA( Clr, vRGBA[i], vertexRGBAAlpha);
@@ -408,7 +409,41 @@ begin
           for i := 0 to (length(v)-1) do
               vRGBA[i] := blendRGBA(vRGBA[i],vRGBAmx[i]);
         end else begin //not additive: mix overlays
-            for c :=  OpenOverlays downto 1 do begin
+          {$DEFINE NFX}
+          {$IFDEF NFX}
+          //see https://en.wikipedia.org/wiki/Alpha_compositing#Analytical_derivation_of_the_over_operator
+          if OverlappingOverlaysOverwrite then begin
+          for i := 0 to (length(v)-1) do
+              vRGBA[i].A := 0;
+          for c :=  OpenOverlays downto 1 do begin
+              if (not overlay[c].aoMap) and (overlay[c].OpacityPercent <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then begin
+                 frac := overlay[c].OpacityPercent / 100;
+                 if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
+                    mn := overlay[c].windowScaledMin;
+                    mx := overlay[c].windowScaledMax;
+                 end else begin
+                     mx := overlay[c].windowScaledMin;
+                     mn := overlay[c].windowScaledMax;
+                 end;
+                 volInc :=  length(v) *  (overlay[c].currentVolume - 1);
+                 if vRemap <> nil then begin //filtered atlas: vertices have been decimated
+                   for i := 0 to (length(v)-1) do begin
+                       rgb := inten2rgb(overlay[c].intensity[vRemap[i]+volInc], mn, mx, overlay[c].LUT, overlay[c].PaintMode);
+                       rgb.A := round(rgb.A * frac);
+                       vRGBA[i] := blendRGBAover(vRGBA[i], rgb);
+                   end; //for i
+                 end else begin
+                   for i := 0 to (length(v)-1) do begin
+                       rgb := inten2rgb(overlay[c].intensity[i+volInc], mn, mx, overlay[c].LUT, overlay[c].PaintMode);
+                       rgb.A := round(rgb.A * frac);
+                       vRGBA[i] := blendRGBAover(vRGBA[i], rgb);
+                   end; //for i
+                 end;
+              end; //if visible
+            end;  //for c
+          end else begin
+          {$ENDIF}
+          for c :=  OpenOverlays downto 1 do begin
               if (not overlay[c].aoMap) and (overlay[c].OpacityPercent <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then begin
                  frac := overlay[c].OpacityPercent / 100;
                  if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
@@ -434,6 +469,9 @@ begin
                  end;
               end; //if visible
             end;  //for c
+          {$IFDEF NFX}
+          end;
+           {$ENDIF}
        end;
        //finish
        if  (length(vtxRGBA) < 1) then begin //feather edges of overlay
@@ -1362,8 +1400,6 @@ begin
 end;*)
 
 constructor TMesh.Create;
-var
-   i: integer;
 begin
      {$IFDEF COREGL}
      vao := 0;
@@ -1375,6 +1411,7 @@ begin
      displayListOverlay := 0;
      {$ENDIF}
      isZDimIsUp := true;
+     OverlappingOverlaysOverwrite := true;
      isVisible := true;
      OpenOverlays := 0;
      OverlayTransparency := 0;
@@ -2005,13 +2042,18 @@ label 123;
 var
    f: TextFile;
    i, num_v, num_f: integer;
+   str: string;
 begin
      result := false;
      if (FSize(FileName) < 64) then exit;
      FileMode := fmOpenRead;
      AssignFile(f, FileName);
        Reset(f);
-       Readln(f);  //% #!ascii
+       Readln(f,str);  //% #!ascii
+       if PosEx('#!ascii',str) < 1 then begin
+          CloseFile(f);
+          exit;
+       end;
        try
           ReadLn(f, num_v, num_f);
        except
@@ -5337,10 +5379,79 @@ begin
      UnifyVertices(faces, vertices);
 end; // LoadDxf()
 
+function TMesh.CullUnusedVertices(): boolean;
+//https://www.nitrc.org/forum/message.php?msg_id=27399
+type
+    TVtx = packed record
+         nUsed, newIdx: integer;
+    end;
+var
+   vs: array of TVtx;
+   oldRGBA : TVertexRGBA;//array of TRGBA;
+   oldVertices : TVertices;
+   nf, nvIn, nvOut, i: integer;
+begin
+     result := false;
+     nvIn := length(vertices);
+     nf := length(faces);
+     if nf < 1 then exit;
+     if nvIn < 3 then exit;
+     if not CheckMesh then exit; //make sure faces indexed from 0
+     setlength(vs, nvIn);
+     for i := 0 to (nvIn-1) do
+         vs[i].nUsed:= 0;
+     //check if all vertices are used
+     for i := 0 to (nf - 1) do begin
+         inc(vs[faces[i].x].nUsed);
+         inc(vs[faces[i].y].nUsed);
+         inc(vs[faces[i].z].nUsed);
+     end;
+     nvOut := 0;
+     for i := 0 to (nvIn-1) do begin
+         if (vs[i].nUsed = 0) then continue;
+         vs[i].newIdx := nvOut;
+         inc(nvOut);
+     end;
+     if (nVin  = nVout) or (nVout = 0) then begin //nothing to do
+        vs := nil;
+        exit;
+     end;
+     {$IFDEF UNIX}
+     writeln(format('Unused vertices culled %d -> %d',[nvIn, nvOut]));
+     {$ENDIF}
+     setlength(oldVertices, nVin);
+     oldVertices := Copy(vertices, 0, MaxInt);
+     setlength(Vertices, nvOut);
+     for i := 0 to (nvIn-1) do begin
+         if (vs[i].nUsed = 0) then continue;
+         Vertices[vs[i].newIdx]:= oldVertices[i];
+     end;
+     oldVertices := nil;
+     if length(vertexRGBA) = nvIn then begin
+       setlength(oldRGBA, nvIn);
+       oldRGBA := Copy(vertexRGBA, 0, MaxInt);
+       setlength(vertexRGBA, nvOut);
+       for i := 0 to (nvIn-1) do begin
+           if (vs[i].nUsed = 0) then continue;
+           vertexRGBA[vs[i].newIdx]:= oldRGBA[i];
+       end;
+       oldRGBA := nil;
+     end;
+
+     for i := 0 to (nf - 1) do begin
+       faces[i].x := vs[faces[i].x].newIdx;
+       faces[i].y := vs[faces[i].y].newIdx;
+       faces[i].z := vs[faces[i].z].newIdx;
+     end;
+     vs := nil;
+     CheckMesh;
+end;
+
 function TMesh.LoadSrf(const FileName: string): boolean;
 //ALWAYS little-endian, n.b. despite docs the 'reserve' may not be zero: NeuroElf refers to this as "ExtendedNeighbors"
 // http://support.brainvoyager.com/automation-aamp-development/23-file-formats/382-developer-guide-26-file-formats-overview.html
 // http://support.brainvoyager.com/automation-aamp-development/23-file-formats/375-users-guide-23-the-format-of-srf-files.html
+// https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/344-users-guide-2-3-the-format-of-srf-files
 type
   THdr = packed record
      vers: single;
@@ -5369,13 +5480,22 @@ begin
   if sz < 64 then goto 666;
   blockread(f, hdr, SizeOf(hdr) );
   {$IFNDEF ENDIAN_LITTLE} need to byte-swap SRF files {$ENDIF}
-  if (specialsingle(hdr.vers)) or (hdr.vers < 0) or (hdr.vers > 32) or (hdr.nTriangles < 1) or (hdr.nVertices < 3) then begin //exit without error - perhaps this is a FreeSurfer SRF
+  if (specialsingle(hdr.vers)) or (hdr.reserve <> 0) or (hdr.vers < 0) or (hdr.vers > 32) or (hdr.nTriangles < 1) or (hdr.nVertices < 3) then begin //exit without error - perhaps this is a FreeSurfer SRF
      CloseFile(f);
      exit;
   end;
-  if (sizeof(hdr) + (int64(hdr.nVertices) * 3 * 4)+ (int64(hdr.nTriangles) * 3 * 4)) > sz then goto 666;
+  //showmessage(format('%d %d', [hdr.nTriangles,hdr.nVertices]));
+  //showmessage(format('%d %d',[(sizeof(hdr) + (int64(hdr.nVertices) * 3 * 4)+ (int64(hdr.nTriangles) * 3 * 4)), sz]));
+  //szX = expected size: header + vertices*4(float32)*3
+  //  header size
+  //  6*nV*4 = each vertex has 6 coordinates (x,y,z) 3 normals (x,y,z), each as 32-bit float
+  //  8*4 = concave/convex colors 8 * 32 bit float
+  //  nV * 4 = mesh color
+  //  nV * 4 + ? Nearest neighbors
+  if (sizeof(hdr) + (int64(hdr.nVertices) * 6 * 4)+ (int64(hdr.nTriangles) * 3 * 4)) > sz then goto 666;
   setlength(vertices, hdr.nVertices);
   setlength(floats, hdr.nVertices);
+  //showmessage(format('%g %g %g',[hdr.meshCenterX, hdr.meshCenterY, hdr.meshCenterZ]));
   blockread(f, floats[0],  int64(hdr.nVertices) * sizeof(single)); //coord X
   for i := 0 to high(floats) do
       vertices[i].Y := -(floats[i]-hdr.meshCenterX);
@@ -5420,7 +5540,8 @@ begin
   //yikes: we have to read the neighbor group: no alternative since no offset to faces and file ends with a variable length string!
   for i := 1 to hdr.nVertices do begin
       blockread(f, nNeighbors,  sizeof(int32));
-      if nNeighbors < 1 then goto 666;
+      if nNeighbors < 0 then goto 666;
+      if nNeighbors < 1 then continue;
       for j := 1 to nNeighbors do
           blockread(f, neighbor,  sizeof(int32));
   end;
@@ -5430,8 +5551,14 @@ begin
   result := true;
   666:
   CloseFile(f);
-  if not result then
+  if not result then begin
        showmessage('Unable to decode BrainVoyager SRF file '+ FileName);
+       faces := nil;
+       vertexRGBA := nil;
+       vertices := nil;
+  end;
+  CullUnusedVertices();
+  UnifyVertices2(faces, vertices,vertexRGBA); //<- this could further enhance vertexRGBA
 end; //LoadSrf()
 
 procedure SwapPt3f(var p: TPoint3f);
@@ -7215,7 +7342,7 @@ begin
 	 if isEmbeddedEdge then
 		LoadEdge(Filename, isEmbeddedEdge);
 	end;
-	if (ext = '.SRF') and (not LoadSrf(Filename)) then
+        if (ext = '.SRF') and (not LoadSrf(Filename)) then
 	   LoadAsc_Srf(Filename);
 	if (ext = '.TRI') then
 	   LoadTri(Filename);
@@ -8282,6 +8409,7 @@ begin
    setlength(overlay[lOverlayIndex].intensity, num_v);
    for i := 0 to (num_v-1) do
        overlay[lOverlayIndex].intensity[i] := nii.mm2intensity(vertices[i].X, vertices[i].Y, vertices[i].Z, lLoadSmooth);
+   overlay[lOverlayIndex].isBinary := nii.isBinary;
    nii.free;
 end; // LoadNii()
 
@@ -8290,6 +8418,7 @@ var
    lMesh: TMesh;
 begin
      lMesh := TMesh.Create;
+     overlay[lOverlayIndex].isBinary := false;
      if lMesh.LoadFromFile(Filename) then begin
         overlay[lOverlayIndex].faces := Copy(lMesh.faces, 0, MaxInt);
         overlay[lOverlayIndex].vertices := Copy(lMesh.vertices, 0, MaxInt);
@@ -8363,9 +8492,13 @@ begin
 end;
 
 procedure TMesh.SetOverlayDescriptives(lOverlayIndex: integer);
+const
+  k0 : single = 0.0;
+  k1 : single = 1.0;
 var
    mx, mn, mnNot0, v: single;
    i, num_v, lLog10: integer;
+   isBinary : boolean;
 begin
   overlay[lOverlayIndex].LUTinvert := false;
   overlay[lOverlayIndex].aoMap := false;
@@ -8380,6 +8513,20 @@ begin
       if mn > overlay[lOverlayIndex].intensity[i] then mn := overlay[lOverlayIndex].intensity  [i];
   //2nd pass: histogram for percent...
   MinMaxPct(lOverlayIndex, num_v, mx, mn, false);
+  //set binary if mesh is only 0 and 1
+  isBinary := true;
+  if (mn <> k0) and (mx <> k1) then isBinary := false;
+  if overlay[lOverlayIndex].isBinary then isBinary := false; //no need to check while loop, e.g. interpolated voxels
+  if isBinary then begin
+     i := 0;
+     while (i < num_v) and (isBinary) do begin
+           if (overlay[lOverlayIndex].intensity[i] <> k0) and (overlay[lOverlayIndex].intensity[i] <> k1) then
+              isBinary := false;
+           i := i + 1;
+     end;
+  end;
+  isBinary := isBinary or overlay[lOverlayIndex].isBinary;
+  //end set binary
   if mn = 0 then begin //find minimal value that is greater than zero
      mnNot0 := mx;
      for i := 0 to (num_v-1) do begin
@@ -8392,7 +8539,11 @@ begin
   overlay[lOverlayIndex].minIntensity := (mn);
   overlay[lOverlayIndex].maxIntensity := (mx);
   lLog10 := trunc(log10( mx-mn))-1;
-  if (mx > 4) and (mn < -1) then begin
+  if isBinary then begin
+    overlay[lOverlayIndex].windowScaledMin:= 0.5;
+    overlay[lOverlayIndex].windowScaledMax:= 0.5;
+
+  end else if (mx > 4) and (mn < -1) then begin
      overlay[lOverlayIndex].windowScaledMin:= 2;
      overlay[lOverlayIndex].windowScaledMax:= roundto(mx,lLog10);
   end else if (mx <= 0) and (mn < -4) then begin

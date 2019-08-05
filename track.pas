@@ -222,7 +222,7 @@ var
 
 begin
      v := RGBin;
-     if (randAmount < 0) or (randAmount > 1.0) then exit;
+     if (randAmount < 0) or (randAmount > 1.0) then randAmount := 0;
      s := random();
      v.X := (randAmount * s) + ((1-randAmount) * v.X);
      v.Y := (randAmount * s) + ((1-randAmount) * v.Y);

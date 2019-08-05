@@ -26,6 +26,7 @@ type
 function UpdateTransferFunction (var lIndex: integer; isInvert: boolean): TLUT;//change color table
 function CLUTDir: string;
 function blendRGBA(c1, c2: TRGBA ): TRGBA;
+function blendRGBAover(ca, cb: TRGBA ): TRGBA;
 function maxRGBA(c1, c2: TRGBA ): TRGBA;
 //function inten2rgb(intensity, mn, mx: single; lut: TLUT): TRGBA;
 function inten2rgb(intensity, mn, mx: single; lut: TLUT; mode: integer): TRGBA; overload;
@@ -41,6 +42,22 @@ uses mainunit;
 function isFreeSurferLUT(lIndex: integer): boolean;
 begin
      result := (lIndex >= 15) and (lIndex <= 18);
+end;
+
+function blendRGBAover(ca, cb: TRGBA ): TRGBA;
+//https://en.wikipedia.org/wiki/Alpha_compositing#Analytical_derivation_of_the_over_operator
+var
+  aa, ab, ao: single;
+begin
+  if cb.A = 0 then exit(ca);
+  if ca.A = 0 then exit(cb);
+  aa := ca.A / 255;
+  ab := cb.A / 255;
+  ao := 1.0 - (1.0-aa)*(1.0-ab);
+  result.R := round(((aa*ca.r)+(1-aa)*ab*cb.r)/ao) ;
+  result.G := round(((aa*ca.g)+(1-aa)*ab*cb.g)/ao) ;
+  result.B := round(((aa*ca.b)+(1-aa)*ab*cb.b)/ao) ;
+  result.A := round(ao * 255.0);
 end;
 
 function blendRGBA(c1, c2: TRGBA ): TRGBA;

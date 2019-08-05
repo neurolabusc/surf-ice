@@ -56,6 +56,7 @@ procedure OVERLAYTRANSLUCENT(lOverlay: integer; TRANSLUCENT: boolean);
 procedure OVERLAYOPACITY(lOverlay: integer; OPACITY: byte);
 procedure OVERLAYINVERT(lOverlay: integer; INVERT: boolean);
 procedure OVERLAYSMOOTHVOXELWISEDATA (SMOOTH: boolean);
+procedure OVERLAYOVERLAPOVERWRITE (OVERWRITE: boolean);
 procedure QUIT;
 procedure RESETDEFAULTS;
 procedure SAVEBMP(lFilename: string);
@@ -88,7 +89,7 @@ const
                (Ptr:@VERSION;Decl:'VERSION';Vars:'(): string')
              );
 
-knProc = 68;
+knProc = 69;
   kProcRA : array [1..knProc] of TScriptRec = (
   (Ptr:@ATLASSTATMAP;Decl:'ATLASSTATMAP';Vars:'(ATLASNAME, STATNAME: string; const Intensities: array of integer; const Intensities: array of single)'),
   (Ptr:@ATLASSATURATIONALPHA;Decl:'ATLASSATURATIONALPHA';Vars:'(lSaturation, lTransparency: single)'),
@@ -140,6 +141,7 @@ knProc = 68;
    (Ptr:@OVERLAYTRANSLUCENT;Decl:'OVERLAYTRANSLUCENT';Vars:'(lOverlay: integer; TRANSLUCENT: boolean)'),
    (Ptr:@OVERLAYINVERT;Decl:'OVERLAYINVERT';Vars:'(lOverlay: integer; INVERT: boolean)'),
    (Ptr:@OVERLAYSMOOTHVOXELWISEDATA;Decl:'OVERLAYSMOOTHVOXELWISEDATA';Vars:'(SMOOTH: boolean)'),
+   (Ptr:@OVERLAYOVERLAPOVERWRITE;Decl:'OVERLAYOVERLAPOVERWRITE';Vars:'(OVERWRITE: boolean)'),
    (Ptr:@QUIT;Decl:'QUIT';Vars:''),
    (Ptr:@RESETDEFAULTS;Decl:'RESETDEFAULTS';Vars:''),
    (Ptr:@SAVEBMP;Decl:'SAVEBMP';Vars:'(lFilename: string)'),
@@ -850,6 +852,13 @@ end;
 procedure OVERLAYINVERT(lOverlay: integer; INVERT: boolean);
 begin
      GLForm1.OverlayInvert(lOverlay, INVERT);
+end;
+
+procedure OVERLAYOVERLAPOVERWRITE  (OVERWRITE: boolean);
+begin
+  if (gMesh.OverlappingOverlaysOverwrite <> OVERWRITE) then GLForm1.OverlayTimer.Enabled := true;
+  gMesh.OverlappingOverlaysOverwrite := OVERWRITE;
+
 end;
 
 procedure OVERLAYSMOOTHVOXELWISEDATA (SMOOTH: boolean);
