@@ -33,6 +33,7 @@ LayerOptionsBtn: TButton;
  CenterPanel: TPanel;
  LayerAOMapMenu: TMenuItem;
  LayerPainHideMenu: TMenuItem;
+ PasteMenu: TMenuItem;
  overlayoverlapoverwrite1: TMenuItem;
  overlayopacity1: TMenuItem;
  PaintModeAutomatic: TMenuItem;
@@ -336,6 +337,7 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     procedure MatCapDropChange(Sender: TObject);
     procedure PaintModeAutomaticMenu(Sender: TObject);
     procedure PaintModeMenuClick(Sender: TObject);
+    procedure PasteMenuClick(Sender: TObject);
     procedure PrevOverlayMenuClick(Sender: TObject);
     procedure Shaders1Click(Sender: TObject);
     procedure UpdateLayerBox(NewLayers: boolean);
@@ -5485,10 +5487,23 @@ begin
   GLBoxRequestUpdate(Sender);
 end;
 
+procedure TGLForm1.PasteMenuClick(Sender: TObject);
+begin
+  if Clipboard.HasFormat(PredefinedClipboardFormat(pcfText)) and (ScriptMemo.Width > 20) and (ScriptMemo.Focused) then begin
+     ScriptMemo.PasteFromClipboard;
+     exit;
+  end;
+  showmessage('Use paste to insert text from clipboard into scripts');
+end;
+
 procedure TGLForm1.CopyMenuClick(Sender: TObject);
 var
  bmp: TBitmap;
 begin
+  if (ScriptMemo.Width > 20) and (ScriptMemo.SelLength > 0) then begin
+     ScriptMemo.CopyToClipboard;
+     exit;
+  end;
  bmp := ScreenShot();
  Clipboard.Assign(bmp);
  bmp.Free;
@@ -6239,6 +6254,7 @@ begin
   //ScriptMenu.ShortCut :=  ShortCut(Word('J'), [ssMeta]);
   OpenMenu.ShortCut :=  ShortCut(Word('O'), [ssMeta]);
   SaveMenu.ShortCut :=  ShortCut(Word('S'), [ssMeta]);
+  PasteMenu.ShortCut :=  ShortCut(Word('V'), [ssMeta]);
   CopyMenu.ShortCut :=  ShortCut(Word('C'), [ssMeta]);
   LeftMenu.ShortCut :=  ShortCut(Word('L'), [ssCtrl]);
   RightMenu.ShortCut :=  ShortCut(Word('R'), [ssCtrl]);

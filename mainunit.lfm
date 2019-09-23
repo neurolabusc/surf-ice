@@ -27,7 +27,7 @@ object GLForm1: TGLForm1
     Align = alLeft
     BorderStyle = bsNone
     ClientHeight = 514
-    ClientWidth = 261
+    ClientWidth = 246
     Constraints.MaxWidth = 272
     Constraints.MinWidth = 4
     ParentFont = False
@@ -37,12 +37,12 @@ object GLForm1: TGLForm1
       Height = 182
       Hint = 'Click on name to hide, control+click to reverse palette'
       Top = 0
-      Width = 261
+      Width = 246
       Align = alTop
       AutoSize = True
       Caption = 'Overlays'
       ClientHeight = 163
-      ClientWidth = 251
+      ClientWidth = 236
       Constraints.MinHeight = 2
       ParentFont = False
       ParentShowHint = False
@@ -54,7 +54,7 @@ object GLForm1: TGLForm1
         Height = 72
         Hint = 'Right-click for options'
         Top = 0
-        Width = 251
+        Width = 236
         Align = alTop
         Constraints.MaxHeight = 72
         ItemHeight = 0
@@ -192,12 +192,12 @@ object GLForm1: TGLForm1
       Left = 0
       Height = 82
       Top = 286
-      Width = 261
+      Width = 246
       Align = alTop
       AutoSize = True
       Caption = 'Clipping'
       ClientHeight = 63
-      ClientWidth = 251
+      ClientWidth = 236
       ParentFont = False
       TabOrder = 0
       OnDblClick = DepthLabelDblClick
@@ -306,12 +306,12 @@ object GLForm1: TGLForm1
       Left = 0
       Height = 104
       Top = 182
-      Width = 261
+      Width = 246
       Align = alTop
       AutoSize = True
       Caption = 'Tracks'
       ClientHeight = 85
-      ClientWidth = 251
+      ClientWidth = 236
       ParentFont = False
       TabOrder = 2
       Visible = False
@@ -480,12 +480,12 @@ object GLForm1: TGLForm1
       Left = 0
       Height = 107
       Top = 368
-      Width = 261
+      Width = 246
       Align = alTop
       AutoSize = True
       Caption = 'Nodes'
       ClientHeight = 88
-      ClientWidth = 251
+      ClientWidth = 236
       ParentFont = False
       TabOrder = 3
       Visible = False
@@ -690,12 +690,12 @@ object GLForm1: TGLForm1
       Left = 0
       Height = 85
       Top = 475
-      Width = 261
+      Width = 246
       Align = alTop
       AutoSize = True
       Caption = 'Edges'
       ClientHeight = 66
-      ClientWidth = 251
+      ClientWidth = 236
       ParentFont = False
       TabOrder = 4
       Visible = False
@@ -875,12 +875,12 @@ object GLForm1: TGLForm1
       Left = 0
       Height = 61
       Top = 560
-      Width = 261
+      Width = 246
       Align = alTop
       AutoSize = True
       Caption = 'Mesh Color'
       ClientHeight = 42
-      ClientWidth = 251
+      ClientWidth = 236
       ParentFont = False
       TabOrder = 6
       Visible = False
@@ -950,12 +950,12 @@ object GLForm1: TGLForm1
       Left = 0
       Height = 60
       Top = 621
-      Width = 261
+      Width = 246
       Align = alTop
       AutoSize = True
       Caption = 'Background Mesh'
       ClientHeight = 41
-      ClientWidth = 251
+      ClientWidth = 236
       ParentFont = False
       TabOrder = 5
       object meshAlphaTrack: TTrackBar
@@ -1057,12 +1057,12 @@ object GLForm1: TGLForm1
       Left = 0
       Height = 282
       Top = 681
-      Width = 261
+      Width = 246
       Align = alClient
       AutoSize = True
       Caption = 'Render'
       ClientHeight = 263
-      ClientWidth = 251
+      ClientWidth = 236
       ParentFont = False
       TabOrder = 7
       OnResize = ShaderBoxResize
@@ -1485,7 +1485,7 @@ object GLForm1: TGLForm1
         Left = 0
         Height = 54
         Top = 209
-        Width = 251
+        Width = 236
         Align = alBottom
         Lines.Strings = (
           ''
@@ -1768,6 +1768,11 @@ object GLForm1: TGLForm1
         Caption = 'Copy'
         ShortCut = 16451
         OnClick = CopyMenuClick
+      end
+      object PasteMenu: TMenuItem
+        Caption = 'Paste'
+        ShortCut = 16470
+        OnClick = PasteMenuClick
       end
     end
     object OverlaysMenu: TMenuItem

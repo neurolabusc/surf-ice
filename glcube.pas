@@ -265,36 +265,250 @@ begin
      displayLst := 0;
      {$ENDIF}
 end;
+{$DEFINE CUBETEXT}
+{$IFDEF CUBETEXT}
+Type
+  TVec4 = record
+        x,y,z,w: single;
+  end;
+  {$IFNDEF COREGL}
+  TnMat44 = array [0..3, 0..3] of single;
+  {$ENDIF}
+{$ENDIF}
 
 procedure MakeCube(sz: single);
+{$IFDEF CUBETEXT}
+const
+    kTiny = -0.01;
+var
+  rot: TnMat44;
+  isBegun: boolean = false;
+
+  function setMat (a,b,c,d, e,f,g,h, i,j,k,l: single): TnMat44;
+  begin
+       result[0,0] := a;
+       result[0,1] := b;
+       result[0,2] := c;
+       result[0,3] := d;
+
+       result[1,0] := e;
+       result[1,1] := f;
+       result[1,2] := g;
+       result[1,3] := h;
+
+       result[2,0] := i;
+       result[2,1] := j;
+       result[2,2] := k;
+       result[2,3] := l;
+
+       result[3,0] := 0;
+       result[3,1] := 0;
+       result[3,2] := 0;
+       result[3,3] := 1;
+  end;
+
+(*function mult(a:TnMat44; b: TVec4):TVec4;
+  begin
+   result.x:=(a[0,0]*b.x)+(a[1,0]*b.y)+(a[2,0]*b.z)+a[3,0];
+   result.y:=(a[0,1]*b.x)+(a[1,1]*b.y)+(a[2,1]*b.z)+a[3,1];
+   result.z:=(a[0,2]*b.x)+(a[1,2]*b.y)+(a[2,2]*b.z)+a[3,2];
+  end; *)
+  function mult(a:TnMat44; b: TVec4):TVec4;
+    begin
+     result.x:=(a[0,0]*b.x)+(a[0,1]*b.y)+(a[0,2]*b.z)+a[0,3];
+     result.y:=(a[1,0]*b.x)+(a[1,1]*b.y)+(a[1,2]*b.z)+a[1,3];
+     result.z:=(a[2,0]*b.x)+(a[2,1]*b.y)+(a[2,2]*b.z)+a[2,3];
+    end;
+
+procedure vertex3f(x,y,z: single; rep: boolean = false);
+begin
+     {$IFNDEF COREGL}
+     if (rep) and (not isBegun) then begin
+        nglBegin(GL_TRIANGLE_STRIP);
+        isBegun := true;
+        rep := false;
+     end;
+     {$ENDIF}
+     nglVertex3f(x,y,z);
+     {$IFDEF COREGL}
+     if (rep) then
+        nglVertex3f(x,y,z);
+     {$ELSE}
+      if (rep) then begin
+         nglEnd;
+         isBegun := false;
+      end;
+     {$ENDIF}
+end;
+
+procedure vertex2f(x,y: single; rep: boolean = false);
+var
+  v: TVec4;
+begin
+     v.x := 1-x;
+     v.y := 1-y;
+     v.z := 0;
+     v.w := 1;
+     v := mult(rot,v);
+     vertex3f(v.x, v.y, v.z, rep);
+end;
+
+procedure drawL();
+begin
+  //setlength(vtxClrs, length(vtxClrs)+ 12);
+  vertex2f(0.275, 0.1, true);
+  vertex2f(0.275, 0.9);
+  vertex2f(0.375, 0.1);
+  vertex2f(0.375, 0.9, true);
+
+  vertex2f(0.375,0.1, true);
+  vertex2f(0.375,0.2);
+  vertex2f(0.725,0.1);
+  vertex2f(0.725,0.2, true);
+end;
+
+procedure drawR();
+begin
+  //setlength(vtxClrs, length(vtxClrs)+ 30);
+  vertex2f(0.275, 0.1, true);
+  vertex2f(0.275, 0.9);
+  vertex2f(0.375, 0.1);
+  vertex2f(0.375, 0.9, true);
+
+  vertex2f(0.375, 0.8, true);
+  vertex2f(0.375, 0.9);
+  vertex2f(0.725, 0.8);
+  vertex2f(0.625, 0.9, true);
+
+  vertex2f(0.625, 0.55, true);
+  vertex2f(0.625, 0.8);
+  vertex2f(0.725, 0.55);
+  vertex2f(0.725, 0.8, true);
+
+  vertex2f(0.375, 0.45, true);
+  vertex2f(0.375, 0.55);
+  vertex2f(0.625, 0.45);
+  vertex2f(0.725, 0.55, true);
+
+  vertex2f(0.625, 0.1, true);
+  vertex2f(0.525, 0.45);
+  vertex2f(0.725, 0.1);
+  vertex2f(0.625, 0.45, true);
+
+end;
+
+procedure drawP();
+begin
+  //setlength(vtxClrs, length(vtxClrs)+ 24);
+  vertex2f(0.275, 0.1, true);
+  vertex2f(0.275, 0.9);
+  vertex2f(0.375, 0.1);
+  vertex2f(0.375, 0.9, true);
+
+  vertex2f(0.375, 0.8, true);
+  vertex2f(0.375, 0.9);
+  vertex2f(0.725, 0.8);
+  vertex2f(0.625, 0.9, true);
+
+  vertex2f(0.625, 0.55, true);
+  vertex2f(0.625, 0.8);
+  vertex2f(0.725, 0.55);
+  vertex2f(0.725, 0.8, true);
+
+  vertex2f(0.375, 0.45, true);
+  vertex2f(0.375, 0.55);
+  vertex2f(0.625, 0.45);
+  vertex2f(0.725, 0.55, true);
+
+end;
+
+procedure drawS();
+begin
+  //setlength(vtxClrs, length(vtxClrs)+ 42);
+  vertex2f(0.275, 0.2, true);
+  vertex2f(0.275, 0.3);
+  vertex2f(0.375, 0.1);
+  vertex2f(0.375, 0.3, true);
+
+  vertex2f(0.375, 0.1, true);
+  vertex2f(0.375, 0.2);
+  vertex2f(0.625, 0.1);
+  vertex2f(0.725, 0.2, true);
+
+  vertex2f(0.625, 0.1, true);
+  vertex2f(0.625, 0.55);
+  vertex2f(0.725, 0.2);
+  vertex2f(0.725, 0.45, true);
+
+  vertex2f(0.375, 0.45, true);
+  vertex2f(0.275, 0.55);
+  vertex2f(0.625, 0.45);
+  vertex2f(0.625, 0.55, true);
+
+  vertex2f(0.275, 0.55, true);
+  vertex2f(0.275, 0.8);
+  vertex2f(0.375, 0.55);
+  vertex2f(0.375, 0.9, true);
+
+  vertex2f(0.375, 0.8, true);
+  vertex2f(0.375, 0.9);
+  vertex2f(0.725, 0.8);
+  vertex2f(0.625, 0.9, true);
+
+  vertex2f(0.625, 0.7, true);
+  vertex2f(0.625, 0.8);
+  vertex2f(0.725, 0.7);
+  vertex2f(0.725, 0.8, true);
+end;
+
+procedure drawA();
+begin
+ //setlength(vtxClrs, length(vtxClrs)+ 18);
+ vertex2f(0.275,0.1, true);
+ vertex2f(0.475,0.9);
+ vertex2f(0.375,0.1);
+ vertex2f(0.575,0.9, true);
+
+ vertex2f(0.625,0.1, true);
+ vertex2f(0.475,0.9);
+ vertex2f(0.725,0.1);
+ vertex2f(0.575,0.9, true);
+
+ vertex2f(0.4375,0.35, true);
+ vertex2f(0.4625,0.45);
+ vertex2f(0.6625,0.35);
+ vertex2f(0.6375,0.45, true);
+end;
+
+procedure drawI();
+begin
+  //setlength(vtxClrs, length(vtxClrs)+ 6);
+  vertex2f(0.45,0.1, true);
+  vertex2f(0.45,0.9);
+  vertex2f(0.55,0.1);
+  vertex2f(0.55,0.9, true);
+end;
+{$ENDIF}
 //draw a cube of size sz
 var
   sz2 : single;
 begin
   sz2 := sz;
-  {$IFDEF COREGL}
   nglColor4ub(204,204,204,255);
-  {$ELSE}
-  nglColor4ub(25,25,25,255);
-  {$ENDIF}
-  nglBegin(GL_TRIANGLE_STRIP); //* Bottom side
+  nglBegin(GL_TRIANGLE_STRIP); //* Top side
 	nglVertex3f(-sz, -sz, -sz2);
 	nglVertex3f(-sz, sz, -sz2);
 	nglVertex3f(sz, -sz, -sz2);
         nglVertex3f(sz, sz, -sz2);
   nglEnd;
-  {$IFDEF COREGL}
-  nglColor4ub(25,25,25,255);
-  {$ELSE}
-  nglColor4ub(204,204,204,255);
-  {$ENDIF}
-  nglBegin(GL_TRIANGLE_STRIP); //* Top side
+  nglColor4ub(56,56,56,255);
+  nglBegin(GL_TRIANGLE_STRIP); //* Bottom side
 	nglVertex3f(-sz, -sz, sz2);
 	nglVertex3f(sz, -sz, sz2);
         nglVertex3f(-sz, sz, sz2);
         nglVertex3f(sz, sz, sz2);
   nglEnd;
-  nglColor4ub(0,0,128,255);
+  nglColor4ub(0,0,153,255);
   nglBegin(GL_TRIANGLE_STRIP); //* Front side
     nglVertex3f(-sz, sz, -sz2);
     nglVertex3f(-sz, sz, sz2);
@@ -315,13 +529,28 @@ begin
 	nglVertex3f(-sz, sz, -sz2);
 	nglVertex3f(-sz, sz, sz2);
   nglEnd;
-  nglColor4ub(0,153,0,255);
+  nglColor4ub(0,128,0,255);
   nglBegin(GL_TRIANGLE_STRIP); //* Right side
 	nglVertex3f(sz, -sz, -sz2);
 	nglVertex3f(sz, sz, -sz2);
 	nglVertex3f(sz, -sz, sz2);
 	nglVertex3f(sz, sz, sz2);
   nglEnd();
+  {$IFDEF CUBETEXT}
+  nglColor4ub(0,0,0,255);
+  rot := setMat(sz*2,0,0,-sz, 0,0,0,sz+kTiny, 0,sz*2,0,-sz);
+  drawA();
+  rot := setMat(-sz*2,0,0,sz, 0,0,0,-sz-kTiny, 0,sz*2,0,-sz);
+  drawP();
+  rot := setMat(sz*2,0,0,-sz, 0,-sz*2,0,sz, 0,0,0,sz+kTiny);
+  drawI();
+  rot := setMat(sz*2,0,0,-sz, 0,sz*2,0,-sz, 0,0,0,-sz-kTiny);
+  drawS();
+  rot := setMat(0,0,0,-sz-kTiny, sz*2,0,0,-sz, 0,sz*2,0,-sz);
+  drawL();
+  rot := setMat(0,0,0,sz+kTiny, -sz*2,0,0,sz, 0,sz*2,0,-sz);
+  drawR();
+  {$ENDIF}
 end; //MakeCube()
 
 procedure  TGLCube.CreateCube(sz: single);
@@ -376,19 +605,32 @@ begin
   glEnable (GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glDisable (GL_LIGHTING);
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity;
-  glOrtho(0, ScrnW, 0, ScrnH,0.01,sz*4);
+
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity;
-  //glEnable(GL_DEPTH_TEST);
-  glTranslatef(0,0,-sz*2);
+  glMatrixMode (GL_PROJECTION);
+  glLoadIdentity ();
+  glOrtho (0, ScrnW,0, ScrnH,-10*sz,10*sz);
+  glTranslatef(0,0,sz*8);
   if isTopLeft then
       glTranslatef(ScrnW - (1.8*sz), ScrnH-(1.8*sz),0)
   else
       glTranslatef(1.8*sz,1.8*sz,0);
-  glRotatef(90-fElevation,-1,0,0);
+  glRotatef(fElevation-90,-1,0,0);
   glRotatef(-fAzimuth,0,0,1);
+  glFrontFace(GL_CW);
+  (*glMatrixMode(GL_PROJECTION);
+  glLoadIdentity;
+  glOrtho(0, ScrnW, 0, ScrnH,-sz*10,sz*10);
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity;
+  glTranslatef(0,0,sz*8);
+  if isTopLeft then
+      glTranslatef(ScrnW - (1.8*sz), ScrnH-(1.8*sz),0)
+  else
+      glTranslatef(1.8*sz,1.8*sz,0);
+  glRotatef(fElevation-90,-1,0,0);
+  glRotatef(-fAzimuth,0,0,1);*)
   {$ENDIF}
   //glEnable( GL_MULTISAMPLE );
   if isRedraw then
