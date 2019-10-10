@@ -1,6 +1,7 @@
 unit userdir;
 //returns directory where user has read/write permissions...
 {$IFDEF FPC} {$mode delphi}{$H+} {$ENDIF}
+{$IFDEF Darwin} {$modeswitch objectivec2} {$ENDIF}
 interface
 //returns number of cores: a computer with two dual cores will report 4
 function IniName: string;
@@ -18,7 +19,7 @@ function AppDir2: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder
 implementation
 
 {$IFDEF UNIX}
-uses Process, SysUtils,classes,IniFiles,dialogs, define_types;
+uses {$IFDEF Darwin}CocoaAll, {$ENDIF}{$IFDEF LINUX}BaseUnix, {$ENDIF} Process, SysUtils,classes,IniFiles,dialogs, define_types ;
 function DesktopFolder: string; //Returns path of destop folder with pathdelim, ~/Desktop/
 begin
     result := GetEnvironmentVariable ('HOME')+pathdelim+ 'Desktop'+pathdelim;
@@ -49,15 +50,35 @@ begin
      Result := lName;
 end;
 
+{$IFDEF DARWIN}
+function SharedSupportFolder: ansistring;
+var
+   path: NSString;
+begin
+   path := NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, true).lastObject;
+   path := path.stringByAppendingPathComponent(NSBundle.mainBundle.bundlePath.lastPathComponent.stringByDeletingPathExtension);
+   NSFileManager.defaultManager.createDirectoryAtPath_withIntermediateDirectories_attributes_error(path, false, nil, nil);
+   result := path.UTF8String;
+end;
+
 function DefaultsDir (lSubFolder: string): string;
 //for Linux: DefaultsDir is ~/appname/SubFolder/, e.g. /home/username/mricron/subfolder/
 //Note: Final character is pathdelim
-const
-     pathdelim = '/';
+begin
+    result := SharedSupportFolder+PathDelim;
+end;
+{$ENDIF}
+
+{$IFDEF LINUX}
+function DefaultsDir (lSubFolder: string): string;
+//for Linux: DefaultsDir is ~/appname/SubFolder/, e.g. /home/username/mricron/subfolder/
+//Note: Final character is pathdelim
+//const
+//     pathdelim = '/';
 var
    lBaseDir: string;
 begin
-     lBaseDir := GetEnvironmentVariable ('HOME')+pathdelim+'.'+ FileNameNoExt(ExtractFilename(paramstr(0) ) );
+     lBaseDir := GetEnvironmentVariable ('HOME')+PathDelim+'.'+ FileNameNoExt(ExtractFilename(paramstr(0) ) );
      if not DirectoryExists(lBaseDir) then begin
         {$I-}
         MkDir(lBaseDir);
@@ -82,6 +103,7 @@ begin
      end else
          result := lBaseDir;
 end;
+{$ENDIF}
 
 function IniName: string;
 begin
@@ -265,8 +287,21 @@ end;
 function AppDir: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app
 begin
  result := extractfilepath(paramstr(0))+'Resources'+pathdelim;
- if not DirectoryExists(result) then
-	result := extractfilepath(paramstr(0));
+ {$IFDEF LINUX}
+ if  DirectoryExists(result) then exit;
+ //https://wiki.freepascal.org/Multiplatform_Programming_Guide#Unix.2FLinux
+ //  /usr/local/share/app_name or /opt/app_name.
+ result := '/usr/local/share/'+ExtractFileName(paramstr(0))+pathdelim;
+ writeln('>>>'+result);
+ if  DirectoryExists(result) then exit;
+ result := '/opt/'+ExtractFileName(paramstr(0))+pathdelim;
+ if  DirectoryExists(result) then exit;
+ result := FpGetEnv('SURFICE_DIR')+pathdelim;
+ if  DirectoryExists(result) then exit;
+ result := extractfilepath(paramstr(0))+'Resources'+pathdelim;
+ {$ENDIF}
+ if  DirectoryExists(result) then exit;
+ result := extractfilepath(paramstr(0));
 end;
 
 function AppDir2: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app

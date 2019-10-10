@@ -335,6 +335,7 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     procedure LeftSplitterMoved(Sender: TObject);
     procedure LayerAOMapMenuClick(Sender: TObject);
     procedure MatCapDropChange(Sender: TObject);
+    procedure NodeMinEditKeyPress(Sender: TObject; var Key: char);
     procedure PaintModeAutomaticMenu(Sender: TObject);
     procedure PaintModeMenuClick(Sender: TObject);
     procedure PasteMenuClick(Sender: TObject);
@@ -506,14 +507,15 @@ implementation
 //{$ENDIF}
 
 {$R *.lfm}
+
+
+uses
 {$IFDEF LCLCocoa}
-uses
-  commandsu,UserNotification, nsappkitext, glcocoanscontext;
-{$ELSE}
-uses
+  UserNotification, nsappkitext, glcocoanscontext,
+{$ENDIF}
   commandsu;
 
-{$ENDIF}
+
 var
   PythonIO : TPythonInputOutput;
   PyMod: TPythonModule;
@@ -720,7 +722,8 @@ end;
 {$ENDIF}
 
   {$IFDEF UNIX}
-  function InitPyLibraryPath: string;
+
+function InitPyLibraryPath: string;
     //
     function GetMacPath(NMinorVersion: integer): string;
     begin
@@ -752,6 +755,54 @@ end;
     end;
     {$endif}
   end;
+{$ENDIF}
+
+{$IFDEF Darwin}
+function findMacOSLibPython3(pthroot: string = '/Library/Frameworks/Python.framework/'): string;
+label
+  121;
+var
+  pths: TStringList;
+  i: integer;
+begin
+  result := '';
+  if not DirectoryExists(pthroot) then exit;
+  pths := TStringList.Create;
+  FindAllFiles(pths, pthroot, 'libpython3*dylib', true); //find e.g. all pascal sourcefiles
+  if pths.Count < 1 then goto 121;
+  for i := pths.Count -1 downto 0 do
+      if AnsiContainsText(pths[i],'loader') then
+         pths.Delete(i);
+  if pths.Count < 1 then goto 121;
+  result := pths[0];
+  //printf(pths);
+  121:
+  pths.Free;
+end;
+{$ENDIF}
+
+{$IFDEF LINUX}
+function findLinuxLibPython3(pthroot: string = '/usr/lib/'): string;
+label
+  121;
+var
+  pths: TStringList;
+  i: integer;
+begin
+  result := '';
+  if not DirectoryExists(pthroot) then exit;
+  pths := TStringList.Create;
+  FindAllFiles(pths, pthroot, 'libpython3*so', true); //find e.g. all pascal sourcefiles
+  if pths.Count < 1 then goto 121;
+  for i := pths.Count -1 downto 0 do
+      if AnsiContainsText(pths[i],'loader') then
+         pths.Delete(i);
+  if pths.Count < 1 then goto 121;
+  result := pths[0];
+  //printf(pths);
+  121:
+  pths.Free;
+end;
 {$ENDIF}
 
   function findPythonLib(def: string): string;
@@ -792,17 +843,20 @@ end;
            n: integer;
         begin
           result := def;
-             if DirectoryExists(def) then begin //in case the user supplies libdir not the library name
+          if DirectoryExists(def) then begin //in case the user supplies libdir not the library name
                result := searchPy(def);
-               (*{$IFDEF Darwin}
-               if FindFirst(IncludeTrailingPathDelimiter(def)+'libpython*.dylib', faDirectory, searchResult) = 0 then
-               {$ELSE}
-               if FindFirst(IncludeTrailingPathDelimiter(def)+'libpython*.so', faDirectory, searchResult) = 0 then
-               {$ENDIF}
-                  result := IncludeTrailingPathDelimiter(def)+(searchResult.Name);
-               FindClose(searchResult);  *)
                if length(result) > 0 then exit;
-             end;
+          end;
+        {$IFDEF Darwin}
+        result := findMacOSLibPython3();
+        if length(result) > 0 then exit;
+        {$ENDIF}
+        {$IFDEF LINUX}
+        result := findLinuxLibPython3();
+        if length(result) > 0 then exit;
+        writeln('If scripts generate "PyUnicode_FromWideChar" errors, install Python3 and reset ("-R") this software.');
+        {$ENDIF}
+
              {$IFDEF LCLCocoa}
              result := searchPy('/System/Library/Frameworks/Python.framework/Versions/Current/lib');
              if fileexists(result) then exit;
@@ -1718,12 +1772,21 @@ var
   S: string;
 begin
   result := false;
+  gPrefs.PyLib := '';
   if FileExists(gPrefs.PyLib) then begin
      {$IFDEF UNIX}writeln('Using PyLib from preferences "'+gPrefs.PyLib+'"');{$ENDIF}
      S := gPrefs.PyLib;
-  end else
+  end else begin
+      //To find Python path:
+      //> import sys
+      //> print(sys.path)
       S:= findPythonLib(gPrefs.PyLib);
-  if (S = '') then exit;
+      {$IFDEF UNIX}writeln('Using PyLib "'+S+'"');{$ENDIF}
+  end;
+  if (S = '') then begin
+     {$IFDEF UNIX}writeln('Unable to find Python. Install Python3 and reset this software (-R) or set the "PyLib" in the preferences.');{$ENDIF}
+     exit;
+  end;
   gPrefs.PyLib := S;
   result := true;
   PythonIO := TPythonInputOutput.Create(GLForm1);
@@ -1737,8 +1800,11 @@ begin
   PyMod.OnInitialization:=PyModInitialization;
   PythonIO.OnSendData := PyIOSendData;
   PythonIO.OnSendUniData:= PyIOSendUniData;
+  //S := '/Library/Frameworks/Python.framework/Versions/3.7/lib/libpython3.7.dylib';
+  //S := '/usr/local/Cellar/python/3.7.4_1/Frameworks/Python.framework/Versions/3.7/lib/libpython3.7m.dylib';
   PyEngine.DllPath:= ExtractFileDir(S);
   PyEngine.DllName:= ExtractFileName(S);
+
   PyEngine.LoadDll
 end;
 
@@ -1789,8 +1855,6 @@ begin
   end;
   GLForm1.ScriptOutputMemo.lines.Add('Python Succesfully Executed');
   result := true;
-  ToolPanel.refresh;
-
   ToolPanel.refresh;
 end;
 
@@ -1872,9 +1936,6 @@ begin
      GLForm1.ScriptPanel.Width := GLForm1.ToolPanel.Constraints.MaxWidth
   else if (not vis) then
       GLForm1.ScriptPanel.width := 0;
-  //{$IFDEF METALAPI}
-  //ViewGPU1.Invalidate;
-  //{$ENDIF}
 end;
 
 procedure TGLForm1.ScriptPanelDblClick(Sender: TObject);
@@ -3026,6 +3087,13 @@ begin
  {$ENDIF}
 end;
 
+procedure TGLForm1.NodeMinEditKeyPress(Sender: TObject; var Key: char);
+begin
+  {$IFDEF Darwin}
+  NodePrefChange(Sender);
+  {$ENDIF}
+end;
+
 procedure TGLForm1.PaintModeAutomaticMenu(Sender: TObject);
 var
    i: integer;
@@ -4099,7 +4167,7 @@ begin
   {$IFDEF LCLCocoa}
   AdvancedBtn.AnchorSide[akTop].Control := DarkModeCheck;
   {$ELSE}
-  AdvancedBtn.AnchorSide[akTop].Control := BlackDefaultBackgroundCheck;
+  AdvancedBtn.AnchorSide[akTop].Control := OverlappingOverlaysOverwriteCheck;
   {$ENDIF}
   AdvancedBtn.BorderSpacing.Top := 4;
   AdvancedBtn.AnchorSide[akLeft].Side := asrLeft;
@@ -5394,12 +5462,53 @@ begin
   //if i  = mrAbort then Quit2TextEditor;
 end;
 
+function readNodeEdgeText(fnm: string; out r,c: integer): boolean;
+label
+     123;
+var
+  s: string;
+  sList: TStringList;
+  fp: TextFile;
+begin
+  result := false;
+  r := 0; //rows
+  c := 0; //cols
+  if not Fileexists(fnm) then exit;
+  sList := TStringList.Create;
+  Filemode := fmOpenRead;
+  AssignFile(fp,fnm);
+  reset(fp);
+  while not EOF(fp) do begin
+    readln(fp, s);
+    if (length(s) < 1) or (s[1] = '#') then continue;
+    sList.DelimitedText := s;
+    if c = 0 then c := sList.Count;
+    if (sList.Count <> c) then begin
+       showmessage('Error reading nodes/edges: number of columns vary: '+fnm);
+       goto 123;
+    end;
+    if c = 0 then continue;
+    r := r + 1;
+  end;
+  if (r < 2) or ((c <> 3) and (c <> r)) then
+     showmessage(format('Unexpected Rows*Columns (%d*%d): node files should be N*3, edge files should be N*N', [r, c]))
+  else
+      result := true;
+  123:
+  CloseFile(fp);
+  Filemode := fmOpenReadWrite;
+  sList.Free;
+end;
+
 procedure TGLForm1.AddNodesMenuClick(Sender: TObject);
 const
-  kNodeFilter = 'BrainNet Node/Edge|*.node;*.nodz;*.edge|Any file|*.*';
+  kNodeFilter = 'BrainNet Node/Edge|*.node;*.nodz;*.edge|Text file (nodes Nx3, edges NxN)|*.txt|Any file|*.*';
 var
   ext, f2: string;
+  r, c: integer;
+  ok: boolean;
 begin
+     f2 := '/Users/chris/Desktop/x/coords.txt';
      if Fileexists(gPrefs.PrevNodename) then begin
         OpenDialog.InitialDir := ExtractFileDir(gPrefs.PrevNodename);
         OpenDialog.Filename := gPrefs.PrevNodename;
@@ -5411,6 +5520,16 @@ begin
         showmessage('Unable to open file (check permissions) '+ OpenDialog.Filename);
      //OpenDialog.FileName := '/Users/rorden/Desktop/obj/myNodes.node';
      ext := UpperCase(ExtractFileExt(OpenDialog.Filename));
+     if (ext = '.TXT') then begin
+        ok := readNodeEdgeText(OpenDialog.Filename, r,c);
+        if not ok then exit;
+        if r = c then
+          OpenEdge(OpenDialog.FileName)
+        else
+            OpenNode(OpenDialog.FileName);
+        UpdateToolbar;
+        exit;
+     end;
      if (ext = '.EDGE') and (length(gNode.nodes) < 1) then begin
         f2 := changefileext(OpenDialog.FileName, '.node');
         if fileexists(f2) then

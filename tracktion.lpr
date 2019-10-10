@@ -505,7 +505,7 @@ begin
              end; //for x
          end; //for y
          showmsg('xxx');
-         showmsg(format('Completed %d/%d', [z, msk.hdr.dim[3])]));
+         showmsg(format('Completed %d/%d', [z, msk.hdr.dim[3] ] ));
      end; //for z
     setlength(Trk.tracks, TrkPos);
     //smooth tracks and simplify

@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
   Left = 553
   Height = 514
-  Top = 103
+  Top = 102
   Width = 691
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -625,6 +625,7 @@ object GLForm1: TGLForm1
         MaxValue = 65535
         MinValue = 0
         OnChange = NodePrefChange
+        OnKeyPress = NodeMinEditKeyPress
         ParentFont = False
         TabOrder = 4
         Value = 0

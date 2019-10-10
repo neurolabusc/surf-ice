@@ -741,6 +741,7 @@ end;
 function readVoxHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; var xDim64: int64): boolean;
 var
    ext, hdrName, imgName: string;
+   isDimPermute2341: boolean = false;
 begin
     result := false;
     swapEndian := false; //assume native endian
@@ -761,7 +762,7 @@ begin
         nhdr := ReadHdr(hdrName);
         xDim64 := nhdr.Dim[1];
      end else begin
-       if not readForeignHeader (imgName, nhdr, gzBytes, swapEndian, xDim64) then exit;
+       if not readForeignHeader (imgName, nhdr, gzBytes, swapEndian, isDimPermute2341, xDim64) then exit;
      end;
      //NIfTI2
      if (nhdr.HdrSz = SizeOf (TNIFTI2hdr)) then begin

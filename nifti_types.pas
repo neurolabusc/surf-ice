@@ -92,6 +92,7 @@ kDT_FLOAT32 = kDT_FLOAT;
 kDT_COMPLEX               =32;     // complex (64 bits/voxel)
 kDT_DOUBLE                =64;     // double (64 bits/voxel)
 kDT_RGB                   =128;     // RGB triple (24 bits/voxel)
+kDT_RGBplanar3D             =129; //RRR..RGGG..GBBBB...B  (24 bits/voxel) entire 3D volume continguous
 kDT_INT8                  =256;     // signed char (8 bits)
 kDT_UINT16                =512;     // unsigned short (16 bits)
 kDT_UINT32                =768;     // unsigned int (32 bits)
@@ -177,7 +178,94 @@ kNIFTI_INTENT_POINTSET  =1008;
 kNIFTI_INTENT_TRIANGLE  =1009;
 kNIFTI_INTENT_QUATERNION =1010;
 
+procedure NII_Clear (out lHdr: TNIFTIHdr);
+
 implementation
+
+procedure NII_SetIdentityMatrix (var lHdr: TNIFTIHdr); //create neutral rotation matrix
+var lInc: integer;
+begin
+  with lHdr do begin
+    for lInc := 0 to 3 do
+        srow_x[lInc] := 0;
+    for lInc := 0 to 3 do
+        srow_y[lInc] := 0;
+    for lInc := 0 to 3 do
+        srow_z[lInc] := 0;
+    for lInc := 1 to 16 do
+        intent_name[lInc] := chr(0);
+    //next: create identity matrix: if code is switched on there will not be a problem
+    srow_x[0] := 1;
+    srow_y[1] := 1;
+    srow_z[2] := 1;
+  end;
+end; // NII_SetIdentityMatrix()
+
+procedure NII_Clear (out lHdr: TNIFTIHdr);
+var
+ lInc: integer;
+begin
+  with lHdr do begin
+    HdrSz := sizeof(TNIFTIhdr);
+    for lInc := 1 to 10 do
+       Data_Type[lInc] := chr(0);
+    for lInc := 1 to 18 do
+       db_name[lInc] := chr(0);
+    extents:=0;
+    session_error:= 0;
+    regular:='r'{chr(0)};
+    dim_info:=(0);
+    intent_p1 := 0;
+    intent_p2 := 0;
+    intent_p3 := 0;
+    intent_code:=0;
+    datatype:=0 ;
+    bitpix:=0;
+    slice_start:=0;
+    for lInc := 1 to 7 do
+       pixdim[linc]:= 1.0;
+    vox_offset:= 0.0;
+    scl_slope := 1.0;
+    scl_inter:= 0.0;
+    slice_end:= 0;
+    slice_code := 0;
+    xyzt_units := 10;
+    cal_max:= 0.0;
+    cal_min:= 0.0;
+    slice_duration:=0;
+    toffset:= 0;
+    glmax:= 0;
+    glmin:= 0;
+    for lInc := 1 to 80 do
+      descrip[lInc] := chr(0);{80 spaces}
+    for lInc := 1 to 24 do
+      aux_file[lInc] := chr(0);{80 spaces}
+    {below are standard settings which are not 0}
+    bitpix := 16;//vc16; {8bits per pixel, e.g. unsigned char 136}
+    DataType := 4;//vc4;{2=unsigned char, 4=16bit int 136}
+    Dim[0] := 3;
+    Dim[1] := 256;
+    Dim[2] := 256;
+    Dim[3] := 1;
+    Dim[4] := 1; {n vols}
+    Dim[5] := 1;
+    Dim[6] := 1;
+    Dim[7] := 1;
+    glMin := 0;
+    glMax := 255;
+    qform_code := kNIFTI_XFORM_UNKNOWN;
+    sform_code:= kNIFTI_XFORM_UNKNOWN;
+    quatern_b := 0;
+    quatern_c := 0;
+    quatern_d := 0;
+    qoffset_x := 0;
+    qoffset_y := 0;
+    qoffset_z := 0;
+    NII_SetIdentityMatrix(lHdr);
+    magic := kNIFTI_MAGIC_SEPARATE_HDR;
+  end; //with the NIfTI header...
+end; // NII_Clear()
+
 
 
 

@@ -8,7 +8,8 @@
         <Filename Value="tracktion.lpr"/>
         <IsPartOfProject Value="True"/>
         <IsVisibleTab Value="True"/>
-        <CursorPos X="10" Y="13"/>
+        <TopLine Value="490"/>
+        <CursorPos X="63" Y="508"/>
         <UsageCount Value="297"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -114,7 +115,7 @@
     <OtherDefines Count="1">
       <Define0 Value="isTerminalApp"/>
     </OtherDefines>
-    <JumpHistory Count="29" HistoryIndex="28">
+    <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="tracktion.lpr"/>
         <Caret Line="368" Column="39" TopLine="354"/>
@@ -231,6 +232,10 @@
         <Filename Value="track.pas"/>
         <Caret Line="55" Column="24" TopLine="34"/>
       </Position29>
+      <Position30>
+        <Filename Value="tracktion.lpr"/>
+        <Caret Line="4" Column="37"/>
+      </Position30>
     </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>

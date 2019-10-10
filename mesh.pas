@@ -137,6 +137,7 @@ type
     procedure LoadMeshAsOverlay(const FileName: string; lOverlayIndex: integer);
     procedure LoadNii(const FileName: string; lOverlayIndex: integer; lLoadSmooth: boolean);
     function LoadCluster(const FileName: string): boolean;
+    function LoadNodeTxt(const FileName: string): boolean;
     procedure LoadNode(const FileName: string; out isEmbeddedEdge: boolean);
     procedure LoadNv(const FileName: string);
     procedure LoadObj(const FileName: string);
@@ -2341,6 +2342,91 @@ begin
   result := true;
 end;
 
+function TMesh.LoadNodeTxt(const FileName: string): boolean;
+label
+     123;
+var
+  num_node, c, i : integer;
+  s: string;
+  sList: TStringList;
+  fp: TextFile;
+begin
+  result := false;
+  num_node := 0; //rows
+  c := 0; //cols
+  if not Fileexists(FileName) then exit;
+  sList := TStringList.Create;
+  Filemode := fmOpenRead;
+  AssignFile(fp,FileName);
+  reset(fp);
+  while not EOF(fp) do begin
+    readln(fp, s);
+    if (length(s) < 1) or (s[1] = '#') then continue;
+    sList.DelimitedText := s;
+    if c = 0 then c := sList.Count;
+    if (c <> 3) then begin
+       showmessage('Error reading nodes: number of columns must be 3: '+FileName);
+       goto 123;
+    end;
+    num_node := num_node + 1;
+  end;
+  if (num_node < 2) or (c <> 3)  then begin
+     showmessage(format('Text Nodes unexpected Rows*Columns (%d*%d): node files should be N*3', [num_node, c]));
+     goto 123;
+  end;
+  setlength(self.nodes, num_node);
+  num_node := 0;
+  reset(fp);
+  while not EOF(fp) do begin
+    readln(fp, s);
+    if (length(s) < 1) or (s[1] = '#') then continue;
+    sList.DelimitedText := s;
+    if sList.Count <> 3 then continue;
+    self.nodes[num_node].X := strtofloatdef(sList[0], 0.0);
+    self.nodes[num_node].Y := strtofloatdef(sList[1], 0.0);
+    self.nodes[num_node].Z := strtofloatdef(sList[2], 0.0);
+    self.nodes[num_node].Clr := 1;
+    self.nodes[num_node].radius := 1;
+    num_node := num_node + 1;
+  end;
+  //start - raw copy from LoadNode() - maybe make function
+  self.isNode := true;
+  nodePrefs.minNodeColor := nodes[0].Clr;
+  nodePrefs.maxNodeColor := nodes[0].Clr;
+  nodePrefs.minNodeSize := nodes[0].radius;
+  nodePrefs.maxNodeSize := nodes[0].radius;
+  if num_node > 0 then begin
+    for i := 0 to (num_node -1) do begin
+       if nodes[i].Clr < nodePrefs.minNodeColor then
+          nodePrefs.minNodeColor := nodes[i].Clr;
+       if nodes[i].Clr > nodePrefs.maxNodeColor then
+          nodePrefs.maxNodeColor := nodes[i].Clr;
+       if nodes[i].radius < nodePrefs.minNodeSize then
+          nodePrefs.minNodeSize := nodes[i].radius;
+       if nodes[i].radius > nodePrefs.maxNodeSize then
+          nodePrefs.maxNodeSize := nodes[i].radius;
+    end;
+  end;
+  if (nodePrefs.minNodeSize = nodePrefs.maxNodeSize) then begin
+     NodePrefs.isNodeThresholdBySize := false;
+     NodePrefs.minNodeThresh := nodePrefs.minNodeColor;
+     NodePrefs.maxNodeThresh := nodePrefs.maxNodeColor;
+  end else begin
+      NodePrefs.isNodeThresholdBySize := true;
+      NodePrefs.minNodeThresh := nodePrefs.minNodeSize;
+      NodePrefs.maxNodeThresh := nodePrefs.maxNodeSize;
+  end;
+  Node2Mesh; //build initially so we have accurate descriptives
+  isRebuildList := true;
+  //end copy
+  result := true;
+  123:
+  sList.Free;
+  CloseFile(fp);
+  Filemode := fmOpenReadWrite;
+end;
+
+
 const
   kEmbeddedEdge = '#ENDNODE'; //signature for node file that contains edge values
 procedure TMesh.LoadNode(const FileName: string; out isEmbeddedEdge: boolean);
@@ -2376,11 +2462,11 @@ begin
            if (length(str) > 0) and (str[1] <> '#') then begin
               strlst.DelimitedText := str;
               if (strlst.count > 4) then begin
-                 self.nodes[num_node].X := strtofloat(strlst[0]);
-                 self.nodes[num_node].Y := strtofloat(strlst[1]);
-                 self.nodes[num_node].Z := strtofloat(strlst[2]);
-                 self.nodes[num_node].Clr := strtofloat(strlst[3]);
-                 self.nodes[num_node].radius := strtofloat(strlst[4]);
+                 self.nodes[num_node].X := strtofloatdef(strlst[0], 0);
+                 self.nodes[num_node].Y := strtofloatdef(strlst[1], 0);
+                 self.nodes[num_node].Z := strtofloatdef(strlst[2], 0);
+                 self.nodes[num_node].Clr := strtofloatdef(strlst[3], 0);
+                 self.nodes[num_node].radius := strtofloatdef(strlst[4], 0);
                  inc(num_node);
               end;
            end else if (pos(kEmbeddedEdge, uppercase(str)) > 0)then
@@ -7260,6 +7346,34 @@ begin
      SetDescriptives; //should yield scale := 1.0; origin  := ptf(0, 0, 0);
 end; *)
 
+function thicknessName(FileName: string): string;
+// e.g. filename "lh.sphere.reg.T1fs_conform.gii" ->  lh.thickness.T1fs_conform
+var
+   pth, nam, prefix: string;
+   i : integer;
+begin
+     result := '';
+     nam := ExtractFileName(FileName);
+     if (posex('lh.', nam) <> 1) and (posex('rh.', nam) <> 1) then exit;
+     prefix := copy(nam, 1, 3);
+     pth := extractfilepath(FileName);
+     //https://www.nitrc.org/forum/message.php?msg_id=25643
+     result := pth +prefix+'thickness';
+     if fileexists(result)then exit;
+     result := result + '.cr';
+     if fileexists(result)then exit;
+     // simnibs convention  lh.sphere.reg.T1fs_conform.gii ->  lh.thickness.T1fs_conform
+     nam := copy(nam, 4, length(nam)-7); // "lh.*.gii' -> "*"
+     i := posex('.', nam);
+     if i < 1 then exit;
+     nam := copy(nam, i, maxint);
+     result := pth +prefix+'thickness'+nam;
+     if fileexists(result)then exit;
+     result := result + '.cr';
+     if fileexists(result)then exit;
+     result := '';
+end;
+
 function TMesh.LoadFromFile(const FileName: string): boolean;
 var
    ext, fnm: string;
@@ -7337,6 +7451,8 @@ begin
 	 LoadStl(Filename);
 	if (ext = '.SURF') then
 	LoadSurf(Filename);
+        if (ext = '.TXT') then
+           LoadNodeTxt(Filename);
 	if (ext = '.NODE') or (ext = '.NODZ')then begin
 	 LoadNode(Filename, isEmbeddedEdge);
 	 if isEmbeddedEdge then
@@ -7377,8 +7493,14 @@ begin
 	isBusy := false;
         if HasOverlays then
            LoadOverlay(FileName, true);
+        if (ext = '.GII') then begin
+           fnm := thicknessName(FileName);
+           if fileexists(fnm) then
+              LoadOverlay(fnm, true);
+        end;
         //https://www.nitrc.org/forum/message.php?msg_id=25643
-        if (ext = '.GII') and AnsiContainsText(FileName,'rh.central') then begin
+        // simnibs convention  lh.sphere.reg.T1fs_conform.gii ->  lh.thickness.T1fs_conform
+        (*if (ext = '.GII') and AnsiContainsText(FileName,'rh.central') then begin
            fnm := extractfilepath(FileName)+'rh.thickness.cr';
            if fileexists(fnm) then
               LoadOverlay(fnm, true);
@@ -7387,7 +7509,7 @@ begin
            fnm := extractfilepath(FileName)+'lh.thickness.cr';
            if fileexists(fnm) then
               LoadOverlay(fnm, true);
-        end;
+        end; *)
 end; // LoadFromFile()
 
 (* works, but Stc files are sparse, so better to use other routines for smoothing
