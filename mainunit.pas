@@ -758,7 +758,17 @@ function InitPyLibraryPath: string;
 {$ENDIF}
 
 {$IFDEF Darwin}
-function findMacOSLibPython3(pthroot: string = '/Library/Frameworks/Python.framework/'): string;
+function findMacOSLibPython3: string;
+const
+     kPth = '/System/Library/Frameworks/Python.framework/Versions/Current/lib/libpython2.7.dylib';
+begin
+ result := '';
+ if not FileExists(kPth) then exit;
+ result := kPth;
+end;
+
+//Catalina sandbox restrictions make do not allow this for Notarized apps:
+(*function findMacOSLibPython3(pthroot: string = '/Library/Frameworks/Python.framework/'): string;
 label
   121;
 var
@@ -778,7 +788,7 @@ begin
   //printf(pths);
   121:
   pths.Free;
-end;
+end; *)
 {$ENDIF}
 
 {$IFDEF LINUX}
@@ -833,7 +843,7 @@ end;
   {$IFDEF Darwin}
       const
          knPaths = 3;
-         kBasePaths : array [1..knPaths] of string = (kBasePath, '/System'+kBasePath, '/System/Library/Frameworks/Python.framework/Versions/Current/lib/');
+         kBasePaths : array [1..knPaths] of string = ('/System'+kBasePath, kBasePath, '/System/Library/Frameworks/Python.framework/Versions/Current/lib/');
 
   {$ENDIF}
       var
@@ -1772,7 +1782,6 @@ var
   S: string;
 begin
   result := false;
-  gPrefs.PyLib := '';
   if FileExists(gPrefs.PyLib) then begin
      {$IFDEF UNIX}writeln('Using PyLib from preferences "'+gPrefs.PyLib+'"');{$ENDIF}
      S := gPrefs.PyLib;
@@ -1780,6 +1789,10 @@ begin
       //To find Python path:
       //> import sys
       //> print(sys.path)
+      {$IFDEF UNIX}
+      if gPrefs.PyLib <> '' then
+         writeln('Unable to find "'+gPrefs.PyLib+'"');
+      {$ENDIF}
       S:= findPythonLib(gPrefs.PyLib);
       {$IFDEF UNIX}writeln('Using PyLib "'+S+'"');{$ENDIF}
   end;
