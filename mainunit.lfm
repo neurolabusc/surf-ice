@@ -1544,7 +1544,7 @@ object GLForm1: TGLForm1
     Left = 267
     Height = 514
     Top = 0
-    Width = 410
+    Width = 416
     Align = alClient
     Constraints.MinHeight = 32
     Constraints.MinWidth = 32
@@ -1553,7 +1553,7 @@ object GLForm1: TGLForm1
     OnClick = CenterPanelClick
   end
   object RightSplitter: TSplitter
-    Left = 677
+    Left = 683
     Height = 514
     Top = 0
     Width = 6
@@ -1561,14 +1561,14 @@ object GLForm1: TGLForm1
     ResizeAnchor = akRight
   end
   object ScriptPanel: TPanel
-    Left = 683
+    Left = 689
     Height = 514
     Top = 0
-    Width = 8
+    Width = 2
     Align = alRight
     BevelOuter = bvNone
     ClientHeight = 514
-    ClientWidth = 8
+    ClientWidth = 2
     Constraints.MinWidth = 2
     ParentFont = False
     TabOrder = 0
@@ -1577,7 +1577,7 @@ object GLForm1: TGLForm1
       Left = 0
       Height = 514
       Top = 0
-      Width = 8
+      Width = 2
       Align = alClient
       Caption = 'Scripting'
       ClientHeight = 495
