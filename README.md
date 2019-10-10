@@ -10,7 +10,18 @@ Supported mesh formats include 3DO, 3DS, AC, BYU, CTM, DAE, DXF, FreeSurfer, GII
 
 ##### Installing
 
-You can get the latest release from [github](https://github.com/neurolabusc/surf-ice/releases) or [NITRC](https://www.nitrc.org/projects/surfice). Releases are provided for Linux, MacOS and Windows. Each release includes two versions of Surf Ice: "Surfice" requires OpenGL 3.3 or later, while "SurficeOld" runs on older computers (requiring OpenGL 2.1). A [wiki](https://www.nitrc.org/plugins/mwiki/index.php/surfice:MainPage) provides a full manual and troubleshooting advice.
+Compiled releases are provided for Linux, MacOS and Windows. 
+
+You can get MRIcroGL using three methods:
+
+ - Download from [NITRC](https://www.nitrc.org/plugins/mwiki/index.php/surfice:MainPage).
+ - Download from [Github](https://github.com/neurolabusc/surf-ice/releases).
+ - Run the following command to get the latest version for Linux, Macintosh or Windows: 
+   * `curl -fLO https://github.com/neurolabusc/surf-ice/releases/latest/download/surfice_linux.zip`
+   * `curl -fLO https://github.com/neurolabusc/surf-ice/releases/latest/download/surfice_macOS.dmg`
+   * `curl -fLO https://github.com/neurolabusc/surf-ice/releases/latest/download/surfice_windows.zip`
+
+The Windows and Linux releases includes two versions of Surf Ice: "Surfice" requires OpenGL 3.3 or later, while "SurficeOld" runs on older computers (requiring OpenGL 2.1). A [wiki](https://www.nitrc.org/plugins/mwiki/index.php/surfice:MainPage) provides a full manual and troubleshooting advice.
 
 ##### Compiling
 
