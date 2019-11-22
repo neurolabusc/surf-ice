@@ -1,9 +1,0 @@
-begin
-	resetdefaults();
-	azimuthelevation(70, 15);
-	meshload('BrainMesh_ICBM152Right.mz3');
-	overlayload('motor_4t95vol.nii.gz');
-	overlayminmax(1,2,12);
-
-end.
-

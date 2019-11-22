@@ -15,6 +15,7 @@ uses
   math, ExtCtrls, OpenGLContext, mesh, LCLintf, ComCtrls, Menus, graphtype,
   curv, ClipBrd, shaderui, shaderu, prefs, userdir, LCLtype, Grids, Spin,
   Buttons, matmath, colorTable, Track, types, glcube, glclrbar, define_types,
+  proc_py,
   meshify, zstream, gl_core_matrix, meshify_simplify, CheckLst;
 
 type
@@ -33,6 +34,7 @@ LayerOptionsBtn: TButton;
  CenterPanel: TPanel;
  LayerAOMapMenu: TMenuItem;
  LayerPainHideMenu: TMenuItem;
+ ExitFullScreenMenu: TMenuItem;
  PasteMenu: TMenuItem;
  overlayoverlapoverwrite1: TMenuItem;
  overlayopacity1: TMenuItem;
@@ -317,6 +319,7 @@ LayerPopup: TPopupMenu;
 LayerInvertColorsMenu: TMenuItem;
 LayerShowHeaderMenu: TMenuItem;
 procedure CenterPanelClick(Sender: TObject);
+procedure ExitFullScreenMenuClick(Sender: TObject);
 procedure LayerListClickCheck(Sender: TObject);
 procedure LayerPopupPopup(Sender: TObject);
 procedure LayerInvertColorsMenuClick(Sender: TObject);
@@ -382,6 +385,7 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     function OpenOverlay(FilenameIn: string): boolean;
     function OpenEdge(FilenameIn: string): boolean;
     function OpenMesh(FilenameIn: string): boolean;
+    function Atlas2Node(FilenameOut: string): boolean;
     procedure CheckForUpdates(Sender: TObject);
     procedure AboutMenuClick(Sender: TObject);
     procedure AddNodesMenuClick(Sender: TObject);
@@ -477,7 +481,7 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     procedure CompileMainClick(Sender: TObject);
     procedure PyIOSendData(Sender: TObject; const Data: AnsiString);
     procedure PyIOSendUniData(Sender: TObject; const Data: UnicodeString);
-
+    //procedure PythonEngineAfterInit(Sender: TObject);
     function PyIsPythonScriptMain(): boolean;
     function PyExecMain(): boolean;
     function PyCreate: boolean;
@@ -738,15 +742,12 @@ function InitPyLibraryPath: string;
     {$ifdef windows}
     exit('python35.dll');
     {$endif}
-
     {$ifdef linux}
     exit('libpython3.6m.so.1.0');
     {$endif}
-
     {$ifdef freebsd}
     exit('libpython3.6m.so');
     {$endif}
-
     {$ifdef darwin}
     for N:= 4 to 9 do
     begin
@@ -1313,6 +1314,22 @@ begin
     end;
 end;
 
+function PyFULLSCREEN(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  Vis: integer;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  with GetPythonEngine do
+    if Boolean(PyArg_ParseTuple(Args, 'i:fullscreen', @Vis)) then begin
+       if (Vis = 1) then begin
+          GLForm1.WindowState := wsFullScreen// wsMaximized
+          {$IFNDEF LCLCocoa}ExitFullScreenMenu.Visible:=true;{$ENDIF} //Linux has issues getting out of full screen
+
+       end else
+           GLForm1.WindowState := wsMaximized;
+    end;
+end;
+
 function PyELEVATION(Self, Args : PPyObject): PPyObject; cdecl;
 var
   E: integer;
@@ -1357,6 +1374,22 @@ begin
       Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
     end;
 end;
+
+function PyATLAS2NODE(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  PtrName: PChar;
+  StrName: string;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 's:atlas2node', @PtrName)) then
+    begin
+      StrName:= string(PtrName);
+      ATLAS2NODE(StrName);
+      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+    end;
+end;
+
 
 function PyTRACKLOAD(Self, Args : PPyObject): PPyObject; cdecl;
 var
@@ -1577,6 +1610,7 @@ var
   StrName,StrName2: string;
   f,f2: single;
   i,i2: integer;
+  b: boolean;
 begin
   Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
   with GetPythonEngine do
@@ -1584,8 +1618,16 @@ begin
     begin
       StrName:= string(PtrName);
       StrName2:= string(PtrName2);
-      MESHCREATE(StrName, StrName2, f, f2, i, i2);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      MyWriteln('meshcreate:');
+      MyWriteln(format(' input voxelwise image:  "%s"',[StrName]));
+      MyWriteln(format(' output mesh: "%s"',[StrName2]));
+      MyWriteln(format(' intensity threshold: %g', [f]));
+      MyWriteln(format(' mesh decimation (0..1): %g', [f2]));
+      MyWriteln(format(' cluster size: %d', [i]));
+      MyWriteln(format(' smooth: %d', [i2]));
+      MyWriteln(' smooth values: 0/1/2 none/smoothMasked/smooth) ');
+      b := MESHCREATE(StrName, StrName2, f, f2, i, i2);
+      Result:= GetPythonEngine.PyBool_FromLong(Ord(b));
     end;
 end;
 
@@ -1693,6 +1735,7 @@ procedure TGLForm1.PyModInitialization(Sender: TObject);
 begin
   with Sender as TPythonModule do begin
     //AddMethod('atlasgraybg', @PyATLASGRAYBG, '');
+    AddMethod('atlas2node', @PyATLAS2NODE, ' atlas2node(imageName) -> convert .annot file labels to BrainNet Node format.');
     AddMethod('atlasmaxindex', @PyATLASMAXINDEX, ' atlasmaxindex(overlayNum) -> Returns maximum region humber in specified atlas. For example, if you load the CIT168 atlas (which has 15 regions) as your background image, then atlasmaxindex(0) will return 15.');
     AddMethod('atlassaturationalpha', @PyATLASSATURATIONALPHA, ' atlassaturationalpha(saturation, transparency) -> Set saturation and transparency of atlas. A desaturated atlas will appear gray, a transparent atlas will reveal the background color.');
     AddMethod('azimuth', @PyAZIMUTH, ' azimuthe(azi) -> Rotate image by specified degrees.');
@@ -1712,6 +1755,7 @@ begin
     AddMethod('elevation', @PyELEVATION, ' elevation(degrees) -> Rotates volume rendering relative to camera.');
     AddMethod('exists', @PyEXISTS, ' exists(filename) -> Returns true if filename is found.');
     AddMethod('fontname', @PyFONTNAME, ' fontname(name) -> Set typeface for display.');
+    AddMethod('fullscreen', @PyFULLSCREEN, ' fullscreen(max) -> Form expands to size of screen (1) or size is maximized (0).');
     AddMethod('meshcolor', @PyMESHCOLOR, ' meshcolor(r, g, b) -> Set red/green/blue components of main image. Each component is an integer 0..255.');
     AddMethod('meshcreate', @PyMESHCREATE, ' meshcreate(niiname, meshname, threshold, decimateFrac, minimumClusterVox, smoothStyle) -> Convert a NIfTI voxel-based image into a mesh.');
     AddMethod('meshcurv', @PyMESHCURV, ' meshcurv() -> Displays mesh curvature, so crevices appear dark.');
@@ -1815,11 +1859,20 @@ begin
   PythonIO.OnSendUniData:= PyIOSendUniData;
   //S := '/Library/Frameworks/Python.framework/Versions/3.7/lib/libpython3.7.dylib';
   //S := '/usr/local/Cellar/python/3.7.4_1/Frameworks/Python.framework/Versions/3.7/lib/libpython3.7m.dylib';
+  //S := '/Users/chris/Desktop/py35/libpython3.6m.dylib';
+  //PyEngine.Py_SetSysPath
+  //Py_SetSysPath('/Users/chris/Desktop/py35/python36.zip', true);//proc_py
+  //PyEngine.OnAfterInit:=PythonEngineAfterInit;
   PyEngine.DllPath:= ExtractFileDir(S);
   PyEngine.DllName:= ExtractFileName(S);
-
   PyEngine.LoadDll
 end;
+
+(*procedure TGLForm1.PythonEngineAfterInit(Sender: TObject);
+begin
+ writeln('>>>>');
+ Py_SetSysPath(['/Users/chris/Desktop/py35/python36.zip'], true);
+end; *)
 
 
 function TGLForm1.PyIsPythonScriptMain(): boolean;
@@ -2082,6 +2135,12 @@ end;
 procedure TGLForm1.CenterPanelClick(Sender: TObject);
 begin
 
+end;
+
+procedure TGLForm1.ExitFullScreenMenuClick(Sender: TObject);
+begin
+ GLForm1.WindowState:= wsNormal;
+ ExitFullScreenMenu.Visible := false;
 end;
 
 procedure TGLForm1.LayerShowHeaderMenuClick(Sender: TObject);
@@ -2831,6 +2890,13 @@ begin
      mStream.Free;
 end; //isMz3Mesh
 
+function TGLForm1.Atlas2Node(FilenameOut: string): boolean;
+begin
+     result := gMesh.Atlas2Node(FilenameOut);
+     if result then
+        OpenNode(FilenameOut);
+end;
+
 function TGLForm1.OpenMesh(FilenameIN: string): boolean;
 var
     Filename, curvname, ext, ext2: string;
@@ -2849,7 +2915,8 @@ begin
      exit;
   end;
   if (ext2 = '.NIML.DSET') then begin
-    Showmessage('.NIML.DSET format not supported: use ConvertDset to convert to GIfTI.');
+    //Showmessage('.NIML.DSET format not supported: use ConvertDset to convert to GIfTI.');
+    OpenOverlay(Filename);
     exit;
   end;
   //ext := UpperCase(ExtractFileExt(Filename));
@@ -3899,7 +3966,7 @@ var
   s: string;
   Quality: integer;
   searchRec: TSearchRec;
-  FontCombo, ZDimIsUpCombo, QualityCombo, SaveAsFormatCombo: TComboBox;
+  WindowCombo, FontCombo, ZDimIsUpCombo, QualityCombo, SaveAsFormatCombo: TComboBox;
   bmpLabel, QualityLabel: TLabel;
   isOverlappingOverlaysOverwriteChanged, isFontChanged, isAdvancedPrefs {$IFDEF LCLCocoa}, isDarkModeChanged, isRetinaChanged {$ENDIF} : boolean;
 begin
@@ -3910,6 +3977,25 @@ begin
   PrefForm.Caption:='Preferences';
   PrefForm.Position := poScreenCenter;
   PrefForm.BorderStyle := bsDialog;
+  //Startup window size
+  WindowCombo:=TComboBox.create(PrefForm);
+  WindowCombo.Parent:=PrefForm;
+  WindowCombo.AutoSize:= true;
+  WindowCombo.Width := 320;
+  WindowCombo.Items.Add('Startup: As Window');
+  WindowCombo.Items.Add('Startup: Maximized');
+  WindowCombo.Items.Add('Startup: Full Screen');
+  WindowCombo.ItemIndex:=  gPrefs.StartupWindowMode;
+  WindowCombo.Style := csDropDownList;
+  WindowCombo.AnchorSide[akTop].Side := asrTop;
+  WindowCombo.AnchorSide[akTop].Control := PrefForm;
+  WindowCombo.BorderSpacing.Top := 6;
+  WindowCombo.AnchorSide[akLeft].Side := asrLeft;
+  WindowCombo.AnchorSide[akLeft].Control := PrefForm;
+  WindowCombo.BorderSpacing.Left := 6;
+  WindowCombo.Anchors := [akTop, akLeft];
+  WindowCombo.Parent:=PrefForm;
+  
     //Bitmap Alpha
   BitmapAlphaCheck:=TCheckBox.create(PrefForm);
   BitmapAlphaCheck.Checked := gPrefs.ScreenCaptureTransparentBackground;
@@ -3917,8 +4003,8 @@ begin
   //BitmapAlphaCheck.Left := 8;
   //BitmapAlphaCheck.Top := 8;
   BitmapAlphaCheck.AutoSize := true;
-  BitmapAlphaCheck.AnchorSide[akTop].Side := asrTop;
-  BitmapAlphaCheck.AnchorSide[akTop].Control := PrefForm;
+  BitmapAlphaCheck.AnchorSide[akTop].Side := asrBottom;
+  BitmapAlphaCheck.AnchorSide[akTop].Control := WindowCombo;
   BitmapAlphaCheck.BorderSpacing.Top := 6;
   BitmapAlphaCheck.AnchorSide[akLeft].Side := asrLeft;
   BitmapAlphaCheck.AnchorSide[akLeft].Control := PrefForm;
@@ -4212,6 +4298,7 @@ begin
     FreeAndNil(PrefForm);
   	exit; //if user closes window with out pressing "OK"
   end;
+   gPrefs.StartupWindowMode := WindowCombo.ItemIndex;
   {$IFDEF LCLCocoa}
   isRetinaChanged := gPrefs.RetinaDisplay <> RetinaCheck.Checked;
   gPrefs.RetinaDisplay := RetinaCheck.Checked;
@@ -5632,6 +5719,18 @@ procedure TGLForm1.CopyMenuClick(Sender: TObject);
 var
  bmp: TBitmap;
 begin
+  if (ScriptOutputMemo.Focused) then begin
+     if (ScriptOutputMemo.SelLength < 1) then
+        ScriptOutputMemo.SelectAll();
+     ScriptOutputMemo.CopyToClipboard;
+     exit;
+  end;
+  if (ScriptMemo.Focused) then begin
+     if (ScriptMemo.SelLength < 1) then
+        ScriptMemo.SelectAll();
+     ScriptMemo.CopyToClipboard;
+     exit;
+  end;
   if (ScriptMemo.Width > 20) and (ScriptMemo.SelLength > 0) then begin
      ScriptMemo.CopyToClipboard;
      exit;
@@ -6224,6 +6323,14 @@ begin
  GLBox.ReleaseContext;
  MultiPassRenderingToolsUpdate;
  ShaderDropChange(sender);
+  if gPrefs.StartupWindowMode = 1 then begin
+     GLForm1.BoundsRect := Screen.MonitorFromWindow(Handle).BoundsRect;
+     GLForm1.WindowState:= wsMaximized;
+  end;
+  if gPrefs.StartupWindowMode = 2 then begin
+     GLForm1.WindowState:= wsFullScreen;
+     {$IFNDEF LCLCocoa}ExitFullScreenMenu.Visible:=true;{$ENDIF} //Linux has issues getting out of full screen
+  end;
  {$IFDEF LCLCocoa} SetDarkMode; {$ENDIF}
  //{$IFDEF Windows}UpdateOverlaySpread;{$ENDIF}//July2017 - scripting on High-dpi, reset scaling
  if (gPrefs.initScript <> '' ) then

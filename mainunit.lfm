@@ -1,12 +1,12 @@
 object GLForm1: TGLForm1
-  Left = 553
-  Height = 514
-  Top = 102
-  Width = 691
+  Left = 187
+  Height = 671
+  Top = 170
+  Width = 1004
   AllowDropFiles = True
   Caption = 'Surf Ice'
-  ClientHeight = 514
-  ClientWidth = 691
+  ClientHeight = 671
+  ClientWidth = 1004
   Menu = MainMenu1
   OnChangeBounds = FormChangeBounds
   OnClose = FormClose
@@ -18,15 +18,15 @@ object GLForm1: TGLForm1
   LCLVersion = '2.1.0.0'
   object ToolPanel: TScrollBox
     Left = 0
-    Height = 514
+    Height = 671
     Top = 0
     Width = 261
     HorzScrollBar.Page = 1
     HorzScrollBar.Visible = False
-    VertScrollBar.Page = 514
+    VertScrollBar.Page = 671
     Align = alLeft
     BorderStyle = bsNone
-    ClientHeight = 514
+    ClientHeight = 671
     ClientWidth = 246
     Constraints.MaxWidth = 272
     Constraints.MinWidth = 4
@@ -1532,7 +1532,7 @@ object GLForm1: TGLForm1
   end
   object LeftSplitter: TSplitter
     Left = 261
-    Height = 514
+    Height = 671
     Top = 0
     Width = 6
     OnCanOffset = LeftSplitterCanOffset
@@ -1542,9 +1542,9 @@ object GLForm1: TGLForm1
   end
   object CenterPanel: TPanel
     Left = 267
-    Height = 514
+    Height = 671
     Top = 0
-    Width = 416
+    Width = 729
     Align = alClient
     Constraints.MinHeight = 32
     Constraints.MinWidth = 32
@@ -1553,21 +1553,21 @@ object GLForm1: TGLForm1
     OnClick = CenterPanelClick
   end
   object RightSplitter: TSplitter
-    Left = 683
-    Height = 514
+    Left = 996
+    Height = 671
     Top = 0
     Width = 6
     Align = alRight
     ResizeAnchor = akRight
   end
   object ScriptPanel: TPanel
-    Left = 689
-    Height = 514
+    Left = 1002
+    Height = 671
     Top = 0
     Width = 2
     Align = alRight
     BevelOuter = bvNone
-    ClientHeight = 514
+    ClientHeight = 671
     ClientWidth = 2
     Constraints.MinWidth = 2
     ParentFont = False
@@ -1575,19 +1575,19 @@ object GLForm1: TGLForm1
     OnDblClick = ScriptPanelDblClick
     object ScriptBox: TGroupBox
       Left = 0
-      Height = 514
+      Height = 671
       Top = 0
       Width = 2
       Align = alClient
       Caption = 'Scripting'
-      ClientHeight = 495
+      ClientHeight = 652
       ClientWidth = 0
       ParentFont = False
       TabOrder = 0
       OnDblClick = ScriptPanelDblClick
       object ScriptMemo: TMemo
         Left = 0
-        Height = 289
+        Height = 446
         Top = 0
         Width = 0
         Align = alClient
@@ -1609,7 +1609,7 @@ object GLForm1: TGLForm1
       object ScriptOutputMemo: TMemo
         Left = 0
         Height = 200
-        Top = 295
+        Top = 452
         Width = 0
         Align = alBottom
         BorderStyle = bsNone
@@ -1626,7 +1626,7 @@ object GLForm1: TGLForm1
         Cursor = crVSplit
         Left = 0
         Height = 6
-        Top = 289
+        Top = 446
         Width = 0
         Align = alBottom
         ResizeAnchor = akBottom
@@ -1976,6 +1976,11 @@ object GLForm1: TGLForm1
         AutoCheck = True
         Caption = 'Orientation cube'
         OnClick = OrientCubeMenuClick
+      end
+      object ExitFullScreenMenu: TMenuItem
+        Caption = 'Exit Full Screen Mode'
+        Visible = False
+        OnClick = ExitFullScreenMenuClick
       end
     end
     object ColorMenu: TMenuItem

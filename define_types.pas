@@ -7,7 +7,7 @@ interface
 {$endif}
 
 const
-  kVers = 'v1.0.20190902';
+  kVers = 'v1.0.20191122 Beta';
   NaN : double = 1/0;
   kTab = chr(9);
   kCR = chr (13);
@@ -168,7 +168,6 @@ begin
   end;
 end;
 {$ENDIF}
-
 
 function DefaultToHomeDir(FileName: string; Force: boolean = false ): string; //set path to home if not provided
 var

@@ -73,7 +73,7 @@ type
     faces : array of TPoint3i;
     vertices: array of TPoint3f;
     vertexRGBA : array of TRGBA;
-    vertexAtlas: TInts; //what atlss regions does this vertex belong to, e.g. [7, 8, 17...] the 3rd vertex belongs to region 17
+    vertexAtlas: TInts; //what atlas regions does this vertex belong to, e.g. [7, 8, 17...] the 3rd vertex belongs to region 17
     atlasTransparentFilter: TBools;
     atlasHideFilter: TInts; //atlas show these atlas regions, e.g. if [7, 8, 22] then only regions 7,8 and 22 will be visible
     tempIntensityLUT : TFloats; //only used to load without external files - flushed after LoadOverlay
@@ -99,6 +99,7 @@ type
     function LoadAc(const FileName: string): boolean;
     function LoadByu(const FileName: string): boolean;
     function LoadAnnot(const FileName: string): boolean;
+    function LoadNiml(const FileName: string): boolean;
     function loadCifti(fnm: string; lOverlayIndex, lSeriesIndex: integer; isLoadCortexLeft: boolean): integer;
     function LoadDae(const FileName: string): boolean; //only subset!
     function LoadDfs(const FileName: string): boolean;
@@ -165,6 +166,7 @@ type
     function LoadOverlay(const FileName: string; lLoadSmooth: boolean): boolean;
     procedure CloseOverlaysCore;
     procedure CloseOverlays;
+    function Atlas2Node(const FileName: string):boolean;
     procedure Close;
     constructor Create;
     (*procedure SaveVrml(const FileName: string; MeshColor: TColor = clWhite);
@@ -182,6 +184,305 @@ implementation
 uses
   mainunit, {$IFDEF FASTGZ}SynZip, {$ENDIF}
   meshify_simplify,shaderu, {$IFDEF COREGL} gl_core_3d {$ELSE} gl_legacy_3d {$ENDIF};
+
+(*function TMesh.Atlas2Node(const FileName: string):boolean;
+const
+  kT = chr(9);
+label
+   123;
+var
+   xROI, yROI, zROI, maxRoiDxIdx, nVert, maxROI, nFace, roi, nroiEdges, nroiVerts, nCOGs: integer;
+   roiEdges, roiVerts: TInts;
+   isEdge, isVert: TInts;
+   roiDx, maxRoiDx: double;
+   COGs: array of TPoint4f; //center of gravity
+   j, i : integer;
+   txt: TextFile;
+begin
+     result := false;
+     nVert := length(vertices);
+     nFace := length(faces);
+     maxROI := AtlasMaxIndex;
+     if (nFace < 1) or (nVert < 3) or (maxROI < 1) or (length(vertexAtlas) <>  nVert) then exit;
+     setlength(COGs, maxROI+1);
+     setlength(roiEdges, nVert); //list of vertices on edge of ROI
+     setlength(roiVerts, nVert); //list all vertices in ROI
+     setlength(isEdge, nVert);
+     setlength(isVert, nVert);
+     for i := 0 to maxROI do
+         COGs[i] := pt4f(0,0,0,0);
+     nCOGs := 0;
+     for roi := 0 to maxROI do begin
+         nroiEdges := 0;
+         for i := 0 to nVert -1 do begin
+             isEdge[i] := 0;
+             isVert[i] := 0;
+         end;
+         //fillChar(isEdge,sizeOf(isEdge),0);
+         //fillChar(isVert,sizeOf(isVert),0);
+         for i := 0 to (nFace-1) do begin
+             xROI := vertexAtlas[Faces[i].X];
+             yROI := vertexAtlas[Faces[i].Y];
+             zROI := vertexAtlas[Faces[i].Z];
+             if (xROI <> roi) and (yROI <> roi) and (zROI <> roi) then continue; //this vertex not member of ROI
+             //roiVerts[nroiVerts] := i;
+             if (xROI = roi) then isVert[Faces[i].X] := 1;
+             if (yROI = roi) then isVert[Faces[i].Y] := 1;
+             if (zROI = roi) then isVert[Faces[i].Z] := 1;
+             if (xROI = yROI) and (xROI = zROI) then continue; //all members of same ROI
+             if (xROI = roi) then isEdge[Faces[i].X] := 1;
+             if (yROI = roi) then isEdge[Faces[i].Y] := 1;
+             if (zROI = roi) then isEdge[Faces[i].Z] := 1;
+             nroiEdges := nroiEdges + 1;
+         end;
+         if nroiEdges < 1 then continue; //no edges found!
+         //compute total number of edges, faces...
+         nroiEdges := 0;
+         for i := 0 to (nVert-1) do
+             if isEdge[i] > 0 then begin
+               roiEdges[nroiEdges] := i;
+               nroiEdges := nroiEdges + 1;
+             end;
+         nroiVerts := 0;
+         for i := 0 to (nVert-1) do
+             if isVert[i] > 0 then begin
+               roiVerts[nroiVerts] := i;
+               nroiVerts := nroiVerts + 1;
+             end;
+         maxRoiDx := -infinity;
+         maxRoiDxIdx := 0;
+         for i := 0 to (nroiVerts -1) do begin //compute cost function for each vertex - furtherst from edges
+             roiDx := 0;
+             for j := 0 to (nroiEdges - 1) do
+                 roiDx := roiDx + DistanceBetween(vertices[roiVerts[i]], vertices[roiEdges[j]]);
+             if (roiDx <= maxRoiDx) then continue;
+             maxRoiDx := roiDx;
+             maxRoiDxIdx := roiVerts[i];
+         end;
+         COGs[nCOGs].x := vertices[maxRoiDxIdx].x;
+         COGs[nCOGs].y := vertices[maxRoiDxIdx].y;
+         COGs[nCOGs].z := vertices[maxRoiDxIdx].z;
+         COGs[nCOGs].w := roi+1;
+         nCOGs := nCOGs + 1;
+     end;
+     if nCOGs < 1 then goto 123;
+     result := true;
+     AssignFile(txt, FileName);
+     rewrite(txt);
+     for i := 0 to nCOGs-1 do begin
+         if COGs[i].w < 1 then continue; //label not present
+         writeln(txt, format('%g%s%g%s%g%s%d%s1', [COGs[i].x,kT,COGs[i].y,kT,COGs[i].z,kT,round(COGs[i].w),kT ]));
+     end;
+     CloseFile(txt);
+     123:
+     roiEdges := nil;
+     roiEdges := nil;
+     COGs := nil;
+     isVert := nil;
+     isEdge := nil;
+     nearestNode := nil;
+end; *)
+
+
+{$DEFINE FXR}
+{$IFDEF FXR}
+function DistanceBetween(var a,b: TPoint3f): single;
+begin
+     result := sqrt(sqr(a.x-b.x)+sqr(a.y-b.y)+sqr(a.z-b.z));
+end;
+
+function AddPt3f(var a,b: TPoint3f): TPoint3f; //create float vector
+begin
+     result.X := a.X + b.X;
+     result.Y := a.Y + b.Y;
+     result.Z := a.Z + b.Z;
+end;
+
+function TMesh.Atlas2Node(const FileName: string):boolean;
+const
+  kT = chr(9);
+label
+   123;
+var
+   xROI, yROI, zROI, maxRoiDxIdx, nVert, maxROI, nFace, roi, nroiEdges, nroiVerts, nCOGs: integer;
+   roiEdges, roiVerts: TInts;
+   isEdge, isVert: TInts;
+   cogDx, maxCogDX, roiDx, maxRoiDx, dx: single;
+   vert, cog: TPoint3f;
+   COGs: array of TPoint4f; //center of gravity
+   j, i : integer;
+   txt: TextFile;
+   {$IFDEF TIMER}startTime : TDateTime;{$ENDIF}
+begin
+     {$IFDEF TIMER}startTime := Now;{$ENDIF}
+     result := false;
+     nVert := length(vertices);
+     nFace := length(faces);
+     maxROI := AtlasMaxIndex;
+     //GLForm1.OverlayBox.Caption := 'a'+inttostr(maxROI);
+     if (nFace < 1) or (nVert < 3) or (maxROI < 1) or (length(vertexAtlas) <>  nVert) then exit;
+     setlength(COGs, maxROI+1);
+     setlength(roiEdges, nVert); //list of vertices on edge of ROI
+     setlength(roiVerts, nVert); //list all vertices in ROI
+     setlength(isEdge, nVert);
+     setlength(isVert, nVert);
+     //GLForm1.OverlayBox.Caption := 'b'+inttostr(maxROI);
+
+     for i := 0 to maxROI do
+         COGs[i] := pt4f(0,0,0,0);
+     nCOGs := 0;
+     for roi := 0 to maxROI do begin
+         nroiEdges := 0;
+         for i := 0 to nVert -1 do begin
+             isEdge[i] := 0;
+             isVert[i] := 0;
+         end;
+         //fillChar(isEdge,sizeOf(isEdge),0);
+         //fillChar(isVert,sizeOf(isVert),0);
+         for i := 0 to (nFace-1) do begin
+             xROI := vertexAtlas[Faces[i].X];
+             yROI := vertexAtlas[Faces[i].Y];
+             zROI := vertexAtlas[Faces[i].Z];
+             if (xROI <> roi) and (yROI <> roi) and (zROI <> roi) then continue; //this vertex not member of ROI
+             //roiVerts[nroiVerts] := i;
+             if (xROI = roi) then isVert[Faces[i].X] := 1;
+             if (yROI = roi) then isVert[Faces[i].Y] := 1;
+             if (zROI = roi) then isVert[Faces[i].Z] := 1;
+             if (xROI = yROI) and (xROI = zROI) then continue; //all members of same ROI
+             if (xROI = roi) then isEdge[Faces[i].X] := 1;
+             if (yROI = roi) then isEdge[Faces[i].Y] := 1;
+             if (zROI = roi) then isEdge[Faces[i].Z] := 1;
+             nroiEdges := nroiEdges + 1;
+         end;
+         if nroiEdges < 1 then continue; //no edges found!
+         //compute total number of edges, faces...
+         nroiEdges := 0;
+         for i := 0 to (nVert-1) do
+             if isEdge[i] > 0 then begin
+               roiEdges[nroiEdges] := i;
+               nroiEdges := nroiEdges + 1;
+             end;
+         nroiVerts := 0;
+         for i := 0 to (nVert-1) do
+             if isVert[i] > 0 then begin
+               roiVerts[nroiVerts] := i;
+               nroiVerts := nroiVerts + 1;
+             end;
+         //find center of mass
+         cog := ptf(0,0,0);
+         for i := 0 to (nroiVerts -1) do
+             cog := AddPt3f(cog, vertices[roiVerts[i]]);
+          cog.x := cog.x / nroiVerts;
+          cog.y := cog.y / nroiVerts;
+          cog.z := cog.z / nroiVerts;
+         maxCogDX := infinity;
+         maxRoiDx := -infinity;
+         maxRoiDxIdx := 0;
+         for i := 0 to (nroiVerts -1) do begin
+             //compute cost function for each vertex - furtherst from edges
+             // who on the island has the longest walk to the beach?
+             roiDx := infinity;
+             vert := vertices[roiVerts[i]];
+             for j := 0 to (nroiEdges - 1) do begin
+                 dx := DistanceBetween(vert, vertices[roiEdges[j]]);
+                 if dx < roiDx then
+                    roiDx := dx;
+             end;
+             if (roiDx < maxRoiDx) then continue;
+             cogDx := DistanceBetween(vert, cog);
+             if (roiDx = maxRoiDx) then begin
+                if (cogDx > maxCogDx) then continue;
+             end;
+             maxCogDx := cogDx;
+             maxRoiDx := roiDx;
+             maxRoiDxIdx := roiVerts[i];
+         end;
+         //maxRoiDxIdx := roiVerts[random(nroiVerts)];
+         //maxRoiDxIdx := roiEdges[random(nroiEdges)];
+         COGs[nCOGs].x := vertices[maxRoiDxIdx].x;
+         COGs[nCOGs].y := vertices[maxRoiDxIdx].y;
+         COGs[nCOGs].z := vertices[maxRoiDxIdx].z;
+         COGs[nCOGs].w := roi+1;
+         nCOGs := nCOGs + 1;
+     end;
+     if nCOGs < 1 then goto 123;
+     result := true;
+     AssignFile(txt, FileName);
+     rewrite(txt);
+     for i := 0 to nCOGs-1 do begin
+         if COGs[i].w < 1 then continue; //label not present
+         writeln(txt, format('%g%s%g%s%g%s%d%s1', [COGs[i].x,kT,COGs[i].y,kT,COGs[i].z,kT,round(COGs[i].w),kT ]));
+     end;
+     CloseFile(txt);
+     {$IFDEF TIMER}GLForm1.Caption :=  inttostr(MilliSecondsBetween(Now,StartTime)); {$ENDIF}
+     123:
+     roiEdges := nil;
+     roiEdges := nil;
+     COGs := nil;
+     isVert := nil;
+     isEdge := nil;
+     //nearestNode := nil;
+end;
+{$ELSE}
+function TMesh.Atlas2Node(const FileName: string):boolean;
+const
+  kT = chr(9);
+label
+   123;
+var
+   nVert, maxROI: integer;
+   COGs, nearestNode: array of TPoint4f; //center of gravity
+   i, idx : integer;
+   dx: single;
+   txt: TextFile;
+begin
+     result := false;
+     nVert := length(vertices);
+     maxROI := AtlasMaxIndex;
+     if (nVert < 3) or (maxROI < 1) or (length(vertexAtlas) <>  nVert) then exit;
+     //vertexAtlas: TInts; //what atlas regions does this vertex belong to, e.g. [7, 8, 17...] the 3rd vertex belongs to region 17
+     //setlength(mass, maxROI+1);
+     setlength(COGs, maxROI+1);
+     for i := 0 to maxROI do
+         COGs[i] := pt4f(0,0,0,0);
+     for i := 0 to (nVert -1) do begin
+         idx := vertexAtlas[i];
+         COGs[idx].w := COGs[idx].w + 1;
+         COGs[idx].x := COGs[idx].x + vertices[i].x;
+         COGs[idx].y := COGs[idx].y + vertices[i].y;
+         COGs[idx].z := COGs[idx].z + vertices[i].z;
+     end;
+     //set center of gravity =  mean
+     for i := 0 to maxROI do begin
+         COGs[i].x := COGs[i].x / COGs[i].w;
+         COGs[i].y := COGs[i].y / COGs[i].w;
+         COGs[i].z := COGs[i].z / COGs[i].w;
+     end;
+     //initialize nearest node - infinitely far away from COG
+     setlength(nearestNode, maxROI+1);
+     for i := 0 to maxROI do
+         nearestNode[i] := pt4f(0,0,0,Infinity);
+     //for each vertex - see if this is closest to COG
+     for i := 0 to (nVert -1) do begin
+         idx := vertexAtlas[i];
+         dx := sqrt( sqr(COGs[idx].x-vertices[i].x) + sqr(COGs[idx].y-vertices[i].y) + sqr(COGs[idx].z-vertices[i].z)  );
+         if (dx >= nearestNode[idx].w) then continue;
+         nearestNode[idx] := pt4f(vertices[i].x, vertices[i].y, vertices[i].z, dx);
+         result := true; //at least one node survives
+     end;
+     if not result then goto 123;
+     AssignFile(txt, FileName);
+     rewrite(txt);
+     for i := 0 to maxROI do begin
+         if COGs[i].w < 1 then continue; //label not present
+         writeln(txt, format('%g%s%g%s%g%s%d%s1', [nearestNode[i].x,kT,nearestNode[i].y,kT,nearestNode[i].z,kT,i,kT ]));
+     end;
+     CloseFile(txt);
+     123:
+     COGs := nil;
+     nearestNode := nil;
+end;
+{$ENDIF}
 
 {$IFDEF FASTGZ}
 function ExtractGz(fnm: string; var mStream : TMemoryStream; magic: word = 0): boolean;
@@ -3879,7 +4180,7 @@ begin
   FileMode := fmOpenWrite;   //FileMode := fmOpenRead;
   AssignFile(f, FileNameGii);
   ReWrite(f);
-  WriteLn(f, '<?xml="1.0" encoding="UTF-8"?>');
+  WriteLn(f, '<?xml version="1.0" encoding="UTF-8"?>');
   WriteLn(f, '<!DOCTYPE GIFTI SYSTEM "http://www.nitrc.org/frs/download.php/115/gifti.dtd">');
   WriteLn(f, '<GIFTI Version="1.0"  NumberOfDataArrays="2">');
   WriteLn(f, '   <MetaData/>');
@@ -7688,6 +7989,167 @@ begin
   result := inguy^.rgba;
 end; // asRGBA()
 
+function TMesh.LoadNiml(const FileName: string): boolean;
+label
+   123;
+const
+  kDT_STRING = 4096;
+type
+  TAFNI = record
+        ni_dimen, ni_type, ni_bytesPerElement: integer;
+        ni_form_lsb: boolean;
+   end;
+function clearAfni: TAfni;
+begin
+     result.ni_dimen := 0;
+     result.ni_type := 0;
+     result.ni_bytesPerElement := 0;
+     result.ni_form_lsb := false;
+end;
+var
+   st: string;
+   i, nVert: integer;
+   FSz: int64;
+   f: TFByte;
+   afni: TAFNI;
+   rgbas: TVertexRGBA;
+   floats: TFloats;
+procedure ReadLnBinNiml(var f: TFByte; out s: string);
+//niml follows binary immediately after ">" without EOLN!
+const
+  kEOLN = $0A;
+  kEnd = ord('>');
+var
+   bt : Byte;
+begin
+     s := '';
+     while (not  EOF(f)) do begin
+           Read(f,bt);
+           if bt = kEOLN then exit;
+           s := s + Chr(bt);
+           if bt = kEnd then exit;
+     end;
+end;
+function parseBetweenQuotes(s: string):string; //'ni_type="int"'->'int'
+var
+   b,e: integer;
+begin
+     result := '';
+     b := PosEx('"',s);
+     if b < 1 then exit;
+     e := PosEx('"',s, b+1);
+     if e <= b then exit;
+     result := copy(s, b+1, e-b-1);
+end;
+procedure parseAfni();
+begin
+    if AnsiContainsText(st, 'ni_type="float"') then begin
+      afni.ni_type := kDT_FLOAT32;
+      afni.ni_bytesPerElement := 4;
+    end;
+    if AnsiContainsText(st, 'ni_type="int"') then begin
+      afni.ni_type := kDT_INT32;
+      afni.ni_bytesPerElement := 4;
+    end;
+    if AnsiContainsText(st, 'ni_form="binary.lsbfirst"') then
+       afni.ni_form_lsb := true;
+    if AnsiContainsText(st, 'ni_form="binary.msbfirst"') then
+       afni.ni_form_lsb := false;
+    if AnsiContainsText(st, 'ni_dimen="') then
+       afni.ni_dimen := strtointdef( parseBetweenQuotes(st), -1);
+end;
+function readObjectHeader(): boolean;
+begin
+  afni := clearAfni();
+  result := false;
+  while not eof(f) and (not AnsiContainsText(st, '>')) do begin
+      ReadLnBinNiml(f, st);
+      parseAfni();
+  end;
+  if not afni.ni_form_lsb then begin
+   {$IFDEF UNIX}writeln('Only LSB supported'); {$ENDIF}
+   exit;
+  end;
+  if (afni.ni_type <> kDT_INT32) and (afni.ni_type <> kDT_FLOAT32) then begin
+   {$IFDEF UNIX}writeln(format('Only support "int" (%d) not %d', [kDT_INT32, afni.ni_type])); {$ENDIF}
+   exit;
+  end;
+  if afni.ni_dimen <> length(vertices) then begin //num_v := length(vertices)
+   {$IFDEF UNIX}writeln(format('Expected %d labels but found %d',[length(vertices), afni.ni_dimen])); {$ENDIF}
+   exit;
+  end;
+  if (filepos(f)+(afni.ni_bytesPerElement*afni.ni_dimen)) > FSz then begin
+    {$IFDEF UNIX}writeln(format('File size too small for data %d',[FSz])); {$ENDIF}
+    exit;
+  end;
+  ////assume sorted_node_def="Yes"!
+  result := true;
+end; //readObjectHeader()
+
+begin
+  result := false;
+  FSz := FSize(FileName);
+  if (FSz < 64) then exit;
+  FileMode := fmOpenRead;
+  AssignFile(f, FileName);
+  Reset(f,1);
+  afni := clearAfni();
+  ReadLnBin(f, st); //signature
+  if (not AnsiContainsText(st, '<AFNI_dataset'))  then begin
+    {$IFDEF UNIX}writeln('Does not appear to be a AFNI dataset');{$ENDIF}
+    //showmessage('Does not appear to be a AFNI dataset.');
+    goto 123;
+  end;
+  while not eof(f) do begin
+    ReadLnBin(f, st);
+    if AnsiContainsText(st, '<INDEX_LIST') then begin
+      //LabelTableObject_data
+      result := readObjectHeader();
+      if not result then goto 123;
+      //writeln('<<d'+st+'*');
+      seek(f, filepos(f)+(afni.ni_bytesPerElement*afni.ni_dimen));
+    end;
+    // LabelTableObject_data
+    if AnsiContainsText(st, '<SPARSE_DATA') then begin
+      result := readObjectHeader();
+      if not result then goto 123;
+      nVert := length(vertices);
+      if nVert <> afni.ni_dimen then goto 123;
+      setlength(vertexAtlas, nVert);
+      if afni.ni_type = kDT_INT32 then begin
+         blockread(f, vertexAtlas[0],  nVert * sizeof(int32)); //coord X
+
+      end else if afni.ni_type = kDT_FLOAT32 then begin
+          setlength(floats, nVert);
+          blockread(f, floats[0],  nVert * sizeof(single)); //coord X
+          for i := 0 to (nVert-1) do
+            vertexAtlas[i] := round(floats[i]);
+          floats := nil;
+      end else begin
+          writeln('Unsupported datatype');
+          goto 123;
+      end;
+      atlasMaxIndex := vertexAtlas[0];
+      for i := 0 to (nVert -1) do
+          if vertexAtlas[i] > atlasMaxIndex then
+             atlasMaxIndex := vertexAtlas[i];
+      setlength(rgbas, atlasMaxIndex+1);
+      for i := 0 to atlasMaxIndex do
+          rgbas[i] := RGBA(random(255), random(255), random(255), 128);
+      setlength(vertexRGBA, nVert);
+
+      for i := 0 to (nVert -1) do
+          vertexRGBA[i] := rgbas[(vertexAtlas[i])];
+      result := true;
+      writeln(format(':::%d',[atlasMaxIndex]));
+      goto 123;
+    end;
+  end; //while not eof(f)
+
+  //result := true;
+ 123:
+ closefile(f);
+end;
 
 {$DEFINE ANNOTasTEMPLATE}
 {$IFDEF ANNOTasTEMPLATE}
@@ -7803,7 +8265,6 @@ begin
   for v := 0 to (nVert -1) do
       if (vertexAtlas[v] < 0) then begin
         GLForm1.ScriptOutputMemo.Lines.Add(format('annot file ERROR %d rgba %d %d %d %d',[666, vertexRGBA[v].r, vertexRGBA[v].g, vertexRGBA[v].b, vertexRGBA[v].a]));
-
         break;
       end;
   result := true;
@@ -8871,7 +9332,6 @@ begin
   vRGBA := nil;
 end;
 
-
 function TMesh.LoadOverlay(const FileName: string; lLoadSmooth: boolean): boolean; //; isSmooth: boolean
 var
    i, nOverlays: integer;
@@ -8962,7 +9422,13 @@ begin
      end;
   end;
   if (ext2 = '.NIML.DSET') then begin
-    Showmessage('.NIML.DSET format not supported: use ConvertDset to convert to GIfTI.');
+     if LoadNiml(FileName) then begin
+        result := true;
+        isRebuildList := true;
+        exit;
+     end;
+     {$IFDEF UNIX}writeln('.NIML.DSET format not supported: use ConvertDset to convert to GIfTI.');  {$ENDIF}
+     {$IFNDEF Darwin}Showmessage('.NIML.DSET format not supported: use ConvertDset to convert to GIfTI.'); {$ENDIF}
     OpenOverlays := OpenOverlays - 1;
     exit;
   end;

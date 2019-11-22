@@ -26,7 +26,9 @@ procedure EDGESIZE(size: single; varies: boolean);
 procedure EDGETHRESH (LO, HI: single);
 procedure ELEVATION (DEG: integer);
 procedure FONTNAME(name: string);
-procedure MESHCREATE(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer);
+procedure FULLSCREEN (isFullScreen: boolean);
+procedure ATLAS2NODE(lFilename: string);
+function MESHCREATE(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer): boolean;
 procedure MESHCURV;
 procedure MESHLOAD(lFilename: string);
 procedure MESHOVERLAYORDER (FLIP: boolean);
@@ -89,7 +91,7 @@ const
                (Ptr:@VERSION;Decl:'VERSION';Vars:'(): string')
              );
 
-knProc = 69;
+knProc = 71;
   kProcRA : array [1..knProc] of TScriptRec = (
   (Ptr:@ATLASSTATMAP;Decl:'ATLASSTATMAP';Vars:'(ATLASNAME, STATNAME: string; const Intensities: array of integer; const Intensities: array of single)'),
   (Ptr:@ATLASSATURATIONALPHA;Decl:'ATLASSATURATIONALPHA';Vars:'(lSaturation, lTransparency: single)'),
@@ -112,6 +114,8 @@ knProc = 69;
    (Ptr:@ELEVATION;Decl:'ELEVATION';Vars:'(DEG: integer)'),
    (Ptr:@EDGELOAD;Decl:'EDGELOAD';Vars:'(lFilename: string)'),
    (Ptr:@FONTNAME;Decl:'FONTNAME';Vars:'(name: string)'),
+   (Ptr:@FULLSCREEN;Decl:'FULLSCREEN';Vars:'(isFullScreen: boolean)'),
+   (Ptr:@ATLAS2NODE;Decl:'ATLAS2NODE';Vars:'(lFilename: string)'),
    (Ptr:@MESHCURV;Decl:'MESHCURV';Vars:''),
    (Ptr:@MESHREVERSEFACES;Decl:'MESHREVERSEFACES';Vars:''),
    (Ptr:@MESHLOAD;Decl:'MESHLOAD';Vars:'(lFilename: string)'),
@@ -431,6 +435,15 @@ begin
     AZIMUTHELEVATION(180,0);
 end;
 
+procedure FULLSCREEN (isFullScreen: boolean);
+begin
+       if (isFullScreen) then begin
+          GLForm1.WindowState := wsFullScreen// wsMaximized
+          {$IFNDEF LCLCocoa}ExitFullScreenMenu.Visible:=true;{$ENDIF} //Linux has issues getting out of full screen
+       end else
+           GLForm1.WindowState := wsMaximized;
+end;
+
 procedure FONTNAME(name: string);
 begin
      gPrefs.FontName:= name;
@@ -455,12 +468,13 @@ begin
      GLForm1.CurvMenuTemp.Click;
 end;
 
-procedure MESHCREATE(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer);
+function MESHCREATE(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer): boolean;
 var
   nVtx: integer;
   meshnamePth: string;
 begin
   //Nii2MeshCore(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer): integer;
+  result := false;
   if (niiname = '') then begin
     GLForm1.ScriptOutputMemo.Lines.Add('meshcreate error: no NIfTI name');
     exit;
@@ -473,14 +487,24 @@ begin
   nVtx := Nii2MeshCore(niiname, meshnamePth, threshold, decimateFrac, minimumClusterVox, smoothStyle);
   if (nVtx < 3) then
      GLForm1.ScriptOutputMemo.Lines.Add('meshcreate error: no mesh created')
-  else
+  else begin
       GLForm1.ScriptOutputMemo.Lines.Add('meshcreate generated mesh with '+inttostr(nVtx)+' vertices');
+      result := true;
+  end;
 end;
 
 procedure MESHLOAD(lFilename: string);
 begin
   if not GLForm1.OpenMesh(lFilename) then begin
      GLForm1.ScriptOutputMemo.Lines.Add('Unable to load mesh named "'+lFilename+'"');
+   end;
+end;
+
+
+procedure ATLAS2NODE(lFilename: string);
+begin
+  if not GLForm1.Atlas2Node(lFilename) then begin
+     GLForm1.ScriptOutputMemo.Lines.Add('Unable to convert labels to nodes (make sure .annot file is loaded)');
    end;
 end;
 

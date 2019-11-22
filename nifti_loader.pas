@@ -7,7 +7,7 @@ uses
   nifti_foreign, {$ifndef isTerminalApp}  dialogs, {$endif}
   Classes, SysUtils, nifti_types, define_types,  zstream;
 
-const
+const               //(0/1/2 none/smoothMasked/smooth)
   kNiftiSmoothNone = 0; //no smoothing: raw values
   kNiftiSmoothMaskZero = 1; //smoothing but ignoring zeros (avoid erosion due to brain mask)
   kNiftiSmooth = 2; //conventional smoothing

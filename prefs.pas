@@ -24,7 +24,9 @@ type
      Colorbar,TracksAreTubes, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,ColorBarPrecedenceTracksNotOverlays,HideDarkTracks, HideBrightTracks,
      OverlappingOverlaysOverwrite, ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting, isFlipMeshOverlay, DarkMode, RetinaDisplay, GenerateSmoothCurves : boolean;
     TrackTubeSlices, ScreenCaptureZoom,ColorbarColor,ColorBarPosition,
-    window_width, window_height, RenderQuality, SaveAsFormat,SaveAsFormatTrack, OcclusionAmount: integer;
+    window_width, window_height, RenderQuality, 
+    StartupWindowMode,
+    SaveAsFormat,SaveAsFormatTrack, OcclusionAmount: integer;
     ObjColor,BackColor: TColor;
     PrevFilename, PrevScriptName: TMRU;
     //{$IFDEF Darwin}BaseDirname,  {$ENDIF} //OSX Sierra puts application in random directory, so 'Sample' 'BrainNet' folders will be in unknown locations
@@ -296,6 +298,7 @@ begin
        with lPrefs do begin
             //CrossHairs := true;
             ColorbarSize := 0.035;
+            StartupWindowMode := 0;
             ObjColor := RGBToColor(212, 168, 168);
             BackColor := RGBToColor(0, 0, 0);
             TextColor := RGBA(255,255,255,255);
@@ -656,6 +659,7 @@ begin
 	  //IntBound(lPrefs.ColorbarPosition, 0,4);
 	  IniInt(lRead,lIniFile,'RenderQuality',lPrefs.RenderQuality);
 	  IniInt(lRead,lIniFile,'SaveAsFormat',lPrefs.SaveAsFormat);
+	  IniInt(lRead,lIniFile,'StartupWindowMode',lPrefs.StartupWindowMode);
 	  IniInt(lRead,lIniFile,'SaveAsFormatTrack',lPrefs.SaveAsFormatTrack);
 	  IniInt(lRead,lIniFile,'OcclusionAmount',lPrefs.OcclusionAmount);
 	  IniFloat(lRead,lIniFile,'ColorbarSize',lPrefs.ColorbarSize);
