@@ -7,7 +7,7 @@ uses
   Classes, SysUtils, dialogs, userdir, prefs, IniFiles, define_types;
 
 const  //maximum number of control points for color schemes...
-  maxNodes = 32;
+  maxNodes = 100;
      kPaintHideDefaultBehavior = -1;
      kPaintHideDarkHideBright = 0;
      kPaintHideDarkShowBright = 1;
@@ -92,8 +92,6 @@ begin
   if (c2.A > result.A) then
      result.A := c2.A;
 end;
-
-
 
 function inten2rgb(intensity, mn, mx: single; lut: TLUT; mode: integer): TRGBA; overload;
 var
@@ -242,6 +240,129 @@ begin
  lIniFile.Free;
 end;
 
+function defaultLabelLut: TLUT;
+function makeRGB (r,b,g: byte): TRGBA;
+//linear interpolation
+begin
+  result.R := r;
+  result.G := g;
+  result.B := b;
+end;//lerpRGBA()
+var
+   lut: TLUT;
+   i: integer;
+begin
+    //lut[0] := makeRGB(fBackColor.r,fBackColor.g, fBackColor.b);
+    lut[0].A := 0;
+    lut[1] := makeRGB(71,46,154);
+    lut[2] := makeRGB(33,78,43);
+    lut[3] := makeRGB(192,199,10);
+    lut[4] := makeRGB(32,79,207);
+    lut[5] := makeRGB(195,89,204);
+    lut[6] := makeRGB(208,41,164);
+    lut[7] := makeRGB(173,208,231);
+    lut[8] := makeRGB(233,135,136);
+    lut[9] := makeRGB(202,20,58);
+    lut[10] := makeRGB(25,154,239);
+    lut[11] := makeRGB(210,35,30);
+    lut[12] := makeRGB(145,21,147);
+    lut[13] := makeRGB(89,43,230);
+    lut[14] := makeRGB(87,230,101);
+    lut[15] := makeRGB(245,113,111);
+    lut[16] := makeRGB(246,191,150);
+    lut[17] := makeRGB(38,147,35);
+    lut[18] := makeRGB(3,208,128);
+    lut[19] := makeRGB(25,37,57);
+    lut[20] := makeRGB(57,28,252);
+    lut[21] := makeRGB(167,27,79);
+    lut[22] := makeRGB(245,86,173);
+    lut[23] := makeRGB(86,203,120);
+    lut[24] := makeRGB(227,25,25);
+    lut[25] := makeRGB(208,209,126);
+    lut[26] := makeRGB(81,148,81);
+    lut[27] := makeRGB(64,187,85);
+    lut[28] := makeRGB(90,139,8);
+    lut[29] := makeRGB(199,111,7);
+    lut[30] := makeRGB(140,48,122);
+    lut[31] := makeRGB(48,102,237);
+    lut[32] := makeRGB(212,76,190);
+    lut[33] := makeRGB(180,110,152);
+    lut[34] := makeRGB(70,106,246);
+    lut[35] := makeRGB(120,130,182);
+    lut[36] := makeRGB(9,37,130);
+    lut[37] := makeRGB(192,160,219);
+    lut[38] := makeRGB(245,34,67);
+    lut[39] := makeRGB(177,222,76);
+    lut[40] := makeRGB(65,90,167);
+    lut[41] := makeRGB(157,165,178);
+    lut[42] := makeRGB(9,245,235);
+    lut[43] := makeRGB(193,222,250);
+    lut[44] := makeRGB(100,102,28);
+    lut[45] := makeRGB(181,47,61);
+    lut[46] := makeRGB(125,19,186);
+    lut[47] := makeRGB(145,130,250);
+    lut[48] := makeRGB(62,4,199);
+    lut[49] := makeRGB(8,232,67);
+    lut[50] := makeRGB(108,137,58);
+    lut[51] := makeRGB(36,211,50);
+    lut[52] := makeRGB(140,240,86);
+    lut[53] := makeRGB(237,11,182);
+    lut[54] := makeRGB(242,140,108);
+    lut[55] := makeRGB(248,21,77);
+    lut[56] := makeRGB(161,42,89);
+    lut[57] := makeRGB(189,22,112);
+    lut[58] := makeRGB(41,241,59);
+    lut[59] := makeRGB(114,61,125);
+    lut[60] := makeRGB(65,99,226);
+    lut[61] := makeRGB(121,115,50);
+    lut[62] := makeRGB(97,199,205);
+    lut[63] := makeRGB(50,166,227);
+    lut[64] := makeRGB(238,114,125);
+    lut[65] := makeRGB(149,190,128);
+    lut[66] := makeRGB(44,204,104);
+    lut[67] := makeRGB(214,60,27);
+    lut[68] := makeRGB(124,233,59);
+    lut[69] := makeRGB(167,66,66);
+    lut[70] := makeRGB(40,115,53);
+    lut[71] := makeRGB(167,230,133);
+    lut[72] := makeRGB(127,125,159);
+    lut[73] := makeRGB(178,103,203);
+    lut[74] := makeRGB(231,203,97);
+    lut[75] := makeRGB(30,125,125);
+    lut[76] := makeRGB(173,13,139);
+    lut[77] := makeRGB(244,176,159);
+    lut[78] := makeRGB(193,94,158);
+    lut[79] := makeRGB(203,131,7);
+    lut[80] := makeRGB(204,39,215);
+    lut[81] := makeRGB(238,198,47);
+    lut[82] := makeRGB(139,167,140);
+    lut[83] := makeRGB(135,124,226);
+    lut[84] := makeRGB(71,67,223);
+    lut[85] := makeRGB(234,175,231);
+    lut[86] := makeRGB(234,254,44);
+    lut[87] := makeRGB(217,1,110);
+    lut[88] := makeRGB(66,15,184);
+    lut[89] := makeRGB(14,198,61);
+    lut[90] := makeRGB(129,62,233);
+    lut[91] := makeRGB(19,237,47);
+    lut[92] := makeRGB(97,159,67);
+    lut[93] := makeRGB(165,31,148);
+    lut[94] := makeRGB(112,218,22);
+    lut[95] := makeRGB(244,58,120);
+    lut[96] := makeRGB(35,244,173);
+    lut[97] := makeRGB(73,47,156);
+    lut[98] := makeRGB(192,61,117);
+    lut[99] := makeRGB(12,67,181);
+    lut[100] := makeRGB(149,94,94);
+    for i := 1 to 100 do
+        lut[i+100] := lut[i]; //fill 101..200
+    for i := 1 to 55 do
+        lut[i+200] := lut[i]; //fill 201..255
+    result := lut;
+end;
+
+
+
 function makeLUT(var lIndex: integer): TLUTnodes;
 begin
   //generate default grayscale color table
@@ -328,11 +449,6 @@ begin
           setNode(  0,  0,  0,  0,136, 1, result);
           setNode(  0,  0,  0,140,155, 2, result);
           setNode(  0,  0,  0,200,255, 3, result);
-
-          //setNode(255,0,0,255,0, 0, result);
-          //setNode(0,255,0,0,156, 1, result);
-          //setNode(0,0,255,255,255, 2, result);
-
        end;
        16: begin //FreeSurferCurve  - curves (valleys and ridges) dark
          result.isFreeSurfer:= true;
@@ -355,6 +471,11 @@ begin
          setNode(0,0,0,0,100,1, result);
          setNode(0,0,0,0,255, 2, result);
        end;
+       19: begin //Random Label
+         result.isFreeSurfer:= false;
+         setNode(7,7,7,255,255, 0, result);
+         setNode(0,0,0,0,100,1, result);
+       end;
        else begin
            result := loadCustomLUT(lIndex);  //index unknown!!!
        end;
@@ -371,6 +492,8 @@ begin
 end;//lerpRGBA()
 
 function UpdateTransferFunction (var lIndex: integer; isInvert: boolean): TLUT;//change color table
+label
+     123;
 var
  lLUTnodes :TLUTnodes;
  lInc,lNodeLo: integer;
@@ -378,6 +501,10 @@ var
  rev: TLUT;
 begin
  lLUTNodes := makeLUT(lIndex);
+ if (lLUTNodes.rgba[0].R = 7) and  (lLUTNodes.rgba[0].G = 7) and  (lLUTNodes.rgba[0].B = 7) and  (lLUTNodes.rgba[0].A = 255) and (lLUTNodes.intensity[0] = 255) then begin
+    result := defaultLabelLut;
+    goto 123;
+ end;
  lNodeLo := 0;
  result[0] := lerpRGBA(lLUTNodes.rgba[0],lLUTNodes.rgba[0],1);
  for lInc := 1 to 255 do begin
@@ -392,7 +519,7 @@ begin
    if frac > 1 then frac := 1;
    result[lInc] := lerpRGBA(lLUTNodes.rgba[lNodeLo],lLUTNodes.rgba[lNodeLo+1],frac);
  end;
-
+123:
  if isInvert then begin
     rev := result;
     for lInc := 0 to 255 do

@@ -1,7 +1,6 @@
 unit mainunit;
  {$Include opts.inc} //optiosn: DGL, CoreGL or legacy GL
 {$mode delphi}{$H+}
-{$DEFINE MYPY}
 interface
 uses
   {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
@@ -311,7 +310,7 @@ wait1: TMenuItem;
     ScriptingMenu: TMenuItem;
 	ScriptingNewMenu: TMenuItem;
 	ScriptingOpenMenu: TMenuItem;
-	ScriptingTemplatesMenu: TMenuItem;
+	ScriptingPythonMenu: TMenuItem;
 	ScriptingRunMenu: TMenuItem;
 	ScriptingSaveMenu: TMenuItem;
 ScriptOpenDialog: TOpenDialog;
@@ -521,10 +520,11 @@ uses
 
 
 var
+  {$IFDEF MYPY}
   PythonIO : TPythonInputOutput;
   PyMod: TPythonModule;
   PyEngine: TPythonEngine = nil;
-
+  {$ENDIF}
   gNode: TMesh;
   gTrack: TTrack;
   gnLUT: integer = 0;
@@ -925,6 +925,7 @@ end;
         end;
   {$ENDIF}
 
+{$IFDEF MYPY}
 function PyVERSION(Self, Args : PPyObject): PPyObject; cdecl;
 begin
   with GetPythonEngine do
@@ -1322,9 +1323,8 @@ begin
   with GetPythonEngine do
     if Boolean(PyArg_ParseTuple(Args, 'i:fullscreen', @Vis)) then begin
        if (Vis = 1) then begin
-          GLForm1.WindowState := wsFullScreen// wsMaximized
-          {$IFNDEF LCLCocoa}ExitFullScreenMenu.Visible:=true;{$ENDIF} //Linux has issues getting out of full screen
-
+          GLForm1.WindowState := wsFullScreen;// wsMaximized
+          {$IFNDEF LCLCocoa}GLForm1.ExitFullScreenMenu.Visible:=true;{$ENDIF} //Linux has issues getting out of full screen
        end else
            GLForm1.WindowState := wsMaximized;
     end;
@@ -1806,6 +1806,13 @@ begin
     AddMethod('wait', @PyWAIT, ' wait(ms) -> Pause script for (at least) the desired milliseconds.');
   end;
 end;
+{$ELSE}
+procedure TGLForm1.PyModInitialization(Sender: TObject);
+begin
+     //
+end;
+
+{$ENDIF}
 
 
 procedure TGLForm1.PyIOSendData(Sender: TObject;
@@ -1819,6 +1826,7 @@ procedure TGLForm1.PyIOSendUniData(Sender: TObject;
 begin
   ScriptOutputMemo.Lines.Add(Data);
 end;
+
 function TGLForm1.PyCreate: boolean;
 //const
 // cPyLibraryMac = '/Library/Frameworks/Python.framework/Versions/2.7/lib/libpython2.7.dylib';
@@ -1826,6 +1834,7 @@ var
   S: string;
 begin
   result := false;
+  {$IFDEF MYPY}
   if FileExists(gPrefs.PyLib) then begin
      {$IFDEF UNIX}writeln('Using PyLib from preferences "'+gPrefs.PyLib+'"');{$ENDIF}
      S := gPrefs.PyLib;
@@ -1846,6 +1855,7 @@ begin
   end;
   gPrefs.PyLib := S;
   result := true;
+
   PythonIO := TPythonInputOutput.Create(GLForm1);
   PyMod := TPythonModule.Create(GLForm1);
   PyEngine := TPythonEngine.Create(GLForm1);
@@ -1857,22 +1867,13 @@ begin
   PyMod.OnInitialization:=PyModInitialization;
   PythonIO.OnSendData := PyIOSendData;
   PythonIO.OnSendUniData:= PyIOSendUniData;
-  //S := '/Library/Frameworks/Python.framework/Versions/3.7/lib/libpython3.7.dylib';
-  //S := '/usr/local/Cellar/python/3.7.4_1/Frameworks/Python.framework/Versions/3.7/lib/libpython3.7m.dylib';
-  //S := '/Users/chris/Desktop/py35/libpython3.6m.dylib';
-  //PyEngine.Py_SetSysPath
-  //Py_SetSysPath('/Users/chris/Desktop/py35/python36.zip', true);//proc_py
-  //PyEngine.OnAfterInit:=PythonEngineAfterInit;
   PyEngine.DllPath:= ExtractFileDir(S);
   PyEngine.DllName:= ExtractFileName(S);
-  PyEngine.LoadDll
+  PyEngine.LoadDll;
+  {$ENDIF}
 end;
 
-(*procedure TGLForm1.PythonEngineAfterInit(Sender: TObject);
-begin
- writeln('>>>>');
- Py_SetSysPath(['/Users/chris/Desktop/py35/python36.zip'], true);
-end; *)
+
 
 
 function TGLForm1.PyIsPythonScriptMain(): boolean;
@@ -1883,6 +1884,7 @@ end;
 function TGLForm1.PyExecMain(): boolean;
 begin
   result := false; //assume code is not Python
+  {$IFDEF MYPY}
   if not (PyIsPythonScriptMain) then exit;
   GLForm1.ScriptOutputMemo.lines.Clear;
   result := true;
@@ -1922,6 +1924,7 @@ begin
   GLForm1.ScriptOutputMemo.lines.Add('Python Succesfully Executed');
   result := true;
   ToolPanel.refresh;
+  {$ENDIF}
 end;
 
 
@@ -1985,7 +1988,7 @@ var
          if isPython then begin
             newMenu.OnClick := ScriptingTemplatesMenuClick;
             //newMenu.GroupIndex := 132;
-            ScriptingTemplatesMenu.Add(newMenu)
+            ScriptingPythonMenu.Add(newMenu)
          end else begin
             newMenu.OnClick := ScriptingPascalMenuClick;
             //newMenu.GroupIndex := 133;
@@ -2336,10 +2339,19 @@ begin
   *)
   LSetWantsBestResolutionOpenGLSurface(gPrefs.RetinaDisplay, GLBox.Handle);
   //GLBox.WantsBestResolutionOpenGLSurface:=gPrefs.RetinaDisplay;
+  GLbox.AutoResizeViewport:= false;
   if (GLbox.Height < 1) or (GLBoxBackingHeight <= GLbox.Height) then
      gRetinaScale := 1
   else
       gRetinaScale := GLBoxBackingHeight/GLbox.Height;
+  GLBox.Align := alNone;
+  GLbox.width := 10 ;
+  GLBox.Align := alClient;
+  //GLbox.AutoResizeViewport:= true;
+
+  //GLBox.Invalidate;
+  //GLBox.Paint;
+
 end;
 
 procedure SetFormDarkMode(var f: TForm);
@@ -5939,6 +5951,7 @@ begin
   LUTdropNode.Items.Add('FreeSurfer2');
   LUTdropNode.Items.Add('FreeSurfer3');
   LUTdropNode.Items.Add('FreeSurfer4');
+  LUTdropNode.Items.Add('Random');
   if DirectoryExists(ClutDir) then  begin
      if FindFirst(CLUTdir+pathdelim+'*.clut', faAnyFile, lSearchRec) = 0 then
 	 repeat
@@ -6008,9 +6021,6 @@ procedure TGLForm1.SaveBitmap(FilenameIn: string; lX, lY: integer); overload;
   if (x = '') then x := '.png';
   Filename := p+n+x;
   z := gPrefs.ScreenCaptureZoom;
-  GLBox.Align := alNone;
-  GLBox.Width:=lX;
-  GLBox.Height:=lY;
   {$IFDEF LCLCocoa}
   if (gPrefs.RetinaDisplay) then begin
      retina := gPrefs.RetinaDisplay;
@@ -6018,12 +6028,19 @@ procedure TGLForm1.SaveBitmap(FilenameIn: string; lX, lY: integer); overload;
      setRetina;
   end;
   {$ENDIF}
+   GLBox.Align := alNone;
+  GLBox.Width:=lX;
+  GLBox.Height:=lY;
   GLBox.ClientWidth:=lX;
   GLBox.ClientHeight:=lY;
+  GLbox.Width := lX ;
+  GLbox.Height := lY ;
   gPrefs.ScreenCaptureZoom:=1;
   GLBox.Invalidate;
   bmp := ScreenShot(true);
+  GLbox.width := 10 ;
   GLBox.Align := alClient;
+  //xxxxx Resize CreateRender(GLBox.ClientWidth, GLBox.ClientHeight,true);
   {$IFDEF LCLCocoa}
   if (retina) then begin
      gPrefs.RetinaDisplay := true;
@@ -6032,6 +6049,7 @@ procedure TGLForm1.SaveBitmap(FilenameIn: string; lX, lY: integer); overload;
   {$ENDIF}
   GLBox.Invalidate;
   gPrefs.ScreenCaptureZoom := z;
+
   {$IFDEF JPG}
   //JPEG
   ext := upcase(x);
@@ -6475,7 +6493,11 @@ begin
     else
       gMesh.MakePyramid;
   end;
+  {$IFDEF MYPY}
   ScriptingGenerateTemplateMenu(true);
+  {$ELSE}
+  ScriptingPythonMenu.visible := false;
+  {$ENDIF}
   ScriptingGenerateTemplateMenu(false);
 
   gMesh.isBusy := false;

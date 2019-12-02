@@ -2037,6 +2037,7 @@ begin
   FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f,1);
+  str := '';
   ReadLnBin(f, str); //signature
   if (not AnsiContainsText(str, 'OFF')) or (not AnsiContainsText(str, 'BINARY')) then begin
     showmessage('Does not appear to be a OFF BINARY file.');
@@ -7989,22 +7990,29 @@ begin
   result := inguy^.rgba;
 end; // asRGBA()
 
+procedure printf(s: string);
+begin
+     {$IFDEF UNIX}writeln(s);{$ENDIF}
+end;
+
 function TMesh.LoadNiml(const FileName: string): boolean;
 label
    123;
 const
-  kDT_STRING = 4096;
+  kDT_4FLOAT_1INT_1STR = 6;
+  kFORM_TXT = 0;
+  kFORM_LSB = 1;
+  kFORM_MSB = 2;
 type
   TAFNI = record
-        ni_dimen, ni_type, ni_bytesPerElement: integer;
-        ni_form_lsb: boolean;
+        ni_form, ni_dimen, ni_type, ni_bytesPerElement: integer;
    end;
 function clearAfni: TAfni;
 begin
      result.ni_dimen := 0;
      result.ni_type := 0;
      result.ni_bytesPerElement := 0;
-     result.ni_form_lsb := false;
+     result.ni_form := kFORM_TXT;
 end;
 var
    st: string;
@@ -8043,6 +8051,9 @@ begin
 end;
 procedure parseAfni();
 begin
+    //writeln('-->', st);
+    if AnsiContainsText(st, 'ni_type="4*float,int,String"') then
+       afni.ni_type := kDT_4FLOAT_1INT_1STR;
     if AnsiContainsText(st, 'ni_type="float"') then begin
       afni.ni_type := kDT_FLOAT32;
       afni.ni_bytesPerElement := 4;
@@ -8052,11 +8063,13 @@ begin
       afni.ni_bytesPerElement := 4;
     end;
     if AnsiContainsText(st, 'ni_form="binary.lsbfirst"') then
-       afni.ni_form_lsb := true;
+       afni.ni_form := kFORM_LSB;
     if AnsiContainsText(st, 'ni_form="binary.msbfirst"') then
-       afni.ni_form_lsb := false;
+       afni.ni_form := kFORM_MSB;
     if AnsiContainsText(st, 'ni_dimen="') then
        afni.ni_dimen := strtointdef( parseBetweenQuotes(st), -1);
+    if AnsiContainsText(st, 'data_type="LabelTableObject_data"') then
+       afni.ni_bytesPerElement := 6;
 end;
 function readObjectHeader(): boolean;
 begin
@@ -8066,8 +8079,13 @@ begin
       ReadLnBinNiml(f, st);
       parseAfni();
   end;
-  if not afni.ni_form_lsb then begin
-   {$IFDEF UNIX}writeln('Only LSB supported'); {$ENDIF}
+  if (afni.ni_type = kDT_4FLOAT_1INT_1STR) then begin
+     result := true;
+     exit;
+     //LabelTableObject_data
+  end;
+  if not afni.ni_form = kFORM_MSB then begin
+   {$IFDEF UNIX}writeln('NIML MSB not supported'); {$ENDIF}
    exit;
   end;
   if (afni.ni_type <> kDT_INT32) and (afni.ni_type <> kDT_FLOAT32) then begin
@@ -8086,8 +8104,62 @@ begin
   result := true;
 end; //readObjectHeader()
 
+procedure parseLabel(out r,g,b,a: byte; out idx: integer);
+var
+   strlst:TStringList;
+begin
+  idx := -1;
+  strlst:=TStringList.Create;
+  strlst.DelimitedText := st;
+  if (strlst.count < 5) then exit;  //X Y Z A Index "StringLabel"
+  idx := strtointdef(strlst[4],-1);
+  if idx < 1 then begin
+     strlst.free;
+     exit;
+  end;
+  r := round(strtofloatdef(strlst[0],0)*255);
+  g := round(strtofloatdef(strlst[1],0)*255);
+  b := round(strtofloatdef(strlst[2],0)*255);
+  a := round(strtofloatdef(strlst[3],0)*255);
+  strlst.free;
+end;
+
+function readLabels(): boolean;
+var
+   i, idx, maxidx: integer;
+   r,g,b,a: byte;
+
+begin
+  result := true;
+  i := filepos(f);
+  maxidx := -1;
+  //first pass: max index e.g. there may be 360 regions with indices 1..1180
+  while not eof(f) and (not AnsiContainsText(st, '</')) do begin
+      ReadLnBinNiml(f, st);
+      parseLabel(r,g,b,a,idx);
+      if idx > maxidx then maxidx := idx;
+  end;
+  //writeln(maxidx);
+  if maxidx < 1 then exit;
+  //second pass
+  Seek(f,i);
+  st := '.';
+  setlength(rgbas, maxidx+1);
+  for i := 0 to atlasMaxIndex do
+      rgbas[i] := RGBA(random(255), random(255), random(255), 0);
+  while not eof(f) and (not AnsiContainsText(st, '</')) do begin
+      ReadLnBinNiml(f, st);
+      parseLabel(r,g,b,a,idx);
+      if idx < 1 then continue;
+      rgbas[idx] := RGBA(r,g,b,a);
+      //writeln(format('%d = %d %d %d %d', [idx, r, g, b, a]));
+  end;
+end; //readObjectHeader()
 begin
   result := false;
+  atlasMaxIndex := -1;
+  rgbas := nil;
+  nVert := -1;
   FSz := FSize(FileName);
   if (FSz < 64) then exit;
   FileMode := fmOpenRead;
@@ -8106,22 +8178,42 @@ begin
       //LabelTableObject_data
       result := readObjectHeader();
       if not result then goto 123;
-      //writeln('<<d'+st+'*');
       seek(f, filepos(f)+(afni.ni_bytesPerElement*afni.ni_dimen));
     end;
     // LabelTableObject_data
     if AnsiContainsText(st, '<SPARSE_DATA') then begin
       result := readObjectHeader();
       if not result then goto 123;
+      if (afni.ni_bytesPerElement = 6) and (afni.ni_type = kDT_4FLOAT_1INT_1STR) then begin //LabelTableObject_data
+         readLabels();
+         continue;
+      end;
       nVert := length(vertices);
-      if nVert <> afni.ni_dimen then goto 123;
+      if nVert <> afni.ni_dimen then begin
+        printf(format('NIML expected %d not %d vertices', [nVert, afni.ni_dimen]));
+        goto 123;
+      end;
+      if afni.ni_form = kFORM_TXT then begin
+         //OpenOverlays := OpenOverlays + 1;
+         setlength(overlay[OpenOverlays].intensity, nVert);
+         // (not AnsiContainsText(st, '</')) do
+         i := 0;
+         while i < nVert do begin
+               ReadLnBin(f, st);
+               if (length(st) < 1) then continue;
+               if (AnsiContainsText(st, '</')) then goto 123;
+               overlay[OpenOverlays].intensity[i] := strtofloatdef(st, 0);
+               i := i + 1;
+         end;
+         result := true;
+         goto 123;
+      end;
       setlength(vertexAtlas, nVert);
       if afni.ni_type = kDT_INT32 then begin
-         blockread(f, vertexAtlas[0],  nVert * sizeof(int32)); //coord X
-
+         blockread(f, vertexAtlas[0],  nVert * sizeof(int32));
       end else if afni.ni_type = kDT_FLOAT32 then begin
           setlength(floats, nVert);
-          blockread(f, floats[0],  nVert * sizeof(single)); //coord X
+          blockread(f, floats[0],  nVert * sizeof(single));
           for i := 0 to (nVert-1) do
             vertexAtlas[i] := round(floats[i]);
           floats := nil;
@@ -8133,19 +8225,32 @@ begin
       for i := 0 to (nVert -1) do
           if vertexAtlas[i] > atlasMaxIndex then
              atlasMaxIndex := vertexAtlas[i];
+      //debug
+      (*atlasMinIndex := vertexAtlas[0];
+      for i := 0 to (nVert -1) do
+          if vertexAtlas[i] < atlasMinIndex then
+             atlasMinIndex := vertexAtlas[i];
+      writeln(format(':::%d..%d',[atlasMinIndex, atlasMaxIndex]));
+      //
       setlength(rgbas, atlasMaxIndex+1);
       for i := 0 to atlasMaxIndex do
-          rgbas[i] := RGBA(random(255), random(255), random(255), 128);
+          //rgbas[i] := RGBA(random(255), random(255), random(255), 128);
+          rgbas[i] := RGBA(random(255), 255, random(255), 128);
       setlength(vertexRGBA, nVert);
 
       for i := 0 to (nVert -1) do
-          vertexRGBA[i] := rgbas[(vertexAtlas[i])];
+          vertexRGBA[i] := rgbas[(vertexAtlas[i])]; *)
       result := true;
-      writeln(format(':::%d',[atlasMaxIndex]));
-      goto 123;
+      //goto 123;
     end;
   end; //while not eof(f)
+  if (result) and (atlasMaxIndex > 0) and (nVert > 1) and (length(rgbas) > atlasMaxIndex) then begin
+     //writeln(format('>>:::%d..%d %d',[length(rgbas), atlasMaxIndex, nVert]));
+     setlength(vertexRGBA, nVert);
+     for i := 0 to (nVert -1) do
+          vertexRGBA[i] := rgbas[(vertexAtlas[i])];
 
+  end;
   //result := true;
  123:
  closefile(f);
@@ -8681,8 +8786,14 @@ begin
          end;
          if (length(str) < 1) then continue;
          if (str[1] = '#') then continue;
+         if AnsiContainsText(str, 'Using average radius') then begin
+           printf('Unsupported type of AFNI 1D dataset');
+           goto 666; //"std.141.FT_rh.MI.1D" does not comment this line with #
+         end;
          v := strtofloatdef(str, kNaN);
+
          if (v = kNaN) then continue;
+         if specialsingle(v) then continue;
          if (idx >= num_v) then continue;
          overlay[lOverlayIndex].intensity[idx] := v;
          idx := idx + 1;
@@ -8702,9 +8813,11 @@ begin
         end;
         strlst.free;
      end;
-     if (idx <> num_v) then //when fewer vertices than background image
-        showmessage(format('1D file reports %d vertices but background mesh has %d',[idx, num_v]))
-     else
+     if (idx <> num_v) then begin //when fewer vertices than background image
+        str := format('1D file reports %d vertices but background mesh has %d',[idx, num_v]);
+        printf(str);
+        showmessage(str)
+     end else
          result := true;
    666:
      CloseFile(f);
@@ -9422,15 +9535,22 @@ begin
      end;
   end;
   if (ext2 = '.NIML.DSET') then begin
-     if LoadNiml(FileName) then begin
+    if not LoadNiml(FileName) then begin
+       printf('NIML variant not supported');
+       OpenOverlays := OpenOverlays - 1;
+       exit;
+    end;
+     (*if LoadNiml(FileName) then begin
         result := true;
+        SetOverlayDescriptives(OpenOverlays);
+        Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex, Overlay[OpenOverlays].LUTinvert); //set color scheme
         isRebuildList := true;
         exit;
      end;
      {$IFDEF UNIX}writeln('.NIML.DSET format not supported: use ConvertDset to convert to GIfTI.');  {$ENDIF}
      {$IFNDEF Darwin}Showmessage('.NIML.DSET format not supported: use ConvertDset to convert to GIfTI.'); {$ENDIF}
     OpenOverlays := OpenOverlays - 1;
-    exit;
+    exit;  *)
   end;
   if (ext2 = '.1D.DSET') or (ext = '.1D') then begin
      if not Load1D(FileName, OpenOverlays) then begin
