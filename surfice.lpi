@@ -23,9 +23,6 @@
     <BuildModes Count="2">
       <Item1 Name="Default" Default="True"/>
       <Item2 Name="MacOS">
-        <MacroValues Count="1">
-          <Macro1 Name="LCLWidgetType" Value="cocoa"/>
-        </MacroValues>
         <CompilerOptions>
           <Version Value="11"/>
           <Target>
@@ -52,7 +49,7 @@
         </CompilerOptions>
       </Item2>
       <SharedMatrixOptions Count="1">
-        <Item1 ID="383516712532" Modes="MacOS" Type="IDEMacro" MacroName="LCLWidgetType" Value="cocoa"/>
+        <Item1 ID="383516712532" Type="IDEMacro" MacroName="LCLWidgetType" Value="cocoa"/>
       </SharedMatrixOptions>
     </BuildModes>
     <PublishOptions>
@@ -99,7 +96,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="lzma"/>
+      <OtherUnitFiles Value="lzma;x86_64-win64"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>

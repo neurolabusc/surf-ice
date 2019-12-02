@@ -1724,17 +1724,9 @@ begin
        VIEWSAGITTAL(BOOL(A));
 end;
 
-(*function pyAbort(Self, Args : PPyObject): PPyObject; cdecl;
-begin
-  Result := nil;
-  Abort;
-end;*)
-
-
 procedure TGLForm1.PyModInitialization(Sender: TObject);
 begin
   with Sender as TPythonModule do begin
-    //AddMethod('atlasgraybg', @PyATLASGRAYBG, '');
     AddMethod('atlas2node', @PyATLAS2NODE, ' atlas2node(imageName) -> convert .annot file labels to BrainNet Node format.');
     AddMethod('atlasmaxindex', @PyATLASMAXINDEX, ' atlasmaxindex(overlayNum) -> Returns maximum region humber in specified atlas. For example, if you load the CIT168 atlas (which has 15 regions) as your background image, then atlasmaxindex(0) will return 15.');
     AddMethod('atlassaturationalpha', @PyATLASSATURATIONALPHA, ' atlassaturationalpha(saturation, transparency) -> Set saturation and transparency of atlas. A desaturated atlas will appear gray, a transparent atlas will reveal the background color.');
@@ -1811,7 +1803,6 @@ procedure TGLForm1.PyModInitialization(Sender: TObject);
 begin
      //
 end;
-
 {$ENDIF}
 
 

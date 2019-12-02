@@ -439,7 +439,7 @@ procedure FULLSCREEN (isFullScreen: boolean);
 begin
        if (isFullScreen) then begin
           GLForm1.WindowState := wsFullScreen;// wsMaximized
-          {$IFNDEF LCLCocoa}ExitFullScreenMenu.Visible:=true;{$ENDIF} //Linux has issues getting out of full screen
+          {$IFNDEF LCLCocoa}GLForm1.ExitFullScreenMenu.Visible:=true;{$ENDIF} //Linux has issues getting out of full screen
        end else
            GLForm1.WindowState := wsMaximized;
 end;

@@ -2,7 +2,7 @@ unit mesh;
 {$Include opts.inc}
 {$mode objfpc}{$H+}
 interface
-{$DEFINE FASTGZ}
+//{$DEFINE FASTGZ}   //defined in opts.inc
 //{$DEFINE TIMER}
 {$DEFINE TREFOIL} //use Trefoil Knot as default object (instead of pyramid)
 uses
