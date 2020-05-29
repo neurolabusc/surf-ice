@@ -5,8 +5,8 @@ interface
 
 uses
         {$IFDEF LCLGtk2} FileUtil, Process, Gtk2Def, gtk2, Gtk2Proc, strutils,{$ENDIF}
-  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls, ComCtrls,
-    StdCtrls, Buttons, Menus;
+  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls, ComCtrls, Buttons, Menus;
+    //StdCtrls,
 
 procedure ConstrainTrackBars;
 

@@ -8,7 +8,7 @@ uses
   {$ifndef isTerminalApp}
     ClipBrd,dialogs,colorTable,
   {$endif}
-  Classes, SysUtils, math, define_types, matmath, track_simplify, zstream;
+  Classes, SysUtils, math, define_types, matmath, track_simplify, zstream, strutils;
 
 Type
 
@@ -37,6 +37,7 @@ TTrack = class
   scalarSelected: integer;
   scalars: array of TScalar;
   private
+    function LoadNimlTract(const FileName: string): boolean;
     function LoadBfloat(const FileName: string): boolean;
     function LoadDat(const FileName: string): boolean;
     function LoadPdb(const FileName: string): boolean;
@@ -259,6 +260,7 @@ begin
        isScalarPerFiberColor := true //one color per fiber
    else
        isScalarPerVertexColor := true;
+   {$IFDEF UNIX}writeln(format('ScalarSelected %d Scalars %d Fibers %d',[ScalarSelected, length(Scalars[ScalarSelected].scalar), n_count]));{$ENDIF}
   end;
   //  exit;
   maxLinks := 0;
@@ -1111,6 +1113,167 @@ begin
   mStream.Free;
 end; //SaveBfloat()
 
+procedure printf(s: string);
+begin
+     {$IFDEF UNIX}writeln(s);{$ENDIF}
+end;
+
+function TTrack.LoadNimlTract(const FileName: string): boolean;
+(*//to do: connectomes (Text), matrices, bundle IDS
+for i := 0 to (hdr.n_scalars-1) do begin
+        SetString(str, PChar(@hdr.scalar_name[i*20]), 20);
+        str := UpperCase(trim(str));
+        scalars[i].name := str;
+        setlength(scalars[i].scalar, nVtx); //one per vertex
+      end;*)
+function parseBetweenQuotes(s: string):string; //'ni_type="int"'->'int'
+var
+   b,e: integer;
+begin
+     result := '';
+     b := PosEx('"',s);
+     if b < 1 then exit;
+     e := PosEx('"',s, b+1);
+     if e <= b then exit;
+     result := copy(s, b+1, e-b-1);
+end;
+procedure ReadLnBinNiml(var f: TFByte; out s: string);
+//niml follows binary immediately after ">" without EOLN!
+const
+  kEOLN = $0A;
+  kEnd = ord('>');
+var
+   bt : Byte;
+begin
+     s := '';
+     while (not  EOF(f)) do begin
+           Read(f,bt);
+           if bt = kEOLN then exit;
+           s := s + Chr(bt);
+           if bt = kEnd then exit;
+     end;
+end;
+label
+   126;
+var
+   f: TFByte;
+   st: string;
+   N_Bundles, ni_dimenSum, N_tracts,startpos, ni_dimen, i,j, nflts, fsz, N_pts3, N_pts, sumPts3, outPos, p: integer;
+   flts: TFloats;
+   ints: TInt32s;
+begin
+  n_count := 0;
+  N_Bundles := 0;
+  isRebuildList := true;
+  result := false;
+  FileMode := fmOpenRead;
+  AssignFile(f, FileName);
+  Reset(f,1);
+  fsz := filesize(f);
+  if fsz < 64 then goto 126;
+  //printf('a'+Filename);
+  ReadLnBinNiml(f, st); //signature: 'mrtrix tracks'
+  if pos('<NETWORK', UpperCase(st)) <> 1 then
+     goto 126;
+  N_tracts := 0;
+  ni_dimen := 0;
+  ni_dimenSum := 0;
+  outPos := 0;
+  while (not EOF(f))  do begin
+        ReadLnBinNiml(f, st);
+        if AnsiContainsText(st, 'N_tracts="') then begin
+           st := parseBetweenQuotes(st);
+           N_tracts := strtointdef(st, 0);
+           if N_tracts < 1 then goto 126;
+           //printf(format('N_tracts %d', [N_tracts]));
+           setlength(scalars, 1);
+           setlength(scalars[0].scalar, N_tracts); //one per fiber
+           scalars[0].name := 'Bundle';
+        end;
+        if AnsiContainsText(st, 'ni_dimen="') then begin
+           st := parseBetweenQuotes(st);
+           ni_dimen := strtointdef(st, 0);
+           if ni_dimen < 1 then goto 126;
+           //printf(format('ni_dimen %d', [ni_dimen]));
+        end;
+
+        if AnsiContainsText(st, 'ni_form="binary.msbfirst"') then begin
+           printf('Only little endian data supported');
+           goto 126;
+        end;
+        if (AnsiContainsText(st, 'ni_type="')) and (not AnsiContainsText(st, 'ni_type="TAYLOR_TRACT_DATUM"')) then begin
+          printf('Unsupported type: '+st);
+          goto 126;
+        end;
+        if (not AnsiContainsText(st, 'Bundle_Ends="')) then
+          continue; //read next line
+        if ni_dimen < 1 then goto 126;
+        N_Bundles += 1;
+        if (N_tracts >= (ni_dimen+ni_dimenSum)) and (N_Bundles > 0) then begin
+           for i := 0 to (ni_dimen-1) do
+               scalars[0].scalar[ni_dimenSum+i] := N_Bundles;
+        end else begin
+            printf('Serious error: ni_dimen exceeds N_tracts');
+            N_Bundles := -1;
+        end;
+        ni_dimenSum += ni_dimen;
+        startpos :=  filepos(f);
+        nflts := (fsz-startpos) div 4;
+        if nflts < 4 then goto 126;
+        setlength(flts, nflts);
+        ints := TInt32s(flts);
+        blockread(f,flts[0],  nflts * sizeof(single));
+        //first pass: determine number of points
+        j := 0;
+        sumPts3 := 0;
+        for i := 0 to (ni_dimen-1) do begin
+            //id := ints[j];
+            N_pts3 := ints[j+1];
+            //printf(format('%d:%d',[i,N_pts3]));
+            if (N_pts3 <= 3) then goto 126;
+            if ((N_pts3 mod 3) <> 0) then goto 126;
+            //printf(format('%d',[N_pts3]));
+            sumPts3 +=  N_pts3;
+            j += 2 + (N_pts3);
+        end;
+        seek(f, startpos + j*(sizeof(single)));
+        //second pass: populate tracks
+        setlength(tracks, outPos + (ni_dimen  + sumPts3) );
+        //printf(format('%d->%d', [sumPts3, ni_dimen  + sumPts3]));
+        j := 0;
+        for i := 0 to (ni_dimen-1) do begin
+            //id := ints[j];
+            N_pts3 := ints[j+1];
+            j += 2;
+            N_pts := N_pts3 div 3;
+            tracks[outPos] := asSingle(N_pts);
+            inc(outPos);
+            for p := 0 to (N_pts - 1) do begin  //fPixelSizeWidth, fPixelSizeHeight, fSliceThickness
+                tracks[outPos] := flts[j];
+                tracks[outPos+1] := flts[j+1];
+                tracks[outPos+2] := flts[j+2];
+                outpos += 3;
+                j += 3;
+            end;
+        end;
+        //printf(format('--%d', [outPos]));
+        //setlength(tracks, outPos);
+        n_count += ni_dimen;
+        result := true;
+        flts := nil;
+  end;
+
+126:
+   if result then
+      SetScalarDescriptives;
+   if (N_Bundles < 2) and (length(scalars) > 0) then begin
+      for i := 0 to length(scalars)-1 do
+          setlength(scalars[i].scalar,0);
+      setlength(scalars, 0);
+   end;
+   closefile(f);
+end;
+
 function TTrack.LoadBfloat(const FileName: string): boolean;
 // http://www.nitrc.org/pipermail/camino-users/2014-April/000389.html
 // http://camino.cs.ucl.ac.uk/index.php?n=Main.Fileformats
@@ -1888,7 +2051,9 @@ begin
     if not FileExists(FileName) then exit;
     //ext := UpperCase(ExtractFileExt(Filename));
     ext := ExtractFileExtGzUpper(Filename);
-    if (ext = '.BFLOAT') or (ext = '.BFLOAT.GZ') then begin
+    if (ext = '.TRACT') then begin
+       if not LoadNimlTract(FileName) then exit;
+    end else if (ext = '.BFLOAT') or (ext = '.BFLOAT.GZ') then begin
          if not LoadBfloat(FileName) then exit;
     end else if (ext = '.DAT') then begin
          if not LoadDat(FileName) then exit;

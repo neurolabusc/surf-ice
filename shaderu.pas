@@ -473,7 +473,11 @@ end;
 procedure releaseFrame;
 begin
   {$IFDEF COREGL}
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+   {$IFDEF GTKlcl3}
+   glBindFramebuffer(GL_FRAMEBUFFER, 1);
+   {$ELSE}
+   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+   {$ENDIF}
   {$ELSE}
   glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);  //only included in 3.0! https://www.opengl.org/sdk/docs/man/html/glBindFramebuffer.xhtml
   {$ENDIF}
@@ -1043,8 +1047,9 @@ end;
 function RStrToInt(lS: string; Default: integer): integer;
 var
   lV: string;
-  lC: char;
-  lLen,lP,lN: integer;
+  lP: integer;
+  //lC: char;
+  //lLen,lN: integer;
 begin
   result := Default;
   lV := '';

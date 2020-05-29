@@ -20,6 +20,7 @@ procedure CLIP (DEPTH: single);
 procedure CLIPAZIMUTHELEVATION (DEPTH,AZI,ELEV: single);
 procedure COLORBARPOSITION(P: integer);
 procedure COLORBARVISIBLE (VISIBLE: boolean);
+procedure CONTOUR(layer: integer);
 procedure EDGECOLOR(name: string; varies: boolean);
 procedure EDGELOAD(lFilename: string);
 procedure EDGESIZE(size: single; varies: boolean);
@@ -623,6 +624,14 @@ begin
      GLForm1.TrackLengthTrack.Position := round(lLength);
      GLForm1.TrackWidthTrack.Position := round(lWidth);
      GLForm1.TrackDitherTrack.Position := round(lDither * GLForm1.TrackDitherTrack.Max);
+end;
+
+procedure CONTOUR(layer: integer);
+begin
+     gMesh.Contours(layer);
+     GLForm1.GLboxRequestUpdate(nil);
+     GLForm1.UpdateToolbar;
+     GLForm1.UpdateLayerBox(true);
 end;
 
 procedure BACKCOLOR (R,G,B: byte);

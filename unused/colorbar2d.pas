@@ -236,7 +236,9 @@ begin
       end; //positive edges
       if (lMesh.nodePrefs.minEdge < 0)  and (not lMesh.nodePrefs.isNoNegEdge) and (lMesh.nodePrefs.minEdgeThresh <> lMesh.nodePrefs.maxEdgeThresh) then begin
          inc(nLUT);
-         lI := lMesh.nodePrefs.edgeLUTindex + 1;
+         //lI := lMesh.nodePrefs.edgeLUTindex + 1;
+         xxxx
+         lI := lMesh.nodePrefs.edgeLUTindex;
          LUT[nLUT] := UpdateTransferFunction (lI);
          mn[nLUT] := -lMesh.nodePrefs.minEdgeThresh;
          mx[nLUT] := -lMesh.nodePrefs.maxEdgeThresh;

@@ -1,5 +1,8 @@
 unit mainunit;
  {$Include opts.inc} //optiosn: DGL, CoreGL or legacy GL
+{$IFDEF LCLgtk3}{$IFNDEF COREGL}
+  warning: GTK3 only supports OpenGL core - enable COREGL inn opts.inc
+{$ENDIF}{$ENDIF}
 {$mode delphi}{$H+}
 interface
 uses
@@ -12,10 +15,9 @@ uses
   {$IFDEF COREGL} gl_core_3d, {$ELSE}     gl_legacy_3d, {$ENDIF}
   uPSComponent,Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
   math, ExtCtrls, OpenGLContext, mesh, LCLintf, ComCtrls, Menus, graphtype,
-  curv, ClipBrd, shaderui, shaderu, prefs, userdir, LCLtype, Grids, Spin,
+  curv, ClipBrd, shaderui, shaderu, prefs, userdir, LCLtype, Spin,
   Buttons, matmath, colorTable, Track, types, glcube, glclrbar, define_types,
-  proc_py,
-  meshify, zstream, gl_core_matrix, meshify_simplify, CheckLst;
+  meshify, zstream, gl_core_matrix, meshify_simplify, CheckLst;  //Grids, proc_py,
 
 type
   { TGLForm1 }
@@ -34,6 +36,7 @@ LayerOptionsBtn: TButton;
  LayerAOMapMenu: TMenuItem;
  LayerPainHideMenu: TMenuItem;
  ExitFullScreenMenu: TMenuItem;
+ EdgeLayerDrop: TComboBox;
  PasteMenu: TMenuItem;
  overlayoverlapoverwrite1: TMenuItem;
  overlayopacity1: TMenuItem;
@@ -158,7 +161,7 @@ wait1: TMenuItem;
     ColorBarVisibleMenu: TMenuItem;
     WhiteClrbarMenu: TMenuItem;
     TransWhiteClrBarMenu: TMenuItem;
-    NewWindow1: TMenuItem;
+    NewWindowMenu: TMenuItem;
     S1Check: TCheckBox;
     S6Label: TLabel;
     S6Track: TTrackBar;
@@ -318,6 +321,7 @@ LayerPopup: TPopupMenu;
 LayerInvertColorsMenu: TMenuItem;
 LayerShowHeaderMenu: TMenuItem;
 procedure CenterPanelClick(Sender: TObject);
+procedure EdgeLayerDropChange(Sender: TObject);
 procedure ExitFullScreenMenuClick(Sender: TObject);
 procedure LayerListClickCheck(Sender: TObject);
 procedure LayerPopupPopup(Sender: TObject);
@@ -372,7 +376,7 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     procedure GLboxDblClick(Sender: TObject);
     procedure CurvMenuClick(Sender: TObject);
     procedure DepthLabelDblClick(Sender: TObject);
-    procedure NewWindow1Click(Sender: TObject);
+    procedure NewWindowMenuClick(Sender: TObject);
     procedure Quit2TextEditor;
     procedure CenterMeshMenuClick(Sender: TObject);
     procedure AdditiveOverlayMenuClick(Sender: TObject);
@@ -537,10 +541,10 @@ var
   clipPlane : TPoint4f; //clipping bottom
   GLbox: TOpenGLControl;
 const
-  kFname=0;
-  kLUT=1;
-  kMin=2;
-  kMax=3;
+  //kFname=0;
+  //kLUT=1;
+  //kMin=2;
+  //kMax=3;
   kTrackFilter = 'Camino, VTK, MRTrix, Quench, TrakVis, DTIstudio|*.Bfloat;*.Bfloat.gz;*.trk.gz;*.trk;*.tck;*.pdb;*.fib;*.vtk;*.dat|Any file|*.*';
 
 procedure CleanStr (var lStr: string);
@@ -932,6 +936,12 @@ begin
     Result:= PyString_FromString(kVers);
 end;
 
+function PyOVERLAYCOUNT(Self, Args : PPyObject): PPyObject; cdecl;
+begin
+  with GetPythonEngine do
+    Result:= PyInt_FromLong(gMesh.OpenOverlays);
+end;
+
 function PyRESETDEFAULTS(Self, Args : PPyObject): PPyObject; cdecl;
 begin
   Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
@@ -1166,7 +1176,7 @@ var
 begin
   Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
   with GetPythonEngine do
-    if Bool(PyArg_ParseTuple(Args, 'ii:overlaytranslucent', @I,@B)) then
+    if Bool(PyArg_ParseTuple(Args, 'ii:overlayopacity', @I,@B)) then
       OVERLAYTRANSLUCENT(I,Bool(B));
 end;
 
@@ -1178,6 +1188,16 @@ begin
   with GetPythonEngine do
     if Bool(PyArg_ParseTuple(Args, 'ii:overlaytranslucent', @I,@B)) then
       OVERLAYOPACITY(I,B);
+end;
+
+function PyCONTOUR(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  L: integer;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 'i:contour', @L)) then
+      CONTOUR(L);
 end;
 
 function PyEDGETHRESH(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1740,6 +1760,7 @@ begin
     AddMethod('clipazimuthelevation', @PyCLIPAZIMUTHELEVATION, ' clipazimuthelevation(depth, azi, elev) -> Set a view-point independent clip plane.');
     AddMethod('colorbarposition', @PyCOLORBARPOSITION, ' colorbarposition(p) -> Set colorbar position (1=bottom, 2=left, 3=top, 4=right).');
     AddMethod('colorbarvisible', @PyCOLORBARVISIBLE, ' colorbarvisible(v) -> Show (1) or hide (0) the color bar.');
+    AddMethod('contour', @PyCONTOUR, ' contour(layer) -> Create edge map for atlas or overlay.');
     AddMethod('edgecolor', @PyEDGECOLOR, ' edgecolor(name, varies) -> Select color scheme for connectome edge map. If varies=1 then edge color depends on strength of connection.');
     AddMethod('edgeload', @PyEDGELOAD, ' edgeload(filename) -> Loads a BrainNet Viewer format Edge file, e.g. connectome map.');
     AddMethod('edgesize', @PyEDGESIZE, ' edgesize (size, varies) -> Set the diameters of the cylinders of the connectome. If varies=1 then edge diameter depends on strength of connection.');
@@ -1768,7 +1789,8 @@ begin
     AddMethod('overlayadditive', @PyOVERLAYADDITIVE, ' overlayadditive (add) -> Determines whether overlay colors are combined by adding or mixing the colors. For example, overlap of red and green overlays will appear yellow if additive is true (1)');
     AddMethod('overlaycloseall', @PyOVERLAYCLOSEALL, ' overlaycloseall() -> Close all open overlays.');
     AddMethod('overlaycolorname', @PyOVERLAYCOLORNAME, ' overlaycolorname(overlayLayer, filename) -> Set the colorscheme for the target overlay to a specified name.');
-    AddMethod('overlayinvert', @PyOVERLAYINVERT, ' overlayinvert(overlaLayer, invert) -> Toggle whether overlay color scheme is inverted.');
+    AddMethod('overlaycount', @PyOVERLAYCOUNT, ' overlaycount() -> Return number of overlays currently open.');
+    AddMethod('overlayinvert', @PyOVERLAYINVERT, ' overlayinvert(layer, invert) -> Toggle whether overlay color scheme is inverted.');
     AddMethod('overlayload', @PyOVERLAYLOAD, ' overlayload(filename) -> Load an image on top of prior images.');
     AddMethod('overlayminmax', @PyOVERLAYMINMAX, ' overlayminmax(layer, min, max) -> Sets the color range for the overlay (layer 0 = background).');
     AddMethod('overlayopacity', @PyOVERLAYOPACITY, ' overlayopacity(overlayLayer, opacity) -> This feature allows you to adjust individual overlays transparency from transparent (0) to opaque (100).');
@@ -2129,6 +2151,12 @@ end;
 procedure TGLForm1.CenterPanelClick(Sender: TObject);
 begin
 
+end;
+
+procedure TGLForm1.EdgeLayerDropChange(Sender: TObject);
+begin
+  gNode.SetEdgeLayer(EdgeLayerDrop.ItemIndex);
+  NodePrefChange(Sender);
 end;
 
 procedure TGLForm1.ExitFullScreenMenuClick(Sender: TObject);
@@ -2590,8 +2618,9 @@ begin
 end;
 
 procedure TGLForm1.UpdateToolbar;
-//var
-//  isOverlayNodeTrack : boolean;
+var
+   i,j : integer;
+   strlst : TStringList;
 begin
  OverlayBox.Visible := (gMesh.OpenOverlays > 0);
  //isOverlays  := (length(gNode.nodes) > 0) or (gTrack.n_count > 0) or ((gMesh.OpenOverlays > 0) and (meshBackgroundOpen));
@@ -2604,12 +2633,23 @@ begin
  //ShaderForBackgroundOnlyCheck.Visible := isOverlayNodeTrack;
  //BackgroundBox.Visible := (length(gNode.nodes) > 0) or (gTrack.n_count > 0) or ((gMesh.OpenOverlays > 0) and (meshBackgroundOpen));
  NodeBox.Visible:= (length(gNode.nodes) > 0) ;
+ EdgeLayerDrop.visible := (length(gNode.edgeLayers) > 0);
  if (length(gNode.edges) > 0) and (EdgeBox.Visible = false) and (BackgroundBox.Visible) then begin
     //this keeps node and edge boxes next to each other
     // executed when node is opened (which displays the background) and then edge is opened
     BackgroundBox.Visible := false;
     EdgeBox.Visible := true;
     BackgroundBox.Visible := true;
+    if (length(gNode.edgeLayers) > 0) then begin
+       EdgeLayerDrop.ItemIndex:= 0;
+       j := length(gNode.edgeLayers) div (length(gNode.edges) * length(gNode.edges));
+       strlst:=TStringList.Create;
+       for i := 0 to (j-1) do
+           strlst.Add(gNode.nodePrefs.layerName[i]);
+       EdgeLayerDrop.Items := strlst;
+       strlst.free;
+           //EdgeLayerDrop.Items[i] := gNode.nodePrefs.layerName[i];
+    end;
  end;
  EdgeBox.Visible:= (length(gNode.edges) > 0) ;
  TrackBox.Visible:= (gTrack.n_count > 0);
@@ -2744,7 +2784,6 @@ begin
     {$ELSE}
     TrackBox.ClientHeight := TrackScalarNameDrop.Top + TrackScalarNameDrop.Height + 2;
     {$ENDIF}
-
     TrackScalarNameDrop.Items.Clear;
     TrackScalarNameDrop.Items.Add('Direction');
     for i := 0 to (length(gTrack.scalars) -1) do
@@ -2917,6 +2956,10 @@ begin
      OpenScript(Filename);
      exit;
   end;
+  if (ext2 = '.NIML.DSET') and (isNimlNodes(Filename)) then begin
+        OpenNode(Filename);
+        exit;
+  end;
   if (ext2 = '.NIML.DSET') then begin
     //Showmessage('.NIML.DSET format not supported: use ConvertDset to convert to GIfTI.');
     OpenOverlay(Filename);
@@ -2938,7 +2981,7 @@ begin
   end else if (length(gMesh.Faces) > 0) and ((ext2 = '.GII.DSET') or (ext = '.GII')) and (not isGiiMesh (Filename)) then begin
     OpenOverlay(Filename);  //GIfTI files can be meshes or overlays - autodetect
     exit;
-  end else if (ext = '.DAT') or  (ext = '.TRK') or  (ext = '.TRK.GZ') or (ext = '.FIB') or (ext = '.PDB') or (ext = '.TCK') or (ext = '.BFLOAT') or (ext = '.BFLOAT.GZ')  then begin
+  end else if (ext = '.TRACT') or (ext = '.DAT') or  (ext = '.TRK') or  (ext = '.TRK.GZ') or (ext = '.FIB') or (ext = '.PDB') or (ext = '.TCK') or (ext = '.BFLOAT') or (ext = '.BFLOAT.GZ')  then begin
     OpenTrack(Filename);
     exit;
   end else if (ext = '.EDGE') then begin
@@ -3348,7 +3391,7 @@ end;
 
 procedure TGLForm1.SaveTrack (var lTrack: TTrack);
 const
-    kTrackFilter  = 'VTK (.vtk)|*.vtk|Camino (.Bfloat)|*.Bfloat|CaminoGZ (.Bfloat.gz)|*.Bfloat.gz|TrackVis (.trk)|*.trk|TrackVisGZ (.trk.gz)|*.trk.gz';
+    kTrackFilter  = 'VTK (.vtk)|*.vtk|Camino (.Bfloat)|*.Bfloat|CaminoGZ (.Bfloat.gz)|*.Bfloat.gz|AFNI (.tract)|*.tract|TrackVis (.trk)|*.trk|TrackVisGZ (.trk.gz)|*.trk.gz';
 var
   nam: string;
 begin
@@ -4613,7 +4656,7 @@ procedure TGLForm1.SimplifyMeshMenuClick(Sender: TObject);
 var
   nTri: integer;
   msStart: Dword;
-  s: string;
+  //s: string;
   r: single;
 begin
  msStart := gettickcount();
@@ -5385,7 +5428,7 @@ begin
       deletefile(fnm);
 end;
 
-procedure TGLForm1.NewWindow1Click(Sender: TObject);
+procedure TGLForm1.NewWindowMenuClick(Sender: TObject);
 {$IFNDEF UNIX}
 begin
    ShellExecute(handle,'open',PChar(paramstr(0)), '','',SW_SHOWNORMAL); //uses ShellApi;
@@ -5485,16 +5528,18 @@ end;
 {$ENDIF}
 
 procedure TGLForm1.AboutMenuClick(Sender: TObject);
+//{$DEFINE TIMEABOUT}
+{$IFDEF TIMEABOUT}
 const
   kSamp = 36;
+  {$ENDIF}
 var
-  //{$DEFINE TIMEABOUT}
   {$IFDEF TIMEABOUT}
   fpsStr: string;
   s: dword;
+  i: integer;
   {$ENDIF}
   titleStr, isAtlasStr, TrackStr, MeshStr, str: string;
-  i: integer;
   scale: single;
   origin: TPoint3f;
 begin
@@ -6497,6 +6542,7 @@ begin
   {$IFDEF Darwin}
   ExitMenu.Visible := false;
   //CopyMenu.enabled := false; //https://bugs.freepascal.org/view.php?id=33632
+  NewWindowMenu.ShortCut := ShortCut(Word('N'), [ssShift, ssMeta]);
   ScriptingNewMenu.ShortCut := ShortCut(Word('N'), [ssMeta]);
   ScriptingRunMenu.ShortCut := ShortCut(Word('R'), [ssMeta]);
   CurvMenuTemp.ShortCut:= ShortCut(Word('K'), [ssMeta]);

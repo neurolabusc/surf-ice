@@ -31,6 +31,7 @@ function loadCifti(fnm: string; lOverlayIndex, lSeriesIndex: integer; isLoadCort
 {$ELSE}
 function TMesh.loadCifti(fnm: string; lOverlayIndex, lSeriesIndex: integer; isLoadCortexLeft: boolean): integer;
 {$ENDIF}
+label 131;
 type
   TBrainModel = record
     IndexOffset, IndexCount, SurfaceNumberOfVertices,
@@ -64,8 +65,10 @@ type
 var
   hdr: TNIFTIhdr2;
   hdrSzSwap : int32;
+  lut : array of TRGBA;
   f: file;
-  nSeries, xmlLen,i,j,k, fsz,xmlPos: integer;
+  fmx: single;
+  nVert, mx, nSeries, xmlLen,i,j,k, fsz,xmlPos, tablePos: integer;
   xmlStr, allBrainStructures, desiredBrainStructure : string;
   rawData: TFloats;
   vertexIndices: array of integer;
@@ -94,6 +97,29 @@ function readXInt(key: string): integer;
 begin
      result := strtointdef(readXStr(key), 0);
 end;
+function readLut(idx: integer): TRGBA;
+//<Label Key="1" Red="0.270588" Green="0" Blue="1" Alpha="1">R_V1_ROI</Label>     lut[i] := ReadLut(xmlStr, i);
+var
+  lStart, lEnd: integer;
+begin
+  result.R := 0;
+  result.G := 0;
+  result.B := 0;
+  result.A := 0;
+  xmlPos := tablePos; //random storage of labels, keys may not be sequential
+  lStart := posExEnd('<Label Key="'+inttostr(idx)+'"');
+  if lStart < 1 then exit;
+  lEnd := PosEx('</Label>', xmlStr, lStart);
+  xmlPos := lStart;
+  if lEnd < 1 then exit;
+  result.R := round(strtofloatDef(readXStr('Red'),0) * 255.0);
+  result.G := round(strtofloatDef(readXStr('Green'),0) * 255);
+  result.B := round(strtofloatDef(readXStr('Blue'),0) * 255.0);
+  result.A := round(strtofloatDef(readXStr('Alpha'),0) * 255.0);
+  //printf(format('%d r%d g%d b%d', [idx, result.R, result.G, result.B]));
+  //result.A := 100;
+end;
+
 function readXArrayInt: integer;
 var
   s: string;
@@ -270,6 +296,40 @@ begin
           k := k + 1;
       end;
   {$ENDIF}
+  //
+  //<LabelTable>
+  // <Label Key="0" Red="1" Green="1" Blue="1" Alpha="0">???</Label>
+  // <Label Key="1" Red="0.270588" Green="0" Blue="1" Alpha="1">R_V1_ROI</Label>
+  //TVertexRGBA
+  // lut : array of TRGBA;
+
+  xmlPos := pos('</LabelTable>', xmlStr);
+  if xmlPos > 0 then begin
+     xmlPos := pos('<LabelTable>', xmlStr);
+     if xmlPos < 1 then goto 131;
+     nVert := bm.SurfaceNumberOfVertices;
+     fmx := overlay[lOverlayIndex].intensity[0];
+     for i := 0 to (nVert-1) do
+         if overlay[lOverlayIndex].intensity[i] > fmx then
+            fmx := overlay[lOverlayIndex].intensity[i];
+     mx := round(fmx);
+     if mx < 1 then goto 131;
+     tablePos := xmlPos;
+     xmlPos := pos('<Label Key="'+inttostr(mx)+'"', xmlStr);
+     if xmlPos < 1 then goto 131;
+     setlength(lut, mx + 1);
+     for i := 0 to mx do
+         lut[i] := ReadLut(i);
+     setlength(vertexRGBA, nVert);
+     for i := 0 to (nVert-1) do begin
+         j := round(overlay[lOverlayIndex].intensity[i]);
+         if j < 0 then continue;
+         vertexRGBA[i] := lut[j];
+     end;
+     setlength(overlay[lOverlayIndex].intensity, 0);
+     //GLForm1.caption := 'xx'+inttostr(mx);
+  end;
+131:
   setlength(rawData,0);
   setlength(vertexIndices,0);
   result := nSeries;

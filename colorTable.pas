@@ -96,7 +96,7 @@ end;
 function inten2rgb(intensity, mn, mx: single; lut: TLUT; mode: integer): TRGBA; overload;
 var
  i: byte;
- isInvert : boolean;
+ //isInvert : boolean;
 begin
   if  (mn < 0) and (mx < 0) and (mode = kPaintHideDefaultBehavior) then begin
     if intensity >= mx then
@@ -218,6 +218,10 @@ begin
  setNode(0,0,0,0,0, 0, result);
  setNode(255,255,255,255,255, 1, result);
  result.isFreeSurfer:= false;
+ if lIndex >= GLForm1.LayerColorDrop.Items.Count then
+    lIndex := GLForm1.LayerColorDrop.Items.Count -1;
+ if lIndex < 0 then
+    lIndex :=  0;
  lFilename := CLUTdir+pathdelim+GLForm1.LayerColorDrop.Items[lIndex]+'.clut';
  if not fileexists(lFilename) then begin
     lIndex := 0;

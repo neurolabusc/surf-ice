@@ -2,8 +2,7 @@ unit mesh;
 {$Include opts.inc}
 {$mode objfpc}{$H+}
 interface
-//{$DEFINE FASTGZ}   //defined in opts.inc
-//{$DEFINE TIMER}
+//{$DEFINE TIMER}   //defined in opts.inc
 {$DEFINE TREFOIL} //use Trefoil Knot as default object (instead of pyramid)
 uses
   //nifti_foreign,
@@ -42,7 +41,7 @@ type
     faces : TFaces;
     vertices: TVertices;
     vertexRGBA : TVertexRGBA; //array of TRGBA;
-    vertexAtlas: TInts; //what atlss regions does this vertex belong to, e.g. [7, 8, 17...] the 3rd vertex belongs to region 17
+    vertexAtlas: TInts; //what atlas regions does this vertex belong to, e.g. [7, 8, 17...] the 3rd vertex belongs to region 17
     atlasTransparentFilter: TBools;
     atlasHideFilter: TInts; //atlas show these atlas regions, e.g. if [7, 8, 22] then only regions 7,8 and 22 will be visible
  end;
@@ -52,6 +51,7 @@ type
     minNodeThresh, maxNodeThresh, scaleNodeSize, scaleEdgeSize, thresholdNodeFrac: single;
     nodeLUTindex , edgeLUTindex: integer;
      isNodeThresholdBySize, isNoNegEdge, isNoPosEdge, isNoLeftNodes,isNoRightNodes,isNoNodeWithoutEdge, isNodeColorVaries, isEdgeColorVaries, isEdgeSizeVaries, isEdgeShowNeg, isEdgeShowPos : boolean;
+    layerName: array[0..kMaxOverlays] of string[32];
  end;
 
 type
@@ -65,11 +65,11 @@ type
     displayList, displayListOverlay : GLuint;
     {$ENDIF}
     isZDimIsUp, isRebuildList, isBusy, isNode, isFreeSurferMesh, isVisible, isAdditiveOverlay : boolean;
-    nodePrefs: TNodePrefs;
     OpenOverlays, OverlayTransparency, AtlasMaxIndex : integer;
     overlay: array [kMinOverlayIndex..kMaxOverlays] of TOverlay;
     nodes: array of TSphere;
     edges:  array of array of Single;
+    edgeLayers: array of single;
     faces : array of TPoint3i;
     vertices: array of TPoint3f;
     vertexRGBA : array of TRGBA;
@@ -81,6 +81,8 @@ type
     //overlay: array of single;
   private
     function CheckMesh: boolean;
+    function CheckNodes: boolean;
+    function CheckEdges: boolean;
     procedure SetOverlayDescriptives(lOverlayIndex: integer);
     procedure MinMaxPct(lOverlayIndex, num_v: integer; var mx, mn: single; isExcludeZero: boolean);
     procedure SetDescriptives;
@@ -100,6 +102,7 @@ type
     function LoadByu(const FileName: string): boolean;
     function LoadAnnot(const FileName: string): boolean;
     function LoadNiml(const FileName: string): boolean;
+    function LoadNimlNodeEdge(const FileName: string): boolean;
     function loadCifti(fnm: string; lOverlayIndex, lSeriesIndex: integer; isLoadCortexLeft: boolean): integer;
     function LoadDae(const FileName: string): boolean; //only subset!
     function LoadDfs(const FileName: string): boolean;
@@ -151,8 +154,10 @@ type
     procedure LoadVtk(const FileName: string);
     procedure LoadW(const FileName: string; lOverlayIndex: integer);
   public
+    nodePrefs: TNodePrefs;
     OverlappingOverlaysOverwrite: boolean;
     procedure MakePyramid;
+    function SetEdgeLayer(layer: integer): boolean;
     //function AtlasStatMapCore(AtlasName, StatName: string; Indices: TInts; Intensities: TFloats): string;
     //function AtlasMaxIndex: integer;
     procedure DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean);
@@ -166,6 +171,7 @@ type
     function LoadOverlay(const FileName: string; lLoadSmooth: boolean): boolean;
     procedure CloseOverlaysCore;
     procedure CloseOverlays;
+    function Contours(OverlayIndex: integer): boolean;
     function Atlas2Node(const FileName: string):boolean;
     procedure Close;
     constructor Create;
@@ -178,12 +184,44 @@ type
     procedure SaveOverlay(const FileName: string; OverlayIndex: integer);
     destructor  Destroy; override;
   end;
+  function isNimlNodes(fnm: string): boolean;
 
 implementation
 
 uses
   mainunit, {$IFDEF FASTGZ}SynZip, {$ENDIF}
   meshify_simplify,shaderu, {$IFDEF COREGL} gl_core_3d {$ELSE} gl_legacy_3d {$ENDIF};
+
+
+procedure printf(s: string);
+begin
+     {$IFDEF UNIX}writeln(s);{$ENDIF}
+end;
+
+function isNimlNodes(fnm: string): boolean;
+//some .niml.dset are per-vertex scalars, others are node maps, the latter have "Graph_Bucket_data"
+label
+  123;
+var
+  f: TextFile;
+  st: string;
+begin
+  result := false;
+  AssignFile(f, fnm);
+  FileMode := fmOpenRead;
+  reset(f);
+  while not eof(f) do begin
+    readln(f, st);
+    if (AnsiContainsText(st, '"Graph_Bucket"')) then begin
+      result := true;
+      goto 123;
+    end;
+    if (AnsiContainsText(st, '"Node_Bucket"')) or (AnsiContainsText(st, '"Node_Label"')) or (AnsiContainsText(st, '>')) then
+       goto 123;
+  end;
+ 123:
+  closefile(f);
+end;
 
 (*function TMesh.Atlas2Node(const FileName: string):boolean;
 const
@@ -627,7 +665,13 @@ begin
                 vRGBA[i].r := vtxRGBA[i].r;
                 vRGBA[i].g := vtxRGBA[i].g;
                 vRGBA[i].b := vtxRGBA[i].b;
-                vRGBA[i].a := c;
+                if vtxRGBA[i].a > 0 then begin
+                   c := round(vertexRgbaAlpha * vtxRGBA[i].a);
+                   vRGBA[i].a := c
+                end else begin
+                   vRGBA[i] := Clr; //Catani2020
+                   vRGBA[i].a := 0; //Catani
+                end;
           end;
         end else begin
             for i := 0 to (length(v)-1) do
@@ -883,7 +927,7 @@ begin
                      for i := 0 to (length(v)-1) do
                          darken(vRGBA[i], overlay[c].intensity[i+volInc], mn,mx);
                end;
-               {$IFNDEF COREGL}
+                {$IFNDEF COREGL}
                for i := 0 to (length(v)-1) do
                    vRGBA[i].A := 255;
                {$ENDIF}
@@ -1722,6 +1766,7 @@ begin
      setlength(vertices,0);
      setlength(nodes, 0);
      setlength(edges,0,0);
+     setlength(edgeLayers, 0);
      setlength(vertexRGBA,0);
      setlength(vertexAtlas,0);
      setlength(atlasHideFilter,0);
@@ -2419,7 +2464,7 @@ end;
 
 procedure TMesh.Node2Mesh;
 var
-   i,j, v,f, n, nNode, nNodeThresh, nEdgeThresh, vert, face,  sphereF, sphereV,  cylF, cylV: integer;
+   i,j, v,f, n, nOK, nNode, nNodeThresh, nEdgeThresh, vert, face,  sphereF, sphereV,  cylF, cylV: integer;
    denom,frac, radius: single;
    lSphere: TMesh;
    cylFace: TFaces;
@@ -2431,6 +2476,7 @@ var
 function isNodeSurvives(ii: integer): boolean;
 begin
         result := false;
+        if (specialsingle(nodes[ii].Radius)) or (specialsingle(nodes[ii].clr))  then exit;
         if nodePrefs.isNodeThresholdBySize then begin
            if (nodes[ii].Radius < nodePrefs.minNodeThresh) then exit;
         end else begin
@@ -2444,6 +2490,7 @@ end; //isNodeSurvives()
 function isEdgeSurvives(ii,jj: integer): boolean;
 begin
      result := false;
+     if  specialsingle(edges[ii,jj]) then exit;
      if abs(edges[ii,jj]) < nodePrefs.minEdgeThresh then exit;
      if edges[ii,jj] = 0 then exit;
      if (nodePrefs.isNoNegEdge) and (edges[ii,jj] < 0) then exit;
@@ -2464,15 +2511,22 @@ begin
      for i := 0 to (nNode - 1) do
          isNodeHasEdge[i] := false;
      //thresholdEdgeSize := nodePrefs.threshEdge * nodePrefs.maxEdge;
+     n := 0;
+     nOK := 0;
      if (nodePrefs.scaleEdgeSize > 0) and (length(Edges) > 0) then begin
         for i := 0 to (nNode - 2) do
-           for j := (i+1) to (nNode -1) do
+           for j := (i+1) to (nNode -1) do begin
+               n := n + 1;
                if isEdgeSurvives(i,j) then begin
                   inc(nEdgeThresh);
+                  nOK := nOK + 1;
                   isNodeHasEdge[i] := true;
                   isNodeHasEdge[j] := true;
                end;
+           end;
      end;
+     if nOK > 1 then
+        printf(format('%d nodes, %d of %d edges survive threshold: %g', [nNode, nOK, n, nOK/n]));  //LJ2020
      //find out which nodes survive
      nNodeThresh := 0;
      if nodePrefs.scaleNodeSize > 0 then begin
@@ -2644,6 +2698,9 @@ begin
   result := true;
 end;
 
+const
+  kEmbeddedEdge = '#ENDNODE'; //signature for node file that contains edge values
+
 function TMesh.LoadNodeTxt(const FileName: string): boolean;
 label
      123;
@@ -2663,6 +2720,7 @@ begin
   reset(fp);
   while not EOF(fp) do begin
     readln(fp, s);
+    if PosEx(kEmbeddedEdge,s) > 0 then break;
     if (length(s) < 1) or (s[1] = '#') then continue;
     sList.DelimitedText := s;
     if c = 0 then c := sList.Count;
@@ -2672,6 +2730,7 @@ begin
     end;
     num_node := num_node + 1;
   end;
+  printf('<<<M< '+inttostr(num_node));
   if (num_node < 2) or (c <> 3)  then begin
      showmessage(format('Text Nodes unexpected Rows*Columns (%d*%d): node files should be N*3', [num_node, c]));
      goto 123;
@@ -2681,6 +2740,7 @@ begin
   reset(fp);
   while not EOF(fp) do begin
     readln(fp, s);
+    if PosEx(kEmbeddedEdge,s) > 0 then break;
     if (length(s) < 1) or (s[1] = '#') then continue;
     sList.DelimitedText := s;
     if sList.Count <> 3 then continue;
@@ -2692,7 +2752,7 @@ begin
     num_node := num_node + 1;
   end;
   //start - raw copy from LoadNode() - maybe make function
-  self.isNode := true;
+  (*self.isNode := true;
   nodePrefs.minNodeColor := nodes[0].Clr;
   nodePrefs.maxNodeColor := nodes[0].Clr;
   nodePrefs.minNodeSize := nodes[0].radius;
@@ -2721,16 +2781,14 @@ begin
   Node2Mesh; //build initially so we have accurate descriptives
   isRebuildList := true;
   //end copy
-  result := true;
+  result := true;*)
+  result := CheckNodes;
   123:
   sList.Free;
   CloseFile(fp);
   Filemode := fmOpenReadWrite;
 end;
 
-
-const
-  kEmbeddedEdge = '#ENDNODE'; //signature for node file that contains edge values
 procedure TMesh.LoadNode(const FileName: string; out isEmbeddedEdge: boolean);
 //BrainNet Node And Edge Connectome Files
 //http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0068910
@@ -2752,6 +2810,7 @@ begin
      Reset(f);
      while not EOF(f) do begin
            ReadLn(f, str); //make sure to run CheckMesh after this, as these are indexed from 1!
+           if PosEx(kEmbeddedEdge,str) > 0 then break;
            if (length(str) > 0) and (str[1] <> '#') then
                inc(num_node);
      end;
@@ -2777,7 +2836,7 @@ begin
      CloseFile(f);
      strlst.free;
 555:
-     self.isNode := true;
+     (*self.isNode := true;
      nodePrefs.minNodeColor := nodes[0].Clr;
      nodePrefs.maxNodeColor := nodes[0].Clr;
      nodePrefs.minNodeSize := nodes[0].radius;
@@ -2804,7 +2863,8 @@ begin
          NodePrefs.maxNodeThresh := nodePrefs.maxNodeSize;
      end;
      Node2Mesh; //build initially so we have accurate descriptives
-     isRebuildList := true;
+     isRebuildList := true; *)
+     CheckNodes();
      exit;
  666:
   showmessage('Unable to load Nodes');
@@ -2812,34 +2872,74 @@ begin
   strlst.free;
 end; // LoadNode()
 
+function TMesh.CheckEdges(): boolean;
+var
+   r,c, num_edge, n, nNot0: integer;
+   v: single;
+begin
+  result := false;
+  num_edge := length(edges);
+  nodePrefs.maxEdgeAbs := abs(edges[0,1]);
+  for r := 0 to (num_edge - 2) do
+      for c := (r+1) to (num_edge -1) do
+          if (abs(edges[r,c]) > nodePrefs.maxEdgeAbs) then
+             nodePrefs.maxEdgeAbs := abs(edges[r,c]);
+  nodePrefs.maxEdge := edges[0,1];
+  nodePrefs.minEdge := edges[0,1];
+  n := 0;
+  nNot0 := 0;
+  for r := 0 to (num_edge - 2) do
+      for c := (r+1) to (num_edge -1) do begin
+          v := edges[r,c];
+          if (v < nodePrefs.minEdge) then
+             nodePrefs.minEdge := v;
+          if (v > nodePrefs.maxEdge) then
+             nodePrefs.maxEdge := v;
+          n := n + 1;
+          if v <> 0.0 then
+             nNot0 := nNot0 + 1;
+      end;
+  nodePrefs.minEdgeThresh := 0;
+  nodePrefs.maxEdgeThresh :=  nodePrefs.maxEdgeAbs;
+  if n > 0 then
+     printf(format('Edges: %d Edges Not Zero: %d', [n, nNot0]));
+  printf(format('Edge min..max %g..%g', [nodePrefs.minEdge, nodePrefs.maxEdge]));
+  isRebuildList := true;
+  result := true;
+end;
+
 function TMesh.LoadEdge(const FileName: string; isEmbeddedEdge: boolean): boolean;
 //BrainNet Node And Edge Connectome Files
 //http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0068910
 label 666;
 var
    f: TextFile;
-   str: string;
+   str, min_edge_str: string;
    num_edge, min_edge, max_edge,r,c: integer;
    strlst : TStringList;
 begin
   result := false;
   setlength(edges,0,0);
+  setlength(edgeLayers,0);
   if not FileExistsF(FileName) then exit;
   if (FSize(FileName) < 8) then exit;
   if (length(nodes) < 2) then begin
-       showmessage('You must load a NODE file before loading your EDGE file.');
-       exit;
+    printf('You must load a NODE file before loading your EDGE file.');
+    showmessage('You must load a NODE file before loading your EDGE file.');
+    exit;
   end;
   strlst:=TStringList.Create;
   FileMode := fmOpenRead;
   AssignFile(f, FileName);
   Reset(f);
+  min_edge_str := '';
   if isEmbeddedEdge then begin
      str := '';
      while (not EOF(f)) and (pos(kEmbeddedEdge, uppercase(str)) = 0) do
         ReadLn(f, str);
      if (EOF(f)) then begin
-        showmessage('Unable to find tag "'+kEmbeddedEdge+'" in '+ FileName);
+       printf('Unable to find tag "'+kEmbeddedEdge+'" in '+ FileName);
+       showmessage('Unable to find tag "'+kEmbeddedEdge+'" in '+ FileName);
         goto 666;
      end;
   end;
@@ -2851,8 +2951,10 @@ begin
         if (length(str) > 0) and (str[1] <> '#') then begin
            inc(num_edge);
            strlst.DelimitedText := str;
-           if strlst.count < min_edge then
+           if strlst.count < min_edge then begin
               min_edge := strlst.count;
+              min_edge_str := str;
+           end;
            if strlst.count > max_edge then
               max_edge := strlst.count;
         end;
@@ -2863,12 +2965,14 @@ begin
   end;
   if (num_edge <> max_edge) or (min_edge <> max_edge) then begin
      showmessage(format('Unable to parse edge file: found %d lines, but %d..%d columns', [num_edge, min_edge, max_edge]));
+     showmessage('"'+min_edge_str+'"');
      goto 666;
   end;
   if (num_edge > length(nodes)) then begin
        showmessage('Edge and node files do not match: '+inttostr(length(nodes))+' nodes loaded, but edge file describes '+inttostr(num_edge)+' nodes.');
        goto 666;
   end;
+  printf(format('Nodes: %d Edges %d', [length(nodes), num_edge])); //LJ2020
   //2nd pass
   Reset(f);
   if isEmbeddedEdge then begin
@@ -2889,31 +2993,16 @@ begin
         ReadLn(f, str); //make sure to run CheckMesh after this, as these are indexed from 1!
         if (length(str) > 0) and (str[1] <> '#') then begin
            strlst.DelimitedText := str;
-           for c := 0 to (num_edge-1) do  //for each column
+           for c := 0 to (num_edge-1) do begin //for each column
                edges[r,c] := StrToFloatDef(strlst[c],0);
+               if isNaN(edges[r,c]) then
+                  edges[r,c] := 0.0;
+               //printf(format('%g', [ edges[r,c]]));
+           end;
            inc(r);
         end;
   end; //read each line
-  nodePrefs.maxEdgeAbs := abs(edges[0,1]);
-  for r := 0 to (num_edge - 2) do
-      for c := (r+1) to (num_edge -1) do
-          if (abs(edges[r,c]) > nodePrefs.maxEdgeAbs) then
-             nodePrefs.maxEdgeAbs := abs(edges[r,c]);
-  nodePrefs.maxEdge := edges[0,1];
-  for r := 0 to (num_edge - 2) do
-      for c := (r+1) to (num_edge -1) do
-          if (edges[r,c] > nodePrefs.maxEdge) then
-             nodePrefs.maxEdge := edges[r,c];
-  nodePrefs.minEdge := edges[0,1];
-  for r := 0 to (num_edge - 2) do
-      for c := (r+1) to (num_edge -1) do
-          if (edges[r,c] < nodePrefs.minEdge) then
-             nodePrefs.minEdge := edges[r,c];
-  //Node2Mesh;
-  nodePrefs.minEdgeThresh := 0;
-  nodePrefs.maxEdgeThresh :=  nodePrefs.maxEdgeAbs;
-  isRebuildList := true;
-  result := true;
+  result := CheckEdges();
  666:
   CloseFile(f);
   strlst.free;
@@ -4434,6 +4523,7 @@ begin
     daEnd := posEx('</DataArray>', Str, daStart); // data array end
     ddStart := posEx('<Data>', Str, daStart) + 6; // data start
     ddEnd := posEx('</Data>', Str, daStart); // data end
+    //printf(format('>>ddStart..ddEnd: %d %d', [ddStart, ddEnd]));
     matStart := posEx('<MatrixData>', Str, daStart); //matrix start
     matEnd := posEx('</MatrixData>', Str, daStart); //matrix end
     if (matStart > 0) and (matEnd > matStart) then begin
@@ -4458,6 +4548,9 @@ begin
     isBinary := pos('Encoding="ExternalFileBinary"', Hdr) > 0;
     Dim0 := KeyStringInt('Dim0', Hdr);
     Dim1 := KeyStringInt('Dim1', Hdr);
+    if (Dim0 > 1) and (Dim1 < 1) then Dim1 := 1;
+    if (Dim1 > 1) and (Dim0 < 1) then Dim0 := 1;
+    //printf(format('>>dim0..dim1: %d %d', [Dim0, Dim1]));
     externalFileName := '';
     externalFileName := KeyString('ExternalFileName', Hdr);
     externalFileOffset := KeyStringInt('ExternalFileOffset', Hdr);
@@ -4469,6 +4562,11 @@ begin
     isVert := pos('Intent="NIFTI_INTENT_POINTSET"', Hdr) > 0; //vertices
     isVertColor := pos('Intent="NIFTI_INTENT_LABEL"', Hdr) > 0; //vertex colors
     isOverlay :=  pos('Intent="NIFTI_INTENT_NONE"', Hdr) > 0; //??? Lets hope this is a fMRI statistical map
+    if (pos('Intent="NIFTI_INTENT_NORMAL"', Hdr) > 0) then begin
+       //https://neurovault.org/collections/1977/
+       //https://neurostars.org/t/uploading-surface-only-results-to-neurovault/6961/2
+       isOverlay := true;
+    end;
     if (pos('NIFTI_INTENT_RGBA_VECTOR"', Hdr) > 0) then begin
        isVertColor := true;
        isOverlay := true;
@@ -4503,13 +4601,29 @@ begin
           Showmessage('Hint: first open the background mesh '+ surfaceID);
        goto 666;
     end;
-    if (isAscii) and ((isVert) or (isOverlay)  or (isVertColor) or (isFace)) then begin
+    if  (isAscii) and (isOverlay) and (Dim1 > 0) then begin
+      overlay[lOverlayIndex].volumes := Dim1;
+      overlay[lOverlayIndex].currentVolume := 1;
+      setlength(overlay[lOverlayIndex].intensity,  Dim1*length(vertices));
+      (*for k := 0 to (length(vertices)-1) do begin
+          overlay[lOverlayIndex].intensity[k] := ReadNextFloat(Str, ddStart, ddEnd);;
+      end;*)
+      for k := 0 to (Dim1-1) do begin
+        j := k;
+        volInc := k * Dim0;
+        for i := 0 to (Dim0-1) do begin
+            overlay[lOverlayIndex].intensity[i+volInc] := ReadNextFloat(Str, ddStart, ddEnd);
+            j := j + Dim1;
+        end;
+      end;
+    end else if (isAscii) and ((isVert) or (isOverlay)  or (isVertColor) or (isFace)) then begin
       //cuban
       {$IFDEF NOTXT}
        Showmessage('Unable to read GIFTI files with ASCII data. Solution: convert to more efficient BINARY data');
        {$ELSE}
+
        if (lOverlayIndex > 0) and (ddEnd > ddStart) then begin
-          Showmessage('Unable to read GIFTI overlays with ASCII data. Solution: convert to more efficient BINARY data');
+         Showmessage('Unable to read GIFTI overlays with ASCII data. Solution: convert to more efficient BINARY data');
        end;
        if (isVertColor) and (ddEnd > ddStart) then begin
           Showmessage('Unable to read colored GIFTI with ASCII data. Solution: convert to more efficient BINARY data');
@@ -5053,6 +5167,7 @@ begin
      ExtractGz(FileName,mStream, kMagic);
      if mStream.Size < 28 then begin
        //showmessage('MZ3 file too small'+inttostr(mStream.Size));
+       printf('MZ3 file too small'+inttostr(mStream.Size));
        exit; //16 byte header, 3 vertices, single 4-byte scalar per vertex vertices
      end;
      mStream.Position := 0;
@@ -5067,6 +5182,8 @@ begin
      isRGBA := (Attr and 4) > 0;
      isScalar := (Attr and 8) > 0;
      isDoubleScalar := (Attr and 16) > 0;
+     //if isRGBA and not isScalar then
+     //   Attr := Attr + 8;
      isAOMap := (Attr and 32) > 0;
      if (Attr > 63) then begin
         showmessage('Unsupported future format '+ inttostr(Attr));
@@ -5079,6 +5196,7 @@ begin
      if (nFace = 0) and (isFace) then goto 666;
      if (not isVert) and (nVert = 0) then
         nVert := nVertBackground;
+     //printf(format('mz3 attr: %d nVert %d(%d) nSkip %d', [Attr, nVert, nVertBackground, nSkip]));
      if (nVert = 0) and ((isVert) or (isRGBA) or (isScalar) ) then goto 666;
      if nSkip > 0 then
         mStream.Seek(nSkip, soFromCurrent);
@@ -5161,7 +5279,6 @@ begin
             Overlay[OpenOverlays].aoMap := isAOMap;
             if isAOMap then  Overlay[OpenOverlays].LUTindex := 0;
             Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex, Overlay[OpenOverlays].LUTinvert);
-            //Showmessage('>>>'+inttostr(OpenOverlays));
           end else //will never happen: we close all overlays when we open a mesh
              Showmessage('Too many overlays open to show the intensity map.');
      end;
@@ -6853,7 +6970,7 @@ var
   f: TextFile;
   str: string;
   strlst: TStringList;
-  num_v, num_f, i, n, nMax: integer;
+  num_v, num_f, i: integer; //, n, nMax
 begin
     result := false;
     if (FSize(FileName) < 64) then exit;
@@ -7590,6 +7707,45 @@ end; // LoadVtk()
 
 {$ENDIF}
 
+function TMesh.CheckNodes: boolean;
+var
+   i, num_node : integer;
+begin
+  //start - raw copy from LoadNode() - maybe make function
+  num_node := length(nodes);
+  if num_node < 1 then exit(false);
+  self.isNode := true;
+  result := true;
+  nodePrefs.minNodeColor := nodes[0].Clr;
+  nodePrefs.maxNodeColor := nodes[0].Clr;
+  nodePrefs.minNodeSize := nodes[0].radius;
+  nodePrefs.maxNodeSize := nodes[0].radius;
+  if num_node > 0 then begin
+    for i := 0 to (num_node -1) do begin
+       if nodes[i].Clr < nodePrefs.minNodeColor then
+          nodePrefs.minNodeColor := nodes[i].Clr;
+       if nodes[i].Clr > nodePrefs.maxNodeColor then
+          nodePrefs.maxNodeColor := nodes[i].Clr;
+       if nodes[i].radius < nodePrefs.minNodeSize then
+          nodePrefs.minNodeSize := nodes[i].radius;
+       if nodes[i].radius > nodePrefs.maxNodeSize then
+          nodePrefs.maxNodeSize := nodes[i].radius;
+    end;
+  end;
+  if (nodePrefs.minNodeSize = nodePrefs.maxNodeSize) then begin
+     NodePrefs.isNodeThresholdBySize := false;
+     NodePrefs.minNodeThresh := nodePrefs.minNodeColor;
+     NodePrefs.maxNodeThresh := nodePrefs.maxNodeColor;
+  end else begin
+      NodePrefs.isNodeThresholdBySize := true;
+      NodePrefs.minNodeThresh := nodePrefs.minNodeSize;
+      NodePrefs.maxNodeThresh := nodePrefs.maxNodeSize;
+  end;
+  Node2Mesh; //build initially so we have accurate descriptives
+  isRebuildList := true;
+  //end copy
+end; //CheckNodes;
+
 function TMesh.CheckMesh: boolean;
 //faces should be indexed for range 0..[number of triangles -1]
 var
@@ -7678,7 +7834,7 @@ end;
 
 function TMesh.LoadFromFile(const FileName: string): boolean;
 var
-   ext, fnm: string;
+   ext, ext2, fnm: string;
    isEmbeddedEdge: boolean;
    HasOverlays : boolean = false;
    {$IFDEF TIMER}startTime : TDateTime;{$ENDIF}
@@ -7699,7 +7855,7 @@ begin
 	if (FSize(FileName) < 9) then exit;
 	isBusy := true;
 	ext := UpperCase(ExtractFileExt(Filename));
-        //ext2 := UpCaseExt2(FileName); // "file.gii.dset" -> ".GII.DSET"
+        ext2 := UpCaseExt2(FileName); // "file.gii.dset" -> ".GII.DSET"
         isRebuildList := true;
 	CloseOverlays;
 	self.Close;
@@ -7755,7 +7911,10 @@ begin
 	LoadSurf(Filename);
         if (ext = '.TXT') then
            LoadNodeTxt(Filename);
-	if (ext = '.NODE') or (ext = '.NODZ')then begin
+        if (ext2 = '.NIML.DSET') and (isNimlNodes(FileName)) then begin
+           LoadNimlNodeEdge(Filename);
+        end;
+        if (ext = '.NODE') or (ext = '.NODZ')then begin
 	 LoadNode(Filename, isEmbeddedEdge);
 	 if isEmbeddedEdge then
 		LoadEdge(Filename, isEmbeddedEdge);
@@ -7990,38 +8149,26 @@ begin
   result := inguy^.rgba;
 end; // asRGBA()
 
-procedure printf(s: string);
-begin
-     {$IFDEF UNIX}writeln(s);{$ENDIF}
-end;
-
-function TMesh.LoadNiml(const FileName: string): boolean;
-label
-   123;
 const
+  kDT_TXT = 5;
   kDT_4FLOAT_1INT_1STR = 6;
+  kDT_1INT_3FLT_1STR = 7;
+  kDT_COLMS_LABS = 9;
   kFORM_TXT = 0;
   kFORM_LSB = 1;
   kFORM_MSB = 2;
 type
   TAFNI = record
-        ni_form, ni_dimen, ni_type, ni_bytesPerElement: integer;
+        ni_form, ni_dimen, ni_type, ni_type_n, ni_bytesPerElement: integer;
    end;
 function clearAfni: TAfni;
 begin
      result.ni_dimen := 0;
      result.ni_type := 0;
+     result.ni_type_n := 1; //e.g. 15 if ni_type="15*float"
      result.ni_bytesPerElement := 0;
      result.ni_form := kFORM_TXT;
 end;
-var
-   st: string;
-   i, nVert: integer;
-   FSz: int64;
-   f: TFByte;
-   afni: TAFNI;
-   rgbas: TVertexRGBA;
-   floats: TFloats;
 procedure ReadLnBinNiml(var f: TFByte; out s: string);
 //niml follows binary immediately after ">" without EOLN!
 const
@@ -8038,30 +8185,27 @@ begin
            if bt = kEnd then exit;
      end;
 end;
-function parseBetweenQuotes(s: string):string; //'ni_type="int"'->'int'
+function parseBetweenQuotes(s: string; endCh: char = '"'):string; //'ni_type="int"'->'int'
 var
    b,e: integer;
 begin
      result := '';
      b := PosEx('"',s);
      if b < 1 then exit;
-     e := PosEx('"',s, b+1);
+     e := PosEx(endCh,s, b+1);
      if e <= b then exit;
      result := copy(s, b+1, e-b-1);
 end;
-procedure parseAfni();
+function parse_ni_type_n(st:string): integer;
 begin
-    //writeln('-->', st);
-    if AnsiContainsText(st, 'ni_type="4*float,int,String"') then
-       afni.ni_type := kDT_4FLOAT_1INT_1STR;
-    if AnsiContainsText(st, 'ni_type="float"') then begin
-      afni.ni_type := kDT_FLOAT32;
-      afni.ni_bytesPerElement := 4;
-    end;
-    if AnsiContainsText(st, 'ni_type="int"') then begin
-      afni.ni_type := kDT_INT32;
-      afni.ni_bytesPerElement := 4;
-    end;
+  result := 1;
+  if not AnsiContainsText(st, '*') then exit;
+  st := parseBetweenQuotes(st,'*');
+  result := strtointdef(st,1);
+end;
+
+procedure parseAfni(var st: string; var afni: TAFNI);
+begin
     if AnsiContainsText(st, 'ni_form="binary.lsbfirst"') then
        afni.ni_form := kFORM_LSB;
     if AnsiContainsText(st, 'ni_form="binary.msbfirst"') then
@@ -8070,14 +8214,35 @@ begin
        afni.ni_dimen := strtointdef( parseBetweenQuotes(st), -1);
     if AnsiContainsText(st, 'data_type="LabelTableObject_data"') then
        afni.ni_bytesPerElement := 6;
+    if AnsiContainsText(st, 'atr_name="COLMS_LABS"') then
+       afni.ni_type := kDT_COLMS_LABS;
+    if not AnsiContainsText(st, 'ni_type="') then exit;
+    if AnsiContainsText(st, 'ni_type="4*float,int,String"') then
+       afni.ni_type := kDT_4FLOAT_1INT_1STR;
+    if AnsiContainsText(st, 'float"') then begin
+      afni.ni_type := kDT_FLOAT32;
+      afni.ni_bytesPerElement := 4;
+    end;
+    if AnsiContainsText(st, 'ni_type="int"') then begin
+      afni.ni_type := kDT_INT32;
+      afni.ni_bytesPerElement := 4;
+    end;
+    if AnsiContainsText(st, 'ni_type="String"') and (afni.ni_type = 0) then
+       afni.ni_type := kDT_TXT;
+    if AnsiContainsText(st, 'ni_type="int,3*float,String"') then
+       afni.ni_type := kDT_1INT_3FLT_1STR;
+    afni.ni_type_n := parse_ni_type_n(st);
+    //printf(st+'>>>'+inttostr(afni.ni_type_n));
 end;
-function readObjectHeader(): boolean;
+function readObjectHeader(var f: TFByte; var afni: TAFNI): boolean;
+var
+   st: string = '';
 begin
   afni := clearAfni();
   result := false;
   while not eof(f) and (not AnsiContainsText(st, '>')) do begin
       ReadLnBinNiml(f, st);
-      parseAfni();
+      parseAfni(st, afni);
   end;
   if (afni.ni_type = kDT_4FLOAT_1INT_1STR) then begin
      result := true;
@@ -8088,22 +8253,184 @@ begin
    {$IFDEF UNIX}writeln('NIML MSB not supported'); {$ENDIF}
    exit;
   end;
-  if (afni.ni_type <> kDT_INT32) and (afni.ni_type <> kDT_FLOAT32) then begin
-   {$IFDEF UNIX}writeln(format('Only support "int" (%d) not %d', [kDT_INT32, afni.ni_type])); {$ENDIF}
+  if (afni.ni_type = 0) then begin
+   {$IFDEF UNIX}writeln('Unsupported ni_type'); {$ENDIF}
    exit;
-  end;
-  if afni.ni_dimen <> length(vertices) then begin //num_v := length(vertices)
-   {$IFDEF UNIX}writeln(format('Expected %d labels but found %d',[length(vertices), afni.ni_dimen])); {$ENDIF}
-   exit;
-  end;
-  if (filepos(f)+(afni.ni_bytesPerElement*afni.ni_dimen)) > FSz then begin
-    {$IFDEF UNIX}writeln(format('File size too small for data %d',[FSz])); {$ENDIF}
-    exit;
   end;
   ////assume sorted_node_def="Yes"!
   result := true;
 end; //readObjectHeader()
 
+function TMesh.SetEdgeLayer(layer: integer): boolean; //0..nLayers-1
+var
+   layerStart, r,c, i, num_edge: integer;
+begin
+     result := false;
+     num_edge := length(edges);
+     layerStart := layer * num_edge * num_edge;
+     if (num_edge < 2) then exit;
+     if length(edgeLayers) < (layerStart+(num_edge * num_edge)) then exit;
+     i := 0;
+     for r := 0 to (num_edge -1) do
+          for c := 0 to (num_edge -1) do begin
+              edges[r,c] := edgeLayers[i + layerStart]; //BrainNet allows files with more nodes than edges
+              i += 1;
+          end;
+     CheckEdges();
+end;
+
+function TMesh.LoadNimlNodeEdge(const FileName: string): boolean;
+label
+   123;
+var
+   st: string;
+   r,c, i, idx, FSz, num_edge: int64;
+   f: TFByte;
+   afni: TAFNI;
+   strlst: TStringList;
+begin
+  result := false;
+  setlength(nodes, 0);
+  setlength(edges,0,0);
+  setlength(edgeLayers,0);
+  FSz := FSize(FileName);
+  if (FSz < 64) then exit;
+  FileMode := fmOpenRead;
+  AssignFile(f, FileName);
+  Reset(f,1);
+  afni := clearAfni();
+  ReadLnBin(f, st); //signature
+  if (not AnsiContainsText(st, '<AFNI_dataset'))  then begin
+    printf('Does not appear to be a AFNI dataset');
+    //showmessage('Does not appear to be a AFNI dataset.');
+    goto 123;
+  end;
+  while not eof(f) do begin
+    ReadLnBin(f, st);
+    if AnsiContainsText(st, '<SPARSE_DATA') then begin
+      //LabelTableObject_data
+      result := readObjectHeader(f, afni);
+      if not result then goto 123;
+      num_edge := round(sqrt(afni.ni_dimen));
+      if (num_edge < 2) or ((num_edge * num_edge) <> afni.ni_dimen) or (afni.ni_type_n < 1) then goto 123;
+      if afni.ni_type_n > kMaxOverlays then goto 123;
+      setlength(edges, num_edge, num_edge);
+      strlst:=TStringList.Create;
+      //{$DEFINE NO_NODE_LAYERS}
+      {$IFDEF NO_NODE_LAYERS}
+      for r := 0 to (num_edge -1) do
+          for c := 0 to (num_edge -1) do begin
+              ReadLnBin(f, st);
+              if st = '' then
+                 ReadLnBin(f, st);
+               strlst.DelimitedText := st;
+               if strlst.count < afni.ni_type_n then continue;
+               edges[r,c] := strtofloatdef(strlst[0],0); //BrainNet allows files with more nodes than edges
+               //printf(format('%dx%d %g', [r,c, edges[r,c]]));
+          end;
+      CheckEdges();
+      {$ELSE}
+      setlength(edgeLayers, afni.ni_type_n * afni.ni_dimen);
+      for r := 0 to (afni.ni_dimen) do begin
+          ReadLnBin(f, st);
+          if st = '' then
+          ReadLnBin(f, st);
+          strlst.DelimitedText := st;
+          if strlst.count < afni.ni_type_n then continue;
+          //printf(format('>>%s<<',[strlst[0]]));
+          //printf(format('%f',[strtofloatdef(strlst[0],0) ]));
+          for c := 0 to afni.ni_type_n-1 do
+              edgeLayers[r+(c*afni.ni_dimen)] := strtofloatdef(strlst[c],0);
+      end;
+      SetEdgeLayer(0);
+      {$ENDIF}
+
+
+      strlst.free;
+      if afni.ni_type_n = 1 then
+         setlength(edgeLayers, 0); //only one layer
+    end;
+    if AnsiContainsText(st, '<NODE_COORDS') then begin
+      //LabelTableObject_data
+      result := readObjectHeader(f, afni);
+      if (not result) or (afni.ni_dimen < 1) then goto 123;
+      strlst:=TStringList.Create;
+      setlength(nodes, afni.ni_dimen);
+      for i := 0 to afni.ni_dimen -1 do begin
+          ReadLnBin(f, st);
+          if st = '' then
+             ReadLnBin(f, st);
+          strlst.DelimitedText := st;
+          if strlst.count < 5 then continue;
+          idx := strtointdef(strlst[4],-1);
+          if (idx < 0) or (idx >= afni.ni_dimen) then continue;
+          nodes[idx].X := strtofloatdef(strlst[1], 0.0);
+          nodes[idx].Y := strtofloatdef(strlst[2], 0.0);
+          nodes[idx].Z := strtofloatdef(strlst[3], 0.0);
+          nodes[idx].Clr := 1;
+          nodes[idx].Radius := 1;
+      end;
+      //strlst.DelimitedText := st;
+      //writeln('->'+inttostr(strlst.count));
+      //todo
+      strlst.free;
+
+    end;
+    if AnsiContainsText(st, '<AFNI_ATR') then begin
+      //LabelTableObject_data
+      result := readObjectHeader(f, afni);
+      if not result then goto 123;
+      if afni.ni_type <> kDT_COLMS_LABS then continue;
+      ReadLnBin(f, st);
+      if st = '' then
+         ReadLnBin(f, st);
+      st := parseBetweenQuotes(st);
+      strlst:=TStringList.Create;
+      strlst.delimiter := ';';
+      strlst.DelimitedText := st;
+      afni.ni_dimen := min(strlst.count,kMaxOverlays);
+      if afni.ni_dimen > 1 then begin
+         for i := 0 to (afni.ni_dimen-1) do begin
+             //writeln(inttostr(i)+'-->'+strlst[i]);
+             nodePrefs.layerName[i] := strlst[i];
+         end;
+
+      end;
+
+      //writeln('->'+inttostr(strlst.count));
+      //todo
+      strlst.free;
+    end;
+
+  end; //while not eof()
+  if (length(nodes) < 1) then
+     goto 123; //NODE_COORDS missing
+  result := true;
+  result := CheckNodes();
+  //printf(format('%d -> %d', [length(edges) ,length(nodes)]));
+  //if result then
+  //   CheckEdges(); //do not modify result: it is ok to have nodes without edges
+  123:
+  closefile(f);
+end; //LoadNimlNodeEdge()
+
+function TMesh.LoadNiml(const FileName: string): boolean;
+label
+   123;
+var
+   st: string;
+   i, nVert: integer;
+   FSz: int64;
+   f: TFByte;
+   afni: TAFNI;
+   rgbas: TVertexRGBA;
+   floats: TFloats;
+   {$DEFINE FASTTXT}
+   {$IFDEF FASTTXT}
+   j, pos, n: integer;
+   bytes: TUint8s;
+   {$ENDIF}
+   {$IFDEF TIMER}startTime : TDateTime;{$ENDIF}
 procedure parseLabel(out r,g,b,a: byte; out idx: integer);
 var
    strlst:TStringList;
@@ -8155,6 +8482,19 @@ begin
       //writeln(format('%d = %d %d %d %d', [idx, r, g, b, a]));
   end;
 end; //readObjectHeader()
+function validateObjectHeader():boolean;
+begin
+  result := false;
+  if (afni.ni_type <> kDT_4FLOAT_1INT_1STR) and (afni.ni_dimen <> length(vertices)) then begin //num_v := length(vertices)
+   {$IFDEF UNIX}writeln(format('Expected %d labels but found %d',[length(vertices), afni.ni_dimen])); {$ENDIF}
+   exit;
+  end;
+  if (filepos(f)+(afni.ni_bytesPerElement*afni.ni_dimen)) > FSz then begin
+    {$IFDEF UNIX}writeln(format('File size too small for data %d',[FSz])); {$ENDIF}
+    exit;
+  end;
+  result := true;
+end; //validateObjectHeader()
 begin
   result := false;
   atlasMaxIndex := -1;
@@ -8168,22 +8508,27 @@ begin
   afni := clearAfni();
   ReadLnBin(f, st); //signature
   if (not AnsiContainsText(st, '<AFNI_dataset'))  then begin
-    {$IFDEF UNIX}writeln('Does not appear to be a AFNI dataset');{$ENDIF}
+    printf('Does not appear to be a AFNI dataset');
     //showmessage('Does not appear to be a AFNI dataset.');
     goto 123;
   end;
+  {$IFDEF TIMER}startTime := Now;{$ENDIF}
   while not eof(f) do begin
     ReadLnBin(f, st);
     if AnsiContainsText(st, '<INDEX_LIST') then begin
       //LabelTableObject_data
-      result := readObjectHeader();
+      result := readObjectHeader(f, afni);
       if not result then goto 123;
-      seek(f, filepos(f)+(afni.ni_bytesPerElement*afni.ni_dimen));
+      if not validateObjectHeader() then goto 123;
+      //seek(f, filepos(f)+(afni.ni_bytesPerElement*afni.ni_dimen));
+      {$IFDEF TIMER}printf(format('index %d', [MilliSecondsBetween(Now,StartTime)])); {$ENDIF}
     end;
     // LabelTableObject_data
     if AnsiContainsText(st, '<SPARSE_DATA') then begin
-      result := readObjectHeader();
+      {$IFDEF TIMER}printf(format('sparse %d', [MilliSecondsBetween(Now,StartTime)])); {$ENDIF}
+      result := readObjectHeader(f, afni);
       if not result then goto 123;
+      if not validateObjectHeader() then goto 123;
       if (afni.ni_bytesPerElement = 6) and (afni.ni_type = kDT_4FLOAT_1INT_1STR) then begin //LabelTableObject_data
          readLabels();
          continue;
@@ -8197,30 +8542,67 @@ begin
          //OpenOverlays := OpenOverlays + 1;
          setlength(overlay[OpenOverlays].intensity, nVert);
          // (not AnsiContainsText(st, '</')) do
+         {$IFDEF TIMER}printf(format('startText %d', [MilliSecondsBetween(Now,StartTime)])); {$ENDIF}
+         {$IFDEF FASTTXT} //ugly code for mixed binary/text but x10 faster
+         pos := filepos(f);
+         n := FSz - pos;
+         setlength(bytes, n);
+         blockread(f,bytes[0],  n);
+         i := 0;
+         j := 0;
+         while (i < nVert) and (j < n) do begin
+               st := '';
+               while (bytes[j] <>$0A) do begin
+                     st := st + chr(bytes[j]);
+                     j += 1;
+               end;
+               j += 1;
+               if st = '' then continue;
+               if (AnsiContainsText(st, '</')) then goto 123;
+               overlay[OpenOverlays].intensity[i] := strtofloatdef(st,0);
+               i := i + 1;
+         end;
+         seek(f,pos+j);
+         {$ELSE}
+         printf(format('Slow format: reading %d vertex intensities saved as text', [nVert]));
+         //since NIML mixes binary and text, or text reader is paraticularly inefficient!
          i := 0;
          while i < nVert do begin
-               ReadLnBin(f, st);
+               //ReadLnBin(f, st); //<- this is very slow, but we need to know byte position at end
+               ReadLnBin(f,st);
                if (length(st) < 1) then continue;
                if (AnsiContainsText(st, '</')) then goto 123;
                overlay[OpenOverlays].intensity[i] := strtofloatdef(st, 0);
                i := i + 1;
          end;
+         {$ENDIF}
+         printf(format('%g %g', [overlay[OpenOverlays].intensity[0], overlay[OpenOverlays].intensity[1]]));
+
+         {$IFDEF TIMER}printf(format('endText %d', [MilliSecondsBetween(Now,StartTime)])); {$ENDIF}
          result := true;
          goto 123;
       end;
-      setlength(vertexAtlas, nVert);
       if afni.ni_type = kDT_INT32 then begin
+         {$IFDEF TIMER}printf(format('atlas %d', [MilliSecondsBetween(Now,StartTime)])); {$ENDIF}
+         setlength(vertexAtlas, nVert);
          blockread(f, vertexAtlas[0],  nVert * sizeof(int32));
       end else if afni.ni_type = kDT_FLOAT32 then begin
+          {$IFDEF TIMER}printf(format('atlas %d', [MilliSecondsBetween(Now,StartTime)])); {$ENDIF}
+          printf('NIML Float32: assuming continuous data not atlas'); //erosion_thick.niml.dset
           setlength(floats, nVert);
           blockread(f, floats[0],  nVert * sizeof(single));
+          setlength(overlay[OpenOverlays].intensity, nVert);
           for i := 0 to (nVert-1) do
-            vertexAtlas[i] := round(floats[i]);
+              overlay[OpenOverlays].intensity[i] := floats[i];
           floats := nil;
+          result := true;
+          goto 123;
       end else begin
-          writeln('Unsupported datatype');
+          printf('Unsupported datatype');
           goto 123;
       end;
+      {$IFDEF TIMER}printf(format('vertexAtlas %d', [MilliSecondsBetween(Now,StartTime)])); {$ENDIF}
+
       atlasMaxIndex := vertexAtlas[0];
       for i := 0 to (nVert -1) do
           if vertexAtlas[i] > atlasMaxIndex then
@@ -8254,8 +8636,261 @@ begin
   //result := true;
  123:
  closefile(f);
+end; //LoadNiml();
+
+function SameRGBA(a, b: TRGBA): boolean; overload;
+begin
+     result := AsInt(a) = AsInt(b);
 end;
 
+function SameRGBA(a, b, c: TRGBA): boolean; overload;
+begin
+     result := AsInt(a) = AsInt(b);
+     if not result then exit;
+     result := AsInt(a) = AsInt(c);
+end;
+
+function ContourRGBA(f: TFaces; v: TVertexRGBA): TBools;
+var
+   nVert, nFace, i: integer;
+   isBorder: TBools;
+begin
+  nVert := length(v);
+  nFace := length(f);
+  result := nil;
+  if (nFace < 1) or (nVert < 3) then exit;
+  setlength(isBorder, nVert);
+  for i := 0 to (nVert -1) do
+      isBorder[i] := false;
+  for i := 0 to (nFace -1) do begin
+      if (SameRGBA(v[f[i].x], v[f[i].y], v[f[i].z])) then
+         continue;
+      isBorder[f[i].x] := true;
+      isBorder[f[i].y] := true;
+      isBorder[f[i].z] := true;
+  end;
+  result := isBorder;
+end;
+
+(*function SameVal(a,b,c,threshlo,threshhi: single): boolean; overload;
+var
+   mn, mx: single;
+begin
+  result := false;
+  mn := min(min(a,b),c);
+  mx := max(max(a,b),c);
+  if (mx > threshhi) and (mn < threshhi) then exit;
+  result := true;
+end;*)
+
+function SameVal(a,b,c,thresh: single): boolean; overload;
+begin
+  result := true;
+  //if (a < mx) and (b < mx) and (c < mx) then exit;
+  //if (a > mx) and (b > mx) and (c > mx) then exit;
+  if (a < thresh) and (b < thresh) and (c < thresh) then exit;
+  if (a > thresh) and (b > thresh) and (c > thresh) then exit;
+  result := false;
+end;
+
+function ContourFloat(f: TFaces; v: TFloats; mn1, mx1: float): TBools;
+var
+   nVert, nFace, i: integer;
+   isBorder: TBools;
+   thresh,mn, mx: single;
+begin
+  nVert := length(v);
+  nFace := length(f);
+  result := nil;
+  if (nFace < 1) or (nVert < 3) then exit;
+  setlength(isBorder, nVert);
+  for i := 0 to (nVert -1) do
+      isBorder[i] := false;
+  thresh := 0;
+  mn := min(mn1,mx1);
+  mx := max(mn1,mx1);
+  (*if (mn < 0) and (mx > 0) then begin
+    for i := 0 to (nFace -1) do begin  //two thresholds, max and min
+      if SameVal(v[f[i].x], v[f[i].y], v[f[i].z], mn, mx) then
+        continue;
+      isBorder[f[i].x] := true;
+      isBorder[f[i].y] := true;
+      isBorder[f[i].z] := true;
+    end;
+  end else begin *)
+    if (mn < 0) and (mx < 0) then
+       thresh := mx
+    else
+       thresh := mn;
+    for i := 0 to (nFace -1) do begin
+      if SameVal(v[f[i].x], v[f[i].y], v[f[i].z], thresh) then
+        continue;
+      isBorder[f[i].x] := true;
+      isBorder[f[i].y] := true;
+      isBorder[f[i].z] := true;
+    end;
+  //end;
+  result := isBorder;
+end;
+
+procedure blur (f: TFaces; var v: TFloats; val: single);
+var
+   i, nFace, nVert: integer;
+   isBorder: TBools;
+begin
+  nFace := length(f);
+  nVert := length(v);
+  if (nFace < 1) or (nVert < 3) then exit;
+  setlength(isBorder, nVert);
+  for i := 0 to (nVert -1) do
+      isBorder[i] := false;
+  for i := 0 to (nFace -1) do begin
+    if (v[f[i].x] = v[f[i].y]) and (v[f[i].x] = v[f[i].z]) then
+      continue;
+      isBorder[f[i].x] := true;
+      isBorder[f[i].y] := true;
+      isBorder[f[i].z] := true;
+  end;
+  for i := 0 to (nVert -1) do
+      if isBorder[i]  then
+         v[i] := max(v[i], val);
+  isBorder := nil;
+end;
+
+function TMesh.Contours(OverlayIndex: integer): boolean;
+var
+   isBorder: TBools;
+   nVert, i: integer;
+begin
+  nVert := length(vertices);
+  if (nVert < 1) or (OverlayIndex > OpenOverlays) then exit(false);
+  if (OverlayIndex <= 0) then begin
+     if (length(vertexRGBA) <> nVert) then exit(false);
+     isBorder := ContourRGBA(faces, vertexRGBA)
+  end else begin
+      if length(Overlay[OverlayIndex].intensity) <> nVert then exit(false);
+       isBorder := ContourFloat(faces, Overlay[OverlayIndex].intensity, overlay[OverlayIndex].windowScaledMin,overlay[OverlayIndex].windowScaledMax);
+  end;
+  if isBorder = nil then exit(false);
+  OpenOverlays := OpenOverlays + 1;
+  Overlay[OpenOverlays].volumes := 1;
+  Overlay[OpenOverlays].CurrentVolume := 1;
+  setlength(Overlay[OpenOverlays].intensity,nVert);
+  Overlay[OpenOverlays].OpacityPercent:= kLUTopaque;
+  if (OverlayIndex <= 0) then
+       Overlay[OpenOverlays].filename  := 'contour'
+  else
+      Overlay[OpenOverlays].filename  := 'contour_'+Overlay[OverlayIndex].filename;//ExtractFilename(FileName);
+  Overlay[OpenOverlays].LUTindex := SetLutIndex(OpenOverlays);
+  Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex, Overlay[OpenOverlays].LUTinvert);
+  Overlay[OpenOverlays].minIntensity := 0;
+  Overlay[OpenOverlays].maxIntensity := 1;
+  Overlay[OpenOverlays].windowScaledMin := 0.8;
+  Overlay[OpenOverlays].windowScaledMax := 1;
+  overlay[OpenOverlays].PaintMode := kPaintHideDefaultBehavior;
+  for i := 0 to (nVert -1) do begin
+    if isBorder[i] then
+       Overlay[OpenOverlays].intensity[i] := 1
+    else
+        Overlay[OpenOverlays].intensity[i] := 0;
+  end;
+  isBorder := nil;
+  blur(faces, Overlay[OpenOverlays].intensity, 0.75);
+  blur(faces, Overlay[OpenOverlays].intensity, 0.50);
+  blur(faces, Overlay[OpenOverlays].intensity, 0.25);
+  result := true;
+end;
+
+(*function TMesh.ColorContours(r,g,b: byte; blur: boolean = true): boolean; overload;
+var
+   nVert, nFace, i: integer;
+   isBorder: array of boolean;
+   borderRGBA, innerRGBA: TRGBA;
+begin
+     nVert := length(vertices);
+     if (length(vertexRGBA) <> nVert) or (nVert < 1) then exit(false);
+     nFace := length(faces);
+     if nFace < 1 then exit(false);
+     setlength(isBorder, nVert);
+     borderRGBA := RGBA(R,G,B,255);
+     innerRGBA := RGBA(R,G,B,0);
+     for i := 0 to (nVert -1) do
+         isBorder[i] := false;
+     for i := 0 to (nFace -1) do begin
+         if (SameRGBA(vertexRGBA[faces[i].x], vertexRGBA[faces[i].y], vertexRGBA[faces[i].z])) then
+            continue;
+         isBorder[faces[i].x] := true;
+         isBorder[faces[i].y] := true;
+         isBorder[faces[i].z] := true;
+     end;
+     for i := 0 to (nVert -1) do begin
+         if isBorder[i] then
+            vertexRGBA[i] := borderRGBA
+         else
+             vertexRGBA[i] := innerRGBA;
+     end;
+     isBorder := nil;
+     //GLForm1.caption := 'Catani';
+     result := true;
+end;*)
+
+{$DEFINE JX}
+{$IFDEF JX}
+(*function TMesh.ColorContours(OverlayIndex: integer; r,g,b: byte; blur: boolean = true): boolean; overload;//arbitrary layer, 0=background
+begin
+     result := ColorContours(OverlayIndex);
+end;   *)
+
+{$ELSE}
+function TMesh.ColorContours(OverlayIndex: integer; r,g,b: byte; blur: boolean = true): boolean; overload;//arbitrary layer, 0=background
+var
+   nVert, nFace, i, c: integer;
+   isBorder: array of boolean;
+   flt,mn,mx: single;
+begin
+     c := OverlayIndex; //channel
+     //GLForm1.caption := 'A';
+     if c > OpenOverlays then exit(false);
+     if c = 0 then
+        exit(ColorContours());
+     //GLForm1.caption := 'B';
+     nVert := length(overlay[c].vertexRGBA);
+     nFace := length(overlay[c].faces);
+     if (nVert > 0) or (nFace > 0) then exit(false);
+     nVert := length(vertices);
+     nFace := length(faces);
+     if (nVert <>  length(overlay[c].intensity)) then exit(false);
+     //GLForm1.caption := 'C'+inttostr(nVert)+':'+inttostr(length(overlay[c].intensity));
+     setlength(isBorder, nVert);
+     for i := 0 to (nVert -1) do
+         isBorder[i] := false;
+     //GLForm1.caption := 'D'+floattostr(overlay[c].windowScaledMin)+':'+floattostr(overlay[c].windowScaledMax);
+     mn := min(overlay[c].windowScaledMin,overlay[c].windowScaledMax);
+     mx := max(overlay[c].windowScaledMin,overlay[c].windowScaledMax);
+     for i := 0 to (nFace -1) do begin
+           if SameVal(overlay[c].intensity[faces[i].x], overlay[c].intensity[faces[i].y], overlay[c].intensity[faces[i].z],mn, mx) then
+              continue;
+           isBorder[faces[i].x] := true;
+           isBorder[faces[i].y] := true;
+           isBorder[faces[i].z] := true;
+     end;
+     flt := mx;
+     if (mx < 0) then
+        flt := mn;
+     for i := 0 to (nVert -1) do begin
+         //isBorder[i] := (i mod 10) = 0;
+         if isBorder[i] then
+            overlay[c].intensity[i] := flt
+            //vertexRGBA[i] := borderRGBA
+         else
+             overlay[c].intensity[i] := 0;
+             //vertexRGBA[i] := innerRGBA;
+     end;
+     isBorder := nil;
+     //GLForm1.caption := 'Catani';
+     result := true;
+end;
+{$ENDIF}
 {$DEFINE ANNOTasTEMPLATE}
 {$IFDEF ANNOTasTEMPLATE}
 function TMesh.LoadAnnot(const FileName: string): boolean;
@@ -8265,7 +8900,7 @@ label
    666;
 var
    f: File;
-   v,i,j,sz: integer;
+   v,i,j,sz, nOK: integer;
    nVert: LongWord;
    labelRGBA: TRGBA;
    num_entries, tag, ctabversion, maxstruc, labelNum, len, r,g,b,a: int32;
@@ -8278,6 +8913,7 @@ begin
   sz := FileSize(f);
   if (sz < 20) or (length(vertices) < 3) then  //not a valid annot file
         goto 666;
+  setlength(vertexAtlas,0);
   blockread(f, nVert, 4);
   {$IFDEF ENDIAN_LITTLE}  //FreeSurfer files ALWAYS big endian
   SwapLongWord(nVert);
@@ -8305,6 +8941,7 @@ begin
          goto 666;
       end;
       vertexRGBA[v] := asRGBA(idx[j+1]);
+      vertexRGBA[i].A := 255;
       j := j + 2;
   end;
   //next ATLAS data
@@ -8359,7 +8996,7 @@ begin
       //GLForm1.ScriptOutputMemo.Lines.Add(format('%d rgba %d %d %d %d',[labelNum, r, g, b, a]));
       if i = 0 then atlasMaxIndex := labelNum;
       if labelNum > atlasMaxIndex then atlasMaxIndex := labelNum;
-      labelRGBA := RGBA(r,g,b,a);
+      labelRGBA := RGBA(r,g,g,a);
       //we need to use the RGB not RGBA value to infer label number!
       // mri_annotation2label can use a different alpha for label and vertex!
       for v := 0 to (nVert -1) do
@@ -8367,11 +9004,22 @@ begin
              vertexAtlas[v] := labelNum;
     end;
   end;
-  for v := 0 to (nVert -1) do
+  nOK := 0;
+  if length(vertexAtlas) = nVert then begin
+    for v := 0 to (nVert -1) do begin
+        if (vertexAtlas[v] >= 0) then
+           nOK += 1;
+        vertexAtlas[v] :=  0;
+    end;
+    if (nVert <> nOK) then
+       GLForm1.ScriptOutputMemo.Lines.Add(format('annot file specifies %d of %d vertices: %s',[nOK, nVert, FileName]));
+  end;
+
+  (*for v := 0 to (nVert -1) do
       if (vertexAtlas[v] < 0) then begin
-        GLForm1.ScriptOutputMemo.Lines.Add(format('annot file ERROR %d rgba %d %d %d %d',[666, vertexRGBA[v].r, vertexRGBA[v].g, vertexRGBA[v].b, vertexRGBA[v].a]));
+        GLForm1.ScriptOutputMemo.Lines.Add(format('annot file ERROR %d rgba %d %d %d %d',[v, vertexRGBA[v].r, vertexRGBA[v].g, vertexRGBA[v].b, vertexRGBA[v].a]));
         break;
-      end;
+      end;*)
   result := true;
   CloseFile(f);
   exit;
@@ -9509,6 +10157,17 @@ begin
        OpenOverlays := OpenOverlays - 1;
         exit;
      end;
+     if (length(overlay[OpenOverlays].vertexRGBA) = length(Vertices) ) and (length(Vertices) > 3) then begin
+       i := length(Vertices);
+       setlength(vertexRGBA, i);
+       vertexRGBA := Copy(overlay[OpenOverlays].vertexRGBA, 0, MaxInt);
+       overlay[OpenOverlays].vertexRGBA := nil;
+       OpenOverlays := OpenOverlays - 1;
+       result := true;
+       isRebuildList := true;
+       exit;
+     end;
+
   end;
   if (ext = '.COL') then begin
      nOverlays := LoadCol(FileName, OpenOverlays, 1);
@@ -9535,6 +10194,10 @@ begin
      end;
   end;
   if (ext2 = '.NIML.DSET') then begin
+     if (isNimlNodes(FileName)) then begin
+        printf('Open NIML network as node not overlay (automatic detection failed)');
+        OpenOverlays := OpenOverlays - 1;
+     end;
     if not LoadNiml(FileName) then begin
        printf('NIML variant not supported');
        OpenOverlays := OpenOverlays - 1;
@@ -9595,6 +10258,11 @@ begin
          nOverlays := 1;
      if (length(overlay[OpenOverlays].faces) < 1 ) and (length(overlay[OpenOverlays].intensity) < 1 ) then begin //unable to open as an overlay - perhaps vertex colors?
         OpenOverlays := OpenOverlays - 1;
+        if nOverlays > 0 then begin //atlas
+           isRebuildList := true;
+           exit(true);
+        end;
+        printf('Unable to load overlay');
         exit;
      end;
   end;
@@ -9603,6 +10271,7 @@ begin
       or (ext = '.NRRD') or (ext = '.HEAD') or (ext = '.MGH')  or (ext = '.MGZ')  or (ext = '.MHA') or (ext = '.MHD') then begin
          if not LoadVoxel2Vertex(FileName, OpenOverlays) then
             LoadNii(FileName, OpenOverlays, lLoadSmooth);
+
       end;
   end;
   //if (length(overlay[OpenOverlays].intensity) < 1 ) and (PosEx('.thickness.',FileName) > 1) and (IsCurv(FileName))  then begin
@@ -9622,9 +10291,8 @@ begin
   end;
   if (length(overlay[OpenOverlays].intensity) < 1 )  then
        LoadW(FileName, OpenOverlays);
-
   if  (length(overlay[OpenOverlays].intensity) < 1 ) then begin
-      LoadMeshAsOverlay(FileName, OpenOverlays);
+     LoadMeshAsOverlay(FileName, OpenOverlays);
   end else
       SetOverlayDescriptives(OpenOverlays);
   if isFreeSurferLUT(Overlay[OpenOverlays].LUTindex) then begin //CURV file
@@ -9672,7 +10340,9 @@ begin
   setlength(faces, 0);
   setlength(vertices, 0);
   setlength(nodes,0);
-  setlength(edges,0);
+  setlength(edges,0,0);
+  setlength(edgeLayers,0);
+  //setlength(edges,0);
   setlength(vertexRGBA,0);
   setlength(vertexAtlas,0);
   AtlasMaxIndex := 0;

@@ -7,7 +7,7 @@ interface
 {$endif}
 
 const
-  kVers = 'v1.0.20191122 Beta';
+  kVers = 'v1.0.20200529';
   NaN : double = 1/0;
   kTab = chr(9);
   kCR = chr (13);
@@ -49,6 +49,7 @@ type
  TVertexRGBA = array of TRGBA;
  TBools = array of boolean;
  TInts = array of integer;
+ TUInt8s = array of uint8;
  TInt16s = array of int16;
  TUInt16s = array of uint16;
  TInt32s = array of int32;
@@ -453,6 +454,7 @@ begin
   s := outguy.Long;
 end; // SwapLongWord()
 
+{$IFDEF SLOWREADLNBIN}
 procedure ReadLnBin(var f: TFByte; var s: string);
 const
   kEOLN = $0A;
@@ -466,6 +468,26 @@ begin
            s := s + Chr(bt);
      end;
 end;
+{$ELSE}
+procedure ReadLnBin(var f: TFByte; var s: string); inline;
+const
+  kEOLN = $0A;
+var
+   bt : Byte;
+begin
+     s := '';
+     //while (not EOF(f)) do begin  //<- half the speed!
+     while (true) do begin
+           try
+              Read(f,bt);
+           except
+                 exit;
+           end;
+           if bt = kEOLN then exit;
+           s := s + Chr(bt);
+     end;
+end;
+{$ENDIF}
 
 function RGBA(lR,lG,lB,lA: byte): TRGBA;
 //set red,green,blue and alpha of a Quad

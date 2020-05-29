@@ -1128,6 +1128,7 @@ begin
     if (lMesh.nodePrefs.minEdge < 0)  and (not lMesh.nodePrefs.isNoNegEdge) and (lMesh.nodePrefs.minEdgeThresh <> lMesh.nodePrefs.maxEdgeThresh) then begin
        inc(nLUT);
        lI := lMesh.nodePrefs.edgeLUTindex + 1;
+	   xxx
        LUT[nLUT] := UpdateTransferFunction (lI, false);
        mn[nLUT] := -lMesh.nodePrefs.minEdgeThresh;
        mx[nLUT] := -lMesh.nodePrefs.maxEdgeThresh;
