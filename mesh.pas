@@ -3174,12 +3174,14 @@ end; // LoadObj()
 procedure TMesh.LoadPly(const FileName: string);
 // https://en.wikipedia.org/wiki/PLY_(file_format)
 // http://paulbourke.net/dataformats/ply/
+const
+   kBlockSz = 4096;
 var
    fb: file;
    f: TextFile;
    isSkipUchar, isSwap, isVertexSection, isAscii, isLittleEndian, isUint32 : boolean;
    fsz, redOffset, greenOffset, blueOffset, AlphaOffset,
-   hdrSz, sz, i, j,  num_v, num_f, num_vx, num_header_lines, vertexOffset, indexSectionExtraBytes: integer;
+   hdrSz, sz, nf, i, j, idx0, idx1, idx2, num_v, num_f, num_vx, num_header_lines, vertexOffset, indexSectionExtraBytes: integer;
    str: string;
    byt: byte;
    flt: single;
@@ -3237,8 +3239,8 @@ begin
         strlst.DelimitedText := str;
         if (strlst.count > 2) and (pos('RED', UpperCase(strlst[2])) = 1) then begin
            redOffset := vertexOffset;
-           if (pos('UCHAR', UpperCase(strlst[1])) <> 1) then begin
-             showmessage('Expected colors of data type "UCHAR", not "'+str+'"');
+           if (pos('UCHAR', UpperCase(strlst[1])) <> 1) and (pos('UINT8', UpperCase(strlst[1])) <> 1) then begin
+             showmessage('Expected colors of data type "UCHAR" or "UINT8", not "'+str+'"');
              closefile(f);
              exit;
            end;
@@ -3293,7 +3295,7 @@ begin
     exit;
   end;
   setlength(vertices, num_v);
-  setlength(faces, num_f);
+  setlength(faces, num_f); //only true if all faces are triagular
   if redOffset > 2 then
      setlength(vertexRGBA,num_v);
   if isAscii then begin
@@ -3316,21 +3318,33 @@ begin
     end else
         for i := 0 to (num_v - 1) do
             readln(f, vertices[i].X, vertices[i].Y, vertices[i].Z);
+    nf := 0;
+    //showmessage('faces');
     for i := 0 to (num_f - 1) do begin
       if isSkipUchar then
          read(f, num_vx);  //AFNI ConvertSurface adds an unused dummy value "intensity" at the start of each line
-      readln(f, num_vx, faces[i].X, faces[i].Y, faces[i].Z);
+      read(f, num_vx, idx0, idx1);
       if num_vx < 3 then begin
-            showmessage('File does not have the expected number of triangle-based faces '+ FileName);
+            showmessage('Invalid PLY file, each face list entry must have at least 3 vertices '+ FileName);
             closefile(f);
             exit;
       end;
-      if num_vx > 3 then begin
-          showmessage('Only able to read triangle-based PLY files. (Hint: open with MeshLab and export as CTM format) ');
-          closefile(f);
-          exit;
+      num_vx := num_vx - 2; //e.g. 4 vertices = 2 triangles
+      if (num_f < (nf + num_vx)) then begin //number of original estimated on triangular mesh, quads require more vertices
+         num_f := num_f + num_vx + kBlockSz;
+         setlength(faces, num_f);
       end;
+      for j := 1 to num_vx do begin
+          read(f, idx2);
+          faces[nf] := pti(idx0, idx1, idx2);
+          idx1 := idx2;
+          //idx0 never changes: like fan not strip https://stackoverflow.com/questions/20394727/gl-triangle-strip-vs-gl-triangle-fan
+          nf := nf + 1;
+      end;
+      readln(f); //read comment at end of line? http://paulbourke.net/dataformats/ply/
     end;
+    num_f := nf;
+    setlength(faces, num_f);
     closefile(f);
   end else begin //if ASCII else Binary
     closefile(f);
@@ -4442,7 +4456,7 @@ function ReadNextInt(s: string; var ddStart, ddEnd: integer): integer;
 var
    v: string = '';
 begin
-  while ddStart < ddEnd do begin
+  while ddStart <= ddEnd do begin
         if s[ddStart] in ['0'..'9','-','+'] then
            v := v + s[ddStart]
         else if v <> '' then
@@ -4456,7 +4470,7 @@ function ReadNextFloat(s: string; var ddStart, ddEnd: integer): single;
 var
    v: string = '';
 begin
-  while ddStart < ddEnd do begin
+  while ddStart <= ddEnd do begin
         if s[ddStart] in ['0'..'9','.','-','+','e'] then
            v := v + s[ddStart]
         else if v <> '' then
@@ -4585,6 +4599,10 @@ begin
        nOverlays := nOverlays + 1;
     isTransposed := pos('ColumnMajorOrder"', Hdr) > 0;
     if (Dim1 = 0) then Dim1 := 1;
+    if (isOverlay) and (lOverlayIndex = 0) and ((length(vertices) < 1) and (not isVert)) then begin
+        Showmessage('Load mesh before loading a GIFTI overlay.');
+       goto 666;
+    end;
     if (isOverlay) and (lOverlayIndex = 0) and ((length(vertices) > 0) or (length(faces) > 0)) then begin
        HasOverlays := true;
       isOverlay := false;
@@ -10227,8 +10245,14 @@ begin
      if isCiftiNii then begin
         nOverlays := loadCifti(FileName, OpenOverlays, 1, (origin.X < 0));
         Overlay[OpenOverlays].LUTindex := 1;
-     end else
+     end else begin
          nOverlays := LoadGii(FileName, OpenOverlays, 1, HasOverlays);
+         if length(faces) < 1 then begin //error loading overlay, background mesh closed
+	   MakePyramid();
+           isRebuildList := true;
+           exit(false);
+         end;
+     end;
      if ((OpenOverlays+nOverlays+1) > kMaxOverlays) then
         nOverlays := kMaxOverlays - 1 - OpenOverlays;
      if nOverlays > 3 then

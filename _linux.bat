@@ -13,6 +13,9 @@ lazbuild -B surfice.lpr
 cp surfice ~/Surf_Ice/surfice
 
 
+rm -rf lib
+lazbuild -B surfice.lpr --ws=qt5
+cp surfice ~/Surf_Ice/surfice_qt5
 
 #compile Surfice to OpenGL 2.1
 
@@ -23,6 +26,11 @@ cp ./optsCompat.inc ./opts.inc
 rm -rf lib
 lazbuild -B surfice.lpr
 cp surfice ~/Surf_Ice/surficeOld
+
+rm -rf lib
+lazbuild -B surfice.lpr --ws=qt5
+cp surfice ~/Surf_Ice/surficeOld_qt5
+
 
 #clean up - remove modified glext so it does not interfere with other builds
 rm -rf lib

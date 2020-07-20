@@ -623,12 +623,10 @@ object GLForm1: TGLForm1
         BorderSpacing.Left = 5
         BorderSpacing.Right = 2
         MaxValue = 65535
-        MinValue = 0
         OnChange = NodePrefChange
         OnKeyPress = NodeMinEditKeyPress
         ParentFont = False
         TabOrder = 4
-        Value = 0
       end
       object NodeThreshLabel: TLabel
         AnchorSideLeft.Control = NodeScaleLabel
@@ -657,7 +655,6 @@ object GLForm1: TGLForm1
         BorderSpacing.Left = 4
         BorderSpacing.Top = 2
         MaxValue = 65535
-        MinValue = 0
         OnChange = NodePrefChange
         ParentFont = False
         TabOrder = 5
@@ -790,11 +787,9 @@ object GLForm1: TGLForm1
         BorderSpacing.Left = 4
         BorderSpacing.Right = 2
         MaxValue = 65535
-        MinValue = 0
         OnChange = NodePrefChange
         ParentFont = False
         TabOrder = 2
-        Value = 0
       end
       object EdgeMaxEdit: TFloatSpinEdit
         AnchorSideLeft.Control = EdgeMinEdit
@@ -810,7 +805,6 @@ object GLForm1: TGLForm1
         BorderSpacing.Left = 4
         BorderSpacing.Top = 2
         MaxValue = 65535
-        MinValue = 0
         OnChange = NodePrefChange
         ParentFont = False
         TabOrder = 3
@@ -1664,8 +1658,8 @@ object GLForm1: TGLForm1
   end
   object LayerPopup: TPopupMenu
     OnPopup = LayerPopupPopup
-    left = 280
-    top = 27
+    Left = 280
+    Top = 27
     object LayerInvertColorsMenu: TMenuItem
       Caption = 'Invert Colors'
       OnClick = LayerInvertColorsMenuClick
@@ -1746,12 +1740,12 @@ object GLForm1: TGLForm1
       'ColorS=F0FBFF'
       'ColorT=A4A0A0'
     )
-    left = 352
-    top = 528
+    Left = 352
+    Top = 528
   end
   object MainMenu1: TMainMenu
-    left = 352
-    top = 24
+    Left = 352
+    Top = 24
     object AppleMenu: TMenuItem
       Caption = ''
       object AboutMenu: TMenuItem
@@ -2663,56 +2657,56 @@ object GLForm1: TGLForm1
   object SaveBitmapDialog: TSaveDialog
     DefaultExt = '.png'
     Filter = 'PNG Lossless|*.png|JPEG Lossy|*.jpg'
-    left = 352
-    top = 80
+    Left = 352
+    Top = 80
   end
   object OpenDialog: TOpenDialog
     Title = 'Open mesh file'
-    left = 352
-    top = 304
+    Left = 352
+    Top = 304
   end
   object ErrorTimer: TTimer
     Enabled = False
     Interval = 300
     OnTimer = ErrorTimerTimer
-    left = 352
-    top = 136
+    Left = 352
+    Top = 136
   end
   object UpdateTimer: TTimer
     Enabled = False
     Interval = 67
     OnTimer = UpdateTimerTimer
-    left = 352
-    top = 192
+    Left = 352
+    Top = 192
   end
   object OverlayTimer: TTimer
     Enabled = False
     Interval = 200
     OnTimer = OverlayTimerTimer
-    left = 352
-    top = 256
+    Left = 352
+    Top = 256
   end
   object SaveMeshDialog: TSaveDialog
     DefaultExt = '.gii'
-    left = 448
-    top = 24
+    Left = 448
+    Top = 24
   end
   object ScriptOpenDialog: TOpenDialog
     DefaultExt = '.py'
     Filter = 'Scripts (*.py;*.gls)|*.py;*.gls|Python scripts (*.py)|*.py|Pascal scripts (*.gls)|*.gls'
-    left = 280
-    top = 368
+    Left = 280
+    Top = 368
   end
   object PSScript1: TPSScript
     CompilerOptions = []
     OnCompile = PSScript1Compile
     Plugins = <>
     UsePreProcessor = False
-    left = 39
-    top = 64
+    Left = 39
+    Top = 64
   end
   object SaveScriptDialog: TSaveDialog
-    left = 461
-    top = 141
+    Left = 461
+    Top = 141
   end
 end
