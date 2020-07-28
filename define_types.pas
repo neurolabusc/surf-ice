@@ -1,4 +1,7 @@
 unit define_types;
+{$IFDEF Darwin}
+{$modeswitch objectivec1}
+{$ENDIF}
 interface
 
 
@@ -105,6 +108,7 @@ implementation
 
 uses
   {$IFDEF UNIX} BaseUnix, {$ELSE} windows, shlobj, {$ENDIF}
+  {$IFDEF Darwin}CocoaAll,{$ENDIF}
     fileutil, sysutils, math;
 function UpCaseExt(lFileName: string): string; // "file.gii.dset" -> ".GII.DSET"
 var
@@ -177,7 +181,12 @@ begin
    result := FileName;
    FilenameParts (Filename, p,n,x);
    if (not Force) and (p <> '') and (DirectoryExists(p)) then exit;
+   {$IFDEF LCLCocoa}
+   //p := HomeDir; //set path to home if not provided
+   p := NSTemporaryDirectory.UTF8String;
+   {$ELSE}
    p := HomeDir; //set path to home if not provided
+   {$ENDIF}
    result := p+n+x;
 end;
 

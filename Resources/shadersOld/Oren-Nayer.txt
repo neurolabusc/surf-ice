@@ -5,24 +5,16 @@ Specular|float|0.0|0.3|2
 Roughness|float|0.0|0.5|1
 Fresnel|float|0.0|0.5|1
 Oren-nayer diffuse with Cook-Torrance specular highlights shader. Adapted from glslify, Copyright 2015 Chris Dickinson and stackgl contributors, MIT License|note
-//vert
-varying vec3 vN, vV;
-varying vec3 vL;
-varying vec4 vP, vClr;
-void main() {
-    vL = gl_LightSource[0].position.xyz;
-    vN = gl_NormalMatrix * gl_Normal;
-    vP = gl_Vertex;
-    vV = -vec3(gl_ModelViewMatrix*gl_Vertex);
-    vClr = gl_Color;
-    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-}
 //frag
-uniform float Roughness, Fresnel, Ambient, Diffuse, Specular;
-uniform vec4 ClipPlane;
+#version 120
+varying vec3 vN, vV, vL;
 varying vec4 vP, vClr;
-varying vec3 vN, vL, vV;
-
+uniform float Ambient = 0.5;
+uniform float Diffuse = 1.0;
+uniform float Specular = 1.0;
+uniform float Roughness = 0.5;
+uniform float Fresnel = 0.5;
+uniform vec4 ClipPlane = vec4(2.0, 0.0, 0.0, 0.0);
 #define PI 3.14159265
 
 float orenNayarDiffuse(vec3 lightDirection, vec3 viewDirection, vec3 N, float roughness, float albedo) {
@@ -73,8 +65,7 @@ vec3 desaturate(vec3 color, float amount) {
 
 void main() {
   if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
-  vec3 a = gl_FrontMaterial.ambient.rgb;
-  a = mix(a.rgb, vClr.rgb, vClr.a);
+  vec3 a = vClr.rgb;
   vec3 d = a * Diffuse;
   a *= Ambient;
   vec3 l = normalize(vL);

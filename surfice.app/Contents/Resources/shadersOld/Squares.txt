@@ -1,0 +1,54 @@
+//pref
+Ambient|float|0.0|0.5|1
+Diffuse|float|0.0|0.7|1
+Specular|float|0.0|0.2|1
+Shininess|float|1|60|120
+Amount|float|0.0|0.5|1
+CheckerSize|float|0.01|1|5
+InvertRGB|bool|false
+Blinn-Phong shading with Lambertian diffuse. Copyright 2015 Chris Rorden, BSD2clause.|note
+//frag
+#version 120
+varying vec3 vN, vV, vL;
+varying vec4 vP, vClr;
+uniform float Ambient = 0.6;
+uniform float Diffuse = 0.7;
+uniform float Specular = 0.2;
+uniform float Shininess = 60.0;
+uniform float Amount = 0.5;
+uniform float CheckerSize = 0.3;
+uniform bool InvertRGB = false;
+
+uniform vec4 ClipPlane = vec4(2.0, 0.0, 0.0, 0.0);
+
+
+void main() {
+	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
+	vec3 l = normalize(vL);
+	vec3 n = normalize(vN);
+	vec3 h = normalize(l+normalize(vV));
+	float W = pow(CheckerSize, 4.0);
+	float halfW = W / 2.0;
+	float toggle1 = mod(vP.x, W);
+	float toggle2 = mod(vP.y, W);
+	float toggle3 = mod(vP.z, W);
+	toggle1 = step(toggle1, halfW);
+	toggle2 = step(toggle2, halfW);
+	toggle3 = step(toggle3, halfW);
+	float fract1 = toggle1+ toggle2 + toggle3;
+	fract1 = step(mod(fract1,2), 0.5);
+	fract1 = clamp(fract1, 0.0, 1.0);
+	fract1 = smoothstep(0.0, 1.0, fract1);
+	fract1 = fract1 * Amount;
+	vec3 objClr = vec3(0.3, 0.3, 0.3);
+	//if (InvertRGB) objClr = vClr.brg;
+	if (InvertRGB) objClr = 1.0 - vClr.rgb;
+	objClr = mix(vClr.rgb, objClr.rgb,  fract1);
+	vec3 a = objClr.rgb;
+	vec3 backcolor = Ambient*vec3(0.1+0.1+0.1) + a*abs(dot(n,l))*Diffuse;
+	vec3 d = a * dot(n,l) * Diffuse;
+	a *= Ambient;
+	float s = pow(max(0.0,dot(n,h)), Shininess) * Specular;
+	float backface = step(0.00, n.z);
+	gl_FragColor = vec4(mix(backcolor.rgb, a + d + s,  backface), 1.0);
+}

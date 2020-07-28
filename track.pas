@@ -4,7 +4,7 @@ unit track;
 interface
 
 uses
-  {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
+  {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl,glext, {$ENDIF}  {$ENDIF DGL}
   {$ifndef isTerminalApp}
     ClipBrd,dialogs,colorTable,
   {$endif}
@@ -30,7 +30,10 @@ TTrack = class
   {$IFDEF COREGL}
   vao, vbo : GLuint;
   {$ELSE}
-  displayList : GLuint;
+  displayListTrack : GLuint;
+  {$IFDEF LEGACY_INDEXING}
+  index_vboTrack, vertex_vboTrack: GLuint;
+  {$ENDIF}
   {$ENDIF}
   tracks: array of single;
   scalarLUT: TLUT;
@@ -456,7 +459,7 @@ begin
   {$IFDEF COREGL}
   BuildDisplayListStrip(Indices, Verts, vNorms, vRGBA, vType, LineWidth, vao, vbo);
   {$ELSE}
-  displayList := BuildDisplayListStrip(Indices, Verts, vNorms, vRGBA, LineWidth);
+  displayListTrack := BuildDisplayListStrip(Indices, Verts, vNorms, vRGBA, LineWidth);
   {$ENDIF}
   n_indices := length(Indices);
   n_vertices := 0;
@@ -514,6 +517,7 @@ begin
   numCylVert := TrackTubeSlices;//numCylVert div 2; //number of faces for half of cylinder (top or bottom disk)
   ntracks := length(tracks);
   radius := LineWidth * 0.25;
+  normRGBA := RGBA(0,0,0,255);;
   {$DEFINE TWOPASS} //two passes is ~4 times quicker as we do not waste time re-allocating memory
   {$IFDEF TWOPASS}
   //first pass: find mesh size
@@ -683,11 +687,20 @@ begin
   {$IFDEF COREGL}
   BuildDisplayList(faces, vertices, vRGBA, vao, vbo, normRGBA);
   {$ELSE}
-  displayList := BuildDisplayList(faces, vertices, vRGBA);
+    {$IFDEF LEGACY_INDEXING}
+    BuildDisplayListIndexed(faces, vertices, vRGBA, index_vboTrack, vertex_vboTrack, normRGBA);
+    //SetVertexAttrib(gShader.programTrackIdxID, vertex_vboTrack);
+    {$ELSE}
+    displayListTrack := BuildDisplayList(faces, vertices, vRGBA, normRGBA);
+    {$ENDIF}
   {$ENDIF}
 end;
 
 procedure TTrack.DrawGL;
+{$IFDEF LEGACY_INDEXING}
+var
+  vertLoc, normLoc, clrLoc: GLuint;
+{$ENDIF}
 begin
   if (length(tracks) < 4) then exit;
 
@@ -701,9 +714,16 @@ begin
        glDeleteBuffers(1, @vbo);
     vao := 0; vbo := 0;
     {$ELSE}
-    if displayList <> 0 then
-       glDeleteLists(displayList, 1);
-    displayList := 0;
+    if displayListTrack <> 0 then
+       glDeleteLists(displayListTrack, 1);
+    displayListTrack := 0;
+    {$IFDEF LEGACY_INDEXING}
+    if (index_vboTrack <> 0) then
+       glDeleteBuffers(1, @index_vboTrack);
+    if (vertex_vboTrack <> 0) then
+       glDeleteBuffers(1, @vertex_vboTrack);
+    index_vboTrack := 0; vertex_vboTrack := 0;
+    {$ENDIF}
     {$ENDIF}
     randseed := 123; //so that dither colors do not flicker when width is adjusted
     if isTubes then //this is slow, so 'isRebuildList' ensures this is done only if the model has been changed
@@ -727,7 +747,29 @@ begin
   end;
   glBindVertexArray(0);
   {$ELSE}
-  glCallList(DisplayList);
+    {$IFDEF LEGACY_INDEXING}
+    if isTubes then begin
+      glBindBuffer(GL_ARRAY_BUFFER, vertex_vboTrack);
+      vertLoc := glGetAttribLocation(gShader.programTrackIdxID , 'Vert');
+      normLoc := glGetAttribLocation(gShader.programTrackIdxID, 'Norm');
+      clrLoc := glGetAttribLocation(gShader.programTrackIdxID, 'Clr');
+      writeln(format('%d %d %d  %d', [vertLoc, normLoc, clrLoc, n_faces]));
+      glEnableVertexAttribArray(vertLoc);//v position
+      glEnableVertexAttribArray(normLoc);//n normal
+      glEnableVertexAttribArray(clrLoc);//c color
+      glVertexAttribPointer(vertLoc, 3, GL_FLOAT, GL_FALSE, sizeof(TVtxNormClr), PChar(0));
+      glVertexAttribPointer(normLoc, 3, GL_FLOAT, GL_TRUE, sizeof(TVtxNormClr), PChar(sizeof(TPoint3f)));
+      glVertexAttribPointer(clrLoc, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(TVtxNormClr), PChar(sizeof(TPoint3f) + sizeof(TPoint3f)));
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_vboTrack);
+      glDrawElements(GL_TRIANGLES,  n_faces* 3, GL_UNSIGNED_INT, PChar(0));
+      glDisableVertexAttribArray(vertLoc);
+      glDisableVertexAttribArray(normLoc);
+      glDisableVertexAttribArray(clrLoc);
+    end else
+        glCallList(DisplayListTrack);
+    {$ELSE}
+    glCallList(DisplayListTrack);
+    {$ENDIF}
   {$ENDIF}
   isBusy := false;
 end; // DrawGL()
@@ -750,7 +792,11 @@ begin
      vao := 0;
      vbo := 0;
      {$ELSE}
-     displayList := 0;
+     displayListTrack := 0;
+     {$IFDEF LEGACY_INDEXING}
+     index_vboTrack := 0;
+     vertex_vboTrack := 0;
+     {$ENDIF}
      {$ENDIF}
      scale := 0;
      maxObservedFiberLength := 0;
@@ -1925,6 +1971,7 @@ begin
   {$IFDEF TRACK2CLIPBOARD}str := '';{$ENDIF}
   i := 0;
   //showmessage(format('--> %g %g %g',[tracks[1], tracks[2], tracks[3]]) );
+  pt1 := ptf(0,0,0);
   while i < length(tracks) do begin
         m :=   asInt( tracks[i]); inc(i);
         for mi := 1 to m do begin
@@ -2267,6 +2314,8 @@ begin
   //first pass: record endpoints of all tracks
   track := 0;
   i := 0;
+  pos := ptf(0,0,0);
+  pos0 := ptf(0,0,0);
   while i < length(tracks) do begin
         m :=   asInt( tracks[i]);
         inc(i);

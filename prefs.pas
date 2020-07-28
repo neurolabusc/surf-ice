@@ -3,7 +3,7 @@ unit prefs;
 {$H+}
 
 interface
-uses {$ifndef isTerminalApp}graphics,Dialogs,{$endif}IniFiles,SysUtils,define_types,Classes;  //,
+uses {$ifndef isTerminalApp}graphics,Dialogs,{$endif}IniFiles,SysUtils,define_types,Classes, lazfileutils;  //,
 const
   knMRU = 10;
   kRenderPoor = 0;
@@ -44,6 +44,7 @@ procedure IniColor(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lVal
 procedure SetDefaultPrefs (var lPrefs: TPrefs; lEverything, askUserIfMissing: boolean);
 procedure IniRGBA(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lValue: TRGBA);
 procedure FillMRU (var lMRU: TMRU; lSearchPath,lSearchExt: string; lForce: boolean);
+function FileIsReadableByThisExecutable(const AFilename: string): boolean;
 procedure Add2MRU (var lMRU: TMRU;  lNewFilename: string); //add new file to most-recent list
 
 implementation
@@ -475,6 +476,35 @@ begin
   StrToRGB(lStr,lValue);
 end; //IniRGBA
 
+function FileIsReadableByThisExecutable(const AFilename: string): boolean;
+//MacOS will block applications from reading files outside their sandbox
+// therefore, simply knowing the user has read access is not sufficient
+//requires "uses LazFileUtils"
+var
+  f: file;
+  b: byte;
+begin
+  Result := lazfileutils.FileIsReadable(AFilename);
+  {$IFDEF Darwin}
+  if not Result then exit; //globally not readable
+  if FileSizeUtf8(AFilename) < 1 then exit(false);
+  AssignFile(f, AFilename);
+  {$I+}
+  try
+    FileMode := fmOpenRead;  //Set file access to read only
+    Reset(f, 1);
+    if ioresult <> 0 then
+       exit;
+    b := 0;
+    BlockRead(f, b, sizeof(b));
+    CloseFile(f);
+    result := true;
+  except
+    result := false;
+  end;
+  {$ENDIF}
+end;
+
 procedure IniMRU(lRead: boolean; lIniFile: TIniFile; lIdent: string;  var lMRU: TMRU; var lPrefs: TPrefs);
 var
 	lI,lOK: integer;
@@ -496,7 +526,7 @@ begin
     lOK := 0;
     for lI := 1 to knMRU do begin
       IniStr(lRead,lIniFile,lIdent+inttostr(lI),lStr);
-      if (length(lStr) > 0) and (fileexistsF(lStr)) and (Novel) then begin
+      if (length(lStr) > 0) and (FileIsReadableByThisExecutable(lStr)) and (Novel) then begin
 		    inc(lOK);
 		    lMRU[lOK] := lStr;
       end else
@@ -643,7 +673,6 @@ begin
 	  IniStrX(lRead,lIniFile,'FontName',lPrefs.FontName);
 	  IniStrX(lRead,lIniFile,'PyLib',lPrefs.PyLib);
 	  IniMRU(lRead,lIniFile,'PrevFilename',lPrefs.PrevFilename, lPrefs);
-	  //IniMRU(lRead,lIniFile,'PrevScriptName',lPrefs.PrevScriptName);
 	  IniRGBA(lRead,lIniFile, 'TextColor',lPrefs.TextColor);
 	  IniRGBA(lRead,lIniFile, 'TextBorder',lPrefs.TextBorder);
 	  IniRGBA(lRead,lIniFile, 'GridAndBorder',lPrefs.GridAndBorder);

@@ -39,6 +39,7 @@ type
     w, h: integer;
   end;
   TShader = record
+    {$IFDEF LEGACY_INDEXING} programTrackIdxID, {$ENDIF}
     vao_point2d, vbo_face2d, program2d, program3dx, programDefault, programTrackID, programAoID: GLuint;
     OverlayVolume,nUniform: integer;
     f1, f2,  fScreenShot: TFrameBuffer;
@@ -59,9 +60,9 @@ var
   function  initVertFrag(vert, geom, frag: string): GLuint;
 function LoadShader(lFilename: string; var Shader: TShader): boolean;
 function InitGLSL (isStartUp: boolean): boolean;
-procedure RunOverlayGLSL(clipPlane: TPoint4f);
-procedure RunMeshGLSL (clipPlane: TPoint4f;  UseDefaultShader: boolean);
-procedure RunTrackGLSL (lineWidth, ScreenPixelX, ScreenPixelY: integer);
+function RunOverlayGLSL(clipPlane: TPoint4f): gluint;
+function RunMeshGLSL (clipPlane: TPoint4f;  UseDefaultShader: boolean): gluint;
+procedure RunTrackGLSL (lineWidth, ScreenPixelX, ScreenPixelY: integer; isTubes: boolean = true);
 procedure RunAoGLSL (var f1, f2 : TFrameBuffer; zoom : integer; alpha1, blend1, fracAO, distance: single);
 function setFrame (wid, ht: integer; var f : TFrameBuffer; isMultiSample: boolean; var isOK: boolean) : boolean; //returns true if multi-sampling
 procedure initFrame(var f : TFrameBuffer);
@@ -983,6 +984,9 @@ begin
       else
           gShader.programAoID := initVertFrag('','', kAoShaderFrag);
       //showmessage(AppDir+'tracks.glsl');
+      {$IFDEF  LEGACY_INDEXING}
+      gShader.programTrackIdxID :=  initVertFrag(kTrackShaderIdxVert,'',  kTrackShaderFrag);
+      {$ENDIF}
       gShader.programTrackID :=  initVertFrag(kTrackShaderVert,'',  kTrackShaderFrag);
       {$ENDIF}
       initFrame(gShader.f1);
@@ -990,9 +994,9 @@ begin
       initFrame(gShader.fScreenShot);
       {$IFDEF MATCAP}gShader.matcap := 0;{$ENDIF}
   end;
-
   //glGetError(); //clear errors
-  if (length(gShader.VertexProgram) > 0) then begin
+  if (length(gShader.FragmentProgram) > 0) then begin
+     if gShader.VertexProgram = '' then gShader.VertexProgram := kVert3d;
      glUseProgram(0);
      glDeleteProgram(gShader.program3dx);
      //glGetError(); //clear error
@@ -1004,6 +1008,7 @@ begin
      gShader.GeometryProgram := '';
      gShader.FragmentProgram := '';
      glUseProgram(0);
+     //SetVertexAttribs(gMesh.vertex_vbo);
      {$IFDEF COREGL}
      (*glDeleteProgram(gShader.programAoID);
      if gShader.isToonAO then
@@ -1213,17 +1218,23 @@ begin
       result := true;
 end;
 
-procedure RunTrackGLSL (lineWidth, ScreenPixelX, ScreenPixelY: integer);
+procedure RunTrackGLSL (lineWidth, ScreenPixelX, ScreenPixelY: integer; isTubes: boolean = true);
 begin
-     glUseProgram(gShader.programTrackID);
-     //GLForm1.caption := inttostr(random(888));
+
      {$IFDEF COREGL}
-     //AdjustShaders(gShader);
+     glUseProgram(gShader.programTrackID);
      SetTrackUniforms (lineWidth, ScreenPixelX, ScreenPixelY);
+     {$ELSE}
+     {$IFDEF LEGACY_INDEXING}
+     if isTubes then
+        glUseProgram(gShader.programTrackIdxID)
+     else
+     {$ENDIF}
+         glUseProgram(gShader.programTrackID);
      {$ENDIF}
 end;
 
-procedure RunMeshGLSL (clipPlane: TPoint4f;  UseDefaultShader: boolean);
+function RunMeshGLSL (clipPlane: TPoint4f;  UseDefaultShader: boolean): gluint;
 var
   lProg: gluint;
   {$IFDEF MATCAP}matcap: GLuint;{$ENDIF}
@@ -1237,6 +1248,7 @@ begin
     glUseProgram(lProg);
     AdjustShaders(gShader);
   end;
+  result := lProg;
   {$IFDEF MATCAP}
   matcap := glGetUniformLocation(lProg, pAnsiChar('MatCap'));
   if (gShader.matcap > 0) and (gShader.isMatCap) then begin
@@ -1246,17 +1258,20 @@ begin
   end;
   {$ENDIF}
   uniform4fx(lProg, 'ClipPlane', clipPlane);
+  {$IFDEF LEGACY_INDEXED}
+  uniform3fx(lProg, 'LightPos',gShader.lightPos.X, gShader.lightPos.Y, gShader.lightPos.Z);
+  {$ENDIF}
   {$IFDEF COREGL}
   uniform3fx(lProg, 'LightPos',gShader.lightPos.X, gShader.lightPos.Y, gShader.lightPos.Z);
   SetCoreUniforms(lProg);
   {$ENDIF}
 end;
 
-procedure RunOverlayGLSL (clipPlane: TPoint4f);//(cp1,cp2,cp3,cp4: single);
+function RunOverlayGLSL (clipPlane: TPoint4f): gluint;//(cp1,cp2,cp3,cp4: single);
 begin
   //if not gPrefs.ShaderForBackgroundOnly then exit;
   //RunMeshGLSL(asPt4f(2.0, 0.0, 0.0, 0.0),  gPrefs.ShaderForBackgroundOnly);
-  RunMeshGLSL(clipPlane,  gPrefs.ShaderForBackgroundOnly);
+  result := RunMeshGLSL(clipPlane,  gPrefs.ShaderForBackgroundOnly);
 end;
 
 {$IFDEF COREGL}

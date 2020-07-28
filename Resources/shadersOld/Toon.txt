@@ -3,28 +3,23 @@ Ambient|float|0.0|0.4|1
 Diffuse|float|0.0|0.8|1
 Specular|float|0.0|0.5|1
 Roughness|float|0.001|0.15|0.5
-Smooth|float|0.01|1|10
-OutlineWidth|float|0.0|0.75|0.2
+Smooth|float|0.01|1|5
+OutlineWidth|float|0.5|0.75|1.0
 ShowGradient|bool|false
 AOradius|float|0|0|16
-Cel shading, adapted from Philip Rideout work, Copyright 2010, MIT License|note
-//vert
-varying vec3 vN, vV;
-varying vec4 vP, vClr;
-void main()
-{
-    vN = gl_NormalMatrix * gl_Normal;
-    vV = -vec3(gl_ModelViewMatrix*gl_Vertex);
-    vClr = gl_Color;
-    vP = gl_Vertex;
-    gl_Position = ftransform();
-}
+Philip Rideout cel shading, Copyright 2010, MIT License|note
 //frag
-varying vec3 vN, vV;
+#version 120
+varying vec3 vN, vV, vL;
 varying vec4 vP, vClr;
-uniform vec4 ClipPlane;
-uniform float Ambient, Diffuse, Specular, Roughness, Smooth, OutlineWidth;
-uniform bool ShowGradient;
+uniform float Ambient = 0.4;
+uniform float Diffuse = 0.7;
+uniform float Specular = 0.6;
+uniform float Roughness = 0.1;
+uniform float Smooth = 1.0;
+uniform float OutlineWidth = 0.0;
+uniform vec4 ClipPlane = vec4(2.0, 0.0, 0.0, 0.0);
+uniform bool ShowGradient = false;
 
 float stepmix(float edge0, float edge1, float E, float x) {
     float T = clamp(0.5 * (x - edge0) / E, 0.0, 1.0);
@@ -38,12 +33,11 @@ vec3 desaturate(vec3 color, float amount) {
 
 void main() {
 	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
-	vec3 a = gl_FrontMaterial.ambient.rgb;
-	a = mix(a.rgb, vClr.rgb, vClr.a);
+	vec3 a = vClr.rgb;
 	vec3 d = a * Diffuse;
 	a *= Ambient;
 	vec3 n = normalize(vN);
-    vec3 l = normalize(gl_LightSource[0].position.xyz);
+    vec3 l = normalize(vL);
     float df = dot(n, l);
     vec3 backcolor = desaturate(0.75 * a + 0.75 * abs(df) * d, 0.5);
     vec3 Eye = vec3(0, 0, 1);
@@ -59,7 +53,8 @@ void main() {
     if (df < A + E) df = stepmix(A, B, E, df);
     else if (df < B + E) df = stepmix(B, C, E, df);
     else df = stepmix(C, D, E, df);
-    float outline = mix(1.0, dot(vec3(0, 0, 1),n), OutlineWidth);
+	float outline = mix(1.0, dot(vec3(0, 0, 1),n), OutlineWidth);
+
 	#define antialias
 	#ifdef antialias
     E = fwidth(outline);
@@ -72,16 +67,13 @@ void main() {
         outline = step(0.5, outline);
     }
     #endif
-    //float outline = step(0.0, OutlineWidth - dot(n,normalize(vV)));
     //outline *= step(0.001, OutlineWidth);
     //specular = mix(specular, -1.0, outline);
-    gl_FragColor.rgb = mix(a + df * d + specular, n + specular, float(ShowGradient) );
-    gl_FragColor.rgb *= outline;
 	float backface = step(0.0, n.z);
-	gl_FragColor = vec4(mix(backcolor.rgb, gl_FragColor.rgb,  backface), 1.0);
-
+	vec3 color = mix(a + df * d + specular, (n) + specular, float(ShowGradient) );
+	color *= outline;
+	gl_FragColor = vec4(mix(backcolor.rgb, color.rgb,  backface), 1.0);
 }
-//http://prideout.net/blog/?p=22
 //Unless otherwise stated in the file itself, all source code in
 //this folder (and its descendent folders) is covered by the MIT
 //License, described as follows:

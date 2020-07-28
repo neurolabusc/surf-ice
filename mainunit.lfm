@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
-  Left = 436
+  Left = 408
   Height = 671
-  Top = 65
+  Top = 69
   Width = 1004
   AllowDropFiles = True
   Caption = 'Surf Ice'

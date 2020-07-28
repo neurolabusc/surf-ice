@@ -7,25 +7,13 @@ SpecularRough|float|0.1|0.3|1
 diffuseStyle|int|0|2|2
 specularStyle|int|0|2|2
 Mix and match diffuse (0=Lambert, 1=Minnaert, 2=Oren-Nayer) and specular (0=Blinn-Phong, 1=Ward, 2=Cook-Torrance) shading styles. Luca Vezzaro (2007) Public Domain|note
-//vert
-varying vec3 vL, vN, vV;
-varying vec4 vP, vClr;
-
-void main() {
-    vN = normalize(gl_NormalMatrix * gl_Normal);
-    vV = -vec3(gl_ModelViewMatrix * gl_Vertex);
-    vL = normalize(gl_LightSource[0].position.xyz);
-    vP = gl_Vertex;
-    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-    vClr = gl_Color;
-}
 //frag
+#version 120
+varying vec3 vN, vV, vL;
+varying vec4 vP, vClr;
 uniform float Ambient, Diffuse, Specular, DiffuseRough, SpecularRough;
 uniform vec4 ClipPlane;
 uniform int specularStyle, diffuseStyle;
-varying vec3 vL, vN, vV;
-varying vec4 vP, vClr;
-
 const float epsilon = 0.005;
 #define PI 3.14159265
 
@@ -127,8 +115,7 @@ void main() {
 	vec3 n = normalize(vN);
 	vec3 v = normalize(vV);
 	vec3 h = normalize(l+v);
-	vec3 a = gl_FrontMaterial.ambient.rgb;
-	a = mix(a.rgb, vClr.rgb, vClr.a);
+	vec3 a = vClr.rgb;
 	vec3 d = a *Diffuse;
 	a *= Ambient;
 	vec3 backcolor = desaturate(0.75 * a + 0.75 * d * abs(dot(l,n)), 0.5);

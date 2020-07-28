@@ -6,7 +6,7 @@ interface
 {$DEFINE TREFOIL} //use Trefoil Knot as default object (instead of pyramid)
 uses
   //nifti_foreign,
-  {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
+  {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, glext,{$ENDIF}  {$ENDIF DGL}
   {$IFDEF CTM} ctm_loader, {$ENDIF}
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, strutils, DateUtils,
   base64, zstream, LcLIntf, nifti_loader, colorTable, matmath, math,
@@ -58,11 +58,15 @@ type
   TMesh = class
     scale, vertexRgbaSaturation, vertexRgbaAlpha : single;
     origin, mxV, mnV : TPoint3f;
+    nFacesOverlay, nFaces: integer;
     {$IFDEF COREGL}
     vao, vbo, vaoOverlay, vboOverlay: GLuint;
-    nFacesOverlay: integer;
+    {$ELSE}
+    {$IFDEF LEGACY_INDEXING}
+    index_vbo, vertex_vbo, index_vboOverlay, vertex_vboOverlay: GLuint;
     {$ELSE}
     displayList, displayListOverlay : GLuint;
+    {$ENDIF}
     {$ENDIF}
     isZDimIsUp, isRebuildList, isBusy, isNode, isFreeSurferMesh, isVisible, isAdditiveOverlay : boolean;
     OpenOverlays, OverlayTransparency, AtlasMaxIndex : integer;
@@ -648,6 +652,7 @@ var
   vSumRGBBA: array of TPoint4f;
   isOverlayPainting : boolean = false;
 begin
+  nFaces := length(f);
   if (length(f) < 1) or (length(v) < 3) then exit;
   volInc := 0;
   isOverlayPainting := false;
@@ -677,12 +682,10 @@ begin
             for i := 0 to (length(v)-1) do
                vRGBA[i] := desaturateRGBA ( vtxRGBA[i], vertexRgbaSaturation, C);
         end;
-        {$IFDEF COREGL}
         //2019: required only when no overlays open - try adjusting transparency of Altas
         if (OpenOverlays < 1) and (vertexRGBAAlpha < 1.0) then
           for i := 0 to (length(v)-1) do
               vRGBA[i] := mixRGBA( Clr, vRGBA[i], vertexRGBAAlpha);
-        {$ENDIF}
      end else begin
          for i := 0 to (length(v)-1) do
              vRGBA[i] := rgb;
@@ -865,21 +868,20 @@ begin
                  vRGBA[i].a :=   vRGBA[i].a shr 1; //make edges more transparent
        end; //end feather edges
        *)
-       {$IFDEF COREGL} //with new openGL we mix here
        mx := 1.0 - OverlayTransparency/100;
        if mx < 0 then mx := 0;
        if mx > 1 then mx := 1;
        //if (OverlayTransparency > 0 ) and (OverlayTransparency <= 100) then
        for i := 0 to (length(v)-1) do
               vRGBA[i] := mixRGBA( Clr, vRGBA[i], mx);
-       {$ELSE}  //with old GLSL we mix in the shader
+       (*{$ELSE}  //with old GLSL we mix in the shader
        if (OverlayTransparency > 0 ) and (OverlayTransparency <= 100) then begin
          for i := 0 to (length(v)-1) do
               vRGBA[i].a := round( vRGBA[i].a * (1 - (OverlayTransparency /100)) );
        end;
-       {$ENDIF}
+       {$ENDIF}*)
      end; // if OpenOverlays > 0
-     {$IFDEF COREGL}
+     //{$IFDEF COREGL}
      //the purpose of the next loop is to allow us to hide curvature
      for c :=  OpenOverlays downto 1 do begin
          volInc :=  length(v) *  (overlay[c].currentVolume - 1);
@@ -894,7 +896,7 @@ begin
            end;
          end;
      end; //for c
-     {$ENDIF}
+     //{$ENDIF}
      //aoMap
      //GLForm1.Caption := format ('%d %d %d', [length(v), random(888),length(vRGBA)]);
      //for i := 0 to (length(v)-1) do
@@ -927,10 +929,8 @@ begin
                      for i := 0 to (length(v)-1) do
                          darken(vRGBA[i], overlay[c].intensity[i+volInc], mn,mx);
                end;
-                {$IFNDEF COREGL}
                for i := 0 to (length(v)-1) do
                    vRGBA[i].A := 255;
-               {$ENDIF}
             end; //for each channel
      end; //aoMap
      if not isWriteToGPU then begin
@@ -943,7 +943,13 @@ begin
      {$IFDEF COREGL}
      BuildDisplayList(f, v, vRGBA, vao, vbo, Clr);
      {$ELSE}
-     displayList:= BuildDisplayList(f, v, vRGBA);
+     {$IFDEF LEGACY_INDEXING}
+     //writeln('BuildListCoreComplex',length(f),':',length(v));
+     BuildDisplayListIndexed(f, v, vRGBA, index_vbo, vertex_vbo, Clr);
+     //SetVertexAttribs(vertex_vbo);
+     {$ELSE}
+     displayList:= BuildDisplayList(f, v, vRGBA, Clr);
+     {$ENDIF}
      {$ENDIF}
   end else begin
       Clr.A := 128; //just a bit less than 50% - only for hiding curvature
@@ -952,7 +958,12 @@ begin
      {$IFDEF COREGL}
      BuildDisplayList(f, v, vRGBA,vao, vbo, Clr);
      {$ELSE}
-     displayList:= BuildDisplayList(f, v, vRGBA);
+     {$IFDEF LEGACY_INDEXING}
+     BuildDisplayListIndexed(f, v, vRGBA, index_vbo, vertex_vbo, Clr);
+     //SetVertexAttribs(vertex_vbo);
+     {$ELSE}
+     displayList:= BuildDisplayList(f, v, vRGBA, Clr);
+     {$ENDIF}
      {$ENDIF}
   end;
 end; // BuildListCore()
@@ -1066,13 +1077,12 @@ var
   vRGBA: TVertexRGBA;
   vRemap: TInts;
 begin
-     FilterAtlas(Clr, AtlasMaxIndex, faces, vertices, vertexAtlas, vtxRGBA, atlasHideFilter, atlasTransparentFilter, f, v, vRGBA, vRemap);
-     if length(v) > 0 then
-        BuildListCore(Clr, f, v, vRGBA, vRemap);
-     setlength(vRemap, 0);
-     setlength(f,0);
-     setlength(v,0);
-     setlength(vRGBA,0);
+  FilterAtlas(Clr, AtlasMaxIndex, faces, vertices, vertexAtlas, vtxRGBA, atlasHideFilter, atlasTransparentFilter, f, v, vRGBA, vRemap);
+  BuildListCore(Clr, f, v, vRGBA, vRemap);
+  setlength(vRemap, 0);
+  setlength(f,0);
+  setlength(v,0);
+  setlength(vRGBA,0);
 end;
 
 procedure TMesh.BuildList (Clr: TRGBA);
@@ -1200,6 +1210,7 @@ var
   //sFaces, sVerts, sRGBA
   //rgb: TRGBA;
 begin
+  nFacesOverlay := 0;
   if (length(faces) < 1) or (length(vertices) < 3) or (OpenOverlays < 1) then
      exit;
   nMeshOverlay := 0;
@@ -1303,18 +1314,88 @@ begin
   nFacesOverlay := length(oFaces);
   BuildDisplayList(oFaces, oVerts, vRGBA, vaoOverlay, vboOverlay, Clr);
   {$ELSE}
-  displayListOverlay := BuildDisplayList(oFaces, oVerts, vRGBA);
+  {$IFDEF LEGACY_INDEXING}
+  nFacesOverlay := length(oFaces);
+  BuildDisplayListIndexed(oFaces, oVerts, vRGBA, index_vboOverlay, vertex_vboOverlay, Clr);
+  //SetVertexAttribs(vertex_vbo);
+  {$ELSE}
+  displayListOverlay := BuildDisplayList(oFaces, oVerts, vRGBA, Clr);
+  {$ENDIF}
   {$ENDIF}
 end; // BuildListOverlay()
 
 procedure TMesh.DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean);
+{$IFNDEF COREGL}{$IFDEF LEGACY_INDEXING}
+(*procedure DrawBG;
+begin
+  if not isVisible then exit;
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_vbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_vbo);
+    glDrawElements(GL_TRIANGLES,  Length(faces)* 3, GL_UNSIGNED_INT, PChar(0));
+end;
+procedure DrawOverlay;
+begin
+  if (index_vboOverlay < 1) and (vertex_vboOverlay < 1) and (nFacesOverlay < 1) then exit;
+  glBindBuffer(GL_ARRAY_BUFFER, vertex_vboOverlay);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_vboOverlay);
+  glDrawElements(GL_TRIANGLES,  nFacesOverlay* 3, GL_UNSIGNED_INT, PChar(0));
+end; *)
+
+procedure DrawBG(prog: GLuint);
+//unlike modern, the AttribPointer is bound to both the index_vbo and the shader.
+// since we have one shader for BOTH the overlay and the main mesh, we need to set this for each draw call
+// alternatively, we could generate two separate shaders, one for the mesh and one for the overlay
+// the cost of running these calls for each draw is not known
+var
+  vertLoc, normLoc, clrLoc: GLuint;
+begin
+  if (not isVisible) or (nFaces < 1) then exit;
+  glBindBuffer(GL_ARRAY_BUFFER, vertex_vbo);
+  vertLoc := glGetAttribLocation(prog, 'Vert');
+  normLoc := glGetAttribLocation(prog, 'Norm');
+  clrLoc := glGetAttribLocation(prog, 'Clr');
+  //writeln(format('%d %d %d', [vertLoc, normLoc, clrLoc]));
+  glEnableVertexAttribArray(vertLoc);//v position
+  glEnableVertexAttribArray(normLoc);//n normal
+  glEnableVertexAttribArray(clrLoc);//c color
+  glVertexAttribPointer(vertLoc, 3, GL_FLOAT, GL_FALSE, sizeof(TVtxNormClr), PChar(0));
+  glVertexAttribPointer(normLoc, 3, GL_FLOAT, GL_TRUE, sizeof(TVtxNormClr), PChar(sizeof(TPoint3f)));
+  glVertexAttribPointer(clrLoc, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(TVtxNormClr), PChar(sizeof(TPoint3f) + sizeof(TPoint3f)));
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_vbo);
+  glDrawElements(GL_TRIANGLES,  nFaces* 3, GL_UNSIGNED_INT, PChar(0));
+  //glDisableVertexAttribArray(vertLoc);
+  //glDisableVertexAttribArray(normLoc);
+  //glDisableVertexAttribArray(clrLoc);
+end;
+procedure DrawOverlay(prog: GLuint);
+var
+  vertLoc, normLoc, clrLoc: GLuint;
+begin
+  if (index_vboOverlay < 1) and (vertex_vboOverlay < 1) and (nFacesOverlay < 1) then exit;
+  glBindBuffer(GL_ARRAY_BUFFER, vertex_vboOverlay);
+  vertLoc := glGetAttribLocation(prog, 'Vert');
+  normLoc := glGetAttribLocation(prog, 'Norm');
+  clrLoc := glGetAttribLocation(prog, 'Clr');
+  glEnableVertexAttribArray(vertLoc);//v position
+  glEnableVertexAttribArray(normLoc);//n normal
+  glEnableVertexAttribArray(clrLoc);//c color
+  glVertexAttribPointer(vertLoc, 3, GL_FLOAT, GL_FALSE, sizeof(TVtxNormClr), PChar(0));
+  glVertexAttribPointer(normLoc, 3, GL_FLOAT, GL_TRUE, sizeof(TVtxNormClr), PChar(sizeof(TPoint3f)));
+  glVertexAttribPointer(clrLoc, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(TVtxNormClr), PChar(sizeof(TPoint3f) + sizeof(TPoint3f)));
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_vboOverlay);
+  glDrawElements(GL_TRIANGLES,  nFacesOverlay* 3, GL_UNSIGNED_INT, PChar(0));
+  //glDisableVertexAttribArray(vertLoc);
+  //glDisableVertexAttribArray(normLoc);
+  //glDisableVertexAttribArray(clrLoc);
+end;
+{$ENDIF}{$ENDIF}
 begin
   if (isNode) and (isRebuildList) then
      //do NOT exit: we might generate new faces and vertices - e.g nodescale increased from zero
   else if (length(faces) < 1) or (length(vertices) < 3) then
      exit;
   isBusy := true;
-  if isRebuildList then begin//only if the model has been changed
+  if (isRebuildList) then begin//only if the model has been changed
       isRebuildList := false;
       if isNode then
        Node2Mesh;
@@ -1329,34 +1410,49 @@ begin
          glDeleteBuffers(1, @vboOverlay);
       vao := 0; vbo := 0; vaoOverlay := 0; vboOverlay := 0;
       {$ELSE}
+      {$IFDEF LEGACY_INDEXING}
+      //nFacesOverlay := 0; //TODO2020
+      if index_vbo <> 0 then
+         glDeleteBuffers(1,@index_vbo);
+      if (vertex_vbo <> 0) then
+         glDeleteBuffers(1, @vertex_vbo);
+      if index_vboOverlay <> 0 then
+         glDeleteBuffers(1,@index_vboOverlay);
+      if (vertex_vboOverlay <> 0) then
+         glDeleteBuffers(1, @vertex_vboOverlay);
+      index_vbo := 0; vertex_vbo := 0; index_vboOverlay := 0; vertex_vboOverlay := 0;
+      {$ELSE}
       glDeleteLists(displayList, 1);
       displayList := 0;
       glDeleteLists(displayListOverlay, 1);
       displayListOverlay := 0;
+      {$ENDIF}
       {$ENDIF}
       BuildList(Clr); //upload geometry as a display list: http://www.songho.ca/opengl/gl_displaylist.html
       BuildListOverlay(Clr);
   end;
   {$IFDEF COREGL}
   if (isFlipMeshOverlay) and true then begin
-      if isVisible then begin
+      //if isVisible then begin
+      if (vaoOverlay <> 0) and (vboOverlay <> 0) and (nFacesOverlay > 0) then begin
         glBindVertexArray(vaoOverlay);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboOverlay);
         glDrawElements(GL_TRIANGLES, nFacesOverlay* 3, GL_UNSIGNED_INT, nil);
         glBindVertexArray(0);
       end;
-      if (vaoOverlay <> 0) and (vboOverlay <> 0) and (nFacesOverlay > 0) then begin
+      //if (vaoOverlay <> 0) and (vboOverlay <> 0) and (nFacesOverlay > 0) then begin
+      if (isVisible) and (nFaces > 0) then begin
          RunOverlayGLSL(clipPlane);
          glBindVertexArray(vao);
          glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vbo);
-         glDrawElements(GL_TRIANGLES,  Length(faces)* 3, GL_UNSIGNED_INT, nil);
+         glDrawElements(GL_TRIANGLES,  Length(nFaces)* 3, GL_UNSIGNED_INT, nil);
          glBindVertexArray(0);
       end;
   end else begin
-    if isVisible then begin
+    if (isVisible) and (nFaces > 0) then begin
       glBindVertexArray(vao);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vbo);
-      glDrawElements(GL_TRIANGLES, Length(faces)* 3, GL_UNSIGNED_INT, nil);
+      glDrawElements(GL_TRIANGLES, nFaces* 3, GL_UNSIGNED_INT, nil);
       glBindVertexArray(0);
     end;
     if (vaoOverlay <> 0) and (vboOverlay <> 0) and (nFacesOverlay > 0) then begin
@@ -1366,6 +1462,15 @@ begin
        glDrawElements(GL_TRIANGLES, nFacesOverlay * 3, GL_UNSIGNED_INT, nil);
        glBindVertexArray(0);
     end;
+  end;
+  {$ELSE}
+  {$IFDEF LEGACY_INDEXING}
+  if (isFlipMeshOverlay) and (nFacesOverlay <> 0) then begin
+     DrawOverlay(gShader.program3dx);
+     DrawBG(RunOverlayGLSL(clipPlane));
+  end else begin
+      DrawBG(gShader.program3dx);
+      DrawOverlay(RunOverlayGLSL(clipPlane));
   end;
   {$ELSE}
   if (isFlipMeshOverlay) and (displayListOverlay <> 0) then begin
@@ -1383,6 +1488,7 @@ begin
       glCallList(displayListOverlay);
     end;
   end;
+  {$ENDIF}
   {$ENDIF}
   isBusy := false;
 end; // DrawGL()
@@ -1753,8 +1859,12 @@ begin
      vaoOverlay := 0;
      vboOverlay := 0;
      {$ELSE}
+     {$IFDEF LEGACY_INDEXING}
+     index_vbo := 0; vertex_vbo := 0; index_vboOverlay := 0; vertex_vboOverlay := 0;
+     {$ELSE}
      displayList := 0;
      displayListOverlay := 0;
+     {$ENDIF}
      {$ENDIF}
      isZDimIsUp := true;
      OverlappingOverlaysOverwrite := true;
@@ -4537,7 +4647,7 @@ begin
     daEnd := posEx('</DataArray>', Str, daStart); // data array end
     ddStart := posEx('<Data>', Str, daStart) + 6; // data start
     ddEnd := posEx('</Data>', Str, daStart); // data end
-    //printf(format('>>ddStart..ddEnd: %d %d', [ddStart, ddEnd]));
+    //printf(format('->>ddStart..ddEnd: %d %d', [ddStart, ddEnd]));
     matStart := posEx('<MatrixData>', Str, daStart); //matrix start
     matEnd := posEx('</MatrixData>', Str, daStart); //matrix end
     if (matStart > 0) and (matEnd > matStart) then begin
@@ -4564,7 +4674,7 @@ begin
     Dim1 := KeyStringInt('Dim1', Hdr);
     if (Dim0 > 1) and (Dim1 < 1) then Dim1 := 1;
     if (Dim1 > 1) and (Dim0 < 1) then Dim0 := 1;
-    //printf(format('>>dim0..dim1: %d %d', [Dim0, Dim1]));
+    //printf(format('->>dim0..dim1: %d %d', [Dim0, Dim1]));
     externalFileName := '';
     externalFileName := KeyString('ExternalFileName', Hdr);
     externalFileOffset := KeyStringInt('ExternalFileOffset', Hdr);
@@ -6938,7 +7048,7 @@ begin
     //50 bytes for each triangle there are 12 fp32 and 1 unit16
     min_sz := 80+4+(50*num_f);
     if sz < min_sz then begin
-       Showmessage(format('STL file too small (expected at least %d bytes) %s', [min_sz, FileName]));
+       Showmessage(format('STL file too small to have %d faces (expected at least %d bytes) %s', [num_f, min_sz, FileName]));
        CloseFile(f);
        exit;
     end;
@@ -8250,7 +8360,7 @@ begin
     if AnsiContainsText(st, 'ni_type="int,3*float,String"') then
        afni.ni_type := kDT_1INT_3FLT_1STR;
     afni.ni_type_n := parse_ni_type_n(st);
-    //printf(st+'>>>'+inttostr(afni.ni_type_n));
+    //printf(st+'->>>'+inttostr(afni.ni_type_n));
 end;
 function readObjectHeader(var f: TFByte; var afni: TAFNI): boolean;
 var
@@ -8355,7 +8465,7 @@ begin
           ReadLnBin(f, st);
           strlst.DelimitedText := st;
           if strlst.count < afni.ni_type_n then continue;
-          //printf(format('>>%s<<',[strlst[0]]));
+          //printf(format('->>%s<<',[strlst[0]]));
           //printf(format('%f',[strtofloatdef(strlst[0],0) ]));
           for c := 0 to afni.ni_type_n-1 do
               edgeLayers[r+(c*afni.ni_dimen)] := strtofloatdef(strlst[c],0);
@@ -8388,11 +8498,7 @@ begin
           nodes[idx].Clr := 1;
           nodes[idx].Radius := 1;
       end;
-      //strlst.DelimitedText := st;
-      //writeln('->'+inttostr(strlst.count));
-      //todo
       strlst.free;
-
     end;
     if AnsiContainsText(st, '<AFNI_ATR') then begin
       //LabelTableObject_data
@@ -8414,12 +8520,8 @@ begin
          end;
 
       end;
-
-      //writeln('->'+inttostr(strlst.count));
-      //todo
       strlst.free;
     end;
-
   end; //while not eof()
   if (length(nodes) < 1) then
      goto 123; //NODE_COORDS missing
@@ -8645,7 +8747,7 @@ begin
     end;
   end; //while not eof(f)
   if (result) and (atlasMaxIndex > 0) and (nVert > 1) and (length(rgbas) > atlasMaxIndex) then begin
-     //writeln(format('>>:::%d..%d %d',[length(rgbas), atlasMaxIndex, nVert]));
+     //writeln(format('->>:::%d..%d %d',[length(rgbas), atlasMaxIndex, nVert]));
      setlength(vertexRGBA, nVert);
      for i := 0 to (nVert -1) do
           vertexRGBA[i] := rgbas[(vertexAtlas[i])];

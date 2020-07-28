@@ -1,22 +1,14 @@
 //pref
-Ambient|float|0.0|0.5|1
-Diffuse|float|0.0|0.7|1
+Ambient|float|0|0.0|1
+Diffuse|float|0|1|1
+AOradius|float|0|0|16
 Fastest but poorest: for software emulation like Mesa. Clip plane will be ignored|note
-//vert
-varying vec3 vL, vN;
-varying vec4 vClr;
-
-void main() {
-    vN = gl_NormalMatrix * gl_Normal;
-    vL = gl_LightSource[0].position.xyz;
-    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-    vClr = gl_Color;
-}
 //frag
-uniform float Ambient, Diffuse;
-varying vec3 vL, vN;
+#version 120
+varying vec3 vN, vL;
 varying vec4 vClr;
-
+uniform float Diffuse;
+uniform float Ambient;
 void main() {
-	gl_FragColor = vec4( (Ambient + (dot(normalize(vN),normalize(vL)) * Diffuse)) * mix(gl_FrontMaterial.ambient.rgb, vClr.rgb, vClr.a),  1.0);
+ 	gl_FragColor = vec4(vClr.rgb * (Ambient + (dot(normalize(vN),normalize(vL)) * Diffuse)),  1.0);
 }

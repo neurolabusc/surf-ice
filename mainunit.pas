@@ -4,6 +4,7 @@ unit mainunit;
   warning: GTK3 only supports OpenGL core - enable COREGL inn opts.inc
 {$ENDIF}{$ENDIF}
 {$mode delphi}{$H+}
+//{$DEFINE DARKMODE}
 interface
 uses
   {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
@@ -430,7 +431,7 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     procedure PrefMenuClick(Sender: TObject);
     {$IFDEF LCLCocoa}
     procedure SetRetina;
-    procedure SetDarkMode;
+    {$IFDEF DARKMODE}procedure SetDarkMode;{$ENDIF}
     {$ENDIF}
     procedure QuickColorClick(Sender: TObject);
     procedure ExitMenuClick(Sender: TObject);
@@ -468,6 +469,7 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     procedure UpdateImageIntensity;
     function ComboBoxName2Index(var lCombo: TComboBox; lName: string): integer;
     procedure SetDistance(Distance: single);
+    procedure OVERLAYEXTREME (lOverlay, lMode: integer);
     procedure OVERLAYMINMAX (lOverlay: integer; lMin,lMax: single);
     procedure OVERLAYCOLORNAME(lOverlay: integer; lFilename: string);
     //procedure SetOrtho (w,h: integer; isMultiSample: boolean);
@@ -518,7 +520,7 @@ implementation
 
 uses
 {$IFDEF LCLCocoa}
-  UserNotification, nsappkitext, glcocoanscontext,
+  UserNotification, {$IFDEF DARKMODE}nsappkitext,{$ENDIF} glcocoanscontext,
 {$ENDIF}
   commandsu;
 
@@ -1722,6 +1724,17 @@ begin
        OVERLAYMINMAX(A,B,C);
 end;
 
+function PyOVERLAYEXTREME(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  layer, mode: integer;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 'ii:overlayextreme', @layer, @mode)) then begin
+       OVERLAYEXTREME(layer, mode);
+    end;
+end;
+
 function PyOVERLAYVISIBLE(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A,B: integer;
@@ -1792,6 +1805,7 @@ begin
     AddMethod('overlaycount', @PyOVERLAYCOUNT, ' overlaycount() -> Return number of overlays currently open.');
     AddMethod('overlayinvert', @PyOVERLAYINVERT, ' overlayinvert(layer, invert) -> Toggle whether overlay color scheme is inverted.');
     AddMethod('overlayload', @PyOVERLAYLOAD, ' overlayload(filename) -> Load an image on top of prior images.');
+    AddMethod('overlayextreme', @PyOVERLAYEXTREME, ' overlayextreme(layer, mode) -> Behavior of values beyond min..max (-1 automatic, 0 hide dark & bright, 1: hide dark, 2 hide bright, 3 show dark & bright)');
     AddMethod('overlayminmax', @PyOVERLAYMINMAX, ' overlayminmax(layer, min, max) -> Sets the color range for the overlay (layer 0 = background).');
     AddMethod('overlayopacity', @PyOVERLAYOPACITY, ' overlayopacity(overlayLayer, opacity) -> This feature allows you to adjust individual overlays transparency from transparent (0) to opaque (100).');
     AddMethod('overlayoverlapoverwrite', @PyOVERLAYOVERLAPOVERWRITE, ' overlayoverlapoverwrite(overwrite) -> Does an overlapping overlay overwrite existing color (1) or are the colors blanded (0).');
@@ -2336,6 +2350,7 @@ begin
 end;
 
 {$IFDEF LCLCocoa}
+{$IFDEF DARKMODE}
 procedure TGLForm1.SetDarkMode;
 begin
   //setThemeMode(Self.Handle, gPrefs.DarkMode);
@@ -2347,6 +2362,7 @@ begin
   ScriptMemo.Color := Memo1.Color;
   ScriptOutputMemo.Color := Memo1.Color;
 end;
+{$ENDIF}
 
 procedure TGLForm1.SetRetina;
 begin
@@ -2373,6 +2389,7 @@ begin
 
 end;
 
+{$IFDEF DARKMODE}
 procedure SetFormDarkMode(var f: TForm);
 begin
   f.PopupMode:= pmAuto;
@@ -2380,7 +2397,7 @@ begin
   //setThemeMode(f.Handle, true);
   setThemeMode(f, true);
 end;
-
+{$ENDIF}
 procedure Mouse2Retina(var X,Y: integer);
 begin
      if not gPrefs.RetinaDisplay then exit;
@@ -3572,9 +3589,9 @@ begin
         OkBtn.Constraints.MinWidth:= 64;
 	OkBtn.Parent:=PrefForm;
 	OkBtn.ModalResult:= mrOK;
-	{$IFDEF LCLCocoa}
+	{$IFDEF LCLCocoa}{$IFDEF DARKMODE}
         if gPrefs.DarkMode then SetFormDarkMode(PrefForm);
-        {$ENDIF}
+        {$ENDIF}{$ENDIF}
         PrefForm.ShowModal;
 	Tol := StrToFloatDef(TolEdit.Caption, Tol);
 	minLength := StrToFloatDef(minLengthEdit.Caption, minLength);
@@ -3828,9 +3845,9 @@ begin
     OkBtn.Constraints.MinWidth:= 64;
     OkBtn.Parent:=PrefForm;
     OkBtn.ModalResult:= mrOK;
-    {$IFDEF LCLCocoa}
+    {$IFDEF LCLCocoa} {$IFDEF DARKMODE}
     if gPrefs.DarkMode then SetFormDarkMode(PrefForm);
-    {$ENDIF}
+    {$ENDIF} {$ENDIF}
     PrefForm.ShowModal;
     viewMin := StrToFloatDef(minEdit.Caption, viewMin);
     HideBright := BrightCheck.Checked;
@@ -4286,7 +4303,11 @@ begin
   RetinaCheck.Parent:=PrefForm;
   //DarkMode
   DarkModeCheck:=TCheckBox.create(PrefForm);
+  {$IFDEF DARKMODE}
   DarkModeCheck.visible := isDarkModeSupported;
+  {$ELSE}
+  DarkModeCheck.visible := false;
+  {$ENDIF}
   DarkModeCheck.Checked := gPrefs.DarkMode;
   DarkModeCheck.Caption:='Dark Mode';
   //DarkModeCheck.Left := 8;
@@ -4299,7 +4320,9 @@ begin
   DarkModeCheck.AnchorSide[akLeft].Control := PrefForm;
   DarkModeCheck.BorderSpacing.Left := 6;
   DarkModeCheck.Parent:=PrefForm;
+  {$IFDEF DARKMODE}
   if gPrefs.DarkMode then SetFormDarkMode(PrefForm);
+  {$ENDIF}
   {$ENDIF}
     AdvancedBtn:=TButton.create(PrefForm);
   AdvancedBtn.Caption:='Advanced';
@@ -4401,8 +4424,10 @@ begin
   {$IFDEF LCLCocoa}
   if isRetinaChanged then
     SetRetina;//GLBox.WantsBestResolutionOpenGLSurface:=gPrefs.RetinaDisplay;
+  {$IFDEF DARKMODE}
   if isDarkModeChanged then
     SetDarkMode;
+    {$ENDIF}
   {$ENDIF}
       GLBoxRequestUpdate(Sender);
   if  isAdvancedPrefs then
@@ -4427,10 +4452,12 @@ end;
 
 procedure TGLForm1.ResetMenuClick(Sender: TObject);
 begin
-     if gPrefs.BlackDefaultBackground then
+  //caption := 'xx'+inttostr(random(999));
+  if gPrefs.BlackDefaultBackground then
          gPrefs.BackColor := RGBToColor(0,0,0)
      else
          gPrefs.BackColor := RGBToColor(255,255,255);
+
      //gPrefs.Colorbar := true;
      TransBlackClrbarMenu.Checked:=true;
      gPrefs.ScreenPan.X := 0; gPrefs.ScreenPan.Y := 0; gPrefs.ScreenPan.Z := 0;
@@ -4439,6 +4466,7 @@ begin
      gAzimuth := 250;
      Transparency0.Click;
      gPrefs.ShaderForBackgroundOnly:= true;
+  //if Sender <> nil then exit;
      ShaderForBackgroundOnlyCheck.Checked := gPrefs.ShaderForBackgroundOnly;
      gPrefs.isFlipMeshOverlay:= false;
      gPrefs.AdditiveOverlay:= false;
@@ -4479,6 +4507,7 @@ begin
      end;
      {$ENDIF}
 end;
+      //  if Sender <> nil then exit;
 
 procedure TGLForm1.RestrictEdgeMenuClick(Sender: TObject);
 begin
@@ -4636,9 +4665,9 @@ begin
   //86
   //{$IFDEF Windows} ScaleDPI(PrefForm, 96);  {$ENDIF}
   //{$IFDEF Linux} ScaleDPIX(PrefForm, 96); {$ENDIF}
-  {$IFDEF LCLCocoa}
+  {$IFDEF LCLCocoa}{$IFDEF DARKMODE}
   if gPrefs.DarkMode then SetFormDarkMode(PrefForm);
-  {$ENDIF}
+  {$ENDIF}{$ENDIF}
   PrefForm.ShowModal;
   result := def;
   if (PrefForm.ModalResult = mrOK) then begin
@@ -4730,6 +4759,13 @@ begin
   Memo1.Lines.Add(format('Track dither %.2g',[gTrack.ditherColorFrac]));
   gTrack.isRebuildList:= true;
   GLBoxRequestUpdate(Sender);
+end;
+
+procedure TGLForm1.OVERLAYEXTREME (lOverlay, lMode: integer);
+begin
+  if (gMesh.OpenOverlays < 1) or (lOverlay > gMesh.OpenOverlays)  then exit;
+  gMesh.Overlay[lOverlay].PaintMode:= lMode;
+  UpdateLayerBox(false);;
 end;
 
 procedure TGLForm1.OVERLAYMINMAX (lOverlay: integer; lMin,lMax: single);
@@ -5528,7 +5564,7 @@ end;
 {$ENDIF}
 
 procedure TGLForm1.AboutMenuClick(Sender: TObject);
-//{$DEFINE TIMEABOUT}
+{$DEFINE TIMEABOUT}
 {$IFDEF TIMEABOUT}
 const
   kSamp = 36;
@@ -5556,8 +5592,11 @@ begin
  {$IFDEF TIMEABOUT}
  s := gettickcount();
  for i := 1 to kSamp do begin
-     gAzimuth := (gAzimuth + 10) mod 360;
+     gAzimuth := (gAzimuth + 5) mod 360;
      GLbox.Repaint;
+     GLBox.MakeCurrent(false);
+     GLFinish;
+     GLBox.ReleaseContext;
   end;
  fpsStr := '';
  if (gettickcount<> s) then
@@ -5570,6 +5609,13 @@ begin
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
+   {$IFDEF CPUAARCH64}
+   + ' ARM'
+   {$ENDIF}
+   {$IFDEF CPUX86_64}
+   + ' x86-64'
+   {$ENDIF}
+
    {$IFDEF LCLCarbon} + ' Carbon'{$ENDIF}
    {$IFDEF LCLCocoa} + ' Cocoa'{$ENDIF}
    {$IFDEF Linux} + ' Linux'{$ENDIF}
@@ -5588,7 +5634,7 @@ begin
            {$ENDIF}
    {$ENDIF}
    +LineEnding+' www.mricro.com :: BSD 2-Clause License (opensource.org/licenses/BSD-2-Clause)'
-   {$IFDEF TIMEABOUT}+FPSstr {$ENDIF}
+   {$IFDEF TIMEABOUT}+LineEnding+FPSstr {$ENDIF}
    +LineEnding+format(' Scale %.4f',[scale])
    +LineEnding+format(' Origin %.4fx%.4fx%.4f',[origin.X, origin.Y, origin.Z])
    +LineEnding+' Mesh Vertices '+inttostr(length(gMesh.vertices))+' Faces '+  inttostr(length(gMesh.faces)) +' Colors '+  inttostr(length(gMesh.vertexRGBA))
@@ -6012,7 +6058,7 @@ end;
 procedure TGLForm1.OverlayTimerTimer(Sender: TObject);
 begin
      OverlayTimer.Enabled := false;
-     gMesh.isRebuildList:= true;
+     gMesh.isRebuildList := true;
      gMesh.isAdditiveOverlay := gPrefs.AdditiveOverlay;
      {$IFDEF FPC}{$IFDEF Windows}
      //StringGrid1.Refresh;
@@ -6385,7 +6431,7 @@ begin
      GLForm1.WindowState:= wsFullScreen;
      {$IFNDEF LCLCocoa}ExitFullScreenMenu.Visible:=true;{$ENDIF} //Linux has issues getting out of full screen
   end;
- {$IFDEF LCLCocoa} SetDarkMode; {$ENDIF}
+ {$IFDEF LCLCocoa}{$IFDEF DARKMODE} SetDarkMode; {$ENDIF}{$ENDIF}
  //{$IFDEF Windows}UpdateOverlaySpread;{$ENDIF}//July2017 - scripting on High-dpi, reset scaling
  if (gPrefs.initScript <> '' ) then
     UpdateTimer.enabled := true;
@@ -6540,6 +6586,9 @@ begin
   isBusy := false;
 
   {$IFDEF Darwin}
+  {$IFDEF CPUAARCH64}
+  ScriptingPascalMenu.Visible := false;
+  {$ENDIF}
   ExitMenu.Visible := false;
   //CopyMenu.enabled := false; //https://bugs.freepascal.org/view.php?id=33632
   NewWindowMenu.ShortCut := ShortCut(Word('N'), [ssShift, ssMeta]);

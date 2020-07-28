@@ -52,6 +52,7 @@ procedure OVERLAYADDITIVE (ADD: boolean);
 procedure OVERLAYCLOSEALL;
 procedure OVERLAYCOLORNAME(lOverlay: integer; lFilename: string);
 procedure OVERLAYLOAD(lFilename: string);
+procedure OVERLAYEXTREME (lOverlay, lMode: integer);
 procedure OVERLAYMINMAX (lOverlay: integer; lMin,lMax: single);
 procedure OVERLAYTRANSPARENCYONBACKGROUND(lPct: integer);
 procedure OVERLAYVISIBLE(lOverlay: integer; VISIBLE: boolean);
@@ -92,7 +93,7 @@ const
                (Ptr:@VERSION;Decl:'VERSION';Vars:'(): string')
              );
 
-knProc = 71;
+knProc = 72;
   kProcRA : array [1..knProc] of TScriptRec = (
   (Ptr:@ATLASSTATMAP;Decl:'ATLASSTATMAP';Vars:'(ATLASNAME, STATNAME: string; const Intensities: array of integer; const Intensities: array of single)'),
   (Ptr:@ATLASSATURATIONALPHA;Decl:'ATLASSATURATIONALPHA';Vars:'(lSaturation, lTransparency: single)'),
@@ -139,6 +140,7 @@ knProc = 71;
    (Ptr:@OVERLAYCLOSEALL;Decl:'OVERLAYCLOSEALL';Vars:''),
    (Ptr:@OVERLAYCOLORNAME;Decl:'OVERLAYCOLORNAME';Vars:'(lOverlay: integer; lFilename: string)'),
    (Ptr:@OVERLAYLOAD;Decl:'OVERLAYLOAD';Vars:'(lFilename: string)'),
+   (Ptr:@OVERLAYEXTREME;Decl:'OVERLAYMINMAX';Vars:'(lOverlay, lMode: integer)'),
    (Ptr:@OVERLAYMINMAX;Decl:'OVERLAYMINMAX';Vars:'(lOverlay: integer; lMin,lMax: single)'),
    (Ptr:@OVERLAYOPACITY;Decl:'OVERLAYOPACITY';Vars:'(lOverlay: integer; OPACITY: byte)'),
    (Ptr:@OVERLAYTRANSPARENCYONBACKGROUND;Decl:'OVERLAYTRANSPARENCYONBACKGROUND';Vars:'(lPct: integer)'),
@@ -170,7 +172,16 @@ knProc = 71;
 implementation
 uses
     //{$IFDEF UNIX}fileutil,{$ENDIF}
-    mainunit, define_types, shaderui, graphics, LCLintf, Forms, SysUtils, Dialogs,  mesh, meshify;
+    prefs, mainunit, define_types, shaderui, graphics, LCLintf, Forms, SysUtils, Dialogs,  mesh, meshify;
+
+function IsReadable(lFilename: string): boolean;
+begin
+  result := true;
+  if fileexists(lFilename) and (not FileIsReadableByThisExecutable(lFilename)) then begin
+     GLForm1.ScriptOutputMemo.Lines.Add('This application does not have permission to read "'+lFilename+'"');
+     result := false;
+   end;
+end;
 
 procedure SCRIPTFORMVISIBLE (VISIBLE: boolean);
 begin
@@ -305,6 +316,8 @@ begin
      err := 'Number of indices ('+inttostr(num_idx)+') does not match number of intensities ('+inttostr(num_inten)+')';
      goto 123;
   end;
+  if not IsReadable(ATLASNAME) then
+     goto 123;
   //ignore: preserve previous filter setlength(gMesh.AtlasHide, 0); //show all regions - we might need some for parsing
   if not GLForm1.OpenMesh(ATLASNAME) then  begin
      err := 'Unable to load mesh named "'+ATLASNAME+'"';
@@ -496,6 +509,7 @@ end;
 
 procedure MESHLOAD(lFilename: string);
 begin
+  if not IsReadable(lFilename) then exit;
   if not GLForm1.OpenMesh(lFilename) then begin
      GLForm1.ScriptOutputMemo.Lines.Add('Unable to load mesh named "'+lFilename+'"');
    end;
@@ -504,6 +518,7 @@ end;
 
 procedure ATLAS2NODE(lFilename: string);
 begin
+   if not IsReadable(lFilename) then exit;
   if not GLForm1.Atlas2Node(lFilename) then begin
      GLForm1.ScriptOutputMemo.Lines.Add('Unable to convert labels to nodes (make sure .annot file is loaded)');
    end;
@@ -524,25 +539,29 @@ end;
 
 procedure OVERLAYLOAD(lFilename: string);
 begin
-   if not GLForm1.OpenOverlay(lFilename)then
+  if not IsReadable(lFilename) then exit;
+  if not GLForm1.OpenOverlay(lFilename)then
       GLForm1.ScriptOutputMemo.Lines.Add('Unable to load overlay named "'+lFilename+'"');
 end;
 
 procedure TRACKLOAD(lFilename: string);
 begin
-      if not GLForm1.OpenTrack(lFilename) then
+   if not IsReadable(lFilename) then exit;
+  if not GLForm1.OpenTrack(lFilename) then
         GLForm1.ScriptOutputMemo.Lines.Add('Unable to load track named "'+lFilename+'"');
 end;
 
 procedure NODELOAD(lFilename: string);
 begin
-  if not GLForm1.OpenNode(lFilename) then
+   if not IsReadable(lFilename) then exit;
+   if not GLForm1.OpenNode(lFilename) then
       GLForm1.ScriptOutputMemo.Lines.Add('Unable to load node named "'+lFilename+'"');
 end;
 
 procedure EDGELOAD(lFilename: string);
 begin
-  if not GLForm1.OpenEdge(lFilename)then
+   if not IsReadable(lFilename) then exit;
+   if not GLForm1.OpenEdge(lFilename)then
       GLForm1.ScriptOutputMemo.Lines.Add('Unable to load edge named "'+lFilename+'"');
 end;
 
@@ -863,6 +882,11 @@ procedure OVERLAYADDITIVE (ADD: boolean);
 begin
      if ADD <> GLForm1.AdditiveOverlayMenu.Checked then
           GLForm1.AdditiveOverlayMenu.Click;
+end;
+
+procedure OVERLAYEXTREME (lOverlay, lMode: integer);
+begin
+     GLForm1.OVERLAYEXTREME(lOverlay, lMode);
 end;
 
 procedure OVERLAYMINMAX (lOverlay: integer; lMin,lMax: single);

@@ -6,18 +6,6 @@ Shininess|float|1|60|120
 WireWidth|float|0.1|2|20
 WireType|int|0|0|2
 Comment: object shimmers as is rotates. Wires useful for evaluating mesh quality. Copyright 2015 Chris Rorden, BSD2clause.|note
-//vert
-varying vec3 vL, vN, vV;
-varying vec4 vP, vClr;
-
-void main() {
-    vN = normalize(gl_NormalMatrix * gl_Normal);
-    vV = -vec3(gl_ModelViewMatrix * gl_Vertex);
-    vL = normalize(gl_LightSource[0].position.xyz);
-    vP = gl_Vertex;
-    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-    vClr = gl_Color;
-}
 //geom
 #version 120
 #extension GL_EXT_geometry_shader4 : enable
@@ -90,10 +78,8 @@ void main() {
 	vec3 l = normalize(gL);
 	vec3 n = normalize(gN);
 	vec3 h = normalize(l+normalize(gV));
-	vec3 a = gl_FrontMaterial.ambient.rgb;
-	a = mix(a.rgb, gClr.rgb, gClr.a);
-	vec3 d = a *Diffuse;
-	a *= Ambient;
+	vec3 a = gClr.rgb * Ambient;
+	vec3 d = gClr.rgb * Diffuse;
 	float backface = 1.0 - step(0.0, n.z); //1=backface
 	n = mix(n, -n, backface); //reverse normal if backface AND two-sided lighting
 	float diff = abs(dot(n,l));

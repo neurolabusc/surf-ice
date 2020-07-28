@@ -1,28 +1,20 @@
 //pref
 Ambient|float|0.0|0|1
-Diffuse|float|0.0|1.0|2
+Diffuse|float|0.0|1|2
 Specular|float|0.0|0.25|1
 SpecularRough|float|0.01|0.05|1
 Edge|float|0|0.05|1.0
 Hint: add substantial ambient occlusion (AO). Diffuse shading using spherical harmonics. Copyright 2010 Martins Upitis, BSD2clause.|note
-//vert
-varying vec3 vN, vV, vL;
-varying vec4 vP, vClr;
-
-void main()
-{
-    vN = normalize(gl_NormalMatrix * gl_Normal);
-    vV = -vec3(gl_ModelViewMatrix*gl_Vertex);
-    vL = normalize(gl_LightSource[0].position.xyz);
-    vP = gl_Vertex;
-    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-    vClr = gl_Color;
-}
 //frag
-uniform float  Ambient, Diffuse, Specular, SpecularRough, Edge;
-uniform vec4 ClipPlane;
+#version 120
 varying vec3 vN, vV, vL;
 varying vec4 vP, vClr;
+uniform float Ambient = 0.5;
+uniform float Diffuse = 0.7;
+uniform float Specular = 0.2;
+uniform float SpecularRough = 0.05;
+uniform float Edge = 0.05;
+uniform vec4 ClipPlane = vec4(2.0, 0.0, 0.0, 0.0);
 
 //Spherical harmonics constants
 const float C1 = 0.429043;
@@ -86,19 +78,18 @@ void main() {
 	vec3 n = normalize(vN);
 	vec3 v = normalize(vV);
 	vec3 h = normalize(l+v);
-	vec3 a = gl_FrontMaterial.ambient.rgb;
-	a = mix(a, vClr.rgb, vClr.a);
+	vec3 a = vClr.rgb;
 	vec3 d = a * Diffuse;
 	a *= Ambient;
 	vec3 backcolor = desaturate(0.75 * a + 0.75 * d *  abs(dot(n,l)), 0.5);
 	d *= SH(-reflect(n, l) );
 	float specular = max(0.0,dot(n,h));
 	specular = pow(specular, 1.0/(SpecularRough * SpecularRough));
-	vec3 frontcolor = a + d + specular* Specular;
+	vec4 color = vec4(a + d + specular* Specular, 1.0);
 	float edge =((max(dot(n,normalize(vV)), 0.0) - 0.5) * Edge) + 1.0;
 	edge = min(1.0, edge);
-	frontcolor *= edge;
+	color.rgb *= edge;
 	float backface = step(0.0, n.z);
-	gl_FragColor = vec4(mix(backcolor, frontcolor,  backface), 1.0);
-
+	color = vec4(mix(backcolor.rgb, color.rgb,  backface), 1.0);
+	gl_FragColor = color;
 }

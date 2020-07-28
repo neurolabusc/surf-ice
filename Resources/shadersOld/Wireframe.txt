@@ -7,18 +7,6 @@ FaceAlpha|float|0.0|1|1
 WireWidth|float|0.1|0.7|6
 WireColor|float|0|0.2|1
 Hint: setting FaceAlpha less than one can cause object to shimmer as is rotates. Wireframe useful for evaluating mesh quality. Copyright 2015 Chris Rorden, BSD2clause.|note
-//vert
-varying vec3 vL, vN, vV;
-varying vec4 vP, vClr;
-
-void main() {
-    vN = normalize(gl_NormalMatrix * gl_Normal);
-    vV = -vec3(gl_ModelViewMatrix * gl_Vertex);
-    vL = normalize(gl_LightSource[0].position.xyz);
-    vP = gl_Vertex;
-    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-    vClr = gl_Color;
-}
 //geom
 #version 120
 #extension GL_EXT_geometry_shader4 : enable
@@ -89,10 +77,8 @@ void main() {
 	vec3 l = normalize(gL);
 	vec3 n = normalize(gN);
 	vec3 h = normalize(l+normalize(gV));
-	vec3 a = gl_FrontMaterial.ambient.rgb;
-	a = mix(a.rgb, gClr.rgb, gClr.a);
-	vec3 d = a *Diffuse;
-	a *= Ambient;
+	vec3 a = gClr.rgb * Ambient;
+	vec3 d = gClr.rgb * Diffuse;
 	float diff = dot(n,l);
 	float spec = pow(max(0.0,dot(n,h)), Shininess);
 	vec3 backcolor = Ambient*vec3(0.1+0.1+0.1) + d*abs(diff);
