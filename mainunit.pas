@@ -4952,7 +4952,7 @@ begin
   origin := GetOrigin(scale);
   //glUseProgram(gShader.program3d);
   {$IFNDEF COREGL}
-  SetLighting(gPrefs);
+  //SetLighting(gPrefs);
   {$ENDIF}
   isMultiPass := true;
   if (gPrefs.RenderQuality = kRenderPoor) then isMultiPass := false;

@@ -7,7 +7,7 @@ interface
 uses
  {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, glext, {$IFDEF GEOM_GLEXT}glext2, {$ENDIF} {$ENDIF}  {$ENDIF DGL}
   {$IFDEF COREGL} gl_core_3d, {$ELSE} gl_legacy_3d, {$ENDIF}
-  sysutils,dialogs, define_types,  userdir, StrUtils, math;
+  sysutils,dialogs, define_types,  userdir, StrUtils, math, gl_core_matrix;
 const
 {$IFDEF DGL}
    kGL_FALSE = FALSE;
@@ -1220,10 +1220,10 @@ end;
 
 procedure RunTrackGLSL (lineWidth, ScreenPixelX, ScreenPixelY: integer; isTubes: boolean = true);
 begin
+ glUseProgram(gShader.programTrackID);
+ SetTrackUniforms (lineWidth, ScreenPixelX, ScreenPixelY);
 
      {$IFDEF COREGL}
-     glUseProgram(gShader.programTrackID);
-     SetTrackUniforms (lineWidth, ScreenPixelX, ScreenPixelY);
      {$ELSE}
      {$IFDEF LEGACY_INDEXING}
      if isTubes then
@@ -1233,6 +1233,27 @@ begin
          glUseProgram(gShader.programTrackID);
      {$ENDIF}
 end;
+
+procedure SetMatrixUniforms(lProg: GLuint);
+var
+  mv, mvp : TnMat44;
+  n : TnMat33;
+  mvpMat, mvMat, normMat: GLint;
+begin
+  glUseProgram(lProg);
+  //AdjustShaders(gShader);
+  //uniform4f('ClipPlane',cp1,cp2,cp3,cp4)
+  mvp := ngl_ModelViewProjectionMatrix;
+  mv := ngl_ModelViewMatrix;
+  n :=  ngl_NormalMatrix;
+  mvpMat := glGetUniformLocation(lProg, pAnsiChar('ModelViewProjectionMatrix'));
+  mvMat := glGetUniformLocation(lProg, pAnsiChar('ModelViewMatrix'));
+  normMat := glGetUniformLocation(lProg, pAnsiChar('NormalMatrix'));
+  glUniformMatrix4fv(mvpMat, 1, kGL_FALSE, @mvp[0,0]); // note model not MVP!
+  glUniformMatrix4fv(mvMat, 1, kGL_FALSE, @mv[0,0]);
+  glUniformMatrix3fv(normMat, 1, kGL_FALSE, @n[0,0]);
+end;
+
 
 function RunMeshGLSL (clipPlane: TPoint4f;  UseDefaultShader: boolean): gluint;
 var
@@ -1258,13 +1279,13 @@ begin
   end;
   {$ENDIF}
   uniform4fx(lProg, 'ClipPlane', clipPlane);
-  {$IFDEF LEGACY_INDEXED}
+  //{$IFDEF LEGACY_INDEXED}
   uniform3fx(lProg, 'LightPos',gShader.lightPos.X, gShader.lightPos.Y, gShader.lightPos.Z);
-  {$ENDIF}
-  {$IFDEF COREGL}
-  uniform3fx(lProg, 'LightPos',gShader.lightPos.X, gShader.lightPos.Y, gShader.lightPos.Z);
-  SetCoreUniforms(lProg);
-  {$ENDIF}
+  //{$ENDIF}
+  //{$IFDEF COREGL}
+  //uniform3fx(lProg, 'LightPos',gShader.lightPos.X, gShader.lightPos.Y, gShader.lightPos.Z);
+  //{$ENDIF}
+  SetMatrixUniforms(lProg);
 end;
 
 function RunOverlayGLSL (clipPlane: TPoint4f): gluint;//(cp1,cp2,cp3,cp4: single);

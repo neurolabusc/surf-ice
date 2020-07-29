@@ -1445,14 +1445,14 @@ begin
          RunOverlayGLSL(clipPlane);
          glBindVertexArray(vao);
          glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vbo);
-         glDrawElements(GL_TRIANGLES,  Length(nFaces)* 3, GL_UNSIGNED_INT, nil);
+         glDrawElements(GL_TRIANGLES,  nFaces * 3, GL_UNSIGNED_INT, nil);
          glBindVertexArray(0);
       end;
   end else begin
     if (isVisible) and (nFaces > 0) then begin
       glBindVertexArray(vao);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vbo);
-      glDrawElements(GL_TRIANGLES, nFaces* 3, GL_UNSIGNED_INT, nil);
+      glDrawElements(GL_TRIANGLES, nFaces * 3, GL_UNSIGNED_INT, nil);
       glBindVertexArray(0);
     end;
     if (vaoOverlay <> 0) and (vboOverlay <> 0) and (nFacesOverlay > 0) then begin

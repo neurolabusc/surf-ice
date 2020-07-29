@@ -5,8 +5,7 @@ unit gl_legacy_3d;
 interface
 
 uses
- {$IFDEF LEGACY_INDEXING} glext,{$ENDIF}
- {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
+ {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, glext, {$ENDIF}  {$ENDIF DGL}
     prefs, math, Classes, SysUtils, mesh, matMath, Graphics, define_types, track;
 
 const
@@ -19,7 +18,7 @@ const
     norm   : TPoint3f; //vertex normal
     clr : TRGBA;
   end;
-  const  kVert3d = '#version 120'
+  (*const  kVert3dx = '#version 120'
 +#10'attribute vec3 Vert;'
 +#10'attribute vec3 Norm;'
 +#10'attribute vec4 Clr;'
@@ -33,15 +32,48 @@ const
 +#10'    vL = normalize(gl_LightSource[0].position.xyz);'
 +#10'    gl_Position = gl_ModelViewProjectionMatrix * vP;'
 +#10'    vClr = Clr;'
-+#10'}';
-  {$ELSE}
-  const  kVert3d = 'varying vec3 vN, vL, vV;'
++#10'}'; *)
+   const  kVert3d = '#version 120'
++#10'attribute vec3 Vert;'
++#10'attribute vec3 Norm;'
++#10'attribute vec4 Clr;'
++#10'varying vec3 vN, vL, vV;'
++#10'varying vec4 vClr, vP;'
++#10'uniform mat4 ModelViewProjectionMatrix;'
++#10'uniform mat4 ModelViewMatrix;'
++#10'uniform mat3 NormalMatrix;'
++#10'uniform vec3 LightPos = vec3(0.0, 20.0, 30.0); //LR, -DU+, -FN+'
++#10'void main() {'
+     +#10'    vN = normalize((NormalMatrix * Norm));'
+     +#10'    vP = vec4(Vert, 1.0);'
+     +#10'    gl_Position = ModelViewProjectionMatrix * vec4(Vert, 1.0);'
+     +#10'    vL = normalize(LightPos);'
+     +#10'    vV = -vec3(ModelViewMatrix*vec4(Vert,1.0));'
+     +#10'    vClr = Clr;'
+   +#10'}';
+    {$ELSE}
+  (*const  kVert3d = 'varying vec3 vN, vL, vV;'
   +#10'varying vec4 vP, vClr;'
   +#10'void main() {  '
   +#10'    gl_Position = ftransform();'
   +#10'    vN = normalize(gl_NormalMatrix * gl_Normal);'
   +#10'    vL = normalize(gl_LightSource[0].position.xyz);'
   +#10'    vV = -vec3(gl_ModelViewMatrix*gl_Vertex);'
+  +#10'    vClr = gl_Color;'
+  +#10'    vP = gl_Vertex;'
+  +#10'}'; *)
+  const  kVert3d = '#version 120'
+  +#10'varying vec3 vN, vL, vV;'
+  +#10'varying vec4 vP, vClr;'
+  +#10'uniform mat4 ModelViewProjectionMatrix;'
+  +#10'uniform mat4 ModelViewMatrix;'
+  +#10'uniform mat3 NormalMatrix;'
+  +#10'uniform vec3 LightPos = vec3(0.0, 20.0, 30.0); //LR, -DU+, -FN+'
+  +#10'void main() {  '
+  +#10'    gl_Position = ModelViewProjectionMatrix * gl_Vertex;'
+  +#10'    vN = normalize(NormalMatrix * gl_Normal);'
+  +#10'    vL = normalize(LightPos);'
+  +#10'    vV = -vec3(ModelViewMatrix*gl_Vertex);'
   +#10'    vClr = gl_Color;'
   +#10'    vP = gl_Vertex;'
   +#10'}';
@@ -88,10 +120,13 @@ const
  {$ENDIF}
   const kTrackShaderVert = 'varying vec3 vN;'
 +#10'varying vec4 vClr;'
++#10'uniform mat4 ModelViewProjectionMatrix;'
++#10'uniform mat4 ModelViewMatrix;'
++#10'uniform mat3 NormalMatrix;'
 +#10'void main()'
 +#10'{    '
-+#10'    vN = gl_NormalMatrix * gl_Normal;'
-+#10'    gl_Position = ftransform();'
++#10'    vN = normalize(NormalMatrix * gl_Normal);'
++#10'    gl_Position = ModelViewProjectionMatrix * gl_Vertex;'
 +#10'    vClr = gl_Color;'
 +#10'}';
 
@@ -109,7 +144,7 @@ const kTrackShaderFrag = 'varying vec3 vN;'
 +#10'    gl_FragColor = vec4(specClr*spec + difClr*dif + ambClr,1.0);'
 +#10'}';
 
-procedure SetLighting (var lPrefs: TPrefs);
+//procedure SetLighting (var lPrefs: TPrefs);
 {$IFDEF LEGACY_INDEXING}
 procedure BuildDisplayListIndexed(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA; var index_vbo, vertex_vbo: gluint; Clr: TRGBA);
 //procedure SetVertexAttrib(shaderProgram, vertex_vbo: GLuint);
@@ -118,10 +153,30 @@ procedure BuildDisplayListIndexed(var faces: TFaces; vertices: TVertices; vRGBA:
 function BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA; Clr: TRGBA): GLuint;
 function BuildDisplayListStrip(Indices: TInts; Verts, vNorms: TVertices; vRGBA: TVertexRGBA; LineWidth: integer): GLuint;
 procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped, isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin: TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
+procedure SetTrackUniforms(lineWidth, ScreenPixelX, ScreenPixelY: integer);
 
 implementation
 
 uses shaderu,  gl_core_matrix;
+
+procedure SetTrackUniforms(lineWidth, ScreenPixelX, ScreenPixelY: integer);
+ var
+  p , mv, mvp : TnMat44;
+  n : TnMat33;
+  mvpMat, mvMat, normMat, pMat, lp: GLint;
+begin
+  glUseProgram(gShader.programTrackID);
+  mvp := ngl_ModelViewProjectionMatrix;
+  mv := ngl_ModelViewMatrix;
+  n :=  ngl_NormalMatrix;
+  mvpMat := glGetUniformLocation(gShader.programTrackID, pAnsiChar('ModelViewProjectionMatrix'));
+  mvMat := glGetUniformLocation(gShader.programTrackID, pAnsiChar('ModelViewMatrix'));
+  normMat := glGetUniformLocation(gShader.programTrackID, pAnsiChar('NormalMatrix'));
+  glUniformMatrix4fv(mvpMat, 1, kGL_FALSE, @mvp[0,0]);
+  glUniformMatrix4fv(mvMat, 1, kGL_FALSE, @mv[0,0]);
+  glUniformMatrix3fv(normMat, 1, kGL_FALSE, @n[0,0]);
+end;
+
 
 function BuildDisplayListStrip(Indices: TInts; Verts, vNorms: TVertices; vRGBA: TVertexRGBA; LineWidth: integer): GLuint;
 var
@@ -160,7 +215,7 @@ begin
      glLineWidth(1);
 end;
 
-function TColorToF (C: TColor; i: integer): single;
+(*function TColorToF (C: TColor; i: integer): single;
 begin
      result := 1;
      if i = 1 then result := red(C)/255;
@@ -198,7 +253,7 @@ begin
   glMaterialfv (GL_FRONT_AND_BACK, GL_DIFFUSE, @objColor);
   glMaterialfv (GL_FRONT_AND_BACK, GL_SPECULAR, @wColor);
   glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, kMaterial[4]);
-end;
+end; *)
 
 
 {$IFNDEF DGL}  //gl.pp does not link to the glu functions, so we will write our own
@@ -254,6 +309,30 @@ begin
   end;
 end;
 
+procedure nSetOrtho (w,h: integer; Distance, MaxDistance: single; isMultiSample, isPerspective: boolean);
+const
+ kScaleX  = 0.7;
+var
+   aspectRatio, scaleX: single;
+   z: integer;
+begin
+ if (isMultiSample) then //and (gZoom <= 1) then
+   z := 2
+ else
+   z := 1;
+ glViewport( 0, 0, w*z, h*z );
+ ScaleX := kScaleX * Distance;
+ AspectRatio := w / h;
+ if isPerspective then
+    ngluPerspective(40.0, w/h, 0.01, MaxDistance+1)
+  else begin
+     if AspectRatio > 1 then //Wide window                                           xxx
+        nglOrtho (-ScaleX * AspectRatio, ScaleX * AspectRatio, -ScaleX, ScaleX, 0.0, 2.0) //Left, Right, Bottom, Top
+     else //Tall window
+       nglOrtho (-ScaleX, ScaleX, -ScaleX/AspectRatio, ScaleX/AspectRatio, 0.0,  2.0); //Left, Right, Bottom, Top
+  end;
+end;
+
 
 procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped, isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin: TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
 var
@@ -272,36 +351,42 @@ begin
  //glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT);
  glClear(GL_COLOR_BUFFER_BIT or  GL_DEPTH_BUFFER_BIT or GL_STENCIL_BUFFER_BIT );
  glEnable(GL_NORMALIZE);
- glMatrixMode(GL_PROJECTION);
+ (*glMatrixMode(GL_PROJECTION);
  glLoadIdentity();
  SetOrtho (w,h,Distance, kMaxDistance, isMultiSample, lPrefs.Perspective);
  glTranslatef(lPrefs.ScreenPan.X, lPrefs.ScreenPan.Y, 0 );
  glMatrixMode (GL_MODELVIEW);
  glLoadIdentity ();
- glLightfv(GL_LIGHT0, GL_POSITION, @gShader.lightpos);
- //caption := floattostr(lightpos[1])+'x'+ floattostr(lightpos[2])+'x'+ floattostr(lightpos[3]);
- //glDisable(GL_CULL_FACE);
- //glEnable(GL_DEPTH_TEST);
- //glEnable(GL_BLEND);
- glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
- //glTranslatef(0,0, -Scale * 8);
  glScalef(0.5/Scale, 0.5/Scale, 0.5/Scale);
- if lPrefs.Perspective then
-        glTranslatef(0,0, -Scale*2* Distance )
- else
-     glTranslatef(0,0, -Scale*2 );
- glRotatef(90- Elevation,-1,0,0);
- glRotatef(-Azimuth,0,0,1);
- //glScalef(0.5/Scale, 0.5/Scale, 0.5/Scale);
- //origin := GetOrigin;
- glTranslatef(-origin.X, -origin.Y, -origin.Z);
+if lPrefs.Perspective then
+       glTranslatef(0,0, -Scale*2* Distance )
+else
+    glTranslatef(0,0, -Scale*2 );
+glRotatef(90- Elevation,-1,0,0);
+glRotatef(-Azimuth,0,0,1);
+glTranslatef(-origin.X, -origin.Y, -origin.Z);
+setLighting (lPrefs);
+ *)
+  nglMatrixMode(nGL_PROJECTION);
+  nglLoadIdentity();
+  nSetOrtho(w, h, Distance, kMaxDistance, isMultiSample, lPrefs.Perspective);
+  nglTranslatef(lPrefs.ScreenPan.X, lPrefs.ScreenPan.Y, 0 );
+  nglMatrixMode (nGL_MODELVIEW);
+  nglLoadIdentity ();
+  //object size normalized to be -1...+1 in largest dimension.
+  //closest/furthest possible vertex is therefore -1.73..+1.73 (e.g. cube where corner is sqrt(1+1+1) from origin)
+  nglScalef(0.5/Scale, 0.5/Scale, 0.5/Scale);
+  if lPrefs.Perspective then
+      nglTranslatef(0,0, -Scale*2*Distance )
+  else
+     nglTranslatef(0,0,  -Scale*2 );
+  nglRotatef(90-Elevation,-1,0,0);
+  nglRotatef(-Azimuth,0,0,1);
+  nglTranslatef(-origin.X, -origin.Y, -origin.Z);
+
+
+ glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
  glShadeModel(GL_SMOOTH);
- setLighting (lPrefs);
- //glEnable(GL_BLEND);
- //glBlendFunc(GL_ONE, GL_ZERO);
- //glEnable(GL_BLEND);
- //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
- //glLineWidth(0);   // GL_INVALID_VALUE is generated if width is less than or equal to 0.
  if lTrack.n_count > 0 then begin
     if lTrack.isTubes then
          RunMeshGLSL (asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W),  lPrefs.ShaderForBackgroundOnly) //disable clip plane

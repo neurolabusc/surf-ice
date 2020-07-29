@@ -6,7 +6,8 @@ unit glcube;
 interface
 
 uses
-  {$IFDEF COREGL}glcorearb,  gl_core_matrix, {$ELSE}gl, glext, {$ENDIF}
+  {$IFDEF COREGL}glcorearb,   {$ELSE}gl, glext, {$ENDIF}
+  gl_core_matrix,
   shaderu, Classes, SysUtils, Graphics, OpenGLContext, math, dialogs;
 
 type
@@ -586,7 +587,7 @@ begin
   if  sz > ScrnH then sz := ScrnH;
   if sz < 10 then exit;
   sz := sz * SizeFrac;
-  {$IFDEF COREGL}
+
 
   nglMatrixMode(nGL_MODELVIEW);
   nglLoadIdentity;
@@ -600,7 +601,7 @@ begin
       nglTranslatef(1.8*sz,1.8*sz,0);
   nglRotatef(fElevation-90,-1,0,0);
   nglRotatef(-fAzimuth,0,0,1);
-  {$ELSE}
+  {$IFNDEF COREGL}
   glUseProgram(0);
   glEnable (GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

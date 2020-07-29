@@ -13,7 +13,7 @@ uses
 procedure BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA; var vao, vbo: gluint; Clr: TRGBA);
 //procedure SetLighting (var lPrefs: TPrefs);
 procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped,isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
-procedure SetCoreUniforms(lProg: Gluint);
+//procedure SetCoreUniformsX(lProg: Gluint);
 procedure SetTrackUniforms (lineWidth, ScreenPixelX, ScreenPixelY: integer);
 //procedure BuildDisplayListStrip(Indices: TInts; Verts, vNorms: TVertices; vRGBA: TVertexRGBA; LineWidth: integer; var vao, vbo: gluint);
 procedure BuildDisplayListStrip(Indices: TInts; vertices, vNorm: TVertices; vRGBA: TVertexRGBA; vType: TInts; LineWidth: integer; var vao, vbo: gluint);
@@ -406,9 +406,7 @@ begin
   glPrimitiveRestartIndex(kPrimitiveRestart);
   glEnable(GL_PRIMITIVE_RESTART);
   {$IFNDEF TUBES}
-
   glUniform3f(glGetUniformLocation(gShader.programTrackID, pAnsiChar('LightPos')), gShader.lightPos.X, gShader.lightPos.Y, gShader.lightPos.Z);
-
   glUniform1f(glGetUniformLocation(gShader.programTrackID, pAnsiChar('Ambient')), gShader.TrackAmbient) ;
   glUniform1f(glGetUniformLocation(gShader.programTrackID, pAnsiChar('Diffuse')), gShader.TrackDiffuse) ;
   //glUniform1f(glGetUniformLocation(gShader.programTrackID, pAnsiChar('Specular')), gShader.TrackSpecular * 0.75) ; //<<<<<<<<<
@@ -418,7 +416,7 @@ begin
 
 end;
 
-procedure SetCoreUniforms (lProg: GLuint);
+(*procedure SetCoreUniforms(lProg: GLuint);
 var
   mv, mvp : TnMat44;
   n : TnMat33;
@@ -431,14 +429,12 @@ begin
   mv := ngl_ModelViewMatrix;
   n :=  ngl_NormalMatrix;
   mvpMat := glGetUniformLocation(lProg, pAnsiChar('ModelViewProjectionMatrix'));
-   mvMat := glGetUniformLocation(lProg, pAnsiChar('ModelViewMatrix'));
-   normMat := glGetUniformLocation(lProg, pAnsiChar('NormalMatrix'));
-
+  mvMat := glGetUniformLocation(lProg, pAnsiChar('ModelViewMatrix'));
+  normMat := glGetUniformLocation(lProg, pAnsiChar('NormalMatrix'))
   glUniformMatrix4fv(mvpMat, 1, kGL_FALSE, @mvp[0,0]); // note model not MVP!
   glUniformMatrix4fv(mvMat, 1, kGL_FALSE, @mv[0,0]);
   glUniformMatrix3fv(normMat, 1, kGL_FALSE, @n[0,0]);
-
-end;
+end; *)
 
 type
 TVtxNormClr = Packed Record
@@ -732,7 +728,7 @@ begin
   //Done by shader
 end;
 
-procedure SetOrtho (w,h: integer; Distance, MaxDistance: single; isMultiSample, isPerspective: boolean);
+procedure nSetOrtho (w,h: integer; Distance, MaxDistance: single; isMultiSample, isPerspective: boolean);
 const
  kScaleX  = 0.7;
 var
@@ -766,13 +762,12 @@ begin
   glClearColor(red(lPrefs.BackColor)/255, green(lPrefs.BackColor)/255, blue(lPrefs.BackColor)/255, 0); //Set background
   glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
+
   nglMatrixMode(nGL_PROJECTION);
   nglLoadIdentity();
-  SetOrtho(w, h, Distance, kMaxDistance, isMultiSample, lPrefs.Perspective);
+  nSetOrtho(w, h, Distance, kMaxDistance, isMultiSample, lPrefs.Perspective);
   nglTranslatef(lPrefs.ScreenPan.X, lPrefs.ScreenPan.Y, 0 );
-
   nglMatrixMode (nGL_MODELVIEW);
-  //glDepthRange(0.001, 0.1);
   nglLoadIdentity ();
   //object size normalized to be -1...+1 in largest dimension.
   //closest/furthest possible vertex is therefore -1.73..+1.73 (e.g. cube where corner is sqrt(1+1+1) from origin)
