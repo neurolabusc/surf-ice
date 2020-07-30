@@ -71,7 +71,7 @@ procedure freeFrame (var f : TFrameBuffer);
 //procedure Set2DDraw (w,h: integer; r,g,b: byte);
 
 implementation
-uses mainunit, shaderui;
+uses {$IFDEF LINUX} prefs, {$ENDIF} mainunit, shaderui;
 
 {$IFDEF COREGL}
 const kVert2D ='#version 330'
@@ -953,7 +953,15 @@ begin
              {$ENDIF}
              {$ENDIF}
       {$ENDIF}
-      gShader.Vendor := glGetString(GL_VENDOR)+' :: OpenGL  '+glGetString(GL_VERSION)+' :: GLSL ' +glGetString(GL_SHADING_LANGUAGE_VERSION);
+      gShader.Vendor := glGetString(GL_VERSION);
+      {$IFDEF LINUX}
+      if AnsiContainsText(gShader.Vendor,'MESA') then begin
+        writeln('Mesa driver detected. If you observe artifacts set "Quality: Poor" in the Preferences window.');
+        if not gPrefs.isMesaWarned then
+          gPrefs.RenderQuality := min(kRenderPoor, gPrefs.RenderQuality);
+      end;
+      {$ENDIF}
+      gShader.Vendor := glGetString(GL_VENDOR)+' :: OpenGL  '+gShader.Vendor+' :: GLSL ' +glGetString(GL_SHADING_LANGUAGE_VERSION);
       gShader.program2d := initVertFrag(kVert2D, '', kFrag2D);
       gShader.program3dx :=  initVertFrag(kVert3d, '', kFrag3d);
       gShader.programDefault :=  initVertFrag(kVert3d, '', kFrag3d);
@@ -1222,7 +1230,6 @@ procedure RunTrackGLSL (lineWidth, ScreenPixelX, ScreenPixelY: integer; isTubes:
 begin
  glUseProgram(gShader.programTrackID);
  SetTrackUniforms (lineWidth, ScreenPixelX, ScreenPixelY);
-
      {$IFDEF COREGL}
      {$ELSE}
      {$IFDEF LEGACY_INDEXING}

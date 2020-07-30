@@ -753,7 +753,7 @@ begin
       vertLoc := glGetAttribLocation(gShader.programTrackIdxID , 'Vert');
       normLoc := glGetAttribLocation(gShader.programTrackIdxID, 'Norm');
       clrLoc := glGetAttribLocation(gShader.programTrackIdxID, 'Clr');
-      writeln(format('%d %d %d  %d', [vertLoc, normLoc, clrLoc, n_faces]));
+      //writeln(format('%d %d %d  %d', [vertLoc, normLoc, clrLoc, n_faces]));
       glEnableVertexAttribArray(vertLoc);//v position
       glEnableVertexAttribArray(normLoc);//n normal
       glEnableVertexAttribArray(clrLoc);//c color

@@ -4405,6 +4405,12 @@ begin
         gPrefs.RenderQuality := kRenderPoor
      else
         gPrefs.RenderQuality := kRenderBetter;
+    {$IFDEF LINUX}
+    if (gPrefs.RenderQuality > kRenderPoor) and (AnsiContainsText(gShader.Vendor,'MESA'))then begin
+      ShowMessage('Mesa drivers may have visual artifacts for quality better than "Poor".');
+      gPrefs.isMesaWarned:= true;
+    end;
+    {$ENDIF}
      if QualityCombo.ItemIndex = 2 then //only for best quality
         gPrefs.OcclusionAmount := 25
      else
@@ -5564,7 +5570,7 @@ end;
 {$ENDIF}
 
 procedure TGLForm1.AboutMenuClick(Sender: TObject);
-{$DEFINE TIMEABOUT}
+//{$DEFINE TIMEABOUT}
 {$IFDEF TIMEABOUT}
 const
   kSamp = 36;
@@ -5621,7 +5627,7 @@ begin
    {$IFDEF Linux} + ' Linux'{$ENDIF}
    {$IFDEF Windows} + ' Windows'{$ENDIF}
    {$IFDEF DGL} + ' DGL'{$ENDIF}
-   {$IFNDEF COREGL}+' (Legacy OpenGL)'{$ENDIF}
+   {$IFNDEF COREGL}+' (Legacy '+{$IFDEF LEGACY_INDEXING}'Indexed '+{$ENDIF}'OpenGL)'{$ENDIF}
    {$IFDEF Darwin}
            {$IFDEF LCLCocoa}
            +''; titleStr := Str; str := ' '+GetHardwareVersion

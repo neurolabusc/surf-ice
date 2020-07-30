@@ -22,7 +22,8 @@ type
     SmoothVoxelwiseData,
     OverlayClip, StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube, MultiSample, BlackDefaultBackground,
      Colorbar,TracksAreTubes, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,ColorBarPrecedenceTracksNotOverlays,HideDarkTracks, HideBrightTracks,
-     OverlappingOverlaysOverwrite, ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting, isFlipMeshOverlay, DarkMode, RetinaDisplay, GenerateSmoothCurves : boolean;
+     OverlappingOverlaysOverwrite, ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting, isFlipMeshOverlay, DarkMode,
+    RetinaDisplay, GenerateSmoothCurves {$IFDEF LINX}, isMesaWarned {$ENDIF} : boolean;
     TrackTubeSlices, ScreenCaptureZoom,ColorbarColor,ColorBarPosition,
     window_width, window_height, RenderQuality, 
     StartupWindowMode,
@@ -299,6 +300,7 @@ begin
        with lPrefs do begin
             //CrossHairs := true;
             ColorbarSize := 0.035;
+            {$IFDEF LINUX}isMesaWarned := false; {$ENDIF}
             StartupWindowMode := 0;
             ObjColor := RGBToColor(212, 168, 168);
             BackColor := RGBToColor(0, 0, 0);
@@ -646,6 +648,7 @@ begin
 	  IniBool(lRead,lIniFile, 'Perspective',lPrefs.Perspective);
 	  IniBool(lRead,lIniFile, 'AdditiveOverlay',lPrefs.AdditiveOverlay);
 	  IniBool(lRead,lIniFile, 'StartupScript',lPrefs.StartupScript);
+          {$IFDEF LINUX}IniBool(lRead,lIniFile, 'MesaWarned', lPrefs.isMesaWarned);{$ENDIF}
           //IniBool(lRead,lIniFile, 'ObjectBasedClipPlane',lPrefs.ObjectBasedClipPlane);
 	  {$IFDEF LCLCocoa}
 	  IniBool(lRead,lIniFile, 'RetinaDisplay',lPrefs.RetinaDisplay);
