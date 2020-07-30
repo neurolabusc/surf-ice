@@ -1411,7 +1411,6 @@ begin
       vao := 0; vbo := 0; vaoOverlay := 0; vboOverlay := 0;
       {$ELSE}
       {$IFDEF LEGACY_INDEXING}
-      //nFacesOverlay := 0; //TODO2020
       if index_vbo <> 0 then
          glDeleteBuffers(1,@index_vbo);
       if (vertex_vbo <> 0) then

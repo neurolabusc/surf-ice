@@ -18,21 +18,7 @@ const
     norm   : TPoint3f; //vertex normal
     clr : TRGBA;
   end;
-  (*const  kVert3dx = '#version 120'
-+#10'attribute vec3 Vert;'
-+#10'attribute vec3 Norm;'
-+#10'attribute vec4 Clr;'
-+#10'varying vec3 vN, vL, vV;'
-+#10'varying vec4 vClr, vP;'
-+#10'uniform vec3 LightPos = vec3(0.0, 20.0, 30.0); //LR, -DU+, -FN+'
-+#10'void main() {'
-+#10'    vP = vec4(Vert, 1.0);'
-+#10'    vN = normalize(gl_NormalMatrix * Norm);'
-+#10'    vV = -vec3(gl_ModelViewMatrix* vP);'
-+#10'    vL = normalize(gl_LightSource[0].position.xyz);'
-+#10'    gl_Position = gl_ModelViewProjectionMatrix * vP;'
-+#10'    vClr = Clr;'
-+#10'}'; *)
+
    const  kVert3d = '#version 120'
 +#10'attribute vec3 Vert;'
 +#10'attribute vec3 Norm;'
@@ -84,24 +70,22 @@ const
  +#10'varying vec4 vClr;'
  +#10'varying vec3 vN, vL, vV;'
  +#10'void main() {'
- +#10' float Ambient = 0.4;'
+ +#10' float Ambient = 0.5;'
  +#10' float Diffuse = 0.7;'
- +#10' float Specular = 0.6;'
+ +#10' float Specular = 0.2;'
  +#10' float Shininess = 60.0;'
  +#10' vec3 l = normalize(vL);'
  +#10' vec3 n = normalize(vN);'
  +#10' vec3 v = normalize(vV);'
  +#10' vec3 h = normalize(vL+v);'
  +#10' float diffuse = dot(vL,n);'
- +#10' vec3 a = gl_FrontMaterial.ambient.rgb;'
- +#10' a = mix(a.rgb, vClr.rgb, vClr.a);'
- +#10' vec3 d = a * Diffuse;'
-  +#10' a *= Ambient;'
- +#10' 	float diff = dot(n,l);'
- +#10' 	float spec = pow(max(0.0,dot(n,h)), Shininess);'
- +#10' 	vec3 backcolor = Ambient*vec3(0.1+0.1+0.1) + d*abs(diff);'
- +#10' 	float backface = step(0.00, n.z);'
- +#10' 	gl_FragColor = vec4(mix(backcolor.rgb, a + d*diff + spec*Specular,  backface), 1.0);'
+ +#10' vec3 a = vClr.rgb * Ambient;'
+ +#10' vec3 d = vClr.rgb * Diffuse;'
+ +#10' float diff = dot(n,l);'
+ +#10' float spec = pow(max(0.0,dot(n,h)), Shininess);'
+ +#10' vec3 backcolor = Ambient*vec3(0.1+0.1+0.1) + d*abs(diff);'
+ +#10' float backface = step(0.00, n.z);'
+ +#10' gl_FragColor = vec4(mix(backcolor.rgb, a + d*diff + spec*Specular,  backface), 1.0);'
  +#10'}';
 
 
@@ -183,7 +167,7 @@ var
   i,j,  n: integer;
 begin
      n := length(Indices);
-     if (n < 2) or (length(Verts) < 2) or (length(Verts) <> length(vNorms)) or (length(Verts) <> length(vRGBA)) then exit;
+     if (n < 2) or (length(Verts) < 2) or (length(Verts) <> length(vNorms)) or (length(Verts) <> length(vRGBA)) then exit(0);
      //glDeleteLists(displayList, 1);
      result := glGenLists(1);
      glNewList(result, GL_COMPILE);
@@ -214,47 +198,6 @@ begin
      glEndList();
      glLineWidth(1);
 end;
-
-(*function TColorToF (C: TColor; i: integer): single;
-begin
-     result := 1;
-     if i = 1 then result := red(C)/255;
-     if i = 2 then result := green(C)/255;
-     if i = 3 then result := blue(C)/255;
-end;
-
-procedure SetLighting (var lPrefs: TPrefs);
-// http://www.cs.brandeis.edu/~cs155/OpenGL%20Lecture_05_6.pdf
-//https://lost-contact.mit.edu/afs/su.se/i386_linux24/pkg/matlab/13/toolbox/matlab/graph3d/material.m
-//https://www.opengl.org/sdk/docs/man2/xhtml/glMaterial.xml
-// https://github.com/Psychtoolbox-3/Psychtoolbox-3/blob/master/Psychtoolbox/PsychDemos/OpenGL4MatlabDemos/UtahTeapotDemo.m
-var
-  kMaterial : array [1..5] of single = (0.3, 0.6, 0.9, 120, 1.0); //shiny
-  wcolor : array [1..4] of single = (1, 1, 1, 0.5);  //white
-  objcolor : array [1..4] of single = (1, 1, 1, 0.5);  //white
-  kaRGB, kdRGB, ksRGB : array [1..4] of single;
-  i: integer;
-begin
-  for i := 1 to 4 do begin
-    objcolor[i] := TColorToF(lPrefs.ObjColor,i);
-    kaRGB[i] := objColor[i] * kMaterial[1];
-    kdRGB[i] := objColor[i] * kMaterial[2];
-    ksRGB[i] := (((1-kMaterial[5]) * objColor[i]) +(kMaterial[5] * wcolor[i])) * kMaterial[3];
-  end;
-  //glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
-  glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GLint(GL_FALSE));
-  glEnable(GL_LIGHTING);
-  glEnable(GL_LIGHT0);
-  glLightfv(GL_LIGHT0, GL_AMBIENT, @KaRGB);
-  glLightfv(GL_LIGHT0, GL_DIFFUSE, @KdRGB);
-  glLightfv(GL_LIGHT0, GL_SPECULAR, @KsRGB);
-  glShadeModel(GL_SMOOTH);
-  glMaterialfv (GL_FRONT_AND_BACK, GL_AMBIENT, @objColor);
-  glMaterialfv (GL_FRONT_AND_BACK, GL_DIFFUSE, @objColor);
-  glMaterialfv (GL_FRONT_AND_BACK, GL_SPECULAR, @wColor);
-  glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, kMaterial[4]);
-end; *)
-
 
 {$IFNDEF DGL}  //gl.pp does not link to the glu functions, so we will write our own
 procedure gluPerspective (fovy, aspect, zNear, zFar: single);

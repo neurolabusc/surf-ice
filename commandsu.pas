@@ -140,7 +140,7 @@ knProc = 72;
    (Ptr:@OVERLAYCLOSEALL;Decl:'OVERLAYCLOSEALL';Vars:''),
    (Ptr:@OVERLAYCOLORNAME;Decl:'OVERLAYCOLORNAME';Vars:'(lOverlay: integer; lFilename: string)'),
    (Ptr:@OVERLAYLOAD;Decl:'OVERLAYLOAD';Vars:'(lFilename: string)'),
-   (Ptr:@OVERLAYEXTREME;Decl:'OVERLAYMINMAX';Vars:'(lOverlay, lMode: integer)'),
+   (Ptr:@OVERLAYEXTREME;Decl:'OVERLAYEXTREME';Vars:'(lOverlay, lMode: integer)'),
    (Ptr:@OVERLAYMINMAX;Decl:'OVERLAYMINMAX';Vars:'(lOverlay: integer; lMin,lMax: single)'),
    (Ptr:@OVERLAYOPACITY;Decl:'OVERLAYOPACITY';Vars:'(lOverlay: integer; OPACITY: byte)'),
    (Ptr:@OVERLAYTRANSPARENCYONBACKGROUND;Decl:'OVERLAYTRANSPARENCYONBACKGROUND';Vars:'(lPct: integer)'),

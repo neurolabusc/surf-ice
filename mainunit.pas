@@ -347,6 +347,8 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     procedure PaintModeMenuClick(Sender: TObject);
     procedure PasteMenuClick(Sender: TObject);
     procedure PrevOverlayMenuClick(Sender: TObject);
+    procedure ScriptMemoKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState
+      );
     procedure Shaders1Click(Sender: TObject);
     procedure UpdateLayerBox(NewLayers: boolean);
 
@@ -2290,6 +2292,13 @@ begin
   UpdateLUT(i, LayerColorDrop.ItemIndex);
   LayerWidgetChange(nil);
   UpdateLayerBox(true);
+end;
+
+procedure TGLForm1.ScriptMemoKeyUp(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  inherited;
+  ScriptBox.Caption := format('Scripting [Line %d Col %d]', [ScriptMemo.CaretPos.Y+1, ScriptMemo.CaretPos.X+1]);
 end;
 
 procedure TGLForm1.Shaders1Click(Sender: TObject);
