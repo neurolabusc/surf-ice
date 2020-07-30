@@ -6,7 +6,7 @@
 // NOT COREGL, DEFINED LEGACY_INDEXING : uses indexed vertices and glDrawElements (medium efficiency)
 // NOT COREGL, NOT LEGACY_INDEXING : glCallList with redundant vertices (least efficient)
 
-{$DEFINE COREGL}
+//{$DEFINE COREGL}
 {$DEFINE LEGACY_INDEXING}
 {$DEFINE GEOM_GLEXT}
 //{$DEFINE HEMISSAO}  //for hemispherical SSAO - requires shaders that save surface normal - see hemiAO3 and hemiAO

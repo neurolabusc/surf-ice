@@ -23,7 +23,7 @@ type
     OverlayClip, StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube, MultiSample, BlackDefaultBackground,
      Colorbar,TracksAreTubes, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,ColorBarPrecedenceTracksNotOverlays,HideDarkTracks, HideBrightTracks,
      OverlappingOverlaysOverwrite, ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting, isFlipMeshOverlay, DarkMode,
-    RetinaDisplay, GenerateSmoothCurves {$IFDEF LINX}, isMesaWarned {$ENDIF} : boolean;
+    RetinaDisplay, GenerateSmoothCurves {$IFDEF LINUX}, isMesaWarned {$ENDIF} : boolean;
     TrackTubeSlices, ScreenCaptureZoom,ColorbarColor,ColorBarPosition,
     window_width, window_height, RenderQuality, 
     StartupWindowMode,
