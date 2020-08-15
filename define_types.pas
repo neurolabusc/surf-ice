@@ -74,7 +74,8 @@ function RGBA(lR,lG,lB,lA: byte): TRGBA;
 function CreateUnitRect (L,T,R,B: single) : TUnitRect;
 procedure IntBound (var lVal: integer; lMin, lMax: integer);
 function UnitBound (lS: single): single;
-procedure ReadLnBin(var f: TFByte; var s: string);
+//procedure ReadLnBin(var f: TFByte; var s: string);
+function ReadLnBin(var f: TFByte; var s: string): boolean; inline;
 procedure SwapSingle(var s : single);
 procedure SwapDouble(var d : double);
 procedure SwapLongInt(var s : LongInt);
@@ -478,7 +479,7 @@ begin
      end;
 end;
 {$ELSE}
-procedure ReadLnBin(var f: TFByte; var s: string); inline;
+function ReadLnBin(var f: TFByte; var s: string): boolean; inline;
 const
   kEOLN = $0A;
 var
@@ -490,9 +491,9 @@ begin
            try
               Read(f,bt);
            except
-                 exit;
+                 exit(false);
            end;
-           if bt = kEOLN then exit;
+           if bt = kEOLN then exit(true);
            s := s + Chr(bt);
      end;
 end;

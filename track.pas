@@ -9,7 +9,7 @@ uses
     ClipBrd,dialogs,colorTable,
   {$endif}
   Classes, SysUtils, math, define_types, matmath, track_simplify, zstream, strutils;
-
+{$DEFINE RESTARTIDX}
 Type
 
 // const
@@ -35,7 +35,12 @@ TTrack = class
   index_vboTrack, vertex_vboTrack: GLuint;
   {$ENDIF}
   {$ENDIF}
+  {$IFDEF RESTARTIDX}
   tracks: array of single;
+  {$ELSE}
+  lineVtx: array of  TPoint3f;
+  lineFinalVertex: array of  Uint32;
+  {$ENDIF}
   scalarLUT: TLUT;
   scalarSelected: integer;
   scalars: array of TScalar;
@@ -71,7 +76,7 @@ TTrack = class
     {$ifndef isTerminalApp}
     procedure DrawGL;
     {$endif}
-    procedure CenterX;
+    //procedure CenterX;
     destructor Destroy; override;
   end;
 
@@ -142,7 +147,7 @@ begin
 end;
 {$ENDIF}
 
-procedure TTrack.CenterX;
+(*procedure TTrack.CenterX;
 var
   offset: single;
    i, m, mi: integer;
@@ -173,7 +178,7 @@ begin
         end;
   end;
   setDescriptives;
-end; // CenterX()
+end; // CenterX()  *)
 
 procedure TTrack.Close;
 var i: integer;
@@ -187,7 +192,12 @@ begin
      n_vertices := 0;
      n_faces := 0;
      n_indices := 0;
+     {$IFDEF RESTARTIDX}
      setlength(tracks, 0);
+     {$ELSE}
+     setlength(lineVtx, 0);
+     setlength(lineFinalVertex, 0);
+     {$ENDIF}
      if scalars <> nil then begin  //close all open properties/scalars
         for i := 0 to (length(scalars)-1) do begin
           scalars[i].scalar := nil;
@@ -237,6 +247,7 @@ begin
      result.A := 255;
 end;
 
+{$IFDEF RESTARTIDX}
 procedure TTrack.BuildListStrip;
 // create displaylist where tracks are drawn as connected line segments
 var
@@ -466,16 +477,445 @@ begin
   n_faces := 0;
 end; // BuildList()
 
-function TTrack.HasScalarPerFiberColor: boolean;
+procedure TTrack.BuildListTubes ;
+// create displaylist where tracks are drawn as connected cylinders
+//const
+//  kSlices = 5; //the cylinder is a pie cut into this many slices: fewer = simpler,  more = less boxy
+var
+  vRGBA: TVertexRGBA;
+  normRGB: TPoint3f;
+  normRGBA: TRGBA;
+  pts: array of TPoint3f;
+  len, radius: single;
+  numCylVert, numVert,  mprev, m, mi, i, j, ntracks, nfiber, nvtx: integer;
+  vertices: TVertices;
+  faces, cylFace: TFaces;
+  numFaces, numCylFace,  maxLinks: integer;
+  cylVert: TVertices;
+  B, startPt, endPt: TPoint3f;
+  trackLinks : array of integer;
+  perVertexScalars: array of single;
+  isScalarPerFiberColor : boolean = false;
+  isScalarPerVertexColor: boolean = false;
+  hideFiber : boolean;
 begin
-  result := false;
   if (ScalarSelected >= 0) and (length(Scalars) > ScalarSelected) then begin
     if  length(Scalars[ScalarSelected].scalar) = n_count then
-        result  := true; //one color per fiber
-    //else
-    //    isScalarPerVertexColor := true;
+        isScalarPerFiberColor := true //one color per fiber
+    else
+        isScalarPerVertexColor := true;
   end;
+  //tm := gettickcount64();
+  n_indices := 0;
+  n_faces := 0;
+  n_vertices := 0;
+  maxLinks := 0;
+  if (length(tracks) < 4) then exit;
+  //if minFiberLinks < 3 then minFiberLinks := 3; //minimum to compute normal;
+  MakeCylinder( 1, 71, cylFace, cylVert, TrackTubeSlices);
+  numCylFace := length(cylFace);
+  numCylVert := TrackTubeSlices;//numCylVert div 2; //number of faces for half of cylinder (top or bottom disk)
+  ntracks := length(tracks);
+  radius := LineWidth * 0.25;
+  normRGBA := RGBA(0,0,0,255);;
+  {$DEFINE TWOPASS} //two passes is ~4 times quicker as we do not waste time re-allocating memory
+  {$IFDEF TWOPASS}
+  //first pass: find mesh size
+  setlength(trackLinks, ntracks);
+  i := 0;
+  nfiber := 0;
+  while i < ntracks do begin
+    trackLinks[i] := 0;
+    m := asInt( tracks[i]);
+    if m >= minFiberLinks then begin
+       startPt.X := tracks[i+1];
+       startPt.Y := tracks[i+2];
+       startPt.Z := tracks[i+3];
+       j := (3 * (m-1));
+       endPt.X := tracks[j+i+1];
+       endPt.Y := tracks[j+i+2];
+       endPt.Z := tracks[j+i+3];
+       normRGB := vector2RGB(startPt, endPt, len);  //here only used for length
+       hideFiber := false;
+       if len < minFiberLength then hideFiber := true;
+       if (isScalarPerFiberColor) and (gPrefs.HideDarkTracks) and (Scalars[ScalarSelected].scalar[nfiber] < Scalars[ScalarSelected].mnView) then
+          hideFiber := true;
+       if (isScalarPerFiberColor) and (gPrefs.HideBrightTracks) and (Scalars[ScalarSelected].scalar[nfiber] > Scalars[ScalarSelected].mxView) then
+          hideFiber := true;
+       if not HideFiber then begin
+          trackLinks[i] := m;
+          n_vertices := n_vertices + (m * numCylVert);
+          n_faces := n_faces + ((m - 1) * numCylFace); //fence post problem
+          if (m > maxLinks) then
+             maxLinks := m;
+       end;
+    end; //len >= minFiberLength
+    i := i + 1 + (3 * m);
+    nfiber := nfiber + 1;
+  end;
+  //GLForm1.Caption := inttostr(n_faces);
+  if (n_faces < 1) then exit;
+  //allocate memory
+  setlength(vertices, n_vertices); //each node as 1 disk (bottom of cylinder)
+  setlength(vRGBA, n_vertices); //each node as 1 disk (bottom of cylinder)
+  setlength(faces, n_faces);
+  setlength(pts, maxLinks);
+  setlength(perVertexScalars, maxLinks);
+  //second pass - load geometry for links that are long enough
+  n_vertices := 0;
+  n_faces := 0;
+  nfiber := 0;
+  nvtx := 0;
+  i := 0;
+  while i < ntracks do begin
+    m := asInt( tracks[i]);
+    if (trackLinks[i] >= minFiberLinks) then begin
+       inc(i);
+       for mi := 0 to (m-1) do begin
+              pts[mi].X := tracks[i]; inc(i);
+              pts[mi].Y := tracks[i]; inc(i);
+              pts[mi].Z := tracks[i]; inc(i);
+              if isScalarPerVertexColor then
+                 perVertexScalars[mi] := Scalars[ScalarSelected].scalar[nvtx+mi];
+       end;
+       normRGB := vector2RGB(pts[0], pts[m-1], len);
+       numFaces := 0;
+       numVert := 0;
+       mprev := 0; //location of previous vertex
+       B := ptf(0,0,0); //need to generate random binormal
+       for mi := 0 to (m-2) do begin
+           makeCylinderEnd(radius, pts[mprev], pts[mi], pts[mi+1], cylVert, B, TrackTubeSlices);
+           for j := 0 to (numCylFace - 1) do //add this cylinder
+               faces[j+numFaces+n_faces] := vectorAdd(cylFace[j], numVert+n_vertices);
+           numFaces := numFaces + numCylFace;
+           for j := 0 to (numCylVert - 1) do //add bottom of this cylinder
+               vertices[j+numVert+n_vertices] := cylVert[j];
+           if isScalarPerVertexColor then begin
+              normRGBA := inten2rgb1(perVertexScalars[mi], Scalars[ScalarSelected].mnView, Scalars[ScalarSelected].mxView,  scalarLUT );
+              for j := 0 to (numCylVert - 1) do
+                  vRGBA[j+numVert+n_vertices] := normRGBA;
+           end;
+           numVert := numVert + numCylVert;
+           mprev := mi;
+       end;
+       //faces[numFaces+n_faces-1] := vectorAdd(cylFace[j], 0);
+       makeCylinderEnd(radius, pts[m-2], pts[m-1], pts[m-1], cylVert, B, TrackTubeSlices);
+       for j := 0 to (numCylVert - 1) do //add top of last cylinder
+           vertices[j+numVert+n_vertices] := cylVert[j];
+       if isScalarPerVertexColor then begin
+          normRGBA := inten2rgb1(perVertexScalars[m-1], Scalars[ScalarSelected].mnView, Scalars[ScalarSelected].mxView,  scalarLUT );
+          for j := 0 to (numCylVert - 1) do
+              vRGBA[j+numVert+n_vertices] := normRGBA;
+       end;
+       numVert := numVert + numCylVert;
+       if not isScalarPerVertexColor then begin
+         if isScalarPerFiberColor then begin
+            normRGBA := inten2rgb1(Scalars[ScalarSelected].scalar[nfiber], Scalars[ScalarSelected].mnView, Scalars[ScalarSelected].mxView,  scalarLUT );
+            normRGB := RGBA2pt3f(normRGBA);
+         end;
+         normRGBA := mixRandRGBA(normRGB, ditherColorFrac);
+         for j := 0 to ((m * numCylVert) -1) do
+             vRGBA[j+n_vertices] := normRGBA;
+       end;
+       n_vertices := n_vertices + (m * numCylVert); //each node as 1 disk (bottom of cylinder)
+       n_faces := n_faces + (m - 1) * numCylFace; //-1: fencepost error
+    end else //len >= minFiberLength
+        i := i + 1 + (3 * m);
+    nfiber := nfiber + 1;
+    nvtx := nvtx + m;
+  end;
+  (*AssignFile(f, '~/Test.txt');
+  ReWrite(f);
+  writeln(f, floattostr(radius),' -> ',inttostr(TrackTubeSlices));
+  i := 0;
+  writeln(f, floattostr(pts[i].X),kTab, floattostr(pts[i].Y),kTab, floattostr(pts[i].Z) );
+    i :=1;
+  writeln(f, floattostr(pts[i].X),kTab, floattostr(pts[i].Y),kTab, floattostr(pts[i].Z) );
+  writeln(f,'xxx');
+
+  for i := 0 to (length(vertices)-1) do
+      writeln(f, floattostr(vertices[i].X),kTab, floattostr(vertices[i].Y),kTab, floattostr(vertices[i].Z) );
+  CloseFile(f); *)
+  setlength(trackLinks,0);
+  setlength(pts, 0);
+{$ELSE}
+  i := 0;
+  while i < ntracks do begin
+        m :=   asInt( tracks[i]); inc(i);
+        if m >= minFiberLinks then begin
+          setlength(pts, m);
+          for mi := 0 to (m-1) do begin
+              pts[mi].X := tracks[i]; inc(i);
+              pts[mi].Y := tracks[i]; inc(i);
+              pts[mi].Z := tracks[i]; inc(i);
+          end;
+          normRGB := vector2RGB(pts[0], pts[m-1], len);
+          if len >= minFiberLength then begin
+              setlength(vertices, n_vertices + (m * numCylVert) ); //each node as 1 disk (bottom of cylinder)
+              setlength(faces, n_faces + ((m - 1) * numCylFace)  ); //-1: fencepost error
+              numFaces := 0;
+              numVert := 0;
+              mprev := 0; //location of previous vertex
+              for mi := 0 to (m-2) do begin
+                  makeCylinderEnd(radius, pts[mprev], pts[mi], pts[mi+1], cylVert, kSlices);
+                  for j := 0 to (numCylFace - 1) do //add this cylinder
+                      //faces[j+numFaces+n_faces] := pti(cylFace[j].X+numVert, cylFace[j].Y+numVert, cylFace[j].Z+numVert) ;
+                      faces[j+numFaces+n_faces] := vectorAdd(cylFace[j], numVert+n_vertices);
+                  numFaces := numFaces + numCylFace;
+                  for j := 0 to (numCylVert - 1) do //add bottom of this cylinder
+                      vertices[j+numVert+n_vertices] := cylVert[j];
+                  numVert := numVert + numCylVert;
+                  mprev := mi;
+              end;
+              makeCylinderEnd(radius, pts[m-2], pts[m-1], pts[m-1], cylVert, kSlices);
+              for j := 0 to (numCylVert - 1) do //add top of last cylinder
+                  vertices[j+numVert+n_vertices] := cylVert[j];
+              numVert := numVert + numCylVert;
+            normRGBA := mixRandRGBA(normRGB, ditherColorFrac);
+            setlength(vRGBA, n_vertices + (m * numCylVert) ); //each node as 1 disk (bottom of cylinder)
+            for j := 0 to ((m * numCylVert) -1) do
+                vRGBA[j+n_vertices] := normRGBA;
+            n_vertices := n_vertices + (m * numCylVert); //each node as 1 disk (bottom of cylinder)
+            n_faces := n_faces + (m - 1) * numCylFace; //-1: fencepost error
+          end; //len >= minFiberLength
+        end else
+            i := i + (3 * m);
+  end;
+{$ENDIF}
+  //utime := gettickcount64() - tm;
+
+  {$IFDEF COREGL}
+  BuildDisplayList(faces, vertices, vRGBA, vao, vbo, normRGBA);
+  {$ELSE}
+    {$IFDEF LEGACY_INDEXING}
+    BuildDisplayListIndexed(faces, vertices, vRGBA, index_vboTrack, vertex_vboTrack, normRGBA);
+    //SetVertexAttrib(gShader.programTrackIdxID, vertex_vboTrack);
+    {$ELSE}
+    displayListTrack := BuildDisplayList(faces, vertices, vRGBA, normRGBA);
+    {$ENDIF}
+  {$ENDIF}
 end;
+
+{$ELSE}
+procedure TTrack.BuildListStrip;
+// create displaylist where tracks are drawn as connected line segments
+var
+  vRGBA: TVertexRGBA;
+  Indices,vType: TInts;
+  Verts, vNorms: TVertices;
+  normRGB: TPoint3f;
+  normRGBA : TRGBA;
+  pts, norms: array of TPoint3f;
+  len: single;
+  lineStart, lineEnd, m, ntracks, maxLinks,  mi, i,j, nfiber, nvertex: integer;
+  fiberSurvives: array of boolean;
+  startPt, endPt:TPoint3f;
+  isScalarPerFiberColor : boolean = false;
+  isScalarPerVertexColor: boolean = false;
+  hideFiber: boolean;
+begin
+  randomize;
+
+  //if length(Scalars) > 0 then
+  //   GLForm1.Caption := format('selected %d available %d count %d streamline count %d',[ScalarSelected,length(Scalars), length(Scalars[0].scalar), n_count ]);
+  if (ScalarSelected >= 0) and (length(Scalars) > ScalarSelected) then begin
+   if  length(Scalars[ScalarSelected].scalar) = n_count then
+       isScalarPerFiberColor := true //one color per fiber
+   else
+       isScalarPerVertexColor := true;
+   {$IFDEF UNIX}writeln(format('ScalarSelected %d Scalars %d Fibers %d',[ScalarSelected, length(Scalars[ScalarSelected].scalar), n_count]));{$ENDIF}
+  end;
+  //  exit;
+  maxLinks := 0;
+  n_faces := 0;
+  n_vertices := 0;
+  n_indices := 0;
+  TrackTubeSlices := 5;
+  if (length(lineVtx) < 2) or (length(lineFinalVertex) < 1) then exit;
+  //if minFiberLinks < 3 then minFiberLinks := 3; //minimum to compute normal;
+  ntracks := length(lineFinalVertex);
+  //uTime := GetTickCount64();
+  {$DEFINE TWOPASS_STRIP} //two passes is ~2 times quicker as we do not waste time re-allocating memory
+  {$IFDEF TWOPASS_STRIP}
+  //first pass: find mesh size
+  setlength(fiberSurvives, ntracks); //
+  nfiber := 0;
+  lineStart := 0;
+  for i := 0 to (ntracks - 1) do begin
+    fiberSurvives[i] := false;
+    lineEnd := lineFinalVertex[i];
+    m := lineEnd-lineStart+1;
+    if m >= minFiberLinks then begin
+       startPt := lineVtx[lineStart];
+       endPt := lineVtx[lineEnd];
+       normRGB := vector2RGB(startPt, endPt, len);
+       hideFiber := false;
+       if len < minFiberLength then hideFiber := true;
+       if (isScalarPerFiberColor) and (gPrefs.HideDarkTracks) and (Scalars[ScalarSelected].scalar[nfiber] < Scalars[ScalarSelected].mnView) then
+          hideFiber := true;
+       if (isScalarPerFiberColor) and (gPrefs.HideBrightTracks) and (Scalars[ScalarSelected].scalar[nfiber] > Scalars[ScalarSelected].mxView) then
+          hideFiber := true;
+       if not hideFiber then begin
+          fiberSurvives[i] := false;
+          n_vertices := n_vertices + 2*m+8; //Duplicate vertices + 8 for the Begin and End Imposter
+          n_indices := n_indices + 2*m+11; //Same as Above + 3 Primitive Restart
+          {$IFDEF COREGL}
+          n_faces := n_faces + 2*m + 3;//adjacent start + adjacent end + primitive restart!
+          {$ELSE}
+          n_faces := n_faces + m + 1;//primitive restart!
+          {$ENDIF}
+          if (m > maxLinks) then
+             maxLinks := m;
+       end;
+       lineStart := lineEnd + 1;
+    end; //len >= minFiberLength
+  end;
+
+  if (maxLinks < 1) then exit;
+  setlength(pts, maxLinks);
+  setlength(norms, maxLinks);
+  setlength(vRGBA, n_vertices);
+  setlength(vType, n_vertices);
+  setlength(Verts, n_vertices);
+  setlength(vNorms, n_vertices);
+  setlength(Indices, n_indices);
+
+
+  //second pass: fill arrays
+  n_vertices := 0;
+  n_faces := 0;
+  n_indices := 0;
+  nfiber := 0;
+  nvertex := 0;
+  lineStart := 0;
+  for i := 0 to (ntracks - 1) do begin
+        lineEnd := lineFinalVertex[i];
+        if not fiberSurvives[i] then begin
+          lineStart := lineEnd + 1;
+          continue;
+        end;
+        m := lineEnd - lineStart + 1;
+        for mi := 0 to (m-1) do
+              pts[mi] := lineVtx[mi+lineStart];
+        if isScalarPerFiberColor then begin
+           normRGBA := inten2rgb1(Scalars[ScalarSelected].scalar[nfiber], Scalars[ScalarSelected].mnView, Scalars[ScalarSelected].mxView,  scalarLUT );
+           normRGB := RGBA2pt3f(normRGBA);
+        end else
+            normRGB := vector2RGB(pts[0], pts[m-1], len);
+        normRGBA := mixRandRGBA(normRGB, ditherColorFrac);
+        if isScalarPerVertexColor then
+           normRGBA :=  inten2rgb1(Scalars[ScalarSelected].scalar[nvertex], Scalars[ScalarSelected].mnView, Scalars[ScalarSelected].mxView,  scalarLUT );
+        for mi := 0 to (m-2) do
+              norms[mi] := normalDirection(pts[mi], pts[mi+1]); //line does not have a surface normal, but a direction
+          //Add the first end imposter
+          for mi:=0 to 3 do begin
+              Verts[n_vertices] := pts[0];
+              vNorms[n_vertices].x := -norms[0].x;
+              vNorms[n_vertices].y := -norms[0].y;
+              vNorms[n_vertices].z := -norms[0].z;
+              if mi>1 then
+                 vType[n_vertices] := 1
+              else
+                  vType[n_vertices] := 2;
+              vRGBA[n_vertices] := normRGBA;
+              Indices[n_indices] := n_vertices;inc(n_indices);
+              inc(n_vertices);
+          end;
+          Indices[n_indices] := kPrimitiveRestart;inc(n_indices);
+          //Duplicate every vertice
+          for mi := 0 to (m-2) do begin
+              if isScalarPerVertexColor then
+                 normRGBA :=  inten2rgb1(Scalars[ScalarSelected].scalar[nvertex+mi], Scalars[ScalarSelected].mnView, Scalars[ScalarSelected].mxView,  scalarLUT );
+              Verts[n_vertices] := pts[mi];
+              vNorms[n_vertices] := norms[mi];
+              vType[n_vertices] := 0;
+              vRGBA[n_vertices] := normRGBA;
+              Indices[n_indices] := n_vertices;inc(n_indices);
+              inc(n_vertices);
+              Verts[n_vertices] := pts[mi];
+              vNorms[n_vertices] := norms[mi];
+              vType[n_vertices] := 0;
+              vRGBA[n_vertices] := normRGBA;
+              Indices[n_indices] := n_vertices;inc(n_indices);
+              inc(n_vertices);
+          end;
+          if isScalarPerVertexColor then
+             normRGBA :=  inten2rgb1(Scalars[ScalarSelected].scalar[nvertex+m-1], Scalars[ScalarSelected].mnView, Scalars[ScalarSelected].mxView,  scalarLUT );
+          //The normal for the last vestice is different
+          Verts[n_vertices] := pts[m-1];
+          vNorms[n_vertices] := norms[m-2];
+          vType[n_vertices] := 0;
+          vRGBA[n_vertices] := normRGBA;
+          Indices[n_indices] := n_vertices;inc(n_indices);
+          inc(n_vertices);
+          Verts[n_vertices] := pts[m-1];
+          vNorms[n_vertices] := norms[m-2];
+          vType[n_vertices] := 0;
+          vRGBA[n_vertices] := normRGBA;
+          Indices[n_indices] := n_vertices;inc(n_indices);
+          inc(n_vertices);
+          Indices[n_indices] := kPrimitiveRestart;inc(n_indices);
+	  //Add the Last end imposter
+          for mi:=0 to 3 do begin
+              Verts[n_vertices] := pts[m-1];
+              vNorms[n_vertices] := norms[m-2];
+              if mi>1 then begin vType[n_vertices] := 1;
+                      end else vType[n_vertices] := 2;
+              vRGBA[n_vertices] := normRGBA;
+              Indices[n_indices] := n_vertices;inc(n_indices);
+              inc(n_vertices);
+          end;
+          Indices[n_indices] := kPrimitiveRestart;inc(n_indices);
+        nfiber := nfiber + 1;
+        nvertex := nvertex + m;
+        lineStart := lineEnd + 1;
+  end;
+  {$ELSE}
+   {$IFDEF COREGL} Use two pass or change code below for GL_LINE_STRIP_ADJACENCY {$ENDIF}
+  i := 0;
+  while i < ntracks do begin
+        m :=   asInt( tracks[i]); inc(i);
+        if m >= minFiberLinks then begin
+          setlength(pts, m);
+          setlength(norms, m);
+          for mi := 0 to (m-1) do begin
+              pts[mi].X := tracks[i]; inc(i);
+              pts[mi].Y := tracks[i]; inc(i);
+              pts[mi].Z := tracks[i]; inc(i);
+          end;
+          normRGB := vector2RGB(pts[0], pts[m-1], len);
+          if len >= minFiberLength then begin
+            normRGBA := mixRandRGBA(normRGB, ditherColorFrac);
+            for mi := 1 to (m-2) do
+                norms[mi] := normalDirection(pts[mi-1], pts[mi+1]); //line does not have a surface normal, but a direction
+            setlength(vRGBA, n_vertices + m);
+            setlength(Verts, n_vertices + m);
+            setlength(vNorms, n_vertices + m);
+            setlength(Indices, n_faces + m + 1);
+            //create as line strip - repeat start/end to end primitive
+            for mi := 0 to (m-1) do begin
+                vRGBA[mi+n_vertices] := normRGBA;
+                Verts[mi+n_vertices] := pts[mi];
+                vNorms[mi+n_vertices] := norms[mi];
+                Indices[mi+n_faces] := mi+n_vertices;
+            end;
+            Indices[m+n_faces] := kPrimitiveRestart;
+            n_vertices := n_vertices + m ;
+            n_faces := n_faces + m + 1;
+          end;
+        end else
+            i := i + (3 * m);
+  end;
+  {$ENDIF}
+  {$IFDEF COREGL}
+  BuildDisplayListStrip(Indices, Verts, vNorms, vRGBA, vType, LineWidth, vao, vbo);
+  {$ELSE}
+  displayListTrack := BuildDisplayListStrip(Indices, Verts, vNorms, vRGBA, LineWidth);
+  {$ENDIF}
+  n_indices := length(Indices);
+  n_vertices := 0;
+  n_faces := 0;
+end; // BuildList()
 
 procedure TTrack.BuildListTubes ;
 // create displaylist where tracks are drawn as connected cylinders
@@ -696,6 +1136,20 @@ begin
   {$ENDIF}
 end;
 
+{$ENDIF}
+
+function TTrack.HasScalarPerFiberColor: boolean;
+begin
+  result := false;
+  if (ScalarSelected >= 0) and (length(Scalars) > ScalarSelected) then begin
+    if  length(Scalars[ScalarSelected].scalar) = n_count then
+        result  := true; //one color per fiber
+    //else
+    //    isScalarPerVertexColor := true;
+  end;
+end;
+
+
 procedure TTrack.DrawGL;
 {$IFDEF LEGACY_INDEXING}
 var
@@ -908,10 +1362,13 @@ begin
     showmessage('This is a mesh file: rename with a ".vtk" extension and use File/Open to view: '+ str);
     goto 666;
   end;
-  if pos('LINES', UpperCase(str)) <> 1 then begin
+  while pos('LINES', UpperCase(str)) <> 1 do begin
+    if not readItem (str) then goto 666;  //Read one item at a time, as FSU data does not use EOLN: "LINES 1 348 347" not  "LINES 1 348\n347"
+  end;
+  (*if pos('LINES', UpperCase(str)) <> 1 then begin
     showmessage('Expected header to report "LINES" not '+ str);
     goto 666;
-  end;
+  end;*)
   n_count := readInt;
   n_items := readInt;
   if (n_count < 1) or (n_items < 1) then goto 666;
@@ -945,6 +1402,69 @@ begin
    SetString(Result, vms.Memory, vms.Size)
 end; //MemoryStreamAsString()
 
+(*procedure TTrack.SaveVtk(const FileName: string);
+var
+   f : TextFile;
+   m, mi, i,j,num_v, k, mSum: integer;
+   offsets: array of integer;
+   vert: array of single;
+   outStream : TMemoryStream;
+begin
+    num_v := (length(tracks) - n_count) div 3;
+    if (num_v < 1) or (n_count < 2) then begin
+       showmessage('You need to open a mesh before you can save it');
+       exit;
+    end;
+	FileMode := fmOpenWrite;
+  	AssignFile(f, FileName);
+    ReWrite(f);
+    WriteLn(f, '# vtx DataFile Version 3.0');
+    WriteLn(f, 'vtx output');
+    WriteLn(f, 'BINARY');
+    WriteLn(f, 'DATASET STREAMLINES');
+    //serialize data
+    setlength(vert, num_v * 3);
+    //n_count
+    setlength(offsets, n_count);
+    i := 0;
+    j := 0;
+    k := 0;
+    mSum := -1;
+    while i < length(tracks) do begin
+        //showmessage(format('%d -> %d',[i, m]));
+        m :=   asInt( tracks[i]); inc(i);
+        mSum += m;
+        offsets[k] := mSum; inc(k);
+        for mi := 0 to (m-1) do begin
+              vert[j] := tracks[i]; inc(i);  inc(j);
+              vert[j] := tracks[i]; inc(i);  inc(j);
+              vert[j] := tracks[i]; inc(i);  inc(j);
+        end;
+    end;
+    {$IFDEF ENDIAN_LITTLE}
+    for i := 0 to (n_count -1) do
+        SwapLongInt(offsets[i]);
+    for i := 0 to ((num_v*3) -1) do begin
+        SwapSingle(vert[i]);
+    end;
+    {$ENDIF}
+    //showmessage(format('yyyy %d %d',[n_items, num_v]));
+    //write points
+    WriteLn(f, 'POINTS '+inttostr(num_v) +' float');  //POINTS 7361202 float
+    outStream := TMemoryStream.Create;
+    outStream.Write(pointer(vert)^, num_v * 3 * sizeOf(single));
+    WriteLn(f, MemoryStreamAsString(outStream));
+    outStream.Free;
+    //write lines
+    WriteLn(f, 'OFFSETS '+inttostr(n_count)+' long');   //LINES 50076 7411278
+    outStream := TMemoryStream.Create;
+    outStream.Write(pointer(offsets)^, n_count * sizeOf(longint));
+    WriteLn(f, MemoryStreamAsString(outStream));
+    outStream.Free;
+    CloseFile(f);
+    FileMode := fmOpenRead;
+end; //SaveVtk()
+      *)
 procedure TTrack.SaveVtk(const FileName: string);
 var
    f : TextFile;
@@ -1071,10 +1591,14 @@ begin
     showmessage('This is a mesh file: rename with a ".vtk" extension and use File/Open to view: '+ str);
     goto 666;
   end;
-  if pos('LINES', UpperCase(str)) <> 1 then begin
+  while (pos('LINES', UpperCase(str)) <> 1) do begin
+      if not ReadLnBin(f, str) then
+         goto 666;
+  end;
+  (*if pos('LINES', UpperCase(str)) <> 1 then begin
     showmessage('Expected header to report "LINES" not '+ str);
     goto 666;
-  end;
+  end;*)
   strlst.DelimitedText := str;
   n_count := StrToIntDef(strlst[1],0);
   n_items := StrToIntDef(strlst[2],0);

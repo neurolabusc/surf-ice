@@ -8069,7 +8069,7 @@ begin
 	   MakePyramid
 	else
 	    result := true;
-        {$IFDEF TIMER}GLForm1.ClipBox.Caption :=  inttostr(MilliSecondsBetween(Now,StartTime)); {$ENDIF}
+        {$IFDEF TIMER}printf('mesh load time '+  inttostr(MilliSecondsBetween(Now,StartTime))); {$ENDIF}
         //MakePyramid;
         if not CheckMesh then
            result := false; //note: prior "MakePyramid" will pass CheckMesh but should still return "false"
@@ -9914,7 +9914,7 @@ begin
    slope := kBins * 1/range;
    if isExcludeZero then begin
       sum := 0;
-      for i := 0 to num_v do begin
+      for i := 0 to (num_v-1) do begin
           if overlay[lOverlayIndex].intensity[i] <> 0 then begin
              bin := round((overlay[lOverlayIndex].intensity[i] - mn) * slope);
              IntBound(bin, 0, kBins);
@@ -9925,7 +9925,7 @@ begin
       if sum = 0 then exit;
       pct := trunc(kFrac * sum);
    end else begin
-       for i := 0 to num_v do begin
+       for i := 0 to (num_v-1) do begin
          bin := round((overlay[lOverlayIndex].intensity[i] - mn) * slope);
          IntBound(bin, 0, kBins);
          inc(cnt[bin]);

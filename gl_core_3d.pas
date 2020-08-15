@@ -6,7 +6,7 @@ interface
 
 uses
 {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
-  gl_core_matrix, Classes, SysUtils, mesh, matMath, Graphics, define_types, Prefs, Track;
+  gl_core_matrix, Classes, SysUtils, mesh, matMath, Graphics, define_types, Prefs, Track, math;
 
 //procedure LoadBufferData (var faces: TFaces; var vertices: TVertices;  var vertexRGBA: TVertexRGBA) ;
 //function BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA): GLuint;
@@ -469,8 +469,17 @@ begin
      else
          result := round(f * 32768);
 end;*)
-
 function AsGL_INT_2_10_10_10_REV(f: TPoint3f): int32;
+//pack 3 32-bit floats as 10 bit signed integers, assumes floats normalized to -1..1
+var
+   x,y,z: int32;
+begin
+     x := (Float2Int16(f.X)) shr 6;
+     y := (Float2Int16(f.Y)) shr 6;
+     z := (Float2Int16(f.Z)) shr 6;
+     result := (z shl 20)+ (y shl 10) + (x shl 0);
+end;
+(*function AsGL_INT_2_10_10_10_REV(f: TPoint3f): int32;
 //pack 3 32-bit floats as 10 bit signed integers, assumes floats normalized to -1..1
 var
    x,y,z: uint16;
@@ -479,7 +488,7 @@ begin
      y := uint16(Float2Int16(f.Y)) shr 6;
      z := uint16(Float2Int16(f.Z)) shr 6;
      result := (z shl 20)+ (y shl 10) + (x shl 0);
-end;
+end; *)
 
 function AsGL_INT_2_10_10_10_REV_T(f: TPoint3f; g: uint16): int32;
 //pack 3 32-bit floats as 10 bit signed integers, assumes floats normalized to -1..1 and uses the 2bit to a int between 0 and 3
@@ -564,78 +573,73 @@ begin
   glDeleteBuffers(1, @vbo_point);
 end;
 
-//procedure BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA; var vao, vbo: gluint; Clr: TRGBA);
 procedure BuildDisplayListStrip(Indices: TInts; vertices, vNorm: TVertices; vRGBA: TVertexRGBA; vType: TInts; LineWidth: integer; var vao, vbo: gluint);
 const
     kATTRIB_VERT = 0;  //vertex XYZ are positions 0,1,2
     kATTRIB_NORM = 3;  //normal XYZ are positions 3,4,5
     kATTRIB_CLR = 6;   //color RGBA are positions 6,7,8,9
+const
+     kMx = (256*3+2);
+     kMx2 = (4*256*256+4*256+3);
 var
   vnc: array of TVtxNormClr;
   vbo_point : GLuint;
-  i: integer;
-  DataCilinder: array[0..256,0..2] of real;
-  FinalDataCilinder: array[0..256*3] of Int8;
-  DataSphere: array[0..256,0..256,0..3] of real;
-  FinalDataSphere: array[0..256*256*4] of Int8;
+  i,j,k: integer;
+  DataCylinder: array[0..256,0..2] of single;
+  FinalDataCylinder: array[0..kMx] of UInt8;
+  DataSphere: array[0..256,0..256,0..3] of single;
+  //FinalDataSphere: array[0..kMx2] of Int8;
+  FinalDataSphere: array[0..kMx2] of UInt8;
   RenderTexture: array [0..1] of GLuint;
-  angle, rad,tx,tz,d: real;
-  j,k: integer;
-
+  angle, rad,tx,tz,d: single;
+  fx: single;
 begin
   //create VBO that combines vertex, normal and color information
   if length(vRGBA) <> length(vertices) then
      exit;
   setlength(vnc, length(vertices));
   //set every vertex
-
   for i := 0 to (length(vertices) -1) do begin
       vnc[i].vtx := vertices[i];
       vnc[i].norm :=  AsGL_INT_2_10_10_10_REV_T(vNorm[i],vType[i]);
       //vnc[i].norm :=  AsGL_INT_2_10_10_10_REV(vNorm[i]);
       vnc[i].clr := vRGBA[i];;
   end;
-
-
-  //Generating Cilinder Normal Map
+  //Generating Cylinder Normal Map
   for i := 0 to 256 do begin
      angle := 180/256.0*i;
      rad := angle * (Pi/180);
      tx := Cos(rad);
      tz := Sin(rad);
-     DataCilinder[i][0] := tx;
-     DataCilinder[i][1] := 0;
-     DataCilinder[i][2] := tz;
+     DataCylinder[i][0] := tx;
+     DataCylinder[i][1] := 0;
+     DataCylinder[i][2] := tz;
   end;
-
   for i:=0 to 256 do begin
       d:=0.0;
       for k:=0 to 2 do begin
-          d+=DataCilinder[i][k]*DataCilinder[i][k];
+          d+=DataCylinder[i][k]*DataCylinder[i][k];
       end;
       d:=Sqrt(d);
       for k:=0 to 2 do begin
-          DataCilinder[i][k] := 0.5*DataCilinder[i][k]/d+0.5;
+          DataCylinder[i][k] := 0.5*DataCylinder[i][k]/d+0.5;
       end;
   end;
-
+  //DataCylinder: array[0..256,0..2] of real;
   for i:=0 to 256 do begin
       for k:=0 to 2 do begin
-          FinalDataCilinder[3*i+k]:=round(255*DataCilinder[i][k]);
+             fx := 255 * DataCylinder[i][k];
+             fx := min(max(fx, 0), 255);
+             FinalDataCylinder[3*i+k]:=round(fx);
       end;
   end;
-
-
   glGenTextures(2, @RenderTexture);
   glActiveTexture(GL_TEXTURE6);
   glBindTexture(GL_TEXTURE_1D,  RenderTexture[0]);
   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, 256, 0, GL_RGB, GL_UNSIGNED_BYTE, @FinalDataCilinder);
+  glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, 256, 0, GL_RGB, GL_UNSIGNED_BYTE, @FinalDataCylinder);
   glUniform1i(glGetUniformLocation(gShader.programTrackID, pAnsiChar('normalmaptexture')), 6) ;
-
-
-
   //Generating Sphere Normal Map
   for i := 0 to 256 do begin
      angle := 180/256.0*i;
@@ -656,9 +660,7 @@ begin
              DataSphere[i][j][3] := 1.0;
         end;
      end;
-
   end;
-
   for i:=0 to 256 do begin
       for j:=0 to 256 do begin
         d:=0.0;
@@ -671,31 +673,28 @@ begin
         end;
       end;
   end;
-
   for i:=0 to 256 do begin
     for j:=0 to 256 do begin
       for k:=0 to 3 do begin
-          FinalDataSphere[4*256*i+4*j+k]:=round(255*DataSphere[i][j][k]);
+          fx :=DataSphere[i][j][k] * 255;
+          //fx := min(max(fx, -128), 127);
+          fx := min(max(fx, 0), 255);
+          FinalDataSphere[4*256*i+4*j+k]:=round(fx);
       end;
     end;
   end;
-
-
   glActiveTexture(GL_TEXTURE7);
   glBindTexture(GL_TEXTURE_2D,  RenderTexture[1]);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 256,256, 0, GL_RGBA, GL_UNSIGNED_BYTE, @FinalDataSphere);
   glUniform1i(glGetUniformLocation(gShader.programTrackID, pAnsiChar('normalmaptexturesphere')), 7) ;
-  glActiveTexture(GL_TEXTURE8);  //Garantee that anywhere else use TEXTURE7
-
-
+  glActiveTexture(GL_TEXTURE8);  //guarantee that anywhere else use TEXTURE7
   vbo_point := 0;
   glGenBuffers(1, @vbo_point);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_point);
   glBufferData(GL_ARRAY_BUFFER, Length(vnc)*SizeOf(TVtxNormClr), @vnc[0], GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
-
   // Prepare vertrex array object (VAO)
   //if vao <> 0 then
   //   glDeleteVertexArrays(1,@vao);
@@ -719,8 +718,6 @@ begin
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, Length(Indices)*sizeof(int32), @Indices[0], GL_STATIC_DRAW);
   glDeleteBuffers(1, @vbo_point);
-
-
 end;
 
 procedure SetLighting (var lPrefs: TPrefs);
