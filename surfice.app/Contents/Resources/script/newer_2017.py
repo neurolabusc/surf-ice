@@ -1,6 +1,6 @@
 import gl
 gl.resetdefaults()
-gl.meshload('BrainMesh_ICBM152Right.mz3')
+gl.meshload('BrainMesh_ICBM152.rh.mz3')
 gl.meshcurv()
 gl.overlayminmax(1,-1,1)
 gl.overlaycolorname(1,'surface')

@@ -5,6 +5,7 @@ unit gl_core_3d;
 interface
 
 uses
+{$IFDEF LHRH}meshlhrh,{$ENDIF}
 {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
   gl_core_matrix, Classes, SysUtils, mesh, matMath, Graphics, define_types, Prefs, Track, math;
 
@@ -12,7 +13,11 @@ uses
 //function BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA): GLuint;
 procedure BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA; var vao, vbo: gluint; Clr: TRGBA);
 //procedure SetLighting (var lPrefs: TPrefs);
+{$IFDEF LHRH}
+procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped,isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh: TMeshLHRH; lNode: TMesh; lTrack: TTrack);
+{$ELSE}
 procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped,isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
+{$ENDIF}
 //procedure SetCoreUniformsX(lProg: Gluint);
 procedure SetTrackUniforms (lineWidth, ScreenPixelX, ScreenPixelY: integer);
 //procedure BuildDisplayListStrip(Indices: TInts; Verts, vNorms: TVertices; vRGBA: TVertexRGBA; LineWidth: integer; var vao, vbo: gluint);
@@ -469,16 +474,18 @@ begin
      else
          result := round(f * 32768);
 end;*)
-function AsGL_INT_2_10_10_10_REV(f: TPoint3f): int32;
+
+function AsGL_INT_2_10_10_10_REV(f: TPoint3f): uint32;
 //pack 3 32-bit floats as 10 bit signed integers, assumes floats normalized to -1..1
 var
-   x,y,z: int32;
+   x,y,z: uint32;
 begin
-     x := (Float2Int16(f.X)) shr 6;
-     y := (Float2Int16(f.Y)) shr 6;
-     z := (Float2Int16(f.Z)) shr 6;
+     x := uint16(Float2Int16(f.X)) shr 6;
+     y := uint16(Float2Int16(f.Y)) shr 6;
+     z := uint16(Float2Int16(f.Z)) shr 6;
      result := (z shl 20)+ (y shl 10) + (x shl 0);
 end;
+
 (*function AsGL_INT_2_10_10_10_REV(f: TPoint3f): int32;
 //pack 3 32-bit floats as 10 bit signed integers, assumes floats normalized to -1..1
 var
@@ -490,10 +497,10 @@ begin
      result := (z shl 20)+ (y shl 10) + (x shl 0);
 end; *)
 
-function AsGL_INT_2_10_10_10_REV_T(f: TPoint3f; g: uint16): int32;
+function AsGL_INT_2_10_10_10_REV_T(f: TPoint3f; g: uint16): uint32;
 //pack 3 32-bit floats as 10 bit signed integers, assumes floats normalized to -1..1 and uses the 2bit to a int between 0 and 3
 var
-   a,x,y,z: uint16;
+   a,x,y,z: uint32;
 begin
      x := uint16(Float2Int16(f.X)) shr 6;
      y := uint16(Float2Int16(f.Y)) shr 6;
@@ -501,7 +508,6 @@ begin
      a := g;
      result := (a shl 30)+ (z shl 20)+ (y shl 10) + (x shl 0);
 end;
-
 
 procedure BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA; var vao, vbo: gluint; Clr: TRGBA);
 const
@@ -571,7 +577,7 @@ begin
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, Length(faces)*sizeof(TPoint3i), @faces[0], GL_STATIC_DRAW);
   glDeleteBuffers(1, @vbo_point);
-end;
+end; //BuildDisplayList()
 
 procedure BuildDisplayListStrip(Indices: TInts; vertices, vNorm: TVertices; vRGBA: TVertexRGBA; vType: TInts; LineWidth: integer; var vao, vbo: gluint);
 const
@@ -718,7 +724,7 @@ begin
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, Length(Indices)*sizeof(int32), @Indices[0], GL_STATIC_DRAW);
   glDeleteBuffers(1, @vbo_point);
-end;
+end; //BuildDisplayListStrip()
 
 procedure SetLighting (var lPrefs: TPrefs);
 begin
@@ -749,7 +755,11 @@ begin
   end;
 end;
 
+{$IFDEF LHRH}
+procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped,isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh: TMeshLHRH; lNode: TMesh; lTrack: TTrack);
+{$ELSE}
 procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped, isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
+{$ENDIF}
 //procedure DrawScene(w,h: integer; isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
 var
    clr: TRGBA;
@@ -759,7 +769,7 @@ begin
   glClearColor(red(lPrefs.BackColor)/255, green(lPrefs.BackColor)/255, blue(lPrefs.BackColor)/255, 0); //Set background
   glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
-
+  //distance *= 0.77;
   nglMatrixMode(nGL_PROJECTION);
   nglLoadIdentity();
   nSetOrtho(w, h, Distance, kMaxDistance, isMultiSample, lPrefs.Perspective);
@@ -802,6 +812,7 @@ begin
  end;
  if  (length(lMesh.faces) > 0) then begin
     lMesh.isVisible := isDrawMesh;
+    {$IFDEF LHRH}if not lMesh.isShowLH then lMesh.isVisible := false; {$ENDIF}
     RunMeshGLSL (clipPlane, false);
     if not isOverlayClipped then
        lMesh.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W), isFlipMeshOverlay )
@@ -809,6 +820,18 @@ begin
         lMesh.DrawGL(clr, clipPlane, isFlipMeshOverlay);
     lMesh.isVisible := true;
  end;
+ {$IFDEF LHRH}
+  if (lMesh.isShowRH) and (length(lMesh.RH.faces) > 0) then begin
+    lMesh.RH.isVisible := isDrawMesh;
+    RunMeshGLSL (clipPlane, false);
+    if not isOverlayClipped then
+       lMesh.RH.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W), isFlipMeshOverlay )
+    else
+        lMesh.RH.DrawGL(clr, clipPlane, isFlipMeshOverlay);
+    lMesh.RH.isVisible := true;
+ end;
+ {$ENDIF}
+
 
 end;
 

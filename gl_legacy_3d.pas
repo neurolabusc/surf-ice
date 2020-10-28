@@ -5,6 +5,7 @@ unit gl_legacy_3d;
 interface
 
 uses
+ {$IFDEF LHRH}meshlhrh,{$ENDIF}
  {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, glext, {$ENDIF}  {$ENDIF DGL}
     prefs, math, Classes, SysUtils, mesh, matMath, Graphics, define_types, track;
 
@@ -136,7 +137,11 @@ procedure BuildDisplayListIndexed(var faces: TFaces; vertices: TVertices; vRGBA:
 {$ENDIF}
 function BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA; Clr: TRGBA): GLuint;
 function BuildDisplayListStrip(Indices: TInts; Verts, vNorms: TVertices; vRGBA: TVertexRGBA; LineWidth: integer): GLuint;
+{$IFDEF LHRH}
+procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped,isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh: TMeshLHRH; lNode: TMesh; lTrack: TTrack);
+{$ELSE}
 procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped, isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin: TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
+{$ENDIF}
 procedure SetTrackUniforms(lineWidth, ScreenPixelX, ScreenPixelY: integer);
 
 implementation
@@ -276,8 +281,11 @@ begin
   end;
 end;
 
-
+{$IFDEF LHRH}
+procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped,isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh: TMeshLHRH; lNode: TMesh; lTrack: TTrack);
+{$ELSE}
 procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped, isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin: TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
+{$ENDIF}
 var
    clr: TRGBA;
 begin
@@ -341,8 +349,9 @@ setLighting (lPrefs);
      RunMeshGLSL (asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W),  lPrefs.ShaderForBackgroundOnly); //disable clip plane
    lNode.DrawGL(clr, clipPlane, isFlipMeshOverlay);
  end;
- if  (length(lMesh.faces) > 0) then begin
+ if (length(lMesh.faces) > 0) then begin
     lMesh.isVisible := isDrawMesh;
+    {$IFDEF LHRH}if not lMesh.isShowLH then lMesh.isVisible := false; {$ENDIF}
     RunMeshGLSL (ClipPlane,  false);
     if not isOverlayClipped then
        lMesh.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W),isFlipMeshOverlay )
@@ -350,6 +359,18 @@ setLighting (lPrefs);
         lMesh.DrawGL(clr, clipPlane, isFlipMeshOverlay);
     lMesh.isVisible := true;
  end;
+ {$IFDEF LHRH}
+  if (lMesh.isShowRH) and (length(lMesh.RH.faces) > 0) then begin
+    lMesh.RH.isVisible := isDrawMesh;
+    RunMeshGLSL (clipPlane, false);
+    if not isOverlayClipped then
+       lMesh.RH.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W), isFlipMeshOverlay )
+    else
+        lMesh.RH.DrawGL(clr, clipPlane, isFlipMeshOverlay);
+    lMesh.RH.isVisible := true;
+ end;
+ {$ENDIF}
+
 end; //DrawScene
 
 {$IFDEF LEGACY_INDEXING}

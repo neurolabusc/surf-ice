@@ -1,0 +1,13 @@
+begin
+	resetdefaults();
+	azimuthelevation(70, 15);
+	meshload('BrainMesh_ICBM152.rh.mz3');
+	overlayload('ICBM152_Right_ROI.mz3');
+	overlayload('motor_4t95vol.nii.gz');
+	overlayminmax(2,4,4);
+	overlaycolorname(2, 'Red');
+	meshcurv();
+	//next line determines if the motor overlay hides the region of interest
+	overlayoverlapoverwrite(true);
+end.
+

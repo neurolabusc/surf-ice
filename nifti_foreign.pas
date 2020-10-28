@@ -1,7 +1,8 @@
 unit nifti_foreign;
 //{$DEFINE MRIcron}
 interface
-{$mode objfpc} //would need to be changed for Delphi mode, see "FPC_DELPHI" below
+//{$mode objfpc} //test
+{$mode Delphi}
 {$H+}
 {$DEFINE GZIP}
 {$Include isgui.inc}//<- {$DEFINE GUI}
@@ -11,6 +12,7 @@ interface
 {$Include isgui.inc}
 {$ENDIF}
 uses
+{$IFDEF Surfice}define_types,{$ENDIF}
 {$IFDEF MRIcron}define_types,{$ENDIF}
 {$IFDEF GL10} define_types, {$IFNDEF FPC}gziod,{$ELSE}gzio2,{$ENDIF}{$ENDIF}
 {$IFDEF GZIP}zstream, {$ENDIF}
@@ -20,16 +22,53 @@ uses
  dialogsx,
 {$ENDIF}
 //ClipBrd,
- nifti_types,  sysutils, classes, StrUtils;//2015! dialogsx
+ nifti_types,  sysutils, classes, StrUtils, math;//2015! dialogsx
 
 const
-    kIVers = ' i2nii v1.0.20191007';
+    kIVers = ' i2nii v1.0.0707';
 
 {$IFDEF GL10}
 procedure NII_Clear (out lHdr: TNIFTIHdr);
 procedure NII_SetIdentityMatrix (var lHdr: TNIFTIHdr); //create neutral rotation matrix
 {$ELSE}
-Type
+
+const
+      //seee README.attributes.html and parser_int.c
+      //FUNC_FIM_TYPE = 0; // 1 value
+      //FUNC_THR_TYPE = 1; //obsolete
+      kFUNC_NOT_STAT =0;
+      kFUNC_COR_TYPE =2;// Correlation Coeff # Samples, # Fit Param, # Orts
+      kFUNC_TT_TYPE = 3;//  Student t         Degrees-of-Freedom (DOF)
+      kFUNC_FT_TYPE = 4;//  F ratio           Numerator DOF, Denominator DOF
+      kFUNC_ZT_TYPE = 5;//  Standard Normal   -- none --
+      kFUNC_CT_TYPE = 6;//  Chi-Squared       DOF
+      kFUNC_BT_TYPE = 7;//  Incomplete Beta   Parameters "a" and "b"
+      kFUNC_BN_TYPE = 8;//  Binomial          # Trials, Probability per trial
+      kFUNC_GT_TYPE = 9;//  Gamma             Shape, Scale
+      kFUNC_PT_TYPE = 10;//  Poisson           Mean
+      kFUNC_NO_STAT_AUX = 13;
+type
+  TFloatVec = record
+    ar: array of single;
+    dx: single;
+    x0: single;
+    function nar: integer; inline;
+  end;
+
+type
+   TAFNI = record
+		jv: integer; //statistical code
+		nv: integer; //number of parameters that follow (may be 0)
+		param: array [0..2] of single;
+                scl_slopex: single;
+                minVal, maxVal, maxAbsVal: single;
+		nam: string[64];
+        FDRcurv: TFloatVec;
+   end;
+   TAFNIs = array of TAFNI;
+
+type
+
   mat44 = array [0..3, 0..3] of Single;
   {$IFNDEF MRIcron}
     	ByteRA = array [1..1] of byte;
@@ -38,10 +77,13 @@ Type
         procedure UnGZip(const FileName: string; buffer: bytep; offset, sz: integer);
   {$ENDIF}
 {$ENDIF}
-function isINTERFILE(var fname: string): boolean;
-function readForeignHeader (var lFilename: string; var lHdr: TNIFTIhdr; var gzBytes: int64; var swapEndian, isDimPermute2341: boolean; out xDim64: int64): boolean; overload;
-function readForeignHeader (var lFilename: string; var lHdr: TNIFTIhdr; var gzBytes: int64; var swapEndian, isDimPermute2341: boolean): boolean; overload;
+function readAFNIHeader(var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian, isAllVolumesSame: boolean;  var AFNIs: TAFNIs; var fLabels: TStringList): boolean; overload;
+function readAFNIHeader(var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean; overload;
 
+function isINTERFILE(var fname: string): boolean;
+function readForeignHeader(var lFilename: string; var lHdr: TNIFTIhdr; var gzBytes: int64; var swapEndian, isDimPermute2341: boolean; out xDim64: int64): boolean; overload;
+function readForeignHeader(var lFilename: string; var lHdr: TNIFTIhdr; var gzBytes: int64; var swapEndian, isDimPermute2341: boolean): boolean; overload;
+function IsReadable(fnm: string): boolean;
 procedure convertForeignToNifti(var nhdr: TNIFTIhdr);
 function FSize (lFName: String): Int64;
 function isTIFF(fnm: string): boolean;
@@ -52,8 +94,6 @@ implementation
 const
     kNaNSingle : single = 1/0;
 Type
-
-
   vect4 = array [0..3] of Single;
   mat33 = array [0..2, 0..2] of Single;
   vect3 = array [0..2] of Single;
@@ -61,7 +101,43 @@ Type
 
 procedure printf(str: string);
 begin
+  {$IFDEF Windows}
+  if IsConsole then //'System' in uses
+     writeln(str);
+  {$ENDIF}
   {$IFDEF UNIX} writeln(str);{$ENDIF}
+end;
+
+
+function IsReadable(fnm: string): boolean;
+//https://wiki.freepascal.org/macOS_Programming_Tips#Determining_if_a_file_is_readable
+{$IFDEF Darwin}
+var
+  f: file;
+  b: byte;
+{$ENDIF}
+begin
+  result := false;
+  if not fileexists(fnm) then exit;
+  if FSize(fnm) < 2 then exit;
+  {$IFDEF Darwin}
+  AssignFile(f, fnm);
+  {$I+}
+  try
+    FileMode := fmOpenRead;  //Set file access to read only
+    Reset(f, 1);
+    if ioresult <> 0 then
+       exit;
+    b := 0;
+    BlockRead(f, b, sizeof(b)); //Byte-order Identifier
+    CloseFile(f);
+    result := true;
+  except
+    result := false;
+  end;
+  {$ELSE}
+  result := true;
+  {$ENDIF}
 end;
 
 
@@ -186,7 +262,8 @@ begin
         decomp.Read(skip[0], offset);
      end;
      //buffer^[0] :=  0; //BlockRead should be out not var: https://fpc-pascal.freepascal.narkive.com/M2rzyAkf/blockread-and-buffers
-     decomp.Read(buffer[0], sz);
+     //decomp.Read(buffer[0], sz);
+     decomp.Read(buffer[1], sz);
      decomp.free;
 end;
 {$ELSE}
@@ -247,24 +324,6 @@ end;
     outguy.Word1 := swap(inguy^.Word1);
     result :=outguy.Small1;
   end;
-
-procedure Xswap4r ( var s:single);
-type
-  swaptype = packed record
-	case byte of
-	  0:(Word1,Word2 : word); //word is 16 bit
-  end;
-  swaptypep = ^swaptype;
-var
-  inguy:swaptypep;
-  outguy:swaptype;
-begin
-  inguy := @s; //assign address of s to inguy
-  outguy.Word1 := swap(inguy^.Word2);
-  outguy.Word2 := swap(inguy^.Word1);
-  inguy^.Word1 := outguy.Word1;
-  inguy^.Word2 := outguy.Word2;
-end;
 
 procedure swap4(var s : LongInt);
 type
@@ -807,6 +866,8 @@ begin
       nhdr.dim[i] := 0;
   end;
   nhdr.bitpix := 8;
+  if (nhdr.scl_slope = 0.0) then
+    nhdr.scl_slope := 1.0;
   if (nhdr.datatype = 4) or (nhdr.datatype = 512) then nhdr.bitpix := 16;
   if (nhdr.datatype = kDT_RGB) or (nhdr.datatype = kDT_RGBplanar3D) then nhdr.bitpix := 24;
   if (nhdr.datatype = 8) or (nhdr.datatype = 16) or (nhdr.datatype = 768) then nhdr.bitpix := 32;
@@ -865,7 +926,7 @@ begin
   sList.Free;
 end;
 
-function nii_readVmr (var fname: string; isV16: boolean; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
+function readVmr (var fname: string; isV16: boolean; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
 //http://support.brainvoyager.com/automation-aamp-development/23-file-formats/385-developer-guide-26-the-format-of-vmr-files.html
 Type
   Tvmr_header = packed record //Next: VMR Format Header structure
@@ -959,9 +1020,9 @@ begin
   convertForeignToNifti(nhdr);
   nhdr.descrip := 'VMR'+kIVers;
   result := true;
-end; //nii_readVmr()
+end; //readVmr()
 
-function nii_readV3draw(var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
+function readV3draw(var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
 //https://github.com/Vaa3D
 // https://github.com/fiji/Vaa3d_Reader/blob/master/src/main/java/org/janelia/vaa3d/reader/Vaa3d_Reader.java
 Type
@@ -1051,9 +1112,9 @@ begin
   convertForeignToNifti(nhdr);
   nhdr.descrip := 'V3draw'+kIVers;
   result := true;
-end; //nii_readV3draw
+end; //readV3draw
 
-function nii_readDf3 (var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
+function readDf3 (var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
 //https://www.povray.org/documentation/view/3.6.1/374/
 //The df3 format consists of a 6 byte header of three 16-bit integers (big endian)
 //The header is followed by x*y*z unsigned integer bytes of data with a resolution of 8, 16 or 32 bit.
@@ -1115,13 +1176,375 @@ begin
   convertForeignToNifti(nhdr);
   nhdr.descrip := 'DF3'+kIVers;
   result := true;
-end; //nii_readDf3
+end; //readDf3
 
-function nii_readBVox (var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
+function readXVF (var fname: string; var nhdr: TNIFTIhdr): boolean;
+//http://ivl.calit2.net/wiki/index.php/VOX_and_Virvo
+//http://web.eng.ucsd.edu/~jschulze/projects/vox/release/deskvox2_00b.txt
+//https://github.com/deskvox/deskvox/blob/f43bc19ecd82c2c2bcc5d7dfb7e65aa9ae99f57d/virvo/virvo/vvvoldesc.h
+Type
+  Tbv_header = packed record
+        id: array [1..9] of ansichar;
+        offset : uint16; //  0,4,8,12
+        dim: array [1..4] of uint32;
+        datatype: uint8;
+        pixdim: array [1..4] of single;
+        mn,mx: single;
+        origin: array [1..3] of single;
+        storagetype, compressiontype: uint8;
+        transferfunctions, transfertype, iconsize : uint16;
+  end; // Tbv_header;
+var
+   bhdr : Tbv_header;
+   lHdrFile: file;
+   i, nvox, FSz : integer;
+begin
+  result := false;
+  {$I-}
+  AssignFile(lHdrFile, fname);
+  FileMode := fmOpenRead;  //Set file access to read only
+  Reset(lHdrFile, 1);
+  {$I+}
+  if ioresult <> 0 then begin
+        NSLog('Error in reading RVF header.'+inttostr(IOResult));
+        FileMode := 2;
+        exit;
+  end;
+  FSz := Filesize(lHdrFile);
+  bhdr.datatype :=  0; //BlockRead should be out not var: https://fpc-pascal.freepascal.narkive.com/M2rzyAkf/blockread-and-buffers
+  BlockRead(lHdrFile, bhdr, sizeof(Tbv_header));
+  CloseFile(lHdrFile);
+  //VIRVO-XVF
+  if (bhdr.id[1]<>'V') or (bhdr.id[2]<>'I') or (bhdr.id[3]<>'R') or (bhdr.id[4]<>'V') or (bhdr.id[5]<>'O')
+      or (bhdr.id[6]<>'-') or (bhdr.id[7]<>'X')  or (bhdr.id[8]<>'V')  or (bhdr.id[9]<>'F') then
+     exit;
+  (*if bHdr.compressiontype <> 0 then begin
+    //supposed to be 0 or 1, but default-animation is 17?
+    NSLog('XVF RLE compression not supported.'+inttostr(bHdr.compressiontype));
+    exit;
+  end;*)
+  {$IFDEF ENDIAN_LITTLE}
+  bhdr.offset := swap(bhdr.offset);
+  for i := 1 to 4 do
+    pswap4i(int32(bhdr.dim[i]));
+  for i := 1 to 4 do
+      pswap4i(int32(bhdr.pixdim[i]));
+  pswap4i(int32(bhdr.mn));
+  pswap4i(int32(bhdr.mx));
+  for i := 1 to 3 do
+      pswap4i(int32(bhdr.origin[i]));
+  bhdr.transferfunctions := swap(bhdr.transferfunctions);
+  bhdr.transfertype := swap(bhdr.transfertype);
+  bhdr.iconsize := swap(bhdr.iconsize);
+  {$ENDIF}
+  //NSLog(format('%d %d', [bhdr.datatype, bhdr.storagetype])); //animation:8:16 rgbCube 24:0 torso 8:0
+  for i := 1 to 4 do
+      nhdr.dim[i]:=bhdr.dim[i];
+  for i := 1 to 4 do
+      nhdr.pixdim[i]:=bhdr.pixdim[i];
+  nhdr.dim[0]:=3;//3D
+  if nhdr.dim[4] > 1 then
+     nhdr.dim[0]:=4;//4D
+  if bhdr.datatype = 24 then
+     nhdr.datatype := kDT_RGB
+  else if bhdr.datatype = 8 then
+       nhdr.datatype := kDT_UINT8
+  else begin
+       NSLog(format('Unknown XVF datatype : %d', [bhdr.datatype]));
+       exit;
+  end;
+  nhdr.vox_offset := bhdr.offset;
+
+  nVox := nhdr.dim[1] * nhdr.dim[2] * nhdr.dim[3] * nhdr.dim[4];
+  if (nVox + bhdr.offset ) > FSz then begin
+       NSLog(format('Not a valid XVF file: expected filesize of %d bytes (%dx%dx%dx%d+%d)',[nVox + bhdr.offset, bhdr.dim[1], bhdr.dim[2], bhdr.dim[3], bhdr.dim[4], bhdr.offset]));
+       exit;
+  end;
+  convertForeignToNifti(nhdr);
+  SetSForm(nhdr);
+  nhdr.descrip := 'XVF'+kIVers;
+  result := true;
+end; //readXVF
+
+function readRVF (var fname: string; var nhdr: TNIFTIhdr): boolean;
+//http://ivl.calit2.net/wiki/index.php/VOX_and_Virvo
+//http://web.eng.ucsd.edu/~jschulze/projects/vox/release/deskvox2_00b.txt
+Type
+  Tbv_header = packed record
+        nx, ny, nz : word; //  0,4,8,12
+  end; // Tbv_header;
+var
+   bhdr : Tbv_header;
+   lHdrFile: file;
+   nvox, FSz : integer;
+begin
+  result := false;
+  {$I-}
+  AssignFile(lHdrFile, fname);
+  FileMode := fmOpenRead;  //Set file access to read only
+  Reset(lHdrFile, 1);
+  {$I+}
+  if ioresult <> 0 then begin
+        NSLog('Error in reading RVF header.'+inttostr(IOResult));
+        FileMode := 2;
+        exit;
+  end;
+  FSz := Filesize(lHdrFile);
+  bhdr.nx :=  0; //BlockRead should be out not var: https://fpc-pascal.freepascal.narkive.com/M2rzyAkf/blockread-and-buffers
+  BlockRead(lHdrFile, bhdr, sizeof(Tbv_header));
+  CloseFile(lHdrFile);
+  {$IFDEF ENDIAN_LITTLE}
+  bhdr.nx := swap(bhdr.nx);
+  bhdr.ny := swap(bhdr.ny);
+  bhdr.nz := swap(bhdr.nz);
+  {$ENDIF}
+  nVox := bhdr.nx * bhdr.ny * bhdr.nz; //*4 as 32-bpp
+  if (nVox + sizeof(Tbv_header) ) <> FSz then begin
+       NSLog(format('Not a valid RVF file: expected filesize of %d bytes (%dx%dx%d+%d)',[nVox + sizeof(Tbv_header), bhdr.nx, bhdr.ny, bhdr.nz, sizeof(Tbv_header)]));
+       exit;
+  end;
+  nhdr.dim[0]:=3;//3D
+  nhdr.dim[1]:=bhdr.nx;
+  nhdr.dim[2]:=bhdr.ny;
+  nhdr.dim[3]:=bhdr.nz;
+  nhdr.pixdim[1]:=1.0;
+  nhdr.pixdim[2]:=1.0;
+  nhdr.pixdim[3]:=1.0;
+  nhdr.datatype := kDT_UINT8;
+  nhdr.vox_offset := sizeof(Tbv_header);
+  nhdr.sform_code := 1;
+  SetSForm(nhdr);
+  convertForeignToNifti(nhdr);
+  nhdr.descrip := 'RVF'+kIVers;
+  result := true;
+end; //readRVF
+
+
+function readXRaw (var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
+//https://twitter.com/ephtracy/status/653721698328551424
+Type
+  Tbv_header = packed record //Next: XRaw Format Header structure
+        magic: UINT32; //'XRAW'
+        datatype: UINT8; // 0=uint, 1=int, 2=float
+        channels: UINT8; //4=RGBA, 3=RGB, 2=RB, 1=R
+        bits: UINT8; //8, 16, 32
+        bitsPerIndex: UINT8; //0=scalar, 8=256, 16=32768
+        nx, ny, nz: UINT32; //
+        nPal: UINT32; //0, 256, or 32768
+  end; // Tbv_header;
+var
+   bhdr : Tbv_header;
+   lHdrFile: file;
+   nvox, FSz : integer;
+begin
+  result := false;
+  {$I-}
+  AssignFile(lHdrFile, fname);
+  FileMode := fmOpenRead;  //Set file access to read only
+  Reset(lHdrFile, 1);
+  {$I+}
+  if ioresult <> 0 then begin
+        NSLog('Error in reading XRaw header.'+inttostr(IOResult));
+        FileMode := 2;
+        exit;
+  end;
+  FSz := Filesize(lHdrFile);
+  bhdr.nx :=  0; //BlockRead should be out not var: https://fpc-pascal.freepascal.narkive.com/M2rzyAkf/blockread-and-buffers
+  BlockRead(lHdrFile, bhdr, sizeof(Tbv_header));
+  CloseFile(lHdrFile);
+  swapEndian := false;
+  {$IFDEF ENDIAN_BIG}
+  swapEndian := true;
+  pswap4i(longint(bhdr.magic));
+  pswap4i(longint(bhdr.nx));
+  pswap4i(longint(bhdr.ny));
+  pswap4i(longint(bhdr.nz));
+  pswap4i(longint(bhdr.nPal));
+  {$ELSE}
+  swapEndian := false;
+  {$ENDIF}
+  if bhdr.magic <> 1463898712 then begin
+    NSLog('Not a valid XRaw file: should begin "XRAW"');
+    exit;
+  end;
+  nVox := bhdr.nx * bhdr.ny * bhdr.nz * 1;
+  if (nVox + sizeof(Tbv_header) ) > FSz then begin
+    NSLog(format('Not a valid XRaw file: filesize too small (%dx%dx%d voxels)',[bhdr.nx, bhdr.ny, bhdr.nz]));
+    exit;
+  end;
+  nhdr.dim[0]:=3;//3D
+  nhdr.dim[1]:=bhdr.nx;
+  nhdr.dim[2]:=bhdr.ny;
+  nhdr.dim[3]:=bhdr.nz;
+  //datatype: UINT8; // 0=uint, 1=int, 2=float
+  //channels: UINT8; //4=RGBA, 3=RGB, 2=RB, 1=R
+  //bits: UINT8; //8, 16, 32
+  //bitsPerIndex: UINT8; //0=scalar, 8=256, 16=32768
+  nhdr.datatype := 0; //unsupported
+  if bhdr.datatype = 0 then begin //0=uint
+     if bhdr.bits = 8 then
+       nhdr.datatype := kDT_UINT8;
+     if bhdr.bits = 16 then
+       nhdr.datatype := kDT_UINT16;
+     if bhdr.bits = 32 then
+       nhdr.datatype := kDT_UINT32;
+  end;
+  if bhdr.datatype = 1 then begin //1=int
+     if bhdr.bits = 8 then
+       nhdr.datatype := kDT_INT8;
+     if bhdr.bits = 16 then
+       nhdr.datatype := kDT_INT16;
+     if bhdr.bits = 32 then
+       nhdr.datatype := kDT_INT32;
+  end;
+  if (bhdr.datatype = 2) and (bhdr.bits = 32) then //1=int
+     nhdr.datatype := kDT_FLOAT32;
+  if (bhdr.bitsPerIndex = 0) and (bhdr.channels > 1) then begin //scalar not palette
+     if (bhdr.bits = 8) and (bhdr.channels = 3) then
+       nhdr.datatype := kDT_RGB
+     else if (bhdr.bits = 8) and (bhdr.channels = 4) then
+         nhdr.datatype := kDT_RGBA32
+     else
+         nhdr.datatype := 0; //unsupported
+  end;
+  if (nhdr.datatype = 0) then begin
+    NSLog(format('Unsupported XRaw file type. datatype: %d channels %d bits %d bitsPerIndex %d',[bhdr.datatype, bhdr.channels, bhdr.bits, bhdr.bitsPerIndex]));
+    exit;
+  end;
+  nhdr.vox_offset := sizeof(Tbv_header);
+  SetSForm(nhdr);
+  convertForeignToNifti(nhdr);
+  nhdr.descrip := 'XRaw'+kIVers;
+  result := true;
+end; //readXRaw
+
+function readVox (var fname: string; var nhdr: TNIFTIhdr): boolean;
+//slab6 vox format
+Type
+  Tbv_header = packed record //Next: Vox Format Header structure
+        nz, ny, nx : LongInt;
+  end; // Tbv_header;
+var
+   bhdr : Tbv_header;
+   lHdrFile: file;
+   Sz, FSz : integer;
+begin
+  result := false;
+  {$I-}
+  AssignFile(lHdrFile, fname);
+  FileMode := fmOpenRead;  //Set file access to read only
+  Reset(lHdrFile, 1);
+  {$I+}
+  if ioresult <> 0 then begin
+        NSLog('Error in reading BVox header.'+inttostr(IOResult));
+        FileMode := 2;
+        exit;
+  end;
+  FSz := Filesize(lHdrFile);
+  bhdr.nx :=  0; //BlockRead should be out not var: https://fpc-pascal.freepascal.narkive.com/M2rzyAkf/blockread-and-buffers
+  BlockRead(lHdrFile, bhdr, sizeof(Tbv_header));
+  CloseFile(lHdrFile);
+  {$IFDEF ENDIAN_BIG}
+  pswap4i(longint(bhdr.nx));
+  pswap4i(longint(bhdr.ny));
+  pswap4i(longint(bhdr.nz));
+  {$ENDIF}
+  Sz := bhdr.nx * bhdr.ny * bhdr.nz + sizeof(Tbv_header);
+  if (Sz <> FSz) and ((768 + Sz ) <> FSz) then begin //768 byte RGB palette as footer
+     //there are so many other formats that use the extension .vox, and Slab6 has no magic signature, so do not report a misleading error
+     //NSLog(format('Not a valid Slab6 Vox file (%dx%dx%d) expected %d or %d bytes.',[bhdr.nx, bhdr.ny, bhdr.nz, Sz, Sz+768]));
+     exit;
+  end;
+  nhdr.dim[0]:=3;//3D
+  nhdr.dim[1]:=bhdr.nx;
+  nhdr.dim[2]:=bhdr.ny;
+  nhdr.dim[3]:=bhdr.nz;
+  nhdr.datatype := kDT_UINT8;
+  nhdr.vox_offset := sizeof(Tbv_header);
+  SetSForm(nhdr);
+  convertForeignToNifti(nhdr);
+  nhdr.descrip := 'Slab6VOX'+kIVers;
+  result := true;
+end; //readVox
+
+(* //SPARSE STORAGE
+function readVox (var fname: string; var nhdr: TNIFTIhdr): boolean;
+//https://github.com/DGtal-team/DGtalTools/blob/master/converters/vol2vox.cpp
+Type
+  Thdr = packed record //signature always at start of file
+        magic, version: UINT32;
+  end;
+  TChunk = packed record
+        id, szBytes, nChild: UINT32;
+  end;
+
+var
+   h : Thdr;
+   chunk: Tchunk;
+   f: file;
+   FSz, ChunkEnd : integer;
+begin
+  result := false;
+  {$I-}
+  AssignFile(f, fname);
+  FileMode := fmOpenRead;  //Set file access to read only
+  Reset(f, 1);
+  {$I+}
+  if ioresult <> 0 then begin
+        NSLog('Error in reading BVox header.'+inttostr(IOResult));
+        FileMode := 2;
+        exit;
+  end;
+  FSz := Filesize(f);
+  h.magic :=  0; //BlockRead should be out not var: https://fpc-pascal.freepascal.narkive.com/M2rzyAkf/blockread-and-buffers
+  BlockRead(f, h, sizeof(Thdr));
+  {$IFDEF ENDIAN_BIG}
+  pswap4i(longint(h.magic));
+  pswap4i(longint(h.version));
+  {$ENDIF}
+  if (h.magic <> 542658390) then begin
+     CloseFile(f);
+     result := readVoxSlab6(fname, nhdr);
+     exit;
+  end;
+  if (h.version > 150) then begin
+    CloseFile(f);
+    NSLog(format('Unsupported .VOX version %d',[h.version]));
+    exit;
+  end;
+  nhdr.vox_offset := 0;
+  nhdr.dim[1] := 0;
+  while (filepos(f)+sizeof(TChunk)) < FSz do begin
+       BlockRead(f, chunk, sizeof(Tchunk));
+       {$IFDEF ENDIAN_BIG}
+       pswap4i(longint(chunk.id));
+       pswap4i(longint(chunk.szBytes));
+       pswap4i(longint(chunk.nChild));
+       {$ENDIF}
+       chunkEnd := filepos(f) + chunk.szBytes;
+       if chunk.id = 1313423693 then begin //MAIN
+          //NSLog('MAIN');
+       end;
+      if chunk.id = 1163544915 then begin //SIZE
+         NSLog('SiZE');
+      end;
+      if chunk.id = 1230657880 then begin //XYZI
+         NSLog('XYZI');
+      end;
+      seek(f, chunkEnd);
+  end;
+  CloseFile(f);
+   convertForeignToNifti(nhdr);
+  nhdr.descrip := 'VOX'+kIVers;
+  result := true;
+end; //readVox *)
+
+
+function readBVox (var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
 //http://pythology.blogspot.com/2014/08/you-can-do-cool-stuff-with-manual.html
 Type
-  Tbv_header = packed record //Next: PIC Format Header structure
-        nx, ny, nz, nvol : LongInt; //  0,4,8,12
+  Tbv_header = packed record //Next: BVox Format Header structure
+        nx, ny, nz, nvol : LongInt;
   end; // Tbv_header;
 var
    bhdr : Tbv_header;
@@ -1179,9 +1602,9 @@ begin
   convertForeignToNifti(nhdr);
   nhdr.descrip := 'BVOX'+kIVers;
   result := true;
-end; //nii_readBVox
+end; //readBVox
 
-function nii_readDeltaVision (var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
+function readDeltaVision (var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
 const
      kDV_HEADER_SIZE = 1024;
      kSIG_NATIVE = 49312;
@@ -1270,7 +1693,7 @@ begin
   convertForeignToNifti(nhdr);
   nhdr.descrip := 'DV'+kIVers;
   result := true;
-end; //nii_readDeltaVision
+end; //readDeltaVision
 
 procedure pswap4ui(var s : uint32);
 type
@@ -1290,7 +1713,7 @@ begin
   s:=outguy.Long;
 end; //proc swap4
 
-function nii_readGipl (var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
+function readGipl (var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
 const
      kmagic_number =4026526128;
 Type
@@ -1398,10 +1821,10 @@ begin
   end;
   result := true;
     nhdr.descrip := 'GIPL'+kIVers;
-end; //nii_readGipl
+end; //readGipl
 
-function nii_readpic (var fname: string; var nhdr: TNIFTIhdr): boolean;
-//function nii_readpic (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+function readpic (var fname: string; var nhdr: TNIFTIhdr): boolean;
+//function readpic (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
 //https://github.com/jefferis/pic2nifti/blob/master/libpic2nifti.c
 const
      kBIORAD_HEADER_SIZE  = 76;
@@ -1511,7 +1934,7 @@ begin
   result := true;
 end;
 
-function nii_readEcat(var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+function readEcat(var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
 Const
   ECAT7_BYTE =1;
   (*ECAT7_VAXI2 =2;
@@ -1694,9 +2117,337 @@ begin
   result := true;
 666:
 CloseFile(lHdrFile);
-end;
+end; //ECAT
 
-function readMGHHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; out xDim64: int64): boolean;
+function readVOL(var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
+// original format by Barthold Lichtenbelt, 1998
+// for Mark Dow's vol format see http://paulbourke.net/dataformats/vol/
+//   Ogles2 volumeReaders.cpp for more details
+Type
+  Tvol = packed record // Header structure
+   version, hdrSz, width, height, depth, bpp : longint;
+  end;
+
+var
+  f: file;
+  hdr: Tvol;
+  FSz, vox: int64;
+begin
+	result := false;
+	FileMode := fmOpenRead;
+	{$I-}
+	AssignFile(f, fname);
+	FileMode := 0;  //Set file access to read only
+	Reset(f, 1);
+	FSz := Filesize(f);
+	{$I+}
+	if ioresult <> 0 then begin
+		NSLog('Error in reading VOL header.'+inttostr(IOResult));
+		FileMode := 2;
+		exit;
+	end;
+	BlockRead(f, hdr, sizeof(Tvol));
+	CloseFile(f);
+	FileMode := 2;
+	if (hdr.version <> 192837465) then begin
+	  swapEndian := true;
+	  swap4(hdr.version);
+	  swap4(hdr.hdrSz);
+	  swap4(hdr.width);
+	  swap4(hdr.height);
+	  swap4(hdr.depth);
+	  swap4(hdr.bpp);
+	end;
+	if (hdr.version <> 192837465) or (FSz <= hdr.hdrSz) or (hdr.width < 1) or (hdr.height < 1) or (hdr.depth < 1) then begin
+		NSLog('Unsupported .vol format.');
+		exit;
+	end;
+	FSz := FSz - hdr.hdrSz;
+	vox := hdr.width * hdr.height * hdr.depth;
+	if (vox = FSz) then
+		nhdr.datatype := kDT_UINT8
+	else if ((2 * vox) = FSz)  then
+		nhdr.datatype := kDT_INT16
+	else if((2 * vox) = FSz)  then
+		nhdr.datatype := kDT_INT32
+	else begin
+		NSLog(format('Unknown .vol format. offset %d size %dx%dx%d', [hdr.hdrSz, hdr.width, hdr.height, hdr.depth]));
+		exit;
+	end;
+	nhdr.dim[1]:=hdr.width;
+	nhdr.dim[2]:=hdr.height;
+	nhdr.dim[3]:=hdr.depth;
+	nhdr.vox_offset := hdr.hdrSz;
+        SetSForm(nhdr);
+	convertForeignToNifti(nhdr);
+	nhdr.descrip := 'VOL'+kIVers;
+	result := true;
+end; //readVOL
+
+function readAim(var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+procedure readKeyAim(field: string; var str: string; out x,y,z: single);
+//Orig-ISQ-Dim-um                                 20480      20480      12300
+var
+	st, en: integer;
+	s: string;
+	strlst: TStringList;
+begin
+	x := kNANsingle;
+	y := kNANsingle;
+	z := kNANsingle;
+	st := PosEx(field,  str);
+	if st < 1 then exit();
+	st := st + length(field);
+	en := PosEx(chr($0A),  str, st);
+	if en < 2 then exit();
+	s := copy(str, st, en-st);
+	s := trim(s);
+	strlst:=TStringList.Create;
+	strlst.DelimitedText := s;
+	if strlst.Count > 0 then
+		x := strtoFloatDef(strlst[0], kNANsingle);
+	if strlst.Count > 1 then
+		y := strtoFloatDef(strlst[1], kNANsingle);
+	if strlst.Count > 2 then
+		z := strtoFloatDef(strlst[2], kNANsingle);
+	strlst.Free;
+end;
+//https://www.researchgate.net/publication/320077296_AIMreader_python_implementation_and_examples
+const
+	kheaderints = 32;
+var
+	AIM_ints: array [0..(kheaderints-1)] of longint;
+	f: file;
+	binSz, strSz, i: integer;
+	x, y, z, xp, yp, zp: single;
+	str: string;
+	fSz: int64;
+begin
+	result := false;
+	result := false;
+	FileMode := fmOpenRead;
+	gzBytes := 0;
+	{$I-}
+	AssignFile(f, fname);
+	FileMode := 0;  //Set file access to read only
+	Reset(f, 1);
+	fSz := FileSize(f);
+	{$I+}
+	if ioresult <> 0 then begin
+		NSLog('Error in reading AIM header.'+inttostr(IOResult));
+		FileMode := 2;
+		exit;
+	end;
+	BlockRead(f, AIM_ints, sizeof(AIM_ints));
+	CloseFile(f);
+	FileMode := 2;
+	{$IFDEF ENDIAN_BIG} //data always stored big endian
+	for i := 0 to (kheaderints -1) do
+		swap4(AIM_ints[i]);
+	swapEndian := true;
+	{$ELSE}
+	swapEndian := false;
+	{$ENDIF}
+        (* //not all AIM files start with signature, see SEGMENTED_V20TRUE_BIN.AIM;1
+        if (AIM_ints[0] <> 1145915713) then begin
+		NSLog('Error AIM images should begin "AIMD".');
+		exit;
+	end;*)
+        str := '';
+	nhdr.datatype := 0;
+	if (AIM_ints[5] = 16) then begin
+		//-> version 020
+		if (AIM_ints[10] = 131074) then
+			nhdr.datatype := kDT_INT16
+		else if (AIM_ints[10] = 65537)  then
+			nhdr.datatype := kDT_UINT8
+		else if (AIM_ints[10] = 1376257) or (AIM_ints[10] = 524290)  then
+			str := '(compressed)'
+		else
+			nhdr.datatype :=  1;//str := 'Datatype='+inttostr(AIM_ints[10]);
+		strSz := AIM_ints[2];
+		binSz := 160;
+		nhdr.vox_offset := strSz + binSz;
+		nhdr.dim[1] := AIM_ints[14];
+		nhdr.dim[2] := AIM_ints[15];
+		nhdr.dim[3] := AIM_ints[16];
+	end else begin
+		//-> version 030
+		if (AIM_ints[17] = 131074) then
+			nhdr.datatype := kDT_INT16
+		else if (AIM_ints[17] = 65537)  then
+			nhdr.datatype := kDT_UINT8
+		else if (AIM_ints[17] = 1376257) or (AIM_ints[17] = 524290)  then
+			str := '(compressed)'
+		else
+			nhdr.datatype :=  1;//str := 'Datatype='+inttostr(AIM_ints[17]);
+		strSz := AIM_ints[8];
+		binSz := 280;
+		nhdr.vox_offset := strSz + binSz;
+		nhdr.dim[1] := AIM_ints[24];
+		nhdr.dim[2] := AIM_ints[26];
+		nhdr.dim[3] := AIM_ints[28];
+    end;
+    if nhdr.datatype =  1 then exit; //do not report: since not all AIM files have a signature, perhaps not an AIM format file at all
+    if (nhdr.datatype = 0) or (strSz < 1) or (nhdr.vox_offset > fSz) then begin
+    	NSLog('Unable to read AIM file. Offset='+inttostr(round(nhdr.vox_offset))+' '+str);
+    	exit;
+    end;
+    //read string header
+	AssignFile(f, fname);
+	FileMode := 0;  //Set file access to read only
+	Reset(f,1);
+	Seek(f, sizeof(AIM_ints));
+	SetLength(str, strSz);
+	BlockRead(f, Str[1],strSz);
+	CloseFile(f);
+	FileMode := 2;
+	readKeyAim('Orig-GOBJ-Dim-p',str, xp,yp,zp); //Resolution
+	if (xp = kNANsingle) then
+		readKeyAim('Orig-ISQ-Dim-p',str, xp,yp,zp); //Resolution
+	readKeyAim('Orig-GOBJ-Dim-um', str, x,y,z); //Field of View
+	if (x = kNANsingle) then
+		readKeyAim('Orig-ISQ-Dim-um', str, x,y,z); //Field of View
+	if (zp <> kNANsingle) and (z <> kNANsingle) then begin
+		if (x > 0) and (xp > 0) then
+			nhdr.pixdim[1] := x / xp;
+		if (y > 0) and (yp > 0) then
+			nhdr.pixdim[2] := y / yp;
+		if (z > 0) and (zp > 0) then
+			nhdr.pixdim[3] := z / zp;
+	end;
+	nhdr.xyzt_units := 3; //microns
+	readKeyAim('Density: intercept', str, x,y,z);
+	if x <> kNANsingle then
+		nhdr.scl_inter := x;
+	readKeyAim('Density: slope', str, x,y,z);
+	if x <> kNANsingle then
+		nhdr.scl_slope := x;
+	readKeyAim('Scaled by factor', str, x,y,z);
+	readKeyAim('scale (el_size factor)', str, xp,yp,zp);
+	//writeln(format('%g %dx%dx%d', [nhdr.vox_offset, nhdr.dim[1], nhdr.dim[2], nhdr.dim[3]]));
+        SetSForm(nhdr);
+	convertForeignToNifti(nhdr);
+	nhdr.descrip := 'AIM'+kIVers;
+	if x <> kNANsingle then
+		nhdr.aux_file := format('Scaling %g', [x]);
+	if xp <> kNANsingle then
+		nhdr.db_name := format('Factor %g', [xp]);
+	result := true;
+end; //readAIM()
+
+function readMRCHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+//https://mrcfile.readthedocs.io/en/latest/usage_guide.html
+//https://bio3d.colorado.edu/imod/doc/mrc_format.txt
+//https://www.ccpem.ac.uk/mrc_format/mrc2014.php
+Type
+  Tmrc = packed record //Next: MGH Format Header structure
+   nx,ny,nz,mode, nxstart, nystart, nzstart, mx,my,mz : int32;
+   xlen,ylen,zlen, alpha, beta, gamma: single;
+   mapc, mapr, maps: int32;
+   amin, amax,amean: single;
+   ispg, next: int32;
+   creatid, extra0, extra1, extra2: int16;
+   extType: array [1..4] of char;
+   nversion: int32;
+   extraData: array [1..16] of char;
+   nint, nreal: int16;
+   extraData2: array [1..20] of char;
+   imodStamp, imodFlags: int32;
+   idtype, lens, nd1, nd2, vd1, vd2: int16;
+   tiltangles: array [1..6] of single;
+   xorg, yorg, zorg: single;
+   cmap: array [1..4] of char;
+   stamp: array [1..4] of uint8;
+   rms: single;
+   nlabs: int32;
+   labels: array [1..800] of char;
+  end;
+var
+  h: Tmrc;
+  lHdrFile: file;
+  lExt: string;
+  isModern: boolean = false;
+  lBuff: Bytep;
+begin
+	result := false;
+	FileMode := fmOpenRead;
+	lExt := UpCaseExt(fname);
+	if (lExt = '.GZ') then begin
+		lBuff := @h;
+		UnGZip(fname,lBuff,0,sizeof(Tmrc)); //1388
+		gzBytes := K_gzBytes_headerAndImageCompressed;
+	end else begin //if MGZ, else assume uncompressed MGH
+		gzBytes := 0;
+		{$I-}
+		AssignFile(lHdrFile, fname);
+		FileMode := 0;  //Set file access to read only
+		Reset(lHdrFile, 1);
+		{$I+}
+		if ioresult <> 0 then begin
+			NSLog('Error in reading MRC header.'+inttostr(IOResult));
+			FileMode := 2;
+			exit;
+		end;
+		BlockRead(lHdrFile, h, sizeof(Tmrc));
+		CloseFile(lHdrFile);
+	end;
+	isModern := (h.cmap[1] = 'M') and (h.cmap[2] = 'A') and (h.cmap[3] = 'P');
+	swapEndian := false;
+	if ((h.stamp[1] = 68) or (h.stamp[1] = 65)) and ((h.stamp[2] = 68) or (h.stamp[2] = 65)) then begin
+		{$IFDEF ENDIAN_BIG}
+		swapEndian := true; //data is little-endian
+		{$ENDIF}
+	end else if (h.stamp[1] = 17) and (h.stamp[2] = 17) then begin
+		{$IFDEF ENDIAN_LITTLE}
+		swapEndian := true; //data is big-endian
+		{$ENDIF}
+	end else begin //endian not specified, e.g. demo iMOD file
+		printf('MRC header machine stamp not specified.');
+		if (h.mode > 101) or (h.nx > 16777215) or (h.ny > 16777215) or (h.nz > 16777215) then
+			swapEndian := true;
+	end;
+	if swapEndian then begin
+		swap4(h.nx);
+		swap4(h.ny);
+		swap4(h.nz);
+		swap4(h.mode);
+		Xswap4r(h.xlen);
+		Xswap4r(h.ylen);
+		Xswap4r(h.zlen);
+	end;
+	if (h.mode = 0) then
+		nhdr.datatype := kDT_INT8
+	else if (h.mode = 1)  then
+		nhdr.datatype := kDT_INT16
+	else if (h.mode = 2)  then
+		nhdr.datatype := kDT_FLOAT32
+	else if (h.mode = 6)  then
+		nhdr.datatype := kDT_INT16
+	else begin
+		  NSLog('Unsupported MRC mode: '+inttostr(h.mode));
+		  exit;
+	end;
+	//NSLog(format('%d %d %d %d %d',[h.nx, h.ny, h.nz, h.mode, h.imodStamp]));
+	if (h.nx < 1) or (h.ny < 1) or (h.nz < 1) then begin
+		NSLog(format('MRC file does not make sense %dx%dx%d mode: %d', [h.nx, h.ny,h.nz, h.mode]));
+		exit;
+	end;
+	nhdr.dim[1]:=h.nx;
+	nhdr.dim[2]:=h.ny;
+	nhdr.dim[3]:=h.nz;
+	nhdr.pixdim[1] := h.xlen/h.nx;
+	nhdr.pixdim[2] := h.ylen/h.ny;
+	nhdr.pixdim[3] := h.zlen/h.nz;
+	if h.zlen = 0 then nhdr.pixdim[3] := max(nhdr.pixdim[1], nhdr.pixdim[2]);
+	nhdr.vox_offset := 1024;
+        SetSForm(nhdr);
+	convertForeignToNifti(nhdr);
+	nhdr.descrip := 'MGH'+kIVers;
+	result := true;
+end; //readMRCHeader()
+
+function readMGH(var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean; out xDim64: int64): boolean;
 Type
   Tmgh = packed record //Next: MGH Format Header structure
    version, width,height,depth,nframes,mtype,dof : longint;
@@ -1803,7 +2554,7 @@ begin
   nhdr.srow_x[0]:=m[0,0]; nhdr.srow_x[1]:=m[0,1]; nhdr.srow_x[2]:=m[0,2]; nhdr.srow_x[3]:=mgh.cr - PxyzOffset[0];
 	nhdr.srow_y[0]:=m[1,0]; nhdr.srow_y[1]:=m[1,1]; nhdr.srow_y[2]:=m[1,2]; nhdr.srow_y[3]:=mgh.ca - PxyzOffset[1];
 	nhdr.srow_z[0]:=m[2,0]; nhdr.srow_z[1]:=m[2,1]; nhdr.srow_z[2]:=m[2,2]; nhdr.srow_z[3]:=mgh.cs - PxyzOffset[2];
-	convertForeignToNifti(nhdr);
+  convertForeignToNifti(nhdr);
   nhdr.descrip := 'MGH'+kIVers;
   result := true;
 end;
@@ -1849,7 +2600,7 @@ type TFByte =  File of Byte;
        exit(true);
   end;
 
-function readVTKHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+function readVTK(var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
 //VTK Simple Legacy Formats : STRUCTURED_POINTS : BINARY
 // http://daac.hpc.mil/gettingStarted/VTK_DataFormats.html
 // https://github.com/bonilhamusclab/MRIcroS/blob/master/%2BfileUtils/%2Bvtk/readVtk.m
@@ -1890,8 +2641,10 @@ begin
   end;
   ReadLnBin(f, str); //comment: 'Comment: created with MRIcroS'
   ReadLnBin(f, str, true); //kind: 'BINARY' or 'ASCII'
-  if pos('BINARY', UpperCase(str)) < 1 then begin  // '# vtk DataFile'
-     NSLog('Only able to read binary VTK files, not "'+str+'"');
+  if (pos('ASCII', UpperCase(str)) > 0) then begin  // '# vtk DataFile'
+	  nhdr.regular := 'A';//ASCII
+  end else  if (pos('BINARY', UpperCase(str)) < 1)  then begin  // '# vtk DataFile'
+     NSLog('Only able to read ASCII or BINARY VTK files, not "'+str+'"');
      goto 666;
   end;
   ReadLnBin(f, str, true); // kind, e.g. "DATASET POLYDATA" or "DATASET STRUCTURED_ POINTS"
@@ -1971,7 +2724,7 @@ begin
   nhdr.descrip := 'VTK'+kIVers;
 end;
 
-function readMHAHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+function readMHA(var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
 //Read VTK "MetaIO" format image
 //http://www.itk.org/Wiki/ITK/MetaIO/Documentation#Reading_a_Brick-of-Bytes_.28an_N-Dimensional_volume_in_a_single_file.29
 //https://www.assembla.com/spaces/plus/wiki/Sequence_metafile_format
@@ -2708,7 +3461,7 @@ begin
 end; //readMIF()
 {$ENDIF}
 
-function readICSHeader(var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+function readICS(var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
 label
 	666;
 var
@@ -2848,9 +3601,391 @@ begin
   nhdr.descrip := 'ICS'+kIVers;
 end; //readICSHeader
 
-function readNRRDHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian, isDimPermute2341: boolean): boolean;
+function readpgm (var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
+//http://netpbm.sourceforge.net/doc/pgm.html
+//http://paulbourke.net/dataformats/ppm/
+label
+  666;
+var
+  FP: TextFile;
+  ch: char;
+  str: string;
+  maxval: integer;
+  fileposBytes: integer = 0;
+  itemIdx: integer = 0;
+begin
+	result := false;
+      	{$IFDEF ENDIAN_LITTLE}
+      	swapEndian := true; //most significant byte is first
+        {$ELSE}
+        swapEndian := false;
+        {$ENDIF}
+	nhdr.datatype := kDT_UINT8;
+	FileMode := fmOpenRead;
+	AssignFile(fp,fname);
+	reset(fp);
+	while (not EOF(fp))  do begin
+		str := '';
+		while not EOF(fp) do begin
+			read(fp,ch);
+			fileposBytes := fileposBytes + 1;
+			if (ch = '#') then begin //comment: ignore rest of line
+				while not EOF(fp) do begin
+					read(fp,ch);
+					fileposBytes := fileposBytes + 1;
+					if (ch = chr($0A)) or (ch = chr($0D)) then break;
+				end;
+			end;
+			if (ch = chr($0D)) or (ch = chr($0A)) or (ch = ' ') then break;
+			str := str+ch;
+		end;
+		str := Trim(str);
+		if str = '' then continue;
+		//NSLog(inttostr(itemIdx)+'"'+str+'"');
+		if itemIdx = 0 then begin
+			if length(str) < 2 then goto 666;
+			if str[1] <> 'P' then goto 666;
+			if str[2] = '2' then
+				nhdr.regular := 'A'
+			else if str[2] = '3' then begin
+				nhdr.regular := 'A';
+				nhdr.datatype := kDT_RGB;
+			end else if str[2] = '5' then
+				//i := 0//
+			else if str[2] = '6' then
+				nhdr.datatype := kDT_RGB
+			else begin
+				NSLog('Unknown pgm type:'+str);
+				goto 666;
+			end;
+		end else if itemIdx = 1 then begin
+			nhdr.dim[1] := strtointdef(str, 0);
+		end else if itemIdx = 2 then begin
+			nhdr.dim[2] := strtointdef(str, 0);
+		end else begin
+			maxval := strtointdef(str, 0);
+			if nhdr.datatype = kDT_RGB then
+				//
+			else if maxval > 255 then //Must be less than 65536, and more than zero.
+				nhdr.datatype := kDT_UINT16
+			else
+				nhdr.datatype := kDT_UINT8;
+			break;
+		end;
+		itemIdx := itemIdx + 1;
+	end;
+	nhdr.vox_offset := fileposBytes;
+	result := true;
+        SetSForm(nhdr);
+	convertForeignToNifti(nhdr);
+	nhdr.descrip := 'VTI'+kIVers;
+666:
+	CloseFile(FP);
+	Filemode := 2;
+end; //readpgm()
+
+procedure swap4u(var s : UInt32);
+type
+  swaptype = packed record
+    case byte of
+      0:(Word1,Word2 : word); //word is 16 bit
+      1:(Long:LongInt);
+  end;
+  swaptypep = ^swaptype;
+var
+  inguy:swaptypep;
+  outguy:swaptype;
+begin
+  inguy := @s; //assign address of s to inguy
+  outguy.Word1 := swap(inguy^.Word2);
+  outguy.Word2 := swap(inguy^.Word1);
+  s:=outguy.Long;
+end;
+
+function ReadUInt32(fname: string; offset: integer; swapEndian: boolean): UInt32;
+var
+	f: file;
+	i: UInt32;
+begin
+  AssignFile(f, fname);
+  FileMode := fmOpenRead;  //Set file access to read only
+  Reset(f, 1);
+  seek(f, offset);
+  BlockRead(f, i, sizeof(i));
+  CloseFile(f);
+  if swapEndian then
+  	swap4u(i);
+  result := i;
+end;
+
+procedure swap8u(var s : UInt64);
+type
+  swaptype = packed record
+    case byte of
+      0:(Word1,Word2,Word3,Word4 : word); //word is 16 bit
+  end;
+  swaptypep = ^swaptype;
+var
+  inguy:swaptypep;
+  outguy:swaptype;
+begin
+  inguy := @s; //assign address of s to inguy
+  outguy.Word1 := swap(inguy^.Word4);
+  outguy.Word2 := swap(inguy^.Word3);
+  outguy.Word3 := swap(inguy^.Word2);
+  outguy.Word4 := swap(inguy^.Word1);
+  inguy^.Word1 := outguy.Word1;
+  inguy^.Word2 := outguy.Word2;
+  inguy^.Word3 := outguy.Word3;
+  inguy^.Word4 := outguy.Word4;
+end;
+
+function ReadUInt64(fname: string; offset: integer; swapEndian: boolean): UInt64;
+var
+	f: file;
+	i: UInt64;
+begin
+  AssignFile(f, fname);
+  FileMode := fmOpenRead;  //Set file access to read only
+  Reset(f, 1);
+  seek(f, offset);
+  BlockRead(f, i, sizeof(i));
+  CloseFile(f);
+  if swapEndian then
+  	swap8u(i);
+  result := i;
+end;
+
+function readVTI(var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+//https://vtk.org/Wiki/VTK_XML_Formats
+//similar to *.vtp/*.vtu  described here http://www.earthmodels.org/software/vtk-and-paraview/vtk-file-formats
+function parseField(field, str: string): string;
+//parseField('WholeExtent="', str) would return '0 63 0 63 0 34' for str =
+//   <ImageData WholeExtent="0 63 0 63 0 34" Origin="104 -58.6843 -84.798"
+var
+	i: integer;
+begin
+	i := PosEx(field,  str);
+	if i < 1 then exit('');
+	result := copy(str, i+length(field), maxint);
+	i := PosEx('"',  result);
+	if i < 2 then exit('');
+	result := copy(result, 1, i-1);
+end;
+//https://vtk.org/Wiki/VTK_XML_Formats
+label
+  666;
+var
+  FP: TextFile;
+  ch: char;
+  mArray: TStringList;
+  //pth,
+  str, str2: string;
+  offset, i, headerSize,fileposBytes: integer;
+  isDetachedFile: boolean = false;
+  isFirstLine: boolean;
+  header_type : integer = kDT_UINT32;
+  a64, e64: UInt64;
+begin
+  //pth := ExtractFilePath(fname);
+  {$IFDEF FPC}
+  DefaultFormatSettings.DecimalSeparator := '.' ;
+  //DecimalSeparator := '.';
+  {$ELSE}
+  DecimalSeparator := '.';
+  {$ENDIF}
+  result := false;
+  gzBytes :=0;
+  fileposBytes := 0;
+  swapEndian :=false;
+  //nDims := 0;
+  nhdr.dim[1] := 1;
+  nhdr.dim[2] := 1;
+  nhdr.dim[3] := 1;
+  headerSize :=0;
+  //isDetachedFile :=false;
+  mArray := TStringList.Create;
+  isFirstLine := true;
+  offset := 0;
+  FileMode := fmOpenRead;
+  AssignFile(fp,fname);
+  reset(fp);
+  while (not EOF(fp))  do begin
+    str := '';
+    while not EOF(fp) do begin
+      read(fp,ch);
+      fileposBytes := fileposBytes + 1;
+      //if (ch = chr($0D)) or (ch = chr($0A)) then break;
+      if (ch = chr($0D)) then continue;
+      if (ch = chr($0A)) then break;
+      str := str+ch;
+    end;
+    if str = '' then break; //if str = '' then continue;
+    str := Trim(str);
+    if (isFirstLine) then begin
+      if AnsiStartsText('<?xml',str) then
+      	continue; //read next line
+      if not AnsiStartsText('<VTKFile',str) then begin
+      	NSLog('File does not start with "<VTIFile" '+ fname);
+      	goto 666;
+      end;
+      if not AnsiContainsText(str, 'type="ImageData"') then begin
+      	NSLog('VTK import only supports type="ImageData" '+fname);
+      	goto 666;
+      end;
+      if AnsiContainsText(str, 'byte_order="LittleEndian"') then begin
+      	{$IFDEF ENDIAN_BIG}
+      	swapEndian :=false;
+      	{$ENDIF}
+      end else if AnsiContainsText(str, 'byte_order="BigEndian"') then begin
+      	{$IFDEF ENDIAN_LITTLE}
+      	swapEndian :=false;
+      	{$ENDIF}
+      end else
+      	NSLog('byte_order not specified, assuming native endian.');
+      if AnsiContainsText(str, 'header_type="UInt64"') then
+      	header_type := kDT_UINT64
+      else if  AnsiContainsText(str, 'header_type="UInt32"') then
+      	header_type := kDT_UINT32
+      else
+      	NSLog('header_type not specified, assuming UInt32');
+      isFirstLine := false;
+      continue;
+    end;
+    if AnsiStartsText('<ImageData',str) then begin
+   		//WholeExtent="0 63 0 63 0 34"
+   		str2 := parseField('WholeExtent="', str);
+   		if str2 = '' then begin
+   			NSLog('error parsing WholeExtent');
+   			goto 666;
+   		end;
+   		mArray.DelimitedText := str2;
+   		if odd(mArray.count) or (mArray.count < 2) then begin
+   			NSLog('WholeExtent must have an even number of arguments');
+   			goto 666;
+   		end;
+   		nhdr.dim[0] := (mArray.count div 2);
+   		for i := 0 to ((mArray.count div 2) -1) do
+   			nhdr.dim[i+1] := 1 + strtointDef(mArray.Strings[(i*2)+1],0) - strtointDef(mArray.Strings[i*2],0);
+   		//Origin="104 -58.6843 -84.798"
+   		str2 := parseField('Origin="', str);
+   		if str2 <> '' then begin
+   			mArray.DelimitedText := str2;
+   			if mArray.count > 0 then
+   				nhdr.srow_x[3] := StrToFloatDef(mArray.Strings[0],0);
+   			if mArray.count > 1 then
+   				nhdr.srow_y[3] := StrToFloatDef(mArray.Strings[1],0);
+   			if mArray.count > 2 then
+   				nhdr.srow_z[3] := StrToFloatDef(mArray.Strings[2],0);
+   		end;
+   		//Spacing="3.25 3.2499993809390175 3.599996584498935" Direction="1 0 0 0 1 0 0 0 1">
+		str2 := parseField('Spacing="', str);
+   		if str2 <> '' then begin
+   			mArray.DelimitedText := str2;
+   			if mArray.count > 0 then
+   				for i := 0 to min(6, mArray.count - 1) do
+   					nhdr.pixdim[i+1] := StrToFloatDef(mArray.Strings[i],0);
+   		end;
+   		nhdr.srow_x[0] := nhdr.pixdim[1];
+   		nhdr.srow_y[1] := nhdr.pixdim[2];
+   		nhdr.srow_z[2] := nhdr.pixdim[3];
+
+   		//TODO Direction="1 0 0 0 1 0 0 0 1"
+   		continue;
+    end; // <ImageData
+    // <DataArray type="Int16" Name="ImageFile" format="appended" RangeMin="0"
+    // <DataArray type="Int16" Name="ImageFile" format="ascii" RangeMin="0" RangeMax="2734">
+    if AnsiStartsText('<DataArray',str) then begin
+   	 	//type="Int16"
+   	 	str2 := parseField('type="', str);
+   	 	if AnsiStartsText( 'UInt8', str2) then
+   	 		nhdr.datatype := kDT_UINT8
+   	 	else if AnsiStartsText( 'Int8', str2) then
+   	 		nhdr.datatype := kDT_INT8
+   	 	else if AnsiStartsText( 'UInt16', str2) then
+   	 		nhdr.datatype := kDT_UINT16
+   	 	else if AnsiStartsText( 'Int16', str2) then
+   	 		nhdr.datatype := kDT_INT16
+   	 	else if AnsiStartsText( 'Float32', str2) then
+   	 		nhdr.datatype := kDT_Float32
+   	 	else if AnsiStartsText( 'Float64', str2) then
+   	 		nhdr.datatype := kDT_Float64
+   	 	else begin
+   	 		NSLog('Unknown VTI value for type='+str2);
+   	 		goto 666;
+   	 	end;
+   	 	//format="ascii"
+   	 	str2 := parseField('format="', str);
+   	 	if AnsiStartsText( 'ascii', str2) then begin
+   	 		//for ASCII data, the raw data follows the DataArray tag
+   	 		nhdr.regular := 'A';
+   	 		break;
+   	 	end else if AnsiStartsText('appended', str2) then
+   	 		//
+   	 	else if AnsiStartsText('binary', str2) then begin
+   	 		NSLog('Unable to read VTI binary files save as base64. Convert with ParaView.');
+   	 		goto 666;
+   	 	end else begin
+   	 		NSLog('Unsupported data "format" '+str2);
+   	 		goto 666;
+   	 	end;
+   	 	//offset="0"
+   	 	str2 := parseField('offset="', str);
+   	 	if length(str2) > 0 then
+   	 		offset := strtointdef(str2, 0);
+
+   		//Name="ImageFile" format="ascii" RangeMin="0" RangeMax="2734">
+    end; // <DataArray
+    //<AppendedData encoding="raw">
+    if AnsiStartsText('<AppendedData', str) then begin
+    	ch := 'x';
+    	while (not EOF(fp)) and (ch <> '_') do begin
+      		read(fp,ch);
+      		fileposBytes := fileposBytes + 1;
+      	end;
+    	break;
+    end;
+    if AnsiStartsText('<', str) then
+    	continue; //ignored tag, like "<Piece Extent="0 63 0 63 0 34">"
+  end;
+  headerSize := fileposBytes;
+  nhdr.vox_offset := headerSize;
+  result := true;
+666:
+  CloseFile(FP);
+  Filemode := 2;
+  mArray.free;
+  convertForeignToNifti(nhdr);
+  if (result) and (not isDetachedFile) and (nhdr.regular <> 'A') then begin
+  		headerSize := headerSize + offset;
+  		//read actual size of
+  		if header_type = kDT_UINT64 then begin
+  			a64 := ReadUInt64(fname, headerSize, swapendian);
+  			headerSize := headerSize + 8;
+  		end else begin
+  			a64 := ReadUInt32(fname, headerSize, swapendian);
+  			headerSize := headerSize + 4;
+  		end;
+  		//expected size
+  		e64 := 1;
+  		for i := 1 to 7 do
+  			if (nhdr.dim[i] > 1) then
+  				e64 *= nhdr.dim[i];
+  		e64 := e64 * (nhdr.bitpix div 8);
+  		//
+  		if e64 <> a64 then begin
+  			result := false;
+  			NSLog(format('Only able to read unpartitioned VTI images saved as single contiguous block. Expected %d bytes, not %d', [e64, a64]));
+  		end;
+  		nhdr.vox_offset := headerSize;
+  end;
+  nhdr.descrip := 'VTI'+kIVers;
+end; //readVTI()
+
+function readNRRD(var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian, isDimPermute2341: boolean): boolean;
 //http://www.sci.utah.edu/~gk/DTI-data/
 //http://teem.sourceforge.net/nrrd/format.html
+//https://github.com/addisonElliott/matnrrd
 FUNCTION specialdouble (d:double): boolean;
 //returns true if s is Infinity, NAN or Indeterminate
 //8byte IEEE: msb[63] = signbit, bits[52-62] exponent, bits[0..51] mantissa
@@ -2909,6 +4044,9 @@ begin
   fileposBytes := 0;
   swapEndian :=false;
   //nDims := 0;
+  nhdr.dim[1] := 1;
+  nhdr.dim[2] := 1;
+  nhdr.dim[3] := 1;
   headerSize :=0;
   lineskip := 0;
   byteskip := 0;
@@ -3031,9 +4169,13 @@ begin
       {$ENDIF}
     end else if AnsiStartsText('encoding',tagName) then begin
       if AnsiContainsText(mArray.Strings[0], 'raw') then
-          gzBytes :=0
+          gzBytes := 0
+      else if AnsiContainsText(mArray.Strings[0], 'bz2') or AnsiContainsText(mArray.Strings[0], 'bzip2') then
+          gzBytes := K_bz2Bytes_headerAndImageCompressed
       else if AnsiContainsText(mArray.Strings[0], 'gz') or AnsiContainsText(mArray.Strings[0], 'gzip') then
           gzBytes := K_gzBytes_headerAndImageCompressed//K_gzBytes_headeruncompressed
+      else if AnsiContainsText(mArray.Strings[0], 'ASCII') or AnsiContainsText(mArray.Strings[0], 'TEXT') or AnsiContainsText(mArray.Strings[0], 'TXT') then
+          nhdr.regular := 'A'
       else begin
           NSLog('Unknown encoding format '+mArray.Strings[0]);
           isOK := false;
@@ -3083,10 +4225,11 @@ begin
       end;
       isDetachedFile :=true;
       //break;
-
     end; //for ...else tag names
   end;
   if ((headerSize = 0) and ( not isDetachedFile)) then begin
+      if gzBytes = K_bz2Bytes_headerAndImageCompressed then
+        gzBytes := K_bz2Bytes_onlyImageCompressed; //raw text file followed by GZ image
     if gzBytes = K_gzBytes_headerAndImageCompressed then
       gzBytes := K_gzBytes_onlyImageCompressed; //raw text file followed by GZ image
     if lineskip > 0 then begin
@@ -3180,7 +4323,7 @@ begin
   nhdr.descrip := 'NRRD'+kIVers;
   //showmessage(floattostr(nhdr.vox_offset));
   //nhdr.vox_offset := 209;
-end; //readNRRDHeader()
+end; //readNRRD()
 
 procedure THD_daxes_to_NIFTI (var nhdr: TNIFTIhdr; xyzDelta, xyzOrigin: vect3; orientSpecific: ivect3);
 //see http://afni.nimh.nih.gov/pub/dist/src/thd_matdaxes.c
@@ -3252,9 +4395,7 @@ begin
        nhdr.srow_y[0], nhdr.srow_y[1], nhdr.srow_y[2], nhdr.srow_y[3],
         nhdr.srow_z[0], nhdr.srow_z[1], nhdr.srow_z[2], nhdr.srow_z[3] ]));
 
-end;*)
-
-(*
+end;
 
 procedure m33 (m: mat33);
 begin
@@ -3298,7 +4439,7 @@ begin
   //Report_Mat(nhdr);
 end;
 
-function nii_readIdf (var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
+function readIdf (var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
 //UCSF IDF format used by SIVIC
 label
   666;
@@ -3322,7 +4463,7 @@ begin
    if (lExt <> '.IDF') then
       hdrName := ChangeFileExt(hdrName, '.idf');
    if not fileexists(hdrName) then begin
-      printf('Unable to find IDF header '+hdrName);
+      NSLog('Unable to find IDF header '+hdrName);
       exit;
    end;
    fname := ChangeFileExt(hdrName, '.byt');
@@ -3336,7 +4477,7 @@ begin
       nhdr.datatype := kDT_FLOAT;
    end;
    if not fileexists(fname) then begin
-      printf('Unable to find IDF image *.byt, *int2, *.real associated with '+hdrName);
+      NSLog('Unable to find IDF image *.byt, *int2, *.real associated with '+hdrName);
       exit;
    end;
    for i := 0 to 2 do begin
@@ -3382,7 +4523,7 @@ begin
          else if (nhdr.datatype = kDT_FLOAT) and (i = 7) then
             //OK
          else
-             printf('Warning: IDF file extension and type do not match');
+             NSLog('Warning: IDF file extension and type do not match');
       end; //filetype
       if posex('dimension:', sList[0]) = 1 then begin
          i := strtointdef(sList[1], 0);
@@ -3436,12 +4577,12 @@ begin
   Filemode := 2;
   sList.Free;
   if not result then begin
-    printf('IDF error "'+errStr+'" '+hdrName);
+    NSLog('IDF error "'+errStr+'" '+hdrName);
     exit; //error - code jumped to 666 without setting result to true
   end;
   convertForeignToNifti(nhdr);
   nhdr.descrip := 'IDF'+kIVers;
-end; //nii_readIdf
+end; //readIdf
 
 function isINTERFILE(var fname: string): boolean;
 var
@@ -3487,27 +4628,27 @@ begin
     nhdr.srow_z[2] := -nhdr.srow_z[2];
     nhdr.srow_x[3] := -nhdr.srow_x[3];
     nhdr.srow_y[3] := -nhdr.srow_y[3];
-    nhdr.srow_z[3] := -nhdr.srow_z[3]; 
+    nhdr.srow_z[3] := -nhdr.srow_z[3];
     if xyzmm1[0] = kNaNSingle then begin
         NSLog('Warning: origin not set, "image info" tags not found');
         exit;
     end;
     if (abs(xyzmm1[1]-xyzmmMax[1]) > 0.01) or (abs(xyzmm1[2]-xyzmmMax[2]) > 0.01)  then begin
         NSLog('Warning: origin not set, "image info" suggest slices not orthogonal with scanner bore.');
-        exit;    
+        exit;
     end;
     nhdr.srow_x[3] := -xyzmm1[1];
     nhdr.srow_y[3] := -xyzmm1[2];
-    nhdr.srow_z[3] := xyzmm1[0]; 
+    nhdr.srow_z[3] := xyzmm1[0];
     //NSLog(format('--> %g %g %g',[nhdr.srow_x[3], nhdr.srow_y[3], nhdr.srow_z[3]]));
-    //Report_Mat(nhdr);   
+    //Report_Mat(nhdr);
 end;
 
 function SiemensImageInfo(tag, val: string; out xyzmm: vect3): integer;
 //e.g. for
 // image info[99]:={98,-253.016,-408.116,-655.193...
 // tag = 'image info[99]', val ] '{98,-25...'
-// slice is 98, xyzmm[0,1,2]= -253,-408,-655 
+// slice is 98, xyzmm[0,1,2]= -253,-408,-655
 var
     sList : TStringList;
 begin
@@ -3516,18 +4657,18 @@ begin
     result := getDim(tag);
     //writeln(inttostr(result)+'->'+val);
     sList := TStringList.Create;
-    sList.Delimiter := ','; 
+    sList.Delimiter := ',';
     sList.DelimitedText := copy(val,2,length(val)-2);
     if sList.Count > 3 then begin
         xyzmm[0] := strtofloatdef(sList[1],0.0);
         xyzmm[1] := strtofloatdef(sList[2],0.0);
-        xyzmm[2] := strtofloatdef(sList[3],0.0); 
-        //NSLog(format('%s-> %g %g %g',[val, xyzmm[0],xyzmm[1], xyzmm[2]]));    
+        xyzmm[2] := strtofloatdef(sList[3],0.0);
+        //NSLog(format('%s-> %g %g %g',[val, xyzmm[0],xyzmm[1], xyzmm[2]]));
     end;
     sList.Free;
 end;
 
-function nii_readInterfile (var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
+function readInterfile (var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
 //interfile
 //https://www.researchgate.net/publication/21707960_A_file_format_for_the_exchange_of_nuclear_medicine_image_data_A_specification_of_interfile_version_33
 label
@@ -3538,8 +4679,8 @@ var
   isLPI, isOK, isUint, isOrigin, isPixDim: boolean;
   tmp, tag, str, errStr, val, valu: string;
   slice, sliceMax: integer;
-  xyzmm, xyzmm1, xyzmmMax:  vect3; 
-begin 
+  xyzmm, xyzmm1, xyzmmMax:  vect3;
+begin
   result := false;
    if not fileexists(fname) then exit;
    FileMode := fmOpenRead;
@@ -3581,7 +4722,7 @@ begin
       tag := lowercase(tag);
       val := copy(str, i+2, maxint);
       val := trim(val);
-      valu := val; //retain case - important for Linux fname 
+      valu := val; //retain case - important for Linux fname
       val := lowercase(val);
       if length(val) < 1 then continue;
       if PosEx('name of data file', tag) > 0 then begin
@@ -3620,7 +4761,7 @@ begin
               goto 666;
          end;
       end; //number of bytes per pixel
-      if (PosEx('image orientation', tag) > 0) and (PosEx('{1,0,0,0,1,0}', val) > 0) then 
+      if (PosEx('image orientation', tag) > 0) and (PosEx('{1,0,0,0,1,0}', val) > 0) then
          isLPI := true;
       if PosEx('number of bytes per pixel', tag) > 0 then
         bpp := strtointdef(val,0);
@@ -3632,7 +4773,7 @@ begin
          nhdr.dim[dim] := strtointdef(val, 0);
       end;
       //https://github.com/UCL/STIR/issues/333 : "mmpixel", "mm/pixel", "scaling factor (mm/pixel)"
-      //Siemens SMS JSRecon appears to have a typo relative to the standard "scale factor (mm/pixel)" vs"'scaling factor'" 
+      //Siemens SMS JSRecon appears to have a typo relative to the standard "scale factor (mm/pixel)" vs"'scaling factor'"
       if ((PosEx('scaling factor', tag) > 0) or (PosEx('scale factor', tag) > 0)) and (PosEx('mm', tag) > 0) and (PosEx('pixel', tag) > 0) then begin
          dim := getDim(tag);
          if dim = 0 then continue;
@@ -3681,19 +4822,18 @@ begin
   if isOK then
      result := true;
   if not isPixDim then
-    printf('Unable to scaling factor (pixdim)');
+    printf('Interfile missing "scaling factor" (pixdim)');
   printf(format('Interfile dim %dx%dx%d %dbpp pixdim %.3fx%.3fx%.3f', [nhdr.dim[1], nhdr.dim[2], nhdr.dim[3], bpp, nhdr.pixdim[1], nhdr.pixdim[2], nhdr.pixdim[3]]));
   //two methods to determine origin: "first pixel offset" or Siemens usage of "image info"
   if isLPI then
     lpi2ras(nhdr, xyzmm1, xyzmmMax)
   else if not isOrigin then
-    printf('Unable to determine origin');    
+    printf('Unable to determine origin');
 666:
     CloseFile(FP);
     Filemode := 2;
-
   if not result then begin
-     printf('Interfile error "'+errStr+'" ');
+     NSLog('Interfile error "'+errStr+'" ');
      //printf(format('  %dx%dx%d %dbpp', [nhdr.dim[1], nhdr.dim[2], nhdr.dim[3], bpp]));
      exit; //error - code jumped to 666 without setting result to true
   end;
@@ -3701,7 +4841,140 @@ begin
   convertForeignToNifti(nhdr);
 end; //read INTERFILE
 
-function readSPRHeader (var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
+function readVFF(var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
+//http://cbi.nyu.edu/svn/mrTools/trunk/mrLoadRet/File/loadVFF.m
+label
+  666;
+const
+	kFF = chr($0C);
+var
+  FP: TFByte;
+  str: string;
+  sList: TStringList;
+  i : integer;
+  isOK: boolean;
+begin
+  {$IFDEF FPC}
+   DefaultFormatSettings.DecimalSeparator := '.' ;
+   {$ELSE}
+   DecimalSeparator := '.';
+   {$ENDIF}
+  isOK := false;
+  {$IFDEF ENDIAN_LITTLE}
+  swapEndian := true;
+  {$ELSE}
+  swapEndian := false;
+  {$ENDIF}
+  result := false;
+  AssignFile(fp,fname);
+  reset(fp);
+  sList := TStringList.Create;
+  sList.Delimiter := ' ';        // Each list item will be blank separated
+  fname := ChangeFileExt(fname, '.vff');
+  if not fileexists(fname) then begin
+     NSLog('Unable to find '+fname);
+     goto 666;
+  end;
+  ReadLnBin(fp,str);
+  if posex('ncaa',str) <> 1 then begin
+		NSLog('vff files should begin with "ncaa": '+fname);
+		goto 666;
+  end;
+  nhdr.datatype := kDT_UINT8;
+  nhdr.dim[0] := 0;
+  while (not EOF(fp))  do begin
+      ReadLnBin(fp,str);
+      if length(str) < 1 then continue;
+      if str = kFF then begin
+      	isOK := true;
+      	nhdr.vox_offset := filepos(fp);
+      	break;
+      end;
+      if AnsiEndsStr(';', str) then
+      	SetLength(str, length(str) - 1);
+      sList.Delimiter:='=';
+      sList.DelimitedText := str;
+      if sList.Count < 2 then continue;
+      if length(sList[1]) < 1 then continue;
+      if posex('rank', sList[0]) = 1 then begin
+         nhdr.dim[0] := strtointdef(sList[1],-1);
+      end;
+      if posex('bits', sList[0]) = 1 then begin
+         nhdr.bitpix := strtointdef(sList[1],-1);
+         if nhdr.bitpix = 8 then
+            nhdr.datatype := kDT_UINT8  //Mango error
+         else if nhdr.bitpix = 16 then
+            nhdr.datatype := kDT_UINT16
+         else if nhdr.bitpix = 32 then
+            nhdr.datatype := kDT_UINT32
+         else begin
+              NSLog('Unsupported datatype "'+sList[1]+'"');
+              goto 666;
+         end;
+      end;
+      if (posex('type', sList[0]) = 1) and (posex('raster', sList[1]) <> 1) then begin
+         NSLog('only able to read vff files of type "raster": '+fname);
+		goto 666;
+      end;
+      if posex('size', sList[0]) = 1 then begin
+      	for i := 1 to sList.Count -1 do
+        	nhdr.dim[i] := strtointdef(sList[i],0);
+      end;
+      if (posex('spacing', sList[0]) = 1) or (posex('aspect', sList[0]) = 1) then begin
+      	for i := 1 to sList.Count -1 do
+        	nhdr.pixdim[i] := strtofloatdef(sList[i],0);
+        nhdr.srow_x[0] := nhdr.pixdim[1];
+        nhdr.srow_y[1] := nhdr.pixdim[2];
+        nhdr.srow_z[2] := nhdr.pixdim[3];
+      end;
+      if posex('origin', sList[0]) = 1 then begin
+      	nhdr.srow_x[3] := strtofloatdef(sList[1],0);
+      	if sList.Count > 2 then
+      		nhdr.srow_y[3] := strtofloatdef(sList[2],0);
+      	if sList.Count > 3 then
+      		nhdr.srow_z[3] := strtofloatdef(sList[3],0);
+      end;
+      if posex('data_scale', sList[0]) = 1 then begin
+      		nhdr.scl_slope := strtofloatdef(sList[1],0);
+      end;
+      if posex('data_offset', sList[0]) = 1 then begin
+      		nhdr.scl_inter := strtofloatdef(sList[1],0);
+      end;
+      if (posex('value', sList[0]) = 1) and (sList.Count > 2) then begin
+      	nhdr.scl_inter := strtofloatdef(sList[1],0);
+      	nhdr.scl_slope := strtofloatdef(sList[1],1);
+      end;
+      if (posex('byte_order', sList[0]) = 1) and (posex('little_endian', sList[1]) = 1) then begin
+		  {$IFDEF ENDIAN_LITTLE}
+		  swapEndian := false;
+		  {$ELSE}
+		  swapEndian := true;
+		  {$ENDIF}
+      end;
+      if (posex('byte_order', sList[0]) = 1) and (posex('big_endian', sList[1]) = 1) then begin
+		  {$IFDEF ENDIAN_LITTLE}
+		  swapEndian := true;
+		  {$ELSE}
+		  swapEndian := false;
+		  {$ENDIF}
+      end;
+      if posex('guidid', sList[0]) = 1 then begin
+      		nhdr.descrip := sList[1];
+      end;
+      //NSLog(sList[0]+'>>"'+sList[1]+'"');
+  end; //while not end
+  if isOK then
+     result := true;
+666:
+  CloseFile(FP);
+  sList.Free;
+  Filemode := 2;
+  if not result then exit; //error - code jumped to 666 without setting result to true
+  convertForeignToNifti(nhdr);
+  nhdr.aux_file := 'VFF'+kIVers;
+end;
+
+function readSPR(var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
 //SLicer3D export format https://www.cmrr.umn.edu/stimulate/stimUsersGuide/node57.html
 label
   666;
@@ -3810,20 +5083,76 @@ begin
   nhdr.descrip := 'SPR'+kIVers;
 end;
 
+function TFloatVec.nar: integer;
+begin
+  result := length(ar);
+end;
 
-function readAFNIHeader (var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean;
+procedure initAFNIs(var AFNIs: TAFNIs; n: integer);
+var
+	prev, i: integer;
+begin
+	if n < 0 then exit;
+	if n < 1 then begin //release
+		setlength(AFNIs, 0);
+		exit;
+	end;
+	prev := length(AFNIs);
+	if prev = n then exit; //no change
+	if prev > n then exit; //keep previous items
+	setLength(AFNIs, n);
+	for i := prev to (n-1) do begin
+		AFNIs[i].nam := '';
+		AFNIs[i].jv := kFUNC_NOT_STAT;
+		AFNIs[i].nv := 0;
+		AFNIs[i].param[0] := 0;
+		AFNIs[i].param[1] := 0;
+		AFNIs[i].param[2] := 0;
+		AFNIs[i].minVal := 0;
+		AFNIs[i].maxVal := 0;
+		AFNIs[i].maxAbsVal := 0;
+		AFNIs[i].FDRcurv.dx:= 0;
+		AFNIs[i].FDRcurv.x0:=0;
+		AFNIs[i].FDRcurv.ar := nil;
+	end;
+end; // initAFNIs()
+
+function parseStr(s, key: string): string;
+// 'VAL="106" OKEY="106"' with key='VAL="' will return '106'
+//beware, not all images follow specification https://sscc.nimh.nih.gov/sscc/dglen/Makinganatlas
+// e.g. HaskinsPeds_aff_atlas1.0+tlrc.HEAD reports 'STRUCT=Left-Caudate' but should report 'STRUCT="Left-Caudate"'
+var
+	b,e, e2: integer;
+begin
+	result := '';
+	b := Pos(key, s);
+	if b < 1 then exit;
+	b := b + length(key);
+	if (b < length(s)) and (s[b] = '"') then
+		b := b + 1;
+	e := PosEx('"', s, b);
+	e2 := PosEx(chr(9), s, b);//
+	if (e2 > 0) and (e2 < e) then e := e2;
+	if e < b then exit;
+	result := copy(s, b, e-b);
+end;
+
+function readAFNIHeader(var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian, isAllVolumesSame: boolean;  var AFNIs: TAFNIs; var fLabels: TStringList): boolean; overload;
 label
   666;
 var
   sl, mArray: TStringList;
-  typeStr,nameStr, valStr: string;
-  lineNum, itemCount,i, vInt, nVols: integer;
-  isAllVolumesSame, isProbMap, isStringAttribute: boolean;
+  typeStr,nameStr, valStr, tmpStr: string;
+  xForm, lineNum, itemCount,i, vInt, nVols: integer;
+  isProbMap, isStringAttribute, hasStatAux, hasIJK_TO_DICOM_REAL: boolean;
   valArray  : Array of double;
   orientSpecific: ivect3;
   xyzOrigin, xyzDelta: vect3;
+  sList : TStringList;
+  ivMax, iv, jv, nv: integer;
+  p0,p1, p2: single;
 begin
- {$IFDEF FPC}
+  {$IFDEF FPC}
   DefaultFormatSettings.DecimalSeparator := '.' ;
  //DecimalSeparator := '.';
   {$ELSE}
@@ -3834,6 +5163,13 @@ begin
       xyzOrigin[i] := 0;
       orientSpecific[i] := 0;
   end;
+  NII_Clear (nhdr);
+  xForm := kNIFTI_XFORM_SCANNER_ANAT;
+  fLabels.Clear;
+  hasStatAux := false;
+  hasIJK_TO_DICOM_REAL := false;
+  isAllVolumesSame := true;
+  setLength(AFNIs, 0);
   nVols := 1;
   result := false;
   isProbMap := false;
@@ -3869,6 +5205,130 @@ begin
     if not AnsiContainsText(cleanStr(mArray[0]), 'count') then continue;
     itemCount := strtoint(cleanStr(mArray[1]));
     if itemCount < 1 then exit;
+
+    if isStringAttribute then begin
+
+    	valStr := '';
+    	repeat
+    		lineNum := lineNum + 1;
+    		if (lineNum > (sl.count-1)) then continue;
+    		valStr := valStr+chr(9)+sl[lineNum];
+    	until pos('~',sl[lineNum]) > 0;
+    	if AnsiContainsText(nameStr,'VALUE_LABEL_DTABLE') then begin
+           //seeTT_N27_EZ_ML+tlrc
+           // https://afni.nimh.nih.gov/pub/dist/doc/program_help/README.environment.html
+           if fLabels.Count > 1 then continue;
+           nhdr.intent_code := kNIFTI_INTENT_LABEL;
+           nv := Pos('>',valStr);
+           if nv < 1 then continue;
+           nv := nv + 1;
+           jv := PosEx('<',valStr, nv);
+           if jv < nv then continue;
+           valStr := copy(valStr, nv, jv-nv-1);
+           sList := TStringList.Create;
+           sList.Delimiter := '"';
+           sList.DelimitedText := valStr;
+           for i := sList.Count-1 downto 0 do
+           		if sList[i] = '' then sList.Delete(i);
+           //first pass: max label
+           nv := 0;
+           i := 0;
+           while (i+1) < sList.Count do begin
+           		jv := StrToIntDef(sList[i], 99999);
+           		if jv > nv then nv := jv;
+           		i := i + 2;
+           end;
+           if (nv = 99999) or (nv < 1) then begin
+           	sList.Free;
+           	printf('Unable to parse VALUE_LABEL_DTABLE');
+           	continue;
+           end;
+           //second pass
+           for i := 0 to nv do
+          	    fLabels.Add(inttostr(i)); //TT_N27_CA_EZ_MPM+tlrc.HEAD only labels some regionsf
+  		   i := 0;
+           while (i+1) < sList.Count do begin
+           		jv := StrToIntDef(sList[i], 0);
+           		fLabels[jv] := sList[i+1];
+           		i := i + 2;
+           end;
+  		   sList.Free;
+    	end; //VALUE_LABEL_DTABLE
+        if AnsiContainsText(nameStr,'ATLAS_LABEL_TABLE') then begin
+           nhdr.intent_code := kNIFTI_INTENT_LABEL;
+           //writeln(valStr);
+        	sList := TStringList.Create;
+        	sList.StrictDelimiter := true;
+  			sList.Delimiter := '<';        // Each list item will be blank separated
+  			sList.DelimitedText := copy(valStr, 2, length(valStr)-2);
+  			if sList.count < 1 then begin
+  				sList.Free;
+  				break;
+  			end;
+  			//if sList.count > (length(AFNIs)) then
+  			//	initAFNIs(AFNIs, sList.count);
+  			//first pass: max label
+  			nv := 0;
+  			for i := 0 to (sList.count-1) do begin
+  				if (Pos('ATLAS_POINT',sList[i]) <> 1) then continue;
+  				tmpStr := parseStr(sList[i], 'VAL="');
+      			if tmpStr = '' then continue;
+      			jv := StrToIntDef(tmpStr,-1);
+      			if jv > nv then
+      				nv := jv;
+      		end;
+  		//second pass
+  		for i := 0 to nv do
+          	    fLabels.Add('');
+  		for i := 0 to (sList.count-1) do begin
+                  if (Pos('ATLAS_POINT',sList[i]) <> 1) then continue;
+                  tmpStr := parseStr(sList[i], 'VAL="');
+                  if tmpStr = '' then continue;
+                  nv := StrToIntDef(tmpStr,-1);
+                  if nv < 0 then continue;
+                  tmpStr := parseStr(sList[i], 'STRUCT=');
+                  fLabels[nv] := tmpStr;
+  		end;
+  		sList.Free;
+  		//for i := 0 to fLabels.Count - 1 do
+  		//    writeln(fLabels[i]);
+           //<ATLAS_POINT
+        end; //ATLAS_LABEL_TABLE
+        if AnsiContainsText(nameStr,'BYTEORDER_STRING') then begin
+              {$IFDEF ENDIAN_BIG}
+              if AnsiContainsText(valStr,'LSB_FIRST') then swapEndian := true;
+              {$ELSE}
+              if AnsiContainsText(valStr,'MSB_FIRST') then swapEndian := true;
+              {$ENDIF}
+        end; //BYTEORDER_STRING
+        if AnsiContainsText(nameStr,'TEMPLATE_SPACE') then begin
+          i := pos('''', valStr) ;
+          if i > 0 then
+             nhdr.aux_file := copy(valStr, i+1, length(valStr)-i-1);
+          if AnsiContainsText(valStr,'TLRC') then xForm := kNIFTI_XFORM_TALAIRACH;
+          if AnsiContainsText(valStr,'TT_N27') then xForm := kNIFTI_XFORM_TALAIRACH;//
+          if AnsiContainsText(valStr,'MNI') then xForm := kNIFTI_XFORM_MNI_152;
+        end; //TEMPLATE_SPACE
+        if AnsiContainsText(nameStr,'BRICK_LABS') then begin
+        	sList := TStringList.Create;
+  			sList.Delimiter := '~';        // Each list item will be blank separated
+                        valStr := trim(valStr);
+                        valStr := copy(valStr, 2, length(valStr)-2);
+
+  			sList.DelimitedText := valStr;
+  			if sList.count < 1 then begin
+  				sList.Free;
+  				break;
+  			end;
+  			if sList.count > (length(AFNIs)) then
+  				initAFNIs(AFNIs, sList.count);
+  			for i := 0 to (sList.count-1) do
+  				AFNIs[i].nam := sList[i] ;
+  			sList.Free;
+        end; //BRICK_LABS
+    	continue;
+    end;// if isStringAttribute else numeric inputs...
+
     //next read values
     lineNum := lineNum + 1;
     if (lineNum > (sl.count-1)) then continue;
@@ -3880,19 +5340,57 @@ begin
     splitstr(' ',valStr,mArray);
     if (mArray.Count < itemCount) then itemCount := mArray.Count; // <- only if corrupt
     if itemCount < 1 then continue; // <- only if corrupt data
-    if isStringAttribute then begin
-        if AnsiContainsText(nameStr,'BYTEORDER_STRING') then begin
-              {$IFDEF ENDIAN_BIG}
-              if AnsiContainsText(mArray[0],'LSB_FIRST') then swapEndian := true;
-              {$ELSE}
-              if AnsiContainsText(mArray[0],'MSB_FIRST') then swapEndian := true;
-              {$ENDIF}
-        end
-    end else begin //if numeric attributes...
       setlength(valArray,itemCount);
       for i := 0 to (itemCount-1) do
         valArray[i] := strtofloat(cleanStr(mArray[i]) );
       //next - harvest data from important names
+      if AnsiContainsText(nameStr,'BRICK_STATAUX') then begin
+      	//first pass: find max index
+        hasStatAux := true;
+      	i := 0;
+      	ivMax := 0;
+      	while (i < itemCount) do begin
+      		iv := round(valArray[i]); //sub-brick index
+      		i := i + 1;
+      		jv := round(valArray[i]); //statistical code
+      		i := i + 1;
+      		nv := round(valArray[i]); //number of parameters
+      		i := i + 1;
+      		i := i + nv;
+      		if (iv < 0) then begin
+      			NSLog('Error: BRICK_STATAUX indices must be positive');
+      			goto 666;
+      		end;
+      		if (iv > ivMax) then ivMax := iv;
+      	end;
+      	//second pass: fill values
+      	if (ivMax+1) > (length(AFNIs)) then
+  			initAFNIs(AFNIs, ivMax+1);
+  		i := 0;
+      	while (i < itemCount) do begin
+      		iv := round(valArray[i]); //sub-brick index
+      		i := i + 1;
+      		jv := round(valArray[i]); //statistical code
+      		i := i + 1;
+      		nv := round(valArray[i]); //number of parameters
+      		i := i + 1;
+      		p0 := 0;
+      		if nv > 0 then
+      			p0 := valArray[i];
+      		p1 := 0;
+      		if nv > 1 then
+      			p1 := valArray[i+1];
+      		p2 := 0;
+      		if nv > 2 then
+      			p2 := valArray[i+2];
+      		i := i + nv;
+      		AFNIs[iv].jv := jv;
+      		AFNIs[iv].nv := nv;
+      		AFNIs[iv].param[0] := p0;
+      		AFNIs[iv].param[1] := p1;
+      		AFNIs[iv].param[2] := p2;
+      	end;
+      end; //BRICK_STATAUX
       if AnsiContainsText(nameStr,'BRICK_TYPES') then begin
               vInt := round(valArray[0]);
               if (vInt = 0) then begin
@@ -3907,7 +5405,6 @@ begin
               end;
               if (itemCount > 1) then begin //check that all volumes are of the same datatype
                   nVols := itemCount;
-                  isAllVolumesSame := true;
                   for i := 1 to (itemCount-1) do
                       if (valArray[0] <> valArray[i]) then isAllVolumesSame := false;
                   if (not isAllVolumesSame) then begin
@@ -3916,16 +5413,54 @@ begin
                   end;
               end; //if acount > 0
               //NSLog('HEAD datatype is '+inttostr(nhdr.datatype) );
-          end else if AnsiContainsText(nameStr,'BRICK_FLOAT_FACS') then begin
+         end else if AnsiContainsText(nameStr,'BRICK_STATS') then begin
+              if (itemCount < 2) then continue;
+              initAFNIs(AFNIs, itemCount div 2);
+              for i := 0 to ((itemCount div 2) -1) do begin
+                  AFNIs[i].minVal := valArray[i*2];
+                  AFNIs[i].maxVal := valArray[(i*2)+1];
+                  AFNIs[i].maxAbsVal := max(abs(AFNIs[i].minVal), abs(AFNIs[i].maxVal));
+                 //printf(format('min..max %g..%g', [AFNIs[i].minVal, AFNIs[i].maxVal]));
+              end;
+         end else if AnsiContainsText(nameStr,'IJK_TO_DICOM_REAL') then begin
+         
+         	hasIJK_TO_DICOM_REAL := true;
+         	nhdr.srow_x[0] := -valArray[0];
+         	nhdr.srow_x[1] := -valArray[1];
+         	nhdr.srow_x[2] := -valArray[2];
+         	nhdr.srow_x[3] := -valArray[3];
+         	nhdr.srow_y[0] := -valArray[4];
+         	nhdr.srow_y[1] := -valArray[5];
+         	nhdr.srow_y[2] := -valArray[6];
+         	nhdr.srow_y[3] := -valArray[7];         	
+         	nhdr.srow_z[0] := valArray[8];
+         	nhdr.srow_z[1] := valArray[9];
+         	nhdr.srow_z[2] := valArray[10];
+         	nhdr.srow_z[3] := valArray[11];         	
+         end else if AnsiContainsText(nameStr,'FDRCURVE_') then begin
+             if (itemCount < 20) then continue;
+             tmpStr := copy(nameStr, 10, maxint);
+             iv := strtointdef(tmpStr, -1);
+             if iv < 0 then continue;
+             initAFNIs(AFNIs, iv+1);
+             AFNIs[iv].FDRcurv.x0 := valArray[0];
+             AFNIs[iv].FDRcurv.dx := valArray[1];
+             setlength(AFNIs[iv].FDRcurv.ar, itemCount-2);
+             for i := 0 to (itemCount-3) do
+                 AFNIs[iv].FDRcurv.ar[i] := valArray[i+2];
+             //printf(format('%d %d', [iv,itemCount]));
+         end else if AnsiContainsText(nameStr,'BRICK_FLOAT_FACS') then begin
               nhdr.scl_slope := valArray[0];
+              if nhdr.scl_slope = 0 then
+                 nhdr.scl_slope := 1;
+              initAFNIs(AFNIs, itemCount);
+              AFNIs[0].scl_slopex := valArray[0];
               if (itemCount > 1) then begin //check that all volumes are of the same datatype
-                  isAllVolumesSame := true;
-                  for i := 1 to (itemCount-1) do
+                  for i := 1 to (itemCount-1) do begin
                       if (valArray[0] <> valArray[i]) then isAllVolumesSame := false;
-                  if (not isAllVolumesSame) then begin
-                      NSLog('Unsupported BRICK_FLOAT_FACS feature: intensity scale between sub-bricks');
+                      AFNIs[i].scl_slopex := valArray[i];
                   end;
-              end; //if acount > 0
+              end; //if itemCount > 0
           end else if AnsiContainsText(nameStr,'DATASET_DIMENSIONS') then begin
               if itemCount > 3 then itemCount := 3;
               for i := 0 to (itemCount-1) do
@@ -3952,7 +5487,6 @@ begin
           end else if AnsiContainsText(nameStr,'TAXIS_FLOATS') then begin
               if (itemCount > 1) then nhdr.pixdim[4] := valArray[1]; //second item is TR
           end;
-      end;// if isStringAttribute else numeric inputs...
   until (lineNum >= (sl.count-1));
   result := true;
 666:
@@ -3963,18 +5497,384 @@ begin
   if not result then exit; //error - code jumped to 666 without setting result to true
   if (nVols > 1) then nhdr.dim[4] := nVols;
   if (isProbMap) and (nhdr.intent_code = kNIFTI_INTENT_LABEL)  then nhdr.intent_code := kNIFTI_INTENT_NONE;
-  THD_daxes_to_NIFTI(nhdr, xyzDelta, xyzOrigin, orientSpecific );
+  if (not hasIJK_TO_DICOM_REAL) then
+  	THD_daxes_to_NIFTI(nhdr, xyzDelta, xyzOrigin, orientSpecific );
   nhdr.vox_offset := 0;
   convertForeignToNifti(nhdr);
+  nhdr.sform_code:= xForm;
+  if fLabels.Count > 2 then
+     nhdr.intent_name := 'Labels'+inttostr(fLabels.Count-1); //0..N
   fname := ChangeFileExt(fname, '.BRIK');
+  if (not FileExists(fname)) and (FileExists(fname+'.bz2')) then begin
+    fname := fname+'.bz2';
+    gzBytes := K_bz2Bytes_headerAndImageCompressed;
+  end;
   if (not FileExists(fname)) then begin
     fname := fname+'.gz';
     gzBytes := K_gzBytes_headerAndImageCompressed;
   end;
   nhdr.descrip := 'AFNI'+kIVers;
+  if (not hasStatAux) and  (length(AFNIs) > 1) then
+     AFNIs[0].jv := kFUNC_NO_STAT_AUX ; //e.g. raw fMRI with BRICK_FLOAT_FACS but no BRICK_STATAUX
+  if (length(AFNIs) = 1) and ((AFNIs[0].jv = kFUNC_NO_STAT_AUX) or (AFNIs[0].jv = kFUNC_NOT_STAT)) then
+     setlength(AFNIs,0); //e.g. for T1 scan, the AFNI fields hold no useful information
 end;
 
-function readForeignHeader (var lFilename: string; var lHdr: TNIFTIhdr; var gzBytes: int64; var swapEndian, isDimPermute2341: boolean; out xDim64: int64): boolean; overload;
+function readAFNIHeader(var fname: string; var nhdr: TNIFTIhdr; var gzBytes: int64; var swapEndian: boolean): boolean; overload;
+var
+    AFNIs: TAFNIs;
+    isAllVolumesSame: boolean;
+    fLabels: TStringList;
+begin
+  fLabels := TStringList.Create;
+  AFNIs := nil;
+  result := readAFNIHeader(fname, nhdr, gzBytes, swapEndian, isAllVolumesSame, AFNIs, fLabels);
+  fLabels.free;
+  setlength(AFNIs,0);
+  if isAllVolumesSame then exit;
+  NSLog('Unsupported BRICK_FLOAT_FACS feature: intensity scale between sub-bricks');
+  result := false;
+end;
+
+function readRAW(var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
+//Drishti raw format http://paulbourke.net/dataformats/pvl/
+Type
+  Tvol = packed record // Header structure
+   datatype: byte;
+   depth, height, width : longint;
+  end;
+
+var
+  f: file;
+  hdr: Tvol;
+  FSz, vox: int64;
+begin
+  	result := false;
+	FileMode := fmOpenRead;
+	{$I-}
+	AssignFile(f, fname);
+	FileMode := 0;  //Set file access to read only
+	Reset(f, 1);
+	FSz := Filesize(f);
+	{$I+}
+	if ioresult <> 0 then begin
+		NSLog('Error in reading RAW header.'+inttostr(IOResult));
+		FileMode := 2;
+		exit;
+	end;
+	BlockRead(f, hdr, sizeof(Tvol));
+	CloseFile(f);
+	FileMode := 2;
+        //NSLog(format('offset %d dt %d size %dx%dx%d bytes %d', [sizeof(Tvol), hdr.datatype, hdr.width, hdr.height, hdr.depth, FSz]));
+        if hdr.datatype = 0 then
+           nhdr.datatype := kDT_UINT8
+        else if hdr.datatype = 2 then
+           nhdr.datatype := kDT_UINT16
+        else if hdr.datatype = 4 then
+           nhdr.datatype := kDT_UINT32
+        else if hdr.datatype = 8 then
+           nhdr.datatype := kDT_FLOAT32
+        else
+             exit;
+        {$IFDEF ENDIAN_BIG}
+        swapEndian := true;
+	swap4(hdr.hdrSz);
+	swap4(hdr.width);
+	swap4(hdr.height);
+        {$ELSE}
+        swapEndian := false;
+        {$ENDIF}
+	FSz := FSz - sizeof(Tvol);
+        if nhdr.datatype = kDT_UINT8 then
+           vox := 1
+        else if nhdr.datatype = kDT_UINT16 then
+           vox := 2
+        else
+             vox := 4;
+        vox := vox * hdr.width * hdr.height * hdr.depth;
+	if (vox <> FSz) then begin
+	    NSLog(format('Not Drishti .raw format. offset %d size %dx%dx%d', [sizeof(Tvol), hdr.width, hdr.height, hdr.depth]));
+	    exit;
+	end;
+	nhdr.dim[1]:=hdr.width;
+	nhdr.dim[2]:=hdr.height;
+	nhdr.dim[3]:=hdr.depth;
+	nhdr.vox_offset := sizeof(Tvol);
+	SetSForm(nhdr);
+        convertForeignToNifti(nhdr);
+	nhdr.descrip := 'DrishtiRAW'+kIVers;
+	result := true;
+end;
+
+function readPVLNC(var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
+//https://github.com/nci/drishti/wiki/file-format---.pvl.nc
+//http://paulbourke.net/dataformats/pvl/
+label
+  666;
+var
+  FP: TextFile;
+  F : File Of byte;
+  str, rawfile, tag: string;
+  mArray: TStringList;
+  slabsize : integer = 0;
+  Sz, FSz: int64;
+procedure ParseStr();
+var
+	e: integer;
+begin
+	tag := '';
+	mArray.clear;
+	str := trim(str);
+	if (length(str) < 2) or (str[1] <> '<') or (str[2] = '/') then exit;
+	e := Pos('>', str);
+	if e < 3 then exit;
+	tag := copy(str, 2, e-2);
+	str := copy(str, e+1, maxint);
+	e := Pos('<', str);
+	str := copy(str, 1, e-1);
+	mArray.DelimitedText := str;
+	//writeln(tag+':'+str+':'+inttostr(mArray.count));
+end; //ParseStr()
+begin
+	result := false;
+	FileMode := fmOpenRead;
+	AssignFile(fp,fname);
+	reset(fp);
+	mArray := TStringList.Create;
+        tag := '';
+	rawfile := fname + '.001';
+	nhdr.datatype := kDT_UINT8; //default if pvlvoxeltype not specified
+	if EOF(fp) then goto 666;
+	readln(fp,str);
+	if PosEx('<!DOCTYPE Drishti_Header>',  str) < 1 then begin
+		//NSLog('Drishti .pvl.nc files should begin with" <!DOCTYPE Drishti_Header>"');
+                {$ifdef lcl}
+                {$IFDEF UNIX}
+                Writeln('Drishti .pvl.nc files should begin with" <!DOCTYPE Drishti_Header>". Perhaps this is a Drishti geometry file.');
+                {$ENDIF}
+                {$else}
+                Writeln('Drishti .pvl.nc files should begin with" <!DOCTYPE Drishti_Header>". Perhaps this is a Drishti geometry file.');
+                {$endif}
+                goto 666;
+	end;
+	while (not EOF(fp))  do begin
+		readln(fp,str);
+		ParseStr();
+		if tag = '' then continue;
+		if (PosEx('gridsize', tag) > 0) and (mArray.count > 2) then begin
+			nhdr.dim[3] := strtointdef(mArray[0],0);
+			nhdr.dim[2] := strtointdef(mArray[1],0);
+			nhdr.dim[1] := strtointdef(mArray[2],0);
+			continue;
+		end;
+		if (PosEx('slabsize', tag) > 0) and (mArray.count > 0) then begin
+			slabsize := strtointdef(mArray[0],0);
+			continue;
+		end;
+		if (PosEx('voxelsize', tag) > 0) and (mArray.count > 2) then begin
+			nhdr.pixdim[3] := strtofloatdef(mArray[0],0);
+			nhdr.pixdim[2] := strtofloatdef(mArray[1],0);
+			nhdr.pixdim[1] := strtofloatdef(mArray[2],0);
+			continue;
+		end;
+		if (PosEx('voxelunit', tag) > 0) and (mArray.count > 0) then begin
+			if (PosEx('meter', mArray[0]) > 0) then
+				nhdr.xyzt_units := kNIFTI_UNITS_METER
+			else if (PosEx('millimeter', mArray[0]) > 0) then
+				nhdr.xyzt_units := kNIFTI_UNITS_MM
+			else if (PosEx('micron', mArray[0]) > 0) then
+				nhdr.xyzt_units := kNIFTI_UNITS_MICRON
+			else begin
+			     //NSLog('Warning: NIfTI does not have voxelunit equivalent for Drishti ' + mArray[0]);
+                        end;
+		end;
+		if (PosEx('pvlvoxeltype', tag) > 0) and (mArray.count > 0) then begin
+			if (PosEx('unsigned', mArray[0]) > 0) and (mArray.count > 1) and (PosEx('char', mArray[1]) > 0) then
+				nhdr.datatype := kDT_UINT8
+			else if (PosEx('char', mArray[0]) > 0) then
+				nhdr.datatype := kDT_INT8
+			else if (PosEx('unsigned', mArray[0]) > 0)  and (mArray.count > 1) and (PosEx('short', mArray[1]) > 0) then
+				nhdr.datatype := kDT_UINT16
+			else if (PosEx('short', mArray[0]) > 0) then
+				nhdr.datatype := kDT_INT16
+			else if (PosEx('int', mArray[0]) > 0) then
+				nhdr.datatype := kDT_INT32
+			else if (PosEx('float', mArray[0]) > 0) then
+				nhdr.datatype := kDT_FLOAT32
+			else begin
+				NSLog('Unknown Drishti voxeltype: '+mArray[0]);
+				goto 666;
+			end;
+			continue;
+		end; //voxeltype
+		if (PosEx('rawfile', tag) > 0) and (mArray.count > 0) then begin //aka pvlvoxeltype
+			rawfile := mArray[0];
+			if not fileexists(rawfile) then
+				rawfile := ExtractFilePath(fname) + ExtractFileName(mArray[0]);
+			if not fileexists(rawfile) then
+				rawfile := fname + '.001';
+			if not fileexists(rawfile) then
+				NSLog('Unable to find image data '+rawfile);
+			if mArray.count > 1 then begin
+				NSLog('Drishti "rawfile" has multiple elements: spaces in filenames or multiple files?');
+			end;
+			continue;
+		end;
+	end;
+	if not fileexists(rawfile) then begin
+		NSLog('Unable to find Drishti raw file named '+rawfile);
+		goto 666;
+	end;
+	//check single volume
+	nhdr.vox_offset := 13;//[single byte][NZ][NY][NX][volume data]
+	//head-foot?
+    nhdr.srow_x[0] := nhdr.pixdim[1];
+    nhdr.srow_x[1] := 0;
+    nhdr.srow_x[2] := 0;
+    nhdr.srow_x[3] := 0;
+    nhdr.srow_y[0] := 0;
+    nhdr.srow_y[1] := nhdr.pixdim[2];
+    nhdr.srow_y[2] := 0;
+    nhdr.srow_y[3] := 0;
+    nhdr.srow_z[0] := 0;
+    nhdr.srow_z[1] := 0;
+    nhdr.srow_z[2] := -nhdr.pixdim[3];
+    nhdr.srow_z[3] := 0;
+	//
+	convertForeignToNifti(nhdr);
+	Sz := round(nhdr.vox_offset) + (nhdr.dim[1]*nhdr.dim[2]*nhdr.dim[3]*(nhdr.bitpix div 8));
+	Assign (F,rawfile);
+  	Reset (F);
+  	FSz := FileSize(F);
+  	Close (F);
+	if (slabsize < nhdr.dim[3]) or (FSz < Sz) then begin
+		if (slabsize < nhdr.dim[3]) then
+			NSLog('Drishti slabsize suggests image split between multiple volume (not supported)')
+		else
+			NSLog(format('Drishti image data split among multiple files? Expected %d (%dx%dx%dx%d+13) not %d', [Sz, nhdr.dim[1], nhdr.dim[2], nhdr.dim[3], nhdr.bitpix div 8, FSz]));
+		goto 666;
+	end;
+	//all good
+        {$IFDEF ENDIAN_BIG}
+        swapEndian := true;
+        {$ELSE}
+        swapEndian := false;
+        {$ENDIF}
+	fname := rawfile;
+	nhdr.descrip := 'Drishti'+kIVers;
+	result := true;
+	666:
+	CloseFile(FP);
+	Filemode := 2;
+	mArray.Free;
+end; //readPVLNC()
+
+
+function readOSP(var fname: string; var nhdr: TNIFTIhdr; var swapEndian: boolean): boolean;
+//https://www.ospray.org/documentation.html
+label
+  666;
+var
+  FP: TextFile;
+  F : File Of byte;
+  str, rawfile, tag: string;
+  mArray: TStringList;
+  //Sz, FSz: int64;
+procedure ParseStr();
+var
+	e: integer;
+begin
+	tag := '';
+	mArray.clear;
+	str := trim(str);
+	if (length(str) < 2) or (str[1] <> '<') or (str[2] = '/') then exit;
+	e := Pos('>', str);
+	if e < 3 then exit;
+	tag := copy(str, 2, e-2);
+	str := copy(str, e+1, maxint);
+	e := Pos('<', str);
+	str := copy(str, 1, e-1);
+	mArray.DelimitedText := str;
+	//writeln(tag+':'+str+':'+inttostr(mArray.count));
+end; //ParseStr()
+begin
+	result := false;
+	FileMode := fmOpenRead;
+	AssignFile(fp,fname);
+	reset(fp);
+	mArray := TStringList.Create;
+        tag := '';
+	rawfile := changefileext(fname,'.raw');
+	nhdr.datatype := kDT_UINT8; //default if pvlvoxeltype not specified
+	if EOF(fp) then goto 666;
+	readln(fp,str);
+	if PosEx('<?xml version="',  str) < 1 then begin
+		{$IFDEF UNIX}
+                Writeln('ospray files should begin with" <?xml ". Perhaps this is a Drishti geometry file.');
+                {$ENDIF}
+                goto 666;
+	end;
+	while (not EOF(fp))  do begin
+		readln(fp,str);
+		ParseStr();
+		if tag = '' then continue;
+		if (PosEx('dimensions', tag) > 0) and (mArray.count > 2) then begin
+			nhdr.dim[1] := strtointdef(mArray[0],0);
+			nhdr.dim[2] := strtointdef(mArray[1],0);
+			nhdr.dim[3] := strtointdef(mArray[2],0);
+			continue;
+		end;
+		if (PosEx('voxelType', tag) > 0) and (mArray.count > 0) then begin
+			if (PosEx('uchar', mArray[0]) > 0) then
+				nhdr.datatype := kDT_UINT8
+			else if (PosEx('short', mArray[0]) > 0) then
+				nhdr.datatype := kDT_INT16
+			else if (PosEx('float', mArray[0]) > 0) then
+				nhdr.datatype := kDT_FLOAT32
+			else begin
+				NSLog('Unknown ospray voxeltype: "'+mArray[0]+'"');
+				goto 666;
+			end;
+			continue;
+		end; //voxeltype
+		if (PosEx('filename', tag) > 0) and (mArray.count > 0) then begin //aka pvlvoxeltype
+			rawfile := mArray[0];
+			if not fileexists(rawfile) then
+				rawfile := ExtractFilePath(fname) + ExtractFileName(mArray[0]);
+			if not fileexists(rawfile) then
+				NSLog('Unable to find image data '+rawfile);
+			if mArray.count > 1 then begin
+				NSLog('ospray "filename" has multiple elements: spaces in filenames or multiple files?');
+			end;
+			continue;
+		end;
+	end;
+	if not fileexists(rawfile) then begin
+		NSLog('Unable to find Drishti raw file named '+rawfile);
+		goto 666;
+	end;
+	convertForeignToNifti(nhdr);
+	//Sz := round(nhdr.vox_offset) + (nhdr.dim[1]*nhdr.dim[2]*nhdr.dim[3]*(nhdr.bitpix div 8));
+	Assign (F,rawfile);
+  	Reset (F);
+  	//FSz := FileSize(F);
+  	Close (F);
+	//all good
+        {$IFDEF ENDIAN_BIG}
+        swapEndian := true;
+        {$ELSE}
+        swapEndian := false;
+        {$ENDIF}
+	fname := rawfile;
+	nhdr.descrip := 'ospray'+kIVers;
+	result := true;
+	666:
+	CloseFile(FP);
+	Filemode := 2;
+	mArray.Free;
+end; //readOSP()
+
+function readForeignHeader(var lFilename: string; var lHdr: TNIFTIhdr; var gzBytes: int64; var swapEndian, isDimPermute2341: boolean; out xDim64: int64): boolean; overload;
 var
   lExt, lExt2GZ: string;
 begin
@@ -3987,23 +5887,28 @@ begin
   result := false;
   if FSize(lFilename) < 32 then //NRRD headers can be very short
       exit;
+  {$IFDEF Darwin}
+  if not IsReadable(lFilename) then exit;
+  {$ENDIF}
   lExt := UpCaseExt(lFilename);
   lExt2GZ := '';
-  if (lExt = '.GZ') then begin
+  if (lExt = '.GZ') or (lExt = '.BZ2') then begin
      lExt2GZ := changefileext(lFilename,'');
      lExt2GZ := UpCaseExt(lExt2GZ);
   end;
-  if (lExt = '.DV') then
-     result := nii_readDeltaVision(lFilename, lHdr, swapEndian)
+  if (PosEx('.AIM',lExt) = 1) then
+       result := readAim(lFilename, lHdr, gzBytes, swapEndian)
+  else if (lExt = '.DV') then
+     result := readDeltaVision(lFilename, lHdr, swapEndian)
   else if (lExt = '.V') then
-       result := nii_readEcat(lFilename, lHdr, gzBytes, swapEndian)
+       result := readEcat(lFilename, lHdr, gzBytes, swapEndian)
   else if (lExt = '.VMR') then
-       result := nii_readVmr(lFilename, false, lHdr, swapEndian)
+       result := readVmr(lFilename, false, lHdr, swapEndian)
   else if (lExt = '.V16') then
-       result := nii_readVmr(lFilename, true, lHdr, swapEndian)
+       result := readVmr(lFilename, true, lHdr, swapEndian)
   else if (lExt = '.DF3') then
-       result := nii_readDf3(lFilename, lHdr, swapEndian)
-  else if (lExt = '.BRIK.GZ')  then begin
+       result := readDf3(lFilename, lHdr, swapEndian)
+  else if (lExt = '.BRIK.GZ') or (lExt2GZ = '.BRIK')  then begin
        lFilename := ChangeFileExt(lFilename, '');
        lFilename := ChangeFileExt(lFilename, '.HEAD');
        result := readAFNIHeader(lFilename, lHdr, gzBytes, swapEndian)
@@ -4011,35 +5916,57 @@ begin
        lFilename := ChangeFileExt(lFilename, '.HEAD');
        result := readAFNIHeader(lFilename, lHdr, gzBytes, swapEndian)
   end else if (lExt = '.BVOX') then
-       result := nii_readBVox(lFilename, lHdr, swapEndian)
+       result := readBVox(lFilename, lHdr, swapEndian)
   else if (lExt = '.GIPL') then
-       result := nii_readGipl(lFilename, lHdr, swapEndian)
+       result := readGipl(lFilename, lHdr, swapEndian)
   else if (lExt = '.IDF') or (lExt = '.BYT') or (lExt = '.INT2') or (lExt = '.REAL') then
-       result := nii_readIdf(lFilename, lHdr, swapEndian)
+       result := readIdf(lFilename, lHdr, swapEndian)
+  else if (lExt = '.RAW') then
+    result := readRAW(lFilename, lHdr, swapEndian)
+  else if (lExt = '.OSP') then
+    result := readOSP(lFilename, lHdr, swapEndian)
+  else if (lExt = '.NC') then
+    result := readPVLNC(lFilename, lHdr, swapEndian)
   else if (lExt = '.PIC') then
-    result := nii_readpic(lFilename, lHdr)
-  //else if (lExt = '.VTI') then
-  //  result := readVTIHeader(lFilename, lHdr, gzBytes, swapEndian)
+    result := readpic(lFilename, lHdr)
+  else if (lExt = '.PGM') or (lExt = '.PPM') or (lExt = '.PNM') then
+    result := readpgm(lFilename, lHdr, swapEndian)
   else if (lExt = '.VTK') then
-    result := readVTKHeader(lFilename, lHdr, gzBytes, swapEndian)
+    result := readVTK(lFilename, lHdr, gzBytes, swapEndian)
   else if (lExt = '.MGH') or (lExt = '.MGZ') then
-    result := readMGHHeader(lFilename, lHdr, gzBytes, swapEndian, xDim64)
+    result := readMGH(lFilename, lHdr, gzBytes, swapEndian, xDim64)
   else if (lExt = '.MHD') or (lExt = '.MHA') then
-    result := readMHAHeader(lFilename, lHdr, gzBytes, swapEndian)
+    result := readMHA(lFilename, lHdr, gzBytes, swapEndian)
   else if (lExt = '.ICS') then
-    result := readICSHeader(lFilename, lHdr, gzBytes, swapEndian)
+    result := readICS(lFilename, lHdr, gzBytes, swapEndian)
+  else if (lExt = '.MRC') or (lExt = '.MAP') or (lExt2GZ = '.MRC') or (lExt2GZ = '.MAP')  then
+    result := readMRCHeader(lFilename, lHdr, gzBytes, swapEndian)
   else if ((lExt2GZ = '.MIF') or (lExt = '.MIF') or (lExt = '.MIH')) then
        result := readMIF(lFilename, lHdr, gzBytes, swapEndian)
   else if (lExt = '.NRRD') or (lExt = '.NHDR') then
-       result := readNRRDHeader(lFilename, lHdr, gzBytes, swapEndian, isDimPermute2341)
+       result := readNRRD(lFilename, lHdr, gzBytes, swapEndian, isDimPermute2341)
   else if (lExt = '.HEAD')  then
     result := readAFNIHeader(lFilename, lHdr, gzBytes, swapEndian)
+  else if (lExt = '.RVF') then
+     result := readRVF(lFilename, lHdr)
+  else if (lExt = '.XVF') then
+     result := readXVF(lFilename, lHdr)
   else if (lExt = '.SPR') then
-    result := readSPRHeader(lFilename, lHdr, swapEndian)
+    result := readSPR(lFilename, lHdr, swapEndian)
   else if (lExt = '.V3DRAW') then
-    result := nii_readV3draw(lFilename, lHdr, swapEndian);
+    result := readV3draw(lFilename, lHdr, swapEndian)
+  else if (lExt = '.VFF') then
+    result := readVFF(lFilename, lHdr, swapEndian)
+  else if (lExt = '.VOL') then
+    result := readVOL(lFilename, lHdr, swapEndian)
+  else if (lExt = '.VOX') then
+    result := readVOX(lFilename, lHdr)
+  else if (lExt = '.VTI') then
+       result := readVTI(lFilename, lHdr, gzBytes, swapEndian)
+  else if (lExt = '.XRAW') then
+     result := readXRaw(lFilename, lHdr, swapEndian);
   if (not result) and (isINTERFILE(lFilename)) then
-     result := nii_readInterfile(lFilename, lHdr, swapEndian);
+     result := readInterfile(lFilename, lHdr, swapEndian);
   if (not result) and (isTIFF(lFilename)) then
     NSLog('Use ImageJ/Fiji to convert TIFF and LSM files to NIfTI (or NRRD) for viewing')
   else if (not result) then begin
@@ -4048,16 +5975,14 @@ begin
           NSLog('Use ImageJ/Fiji to convert this '+lExt2GZ+' BioFormat image to NIfTI (or NRRD) for viewing');
   end;
   if (xDim64 < 0) and (result) then //only NGH supports 32-bit XDims, rather than 16-bit
-    xDim64 := lHdr.dim[1]; 
+    xDim64 := lHdr.dim[1];
 end;
 
-function readForeignHeader (var lFilename: string; var lHdr: TNIFTIhdr; var gzBytes: int64; var swapEndian, isDimPermute2341: boolean): boolean; overload;
+function readForeignHeader(var lFilename: string; var lHdr: TNIFTIhdr; var gzBytes: int64; var swapEndian, isDimPermute2341: boolean): boolean; overload;
 var
     xDim64: int64;
 begin
-    result := readForeignHeader (lFilename, lHdr, gzBytes, swapEndian, isDimPermute2341, xDim64);
+    result := readForeignHeader(lFilename, lHdr, gzBytes, swapEndian, isDimPermute2341, xDim64);
 end;
 
-
 end.
-

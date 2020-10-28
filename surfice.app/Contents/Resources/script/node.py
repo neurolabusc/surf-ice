@@ -1,6 +1,6 @@
 import gl
 gl.resetdefaults()
-gl.meshload('BrainMesh_ICBM152Left.mz3')
+gl.meshload('BrainMesh_ICBM152.lh.mz3')
 gl.edgeload('LPBA40.edge')
 gl.clipazimuthelevation(0.3, 0, 130)
 gl.nodesize(6, 1)

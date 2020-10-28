@@ -2318,7 +2318,6 @@ begin
   end;
   //showmessage(format('properties %d scalars %d', [hdr.n_properties, hdr.n_scalars]));
   //showmessage(format('%g %g %g %g %g %g', [hdr.image_orientation_patient[1], hdr.image_orientation_patient[2], hdr.image_orientation_patient[3],
-
   //     hdr.image_orientation_patient[4], hdr.image_orientation_patient[5], hdr.image_orientation_patient[6]]) );
   str := UpperCase(hdr.voxel_order[1]+hdr.voxel_order[2]+hdr.voxel_order[3]);
   (*if ((str[1] <> 'L') and (str[1] <> 'R')) or ((str[2] <> 'A') and (str[2] <> 'P')) or ((str[3] <> 'S') and (str[3] <> 'I')) then begin
@@ -2368,7 +2367,7 @@ begin
     for i := 1 to hdr.n_count do begin
        //blockread(f, nVtx32, SizeOf(nVtx32)  );
        mStream.Read(nVtx32, SizeOf(nVtx32) );
-       if nVtx32 < 2 then goto 666;
+       if nVtx32 < 1 then goto 666;
        tracks[outPos] := asSingle(nVtx32); inc(outPos);
        for v := 1 to nVtx32 do begin
            //blockread(f, pt, SizeOf(pt)  );

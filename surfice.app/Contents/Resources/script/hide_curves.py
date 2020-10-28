@@ -1,6 +1,6 @@
 import gl
 gl.resetdefaults()
-gl.meshload('BrainMesh_ICBM152Left_smoothed.mz3')
+gl.meshload('BrainMesh_ICBM152_smoothed.lh.mz3')
 gl.meshcurv()
 gl.shadername('hidecurves')
 gl.overlayload('CIT168.mz3')

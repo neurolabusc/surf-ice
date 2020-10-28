@@ -75,7 +75,8 @@ end;//TAnalyzeHdrSection Structure
 
 
  const
-
+K_bz2Bytes_headerAndImageCompressed = -4;
+ K_bz2Bytes_onlyImageCompressed = -3;
  K_gzBytes_headerAndImageCompressed = -2;
  K_gzBytes_onlyImageCompressed= -1;
  K_gzBytes_headerAndImageUncompressed= 0;
@@ -91,6 +92,7 @@ kDT_FLOAT                 =16;     // float (32 bits/voxel)
 kDT_FLOAT32 = kDT_FLOAT;
 kDT_COMPLEX               =32;     // complex (64 bits/voxel)
 kDT_DOUBLE                =64;     // double (64 bits/voxel)
+kDT_FLOAT64 = kDT_DOUBLE;
 kDT_RGB                   =128;     // RGB triple (24 bits/voxel)
 kDT_RGBplanar3D             =129; //RRR..RGGG..GBBBB...B  (24 bits/voxel) entire 3D volume continguous
 kDT_INT8                  =256;     // signed char (8 bits)
@@ -101,6 +103,8 @@ kDT_UINT64               =1280;     // unsigned long long (64 bits)
 kDT_FLOAT128             =1536;     // long double (128 bits)
 kDT_COMPLEX128           =1792;     // double pair (128 bits)
 kDT_COMPLEX256           =2048;     // long double pair (256 bits)
+kDT_RGBA32               =2304;     // 4 byte RGBA (32 bits/voxel)
+
 //   slice_code values
  kNIFTI_SLICE_SEQ_UNKNOWN = 0;
  kNIFTI_SLICE_SEQ_INC = 1;

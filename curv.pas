@@ -69,8 +69,10 @@ begin
     CloseFile(f);
   except
    // If there was an error the reason can be found here
-   on E: EInOutError do
+   on E: EInOutError do begin
+     {$IFDEF UNIX} writeln('Unable to create '+fnm+' Details: '+ E.ClassName+ '/'+ E.Message);{$ENDIF}
      Showmessage('Unable to create '+fnm+' Details: '+ E.ClassName+ '/'+ E.Message);
+   end;
   end;
 end;
 

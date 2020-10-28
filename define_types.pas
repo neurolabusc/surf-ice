@@ -10,7 +10,7 @@ interface
 {$endif}
 
 const
-  kVers = 'v1.0.20200729';
+  kVers = 'v1.0.20201028';
   NaN : double = 1/0;
   kTab = chr(9);
   kCR = chr (13);
@@ -104,6 +104,7 @@ function Blue(rgb: TColor): BYTE;
 {$else}
 function asRGBA(clr: TColor): TRGBA;
 {$endif}
+procedure Xswap4r ( var s:single);
 
 implementation
 
@@ -111,6 +112,25 @@ uses
   {$IFDEF UNIX} BaseUnix, {$ELSE} windows, shlobj, {$ENDIF}
   {$IFDEF Darwin}CocoaAll,{$ENDIF}
     fileutil, sysutils, math;
+    
+procedure Xswap4r ( var s:single);
+type
+  swaptype = packed record
+	case byte of
+	  0:(Word1,Word2 : word); //word is 16 bit
+  end;
+  swaptypep = ^swaptype;
+var
+  inguy:swaptypep;
+  outguy:swaptype;
+begin
+  inguy := @s; //assign address of s to inguy
+  outguy.Word1 := swap(inguy^.Word2);
+  outguy.Word2 := swap(inguy^.Word1);
+  inguy^.Word1 := outguy.Word1;
+  inguy^.Word2 := outguy.Word2;
+end;
+
 function UpCaseExt(lFileName: string): string; // "file.gii.dset" -> ".GII.DSET"
 var
    fnm : string;

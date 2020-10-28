@@ -481,8 +481,10 @@ begin
 					v0 := @vertices[i0];
 					i1 := t^.v[(j+1) mod 3];
 					v1 := @vertices[i1];
+                    //https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification/issues/14
 					// Border check
-					if(v0^.border <> v1^.border) then continue;
+					//if (v0^.border <> v1^.border) then continue;
+					if (v0^.border > 0) or (v1^.border > 0) then continue;
 					// Compute vertex to collapse to
 					calculate_error(i0,i1,p, vertices);
 					setlength(deleted0, v0^.tcount);

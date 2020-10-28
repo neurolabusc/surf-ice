@@ -1,8 +1,0 @@
-begin
-	resetdefaults();
-	azimuthelevation(70, 15);
-	meshload('FU_lh_ld141_mappedSmWm.gii');
-	overlayload('lh_ld141_smoothcol2.1D.col');
-
-end.
-

@@ -6,7 +6,7 @@ var
 begin
 	resetdefaults();
 	meshcolor(210, 148, 148);
-	meshload('BrainMesh_ICBM152Left.mz3');
+	meshload('BrainMesh_ICBM152.lh.mz3');
 	edgeload('LPBA40.edge');
 	clipazimuthelevation(0.3, 0, 130);
 	nodesize(6, true);

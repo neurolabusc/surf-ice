@@ -81,9 +81,11 @@ type
     atlasTransparentFilter: TBools;
     atlasHideFilter: TInts; //atlas show these atlas regions, e.g. if [7, 8, 22] then only regions 7,8 and 22 will be visible
     tempIntensityLUT : TFloats; //only used to load without external files - flushed after LoadOverlay
-    errorString: string;
+  	errorString: string;
     //overlay: array of single;
   private
+    //procedure DBug();
+    function FindBorderVertices(): TUInt8s;
     function CheckMesh: boolean;
     function CheckNodes: boolean;
     function CheckEdges: boolean;
@@ -144,6 +146,7 @@ type
     procedure LoadCurv(const FileName: string; lOverlayIndex: integer);
     procedure LoadMeshAsOverlay(const FileName: string; lOverlayIndex: integer);
     procedure LoadNii(const FileName: string; lOverlayIndex: integer; lLoadSmooth: boolean);
+    procedure Overlay2Atlas();
     function LoadCluster(const FileName: string): boolean;
     function LoadNodeTxt(const FileName: string): boolean;
     procedure LoadNode(const FileName: string; out isEmbeddedEdge: boolean);
@@ -157,8 +160,10 @@ type
     function LoadVtkTxt(const FileName: string):boolean;
     procedure LoadVtk(const FileName: string);
     procedure LoadW(const FileName: string; lOverlayIndex: integer);
+
   public
     nodePrefs: TNodePrefs;
+    isBilateral: boolean;
     OverlappingOverlaysOverwrite: boolean;
     procedure MakePyramid;
     function SetEdgeLayer(layer: integer): boolean;
@@ -173,10 +178,12 @@ type
     function LoadFromFile(const FileName: string): boolean;
     function LoadEdge(const FileName: string; isEmbeddedEdge: boolean): boolean;
     function LoadOverlay(const FileName: string; lLoadSmooth: boolean): boolean;
+    procedure LoadDummyOverlay(layer: integer; ov: TOverlay);
     procedure CloseOverlaysCore;
     procedure CloseOverlays;
     function Contours(OverlayIndex: integer): boolean;
-    function Atlas2Node(const FileName: string):boolean;
+    function Mesh2Node(const FileName: string; isAppend: boolean = true):boolean;
+    function Atlas2Node(const FileName: string; isAppend: boolean = true):boolean;
     procedure Close;
     constructor Create;
     (*procedure SaveVrml(const FileName: string; MeshColor: TColor = clWhite);
@@ -200,6 +207,12 @@ uses
 procedure printf(s: string);
 begin
      {$IFDEF UNIX}writeln(s);{$ENDIF}
+end;
+
+procedure ShowMessageX(str: string);
+begin
+     printf(str);
+     showmessage(str);
 end;
 
 function isNimlNodes(fnm: string): boolean;
@@ -340,7 +353,187 @@ begin
      result.Z := a.Z + b.Z;
 end;
 
-function TMesh.Atlas2Node(const FileName: string):boolean;
+(*procedure TMesh.dBug();
+var
+  mn, mx, i, nVert, nFace: integer;
+begin
+  nVert := length(vertices);
+  nFace := length(faces);
+  if (nFace < 1) or (nVert < 3) or (length(vertexAtlas) <>  nVert) then exit;
+  mn := vertexAtlas[0];
+  mx := mn;
+
+  for i := 0 to (nVert -1) do begin
+  	 mn := min(mn, vertexAtlas[i]);
+  	 mx := max(mx, vertexAtlas[i]);
+  end;
+  printf(format('>>>> %d..%d', [mn, mx]));
+end;  *)
+
+function TMesh.FindBorderVertices(): TUInt8s;
+var
+  isEdge: TUInt8s;
+  prefixSum, loCount, hiVs: TInts;
+  nVert, nFace, i, j, k, lov, repeats: integer;
+procedure addV(x, y: integer);
+var
+   lo, hi: integer;
+begin
+	 lo := min(x,y);
+     hi := max(x,y);
+     prefixSum[lo] -= 1;
+     hiVs[prefixSum[lo]] := hi;
+end;
+begin
+  result := nil;
+  //For triangular mesh, a "border vertex" has at least one edge
+  // that is used by only one face (triangle)
+  nVert := length(vertices);
+  nFace := length(faces);
+  if (nFace < 2) or (nVert < 3) then exit(nil);
+  printf(format('Find borders. face %d vert %d', [nFace, nVert]));
+  //each face (triangle) has 3 vertices (x,y,z)
+  setlength(loCount, nVert);
+  //first pass: bucket size
+  for i := 0 to (nFace-1) do begin
+  	  loCount[min(faces[i].X, faces[i].Y)] += 1;
+      loCount[min(faces[i].X, faces[i].Z)] += 1;
+      loCount[min(faces[i].Y, faces[i].Z)] += 1;
+  end;
+  //create prefix sum
+  setlength(prefixSum, nVert);
+  prefixSum := Copy(loCount, Low(loCount), Length(loCount));
+  for i := 1 to (nVert -1) do
+  	  prefixSum[i] += prefixSum[i-1];
+  setlength(hiVs, nFace * 3);
+  //second pass: load high value
+  for i := 0 to (nFace-1) do begin
+  	  addV(faces[i].X, faces[i].Y);
+      addV(faces[i].X, faces[i].Z);
+      addV(faces[i].Y, faces[i].Z);
+  end;
+  prefixSum := nil;
+  //finally: identify vertices that have singleton lines
+  setlength(isEdge, nVert);
+  //test
+  (*i := 0;
+  for lov := 0 to (nVert -1) do
+      i += loCount[lov];
+  printf(format(' lines %d %d', [i, nFace * 3]));
+  i := 0;
+  for lov := 0 to (nVert -1) do begin
+  	  if loCount[lov] < 1 then continue;
+      //printf(format('%d %d', [loCount[lov], lov]));
+  	  for j := 0 to (loCount[lov]-1)  do begin
+      	  printf(format('%d line %d %d', [i+j, lov, hiVs[i+j]]));
+
+      end;
+      i += loCount[lov];
+
+  end; *)
+  //done
+  i := 0;
+  for lov := 0 to (nVert -1) do begin
+  	  if loCount[lov] < 1 then continue;
+      //printf(format('%d %d', [loCount[lov], lov]));
+  	  for j := 0 to (loCount[lov]-1)  do begin
+      	  repeats := 0;
+          for k := 0 to (loCount[lov]-1) do
+              if hiVs[i+j] = hiVs[i+k] then
+                 repeats += 1;
+          if repeats > 1 then continue;
+          //border edge found - set both vertices of edge as "border"
+          isEdge[lov] := 1;
+          isEdge[hiVs[i+j]] := 1;
+      end;
+      i += loCount[lov];
+  end;
+  hiVs := nil;
+  loCount := nil;
+  //test if watertight
+  j := 0;
+  for i := 0 to (nVert -1) do
+      if isEdge[i] > 0 then
+         j += 1;
+  if (j = 0) then begin
+  	 printf(format('This is a watertight mesh: none of the %d vertices are on the border', [nVert]));
+     isEdge := nil;
+     exit;
+  end else
+  	  printf(format('%d of %d vertices are on the border', [j, nVert]));
+  result := isEdge;
+end;
+
+function TMesh.Mesh2Node(const FileName: string; isAppend: boolean = true): boolean;
+const
+  kT = chr(9);
+var
+   borderVertices: TUInt8s; //binary for all vertices [0 0 1 0 1]
+   borderIdxs: TInts; //indices for edges [2 4]
+   nVert, nEdge, i, j, maxIdx: integer;
+   vert, cog: TPoint3f;
+   cogDx, maxCogDX, maxEdgeDx, dx: single;
+   txt: TextFile;
+begin
+  result := false;
+  borderVertices := FindBorderVertices;
+  if borderVertices = nil then begin
+    printf('Unable to generate nodes for watertight meshes');
+    exit; //e.g. watertight mesh
+  end;
+  nVert := length(vertices);
+  //
+  setlength(borderIdxs, nVert); //worst case scenario: all edges
+  nEdge := 0;
+  for i := 0 to (nVert -1) do
+      if borderVertices[i] <> 0 then begin
+         borderIdxs[nEdge] := i;
+         nEdge += 1;
+      end;
+  setlength(borderIdxs, nEdge); //reduce memory
+  if nEdge = 0 then exit;
+  //find center of gravity for whole mesh (tie breaker);
+  cog := ptf(0,0,0);
+  for i := 0 to (nVert -1) do
+      cog := AddPt3f(cog, vertices[i]);
+  cog.x := cog.x / nVert;
+  cog.y := cog.y / nVert;
+  cog.z := cog.z / nVert;
+  maxCogDX := infinity;
+  maxEdgeDx := -infinity;
+  maxIdx := 0;
+  for i := 0 to (nVert -1) do begin
+    //compute cost function for each vertex - furtherst from edges
+    // who on the island has the longest walk to the beach?
+    if (maxEdgeDx > 0) and (borderVertices[i] = 1) then continue; //this vertex is on the edge, only useful if all vertices edge
+    dx := infinity;
+    vert := vertices[i];
+    for j := 0 to (nEdge - 1) do //find closest distance to edge
+    	dx := min(dx, DistanceBetween(vert, vertices[borderIdxs[j]]));
+
+    if (dx < maxEdgeDx) then continue; //a previous vertex is closer to edge
+    cogDx := DistanceBetween(vert, cog);
+    if (dx = maxEdgeDx) then begin //we have a tie - is this closer to the center of gravity
+       if (cogDx > maxCogDx) then continue;
+    end;
+    maxCogDx := cogDx;
+    maxEdgeDx := dx;
+    maxIdx := i;
+  end;
+  printf(format('xyz %g %g %g', [vertices[maxIdx].x, vertices[maxIdx].y, vertices[maxIdx].z]));
+  borderVertices := nil;
+  borderIdxs := nil;
+  result := true;
+  AssignFile(txt, FileName);
+  if isAppend then
+     append(txt)
+  else
+  	  rewrite(txt);
+  writeln(txt, format('%g%s%g%s%g%s%d%s1', [vertices[maxIdx].x,kT,vertices[maxIdx].y,kT,vertices[maxIdx].z,kT,round(123),kT ]));
+  CloseFile(txt);
+end;
+
+function TMesh.Atlas2Node(const FileName: string; isAppend: boolean = true):boolean;
 const
   kT = chr(9);
 label
@@ -348,12 +541,14 @@ label
 var
    xROI, yROI, zROI, maxRoiDxIdx, nVert, maxROI, nFace, roi, nroiEdges, nroiVerts, nCOGs: integer;
    roiEdges, roiVerts: TInts;
-   isEdge, isVert: TInts;
+   isEdge, isVert: TUInt8s;
    cogDx, maxCogDX, roiDx, maxRoiDx, dx: single;
    vert, cog: TPoint3f;
    COGs: array of TPoint4f; //center of gravity
    j, i : integer;
    txt: TextFile;
+   isOverlayAsAtlas: boolean = false;
+   borderVertices: TUInt8s; //binary for all vertices [0 0 1 0 1]
    {$IFDEF TIMER}startTime : TDateTime;{$ENDIF}
 begin
      {$IFDEF TIMER}startTime := Now;{$ENDIF}
@@ -362,31 +557,56 @@ begin
      nFace := length(faces);
      maxROI := AtlasMaxIndex;
      //GLForm1.OverlayBox.Caption := 'a'+inttostr(maxROI);
-     if (nFace < 1) or (nVert < 3) or (maxROI < 1) or (length(vertexAtlas) <>  nVert) then exit;
+     if (nFace < 1) or (nVert < 3) then exit;
+     if (maxROI < 1) and (OpenOverlays > 0) and (length(overlay[kMinOverlayIndex].intensity) = nVert) then begin
+	 	maxROI := 0;
+        isOverlayAsAtlas := true;
+        setlength(vertexAtlas, nVert);
+        for i := 0 to nVert -1 do begin
+        	vertexAtlas[i] := round(overlay[kMinOverlayIndex].intensity[i]);
+        	maxROI := max(vertexAtlas[i], maxROI);
+        end;
+        if maxROI < 1 then
+           vertexAtlas := nil
+        else
+            printf(format('Overlay is %d discrete parcels', [maxROI]));
+     end;
+     if (maxROI < 1) or (length(vertexAtlas) <>  nVert) then begin
+        //find single node most representative of whole mesh
+        result := Mesh2Node(FileName);
+       	exit;
+     end;
+     //	 for i := 0 to (nVert -1) do
+     //	 	 sumV += vertexAtlas[i];
      setlength(COGs, maxROI+1);
      setlength(roiEdges, nVert); //list of vertices on edge of ROI
      setlength(roiVerts, nVert); //list all vertices in ROI
      setlength(isEdge, nVert);
      setlength(isVert, nVert);
      //GLForm1.OverlayBox.Caption := 'b'+inttostr(maxROI);
-
      for i := 0 to maxROI do
          COGs[i] := pt4f(0,0,0,0);
      nCOGs := 0;
+     borderVertices := FindBorderVertices; //find border vertices that have no neighbors - these are boundary for a region
      for roi := 0 to maxROI do begin
-         nroiEdges := 0;
          for i := 0 to nVert -1 do begin
              isEdge[i] := 0;
              isVert[i] := 0;
          end;
-         //fillChar(isEdge,sizeOf(isEdge),0);
-         //fillChar(isVert,sizeOf(isVert),0);
+         nroiVerts := 0;
          for i := 0 to (nFace-1) do begin
-             xROI := vertexAtlas[Faces[i].X];
-             yROI := vertexAtlas[Faces[i].Y];
-             zROI := vertexAtlas[Faces[i].Z];
+         	 if maxROI < 1 then begin
+               xROI := 0;
+               yROI := 0;
+               zROI := 0;
+             end else begin
+               xROI := vertexAtlas[Faces[i].X];
+               yROI := vertexAtlas[Faces[i].Y];
+               zROI := vertexAtlas[Faces[i].Z];
+             end;
              if (xROI <> roi) and (yROI <> roi) and (zROI <> roi) then continue; //this vertex not member of ROI
              //roiVerts[nroiVerts] := i;
+             nroiVerts += 1;
              if (xROI = roi) then isVert[Faces[i].X] := 1;
              if (yROI = roi) then isVert[Faces[i].Y] := 1;
              if (zROI = roi) then isVert[Faces[i].Z] := 1;
@@ -394,9 +614,26 @@ begin
              if (xROI = roi) then isEdge[Faces[i].X] := 1;
              if (yROI = roi) then isEdge[Faces[i].Y] := 1;
              if (zROI = roi) then isEdge[Faces[i].Z] := 1;
-             nroiEdges := nroiEdges + 1;
+
          end;
-         if nroiEdges < 1 then continue; //no edges found!
+         //add border vertices that are part  of region but have no neighbors
+         if (borderVertices <> nil) then begin //if mesh is not water tight
+           for i := 0 to nVert -1 do begin
+         	   if (isVert[i] = 1) and (borderVertices[i] = 1) then
+             	  isEdge[i] := 1;
+           end;
+         end;
+         //count
+         nroiEdges := 0;
+         for i := 0 to nVert -1 do
+             if (isEdge[i] = 1)  then
+                nroiEdges := nroiEdges + 1;
+         //printf(roi, ' has ', nroiVerts, ' vertices and ', nroiEdges, ' edges' );
+         if nroiVerts < 1 then continue;
+         if nroiEdges < 1 then begin
+           printf(format('Region %d has no edges (it is a closed surface)',[roi]));
+           continue; //no edges found!
+         end;
          //compute total number of edges, faces...
          nroiEdges := 0;
          for i := 0 to (nVert-1) do
@@ -430,9 +667,9 @@ begin
                  if dx < roiDx then
                     roiDx := dx;
              end;
-             if (roiDx < maxRoiDx) then continue;
+             if (roiDx < maxRoiDx) then continue; //a previous vertex is closer to edge
              cogDx := DistanceBetween(vert, cog);
-             if (roiDx = maxRoiDx) then begin
+             if (roiDx = maxRoiDx) then begin //we have a tie - is this closer to the center of gravity
                 if (cogDx > maxCogDx) then continue;
              end;
              maxCogDx := cogDx;
@@ -447,10 +684,16 @@ begin
          COGs[nCOGs].w := roi+1;
          nCOGs := nCOGs + 1;
      end;
+     if isOverlayAsAtlas then
+     	vertexAtlas := nil;
+     GLForm1.OverlayBox.Caption := 'nCOGs'+inttostr(nCOGs);
      if nCOGs < 1 then goto 123;
      result := true;
      AssignFile(txt, FileName);
-     rewrite(txt);
+     if isAppend then
+        append(txt)
+     else
+     	 rewrite(txt);
      for i := 0 to nCOGs-1 do begin
          if COGs[i].w < 1 then continue; //label not present
          writeln(txt, format('%g%s%g%s%g%s%d%s1', [COGs[i].x,kT,COGs[i].y,kT,COGs[i].z,kT,round(COGs[i].w),kT ]));
@@ -459,6 +702,7 @@ begin
      {$IFDEF TIMER}GLForm1.Caption :=  inttostr(MilliSecondsBetween(Now,StartTime)); {$ENDIF}
      123:
      roiEdges := nil;
+     borderVertices := nil;
      roiEdges := nil;
      COGs := nil;
      isVert := nil;
@@ -1529,7 +1773,7 @@ var
    i: integer;
 begin
      if length(vertices) < 1 then begin
-       showmessage('No mesh is open: unable to center origin');
+       showmessageX('No mesh is open: unable to center origin');
        exit;
      end;
      vectorNegate(origin);
@@ -1546,7 +1790,7 @@ var
    i: integer;
 begin
   if (length(faces) < 1) then begin
-     showmessage('No mesh is open: unable to reverse faces');
+     showmessageX('No mesh is open: unable to reverse faces');
      exit;
   end;
   if isBusy then exit;
@@ -1570,6 +1814,10 @@ begin
      mn := mx;
      for i := 0 to (length(vertices) - 1) do
          minMax(vertices[i], mn, mx);
+     if isBilateral then begin
+	 	mx.X := max(abs(mx.X), abs(mn.X));
+        mn.X := -mx.X;
+     end;
      origin.X := (0.5 * (mx.X - mn.X)) + mn.X;
      origin.Y := (0.5 * (mx.Y - mn.Y)) + mn.Y;
      origin.Z := (0.5 * (mx.Z - mn.Z)) + mn.Z;
@@ -1867,6 +2115,7 @@ begin
      {$ENDIF}
      isZDimIsUp := true;
      OverlappingOverlaysOverwrite := true;
+     isBilateral := false;
      isVisible := true;
      OpenOverlays := 0;
      OverlayTransparency := 0;
@@ -1882,6 +2131,7 @@ begin
      setlength(atlasTransparentFilter,0);
      setlength(tempIntensityLUT,0);
      errorString := '';
+     //separateLHverts := 0;
      isFreeSurferMesh := false;
      vertexRgbaSaturation := 1;
      vertexRgbaAlpha := 1;
@@ -2038,7 +2288,7 @@ begin
            if b = $0A then inc(num_EOLN);
      end;
      if num_EOLN < 2 then begin
-        showmessage('File corrupted');
+        showmessageX('File corrupted');
         CloseFile(f);
         exit;
      end;
@@ -2049,7 +2299,7 @@ begin
      SwapLongWord(num_f);
      {$ENDIF}
      if (num_v < 3) or (num_f < 1) or (sz < (filepos(f)+(num_v*12) + (num_f * 12) )) then begin
-        showmessage('File corrupted: file must be large enough for '+inttostr(num_v)+' vertices and '+inttostr(num_f)+' triangles');
+        showmessageX('File corrupted: file must be large enough for '+inttostr(num_v)+' vertices and '+inttostr(num_f)+' triangles');
         CloseFile(f);
         exit;
      end;
@@ -2135,7 +2385,7 @@ begin
      ReadlnSafe(f, v1,v2,v3, v4);
      num_v := round(v1);
      if num_v < 3 then begin
-        showmessage('Corrupt file: must have at least 3 vertices');
+        showmessageX('Corrupt file: must have at least 3 vertices');
         CloseFile(f);
         exit;
      end;
@@ -2144,7 +2394,7 @@ begin
          ReadlnSafe(f, vertices[i].X, vertices[i].Y, vertices[i].Z, v4);
      ReadLn(f, num_f);
      if num_f < 3 then begin
-        showmessage('Corrupt file: must have at least 1 triangle');
+        showmessageX('Corrupt file: must have at least 1 triangle');
      end;
      setlength(faces, num_f);
      for i := 0 to (num_f - 1) do begin
@@ -2194,19 +2444,19 @@ begin
   str := '';
   ReadLnBin(f, str); //signature
   if (not AnsiContainsText(str, 'OFF')) or (not AnsiContainsText(str, 'BINARY')) then begin
-    showmessage('Does not appear to be a OFF BINARY file.');
+    showmessageX('Does not appear to be a OFF BINARY file.');
     goto 666;
   end;
   num_v := i32();
   num_f := i32();
   i := i32();
   if (num_v < 3) or (num_f < 1) then begin
-     showmessage('Corrupt file: must have at least 3 vertices and one face');
+     showmessageX('Corrupt file: must have at least 3 vertices and one face');
      goto 666;
   end;
   i := (num_v * 12) + (num_f * 20) + (FilePos(f));
   if (i <> FSz) then begin
-     showmessage(format('Only able to read BINARY OFF files that are triangular meshes without colors. Size expected: %d Actual: %d', [i, FSz]));
+     showmessageX(format('Only able to read BINARY OFF files that are triangular meshes without colors. Size expected: %d Actual: %d', [i, FSz]));
      goto 666;
   end;
   result := true;
@@ -2273,7 +2523,7 @@ begin
      Reset(f);
      Readln(f,s);
      if (pos('OFF', s) <> 1) then begin
-        showmessage('Corrupt file: OFF files must begin with OFF');
+        showmessageX('Corrupt file: OFF files must begin with OFF');
         CloseFile(f);
         exit;
      end;
@@ -2281,7 +2531,7 @@ begin
      num_v := round(v1);
      num_f := round(v2);
      if (num_v < 3) or (num_f < 1) then begin
-        showmessage('Corrupt file: must have at least 3 vertices and one face');
+        showmessageX('Corrupt file: must have at least 3 vertices and one face');
         CloseFile(f);
         exit;
      end;
@@ -2295,7 +2545,7 @@ begin
          if (round(v1) <> 3) then begin
             setlength(faces, 0);
             setlength(vertices, 0);
-            showmessage('Only able to read triangular meshes: this OFF file has a face with '+inttostr(round(v1))+' faces');
+            showmessageX('Only able to read triangular meshes: this OFF file has a face with '+inttostr(round(v1))+' faces');
             CloseFile(f);
             exit;
          end;
@@ -2333,7 +2583,7 @@ begin
      while (not EOF(f)) and ((length(s) < 1) or (s[1]='#')) do
            Readln(f,s); //files can begin with comments: http://www.geomview.org/docs/oogltour.html
      if (pos('OFF', s) <> 1) and (pos('NOFF', s) <> 1) and (pos('COFF', s) <> 1) then begin
-        showmessage('Corrupt file: OFF files must begin with "OFF", "COFF" or "NOFF"');
+        showmessageX('Corrupt file: OFF files must begin with "OFF", "COFF" or "NOFF"');
         CloseFile(f);
         exit;
      end;
@@ -2345,7 +2595,7 @@ begin
      num_v := round(s1);
      num_f := round(s2);
      if (num_v < 3) or (num_f < 1) then begin  //e.g. faces on multiple lines, see https://github.com/libigl/libigl
-        showmessage('Corrupt file: must have at least 3 vertices and one face');
+        showmessageX('Corrupt file: must have at least 3 vertices and one face');
         CloseFile(f);
         exit;
      end;
@@ -2363,7 +2613,7 @@ begin
          newF := StrToIntDef(strlst[0],0);
          if newF < 3 then continue;
          if (newF+1) > (strlst.Count) then begin
-            showmessage('Unable to read OFF file (perhaps you can open with MeshLab and export as another format');
+            showmessageX('Unable to read OFF file (perhaps you can open with MeshLab and export as another format');
             goto 666;
          end;
          indx1 := StrToIntDef(strlst[1],0);
@@ -2421,7 +2671,7 @@ begin
          num_v := 0;
        end;
        if (num_v < 3) or (num_f < 1) then begin
-          showmessage('Corrupt file: must have at least 3 vertices and one face');
+          showmessageX('Corrupt file: must have at least 3 vertices and one face');
           CloseFile(f);
           exit;
        end;
@@ -2440,7 +2690,7 @@ begin
                strTrim := copy(str, j+4, maxint);
                vno := StrToIntDef(strTrim, -1);
                if vno < 0 then begin
-                  showmessage('"'+strTrim+'"Unable to parse AFNI patch file: '+str);
+                  showmessageX('"'+strTrim+'"Unable to parse AFNI patch file: '+str);
                   goto 123;
                end;
                if vno > maxVno then begin
@@ -2517,7 +2767,7 @@ begin
          num_v := 0;
        end;
        if (num_v < 3) or (num_f < 1) then begin
-          showmessage('Corrupt file: must have at least 3 vertices and one face');
+          showmessageX('Corrupt file: must have at least 3 vertices and one face');
           CloseFile(f);
           exit;
        end;
@@ -2661,7 +2911,7 @@ begin
      MakeCylinder( 1, 71, cylFace, cylVert);
      cylF := length(cylFace);
      cylV := length(cylVert);
-     //showmessage(inttostr(sphereF)+ '  '+inttostr(sphereV));
+     //showmessageX(inttostr(sphereF)+ '  '+inttostr(sphereV));
      setlength(self.faces, sphereF * nNodeThresh + CylF * nEdgeThresh);
      setlength(self.vertices, sphereV * nNodeThresh + CylV * nEdgeThresh);
      setlength(self.vertexRGBA, sphereV * nNodeThresh + CylV * nEdgeThresh);
@@ -2780,7 +3030,7 @@ begin
   end;
   if PosEx('(mm)',str) < 1 then begin
      CloseFile(f);
-     showmessage('Clusters should report peaks in mm not voxels (hint: "cluster --in=spmT --thresh=5 --mm >> max.node" ).');
+     ShowMessageX('Clusters should report peaks in mm not voxels (hint: "cluster --in=spmT --thresh=5 --mm >> max.node" ).');
      exit;
   end;
   strlst:=TStringList.Create;
@@ -2797,7 +3047,6 @@ begin
 		  nodes[num_node].Y := strtofloat(strlst[4]);
 		  nodes[num_node].Z := strtofloat(strlst[5]);
 		  nodes[num_node].radius := 1;
-                  //showmessage(format('%gx%gx%g=%g',[nodes[num_node].X,nodes[num_node].Y,nodes[num_node].Z,nodes[num_node].Clr]));
 		  inc(num_node);
 	  end;
   end;
@@ -2834,14 +3083,13 @@ begin
     sList.DelimitedText := s;
     if c = 0 then c := sList.Count;
     if (c <> 3) then begin
-       showmessage('Error reading nodes: number of columns must be 3: '+FileName);
+       showmessageX('Error reading nodes: number of columns must be 3: '+FileName);
        goto 123;
     end;
     num_node := num_node + 1;
   end;
-  printf('<<<M< '+inttostr(num_node));
   if (num_node < 2) or (c <> 3)  then begin
-     showmessage(format('Text Nodes unexpected Rows*Columns (%d*%d): node files should be N*3', [num_node, c]));
+     showmessageX(format('Text Nodes unexpected Rows*Columns (%d*%d): node files should be N*3', [num_node, c]));
      goto 123;
   end;
   setlength(self.nodes, num_node);
@@ -2976,7 +3224,7 @@ begin
      CheckNodes();
      exit;
  666:
-  showmessage('Unable to load Nodes');
+  showmessageX('Unable to load Nodes');
   CloseFile(f);
   strlst.free;
 end; // LoadNode()
@@ -3034,7 +3282,7 @@ begin
   if (FSize(FileName) < 8) then exit;
   if (length(nodes) < 2) then begin
     printf('You must load a NODE file before loading your EDGE file.');
-    showmessage('You must load a NODE file before loading your EDGE file.');
+    showmessageX('You must load a NODE file before loading your EDGE file.');
     exit;
   end;
   strlst:=TStringList.Create;
@@ -3048,7 +3296,7 @@ begin
         ReadLn(f, str);
      if (EOF(f)) then begin
        printf('Unable to find tag "'+kEmbeddedEdge+'" in '+ FileName);
-       showmessage('Unable to find tag "'+kEmbeddedEdge+'" in '+ FileName);
+       showmessageX('Unable to find tag "'+kEmbeddedEdge+'" in '+ FileName);
         goto 666;
      end;
   end;
@@ -3069,16 +3317,16 @@ begin
         end;
   end; //read each line
   if (num_edge < 2) then begin
-     showmessage('No edges found');
+     showmessageX('No edges found');
      goto 666;
   end;
   if (num_edge <> max_edge) or (min_edge <> max_edge) then begin
-     showmessage(format('Unable to parse edge file: found %d lines, but %d..%d columns', [num_edge, min_edge, max_edge]));
-     showmessage('"'+min_edge_str+'"');
+     showmessageX(format('Unable to parse edge file: found %d lines, but %d..%d columns', [num_edge, min_edge, max_edge]));
+     showmessageX('"'+min_edge_str+'"');
      goto 666;
   end;
   if (num_edge > length(nodes)) then begin
-       showmessage('Edge and node files do not match: '+inttostr(length(nodes))+' nodes loaded, but edge file describes '+inttostr(num_edge)+' nodes.');
+       showmessageX('Edge and node files do not match: '+inttostr(length(nodes))+' nodes loaded, but edge file describes '+inttostr(num_edge)+' nodes.');
        goto 666;
   end;
   printf(format('Nodes: %d Edges %d', [length(nodes), num_edge])); //LJ2020
@@ -3089,7 +3337,7 @@ begin
      while (not EOF(f)) and (pos(kEmbeddedEdge, uppercase(str)) = 0) do
         ReadLn(f, str);
      if (EOF(f)) then begin
-        showmessage('Unable to find tag "'+kEmbeddedEdge+'" in '+ FileName);
+        showmessageX('Unable to find tag "'+kEmbeddedEdge+'" in '+ FileName);
         goto 666;
      end;
   end;
@@ -3236,7 +3484,7 @@ begin
            faces[num_f].X := strtointDef(strlst[1], 1);
            faces[num_f].Y := strtointDef(strlst[j+1], 1);
            faces[num_f].Z := strtointDef(strlst[j+2], 1);
-           //showmessage(format('%d:%d= %d %d %d', [num_v, num_f, faces[num_f].x, faces[num_f].y, faces[num_f].z]));
+           //showmessageX(format('%d:%d= %d %d %d', [num_v, num_f, faces[num_f].x, faces[num_f].y, faces[num_f].z]));
        //20:6 -4 -3 -2
          if faces[num_f].X < 0 then
               faces[num_f].X := 1 + num_v + faces[num_f].X;
@@ -3265,7 +3513,7 @@ begin
        inc(num_c);
     end;
   end;
-  //showmessage(format('%d %g %g %g',[num_v, vertices[num_v-1].X, vertices[num_v-1].Y, vertices[num_v-1].Z]));
+  //showmessageX(format('%d %g %g %g',[num_v, vertices[num_v-1].X, vertices[num_v-1].Y, vertices[num_v-1].Z]));
   CloseFile(f);
   strlst.free;
   setlength(faces, num_f);
@@ -3275,9 +3523,9 @@ begin
   else
   	setlength(vertexRGBA, 0);
   if (num_v < 3) then
-     showmessage('Not a Wavefront or MNI format OBJ mesh (perhaps proprietary Mayo Clinic Analyze format)');
+     showmessageX('Not a Wavefront or MNI format OBJ mesh (perhaps proprietary Mayo Clinic Analyze format)');
   if (num_f < 1) and (num_v > 1) then
-    showmessage('Not a face-based OBJ file (perhaps lines, try opening in MeshLab)');
+    showmessageX('Not a face-based OBJ file (perhaps lines, try opening in MeshLab)');
 end; // LoadObj()
 
 procedure TMesh.LoadPly(const FileName: string);
@@ -3306,7 +3554,7 @@ begin
   Reset(f);
   ReadLn(f, str);
   if pos('PLY', UpperCase(str)) <> 1 then begin
-    showmessage('Not a PLY file');
+    showmessageX('Not a PLY file');
     closefile(f);
     exit;
   end;
@@ -3349,7 +3597,7 @@ begin
         if (strlst.count > 2) and (pos('RED', UpperCase(strlst[2])) = 1) then begin
            redOffset := vertexOffset;
            if (pos('UCHAR', UpperCase(strlst[1])) <> 1) and (pos('UINT8', UpperCase(strlst[1])) <> 1) then begin
-             showmessage('Expected colors of data type "UCHAR" or "UINT8", not "'+str+'"');
+             showmessageX('Expected colors of data type "UCHAR" or "UINT8", not "'+str+'"');
              closefile(f);
              exit;
            end;
@@ -3360,7 +3608,7 @@ begin
            blueOffset := vertexOffset;
         if (strlst.count > 2) and (pos('ALPHA', UpperCase(strlst[2])) = 1) then
            alphaOffset := vertexOffset;
-        //showmessage(str+ inttostr(strlst.count));
+        //showmessageX(str+ inttostr(strlst.count));
         if isAscii then
           vertexOffset := vertexOffset + 1  //for ASCII we count items not bytes
         else if (pos('CHAR', UpperCase(strlst[1])) = 1) or (pos('UCHAR', UpperCase(strlst[1])) = 1) then
@@ -3372,7 +3620,7 @@ begin
         else if (pos('DOUBLE', UpperCase(strlst[1])) = 1) then
            vertexOffset := vertexOffset + 8
         else begin
-            showmessage('Unexpected data type : "'+UpperCase(strlst[1])+'"');
+            showmessageX('Unexpected data type : "'+UpperCase(strlst[1])+'"');
             closefile(f);
             exit;
         end;
@@ -3399,7 +3647,7 @@ begin
      end; //face section properties
   end;
   if EOF(f) or (num_v < 3) or (num_f < 1) then begin
-    showmessage('Not a mesh-based PLY file (perhaps point based, try opening in MeshLab)');
+    showmessageX('Not a mesh-based PLY file (perhaps point based, try opening in MeshLab)');
     closefile(f);
     exit;
   end;
@@ -3428,13 +3676,13 @@ begin
         for i := 0 to (num_v - 1) do
             readln(f, vertices[i].X, vertices[i].Y, vertices[i].Z);
     nf := 0;
-    //showmessage('faces');
+    //showmessageX('faces');
     for i := 0 to (num_f - 1) do begin
       if isSkipUchar then
          read(f, num_vx);  //AFNI ConvertSurface adds an unused dummy value "intensity" at the start of each line
       read(f, num_vx, idx0, idx1);
       if num_vx < 3 then begin
-            showmessage('Invalid PLY file, each face list entry must have at least 3 vertices '+ FileName);
+            showmessageX('Invalid PLY file, each face list entry must have at least 3 vertices '+ FileName);
             closefile(f);
             exit;
       end;
@@ -3465,12 +3713,12 @@ begin
     {$ELSE}
     if isLittleEndian then begin
     {$ENDIF}
-      //showmessage('unsupported binary PLY feature: swapped bytes');
+      //showmessageX('unsupported binary PLY feature: swapped bytes');
       //exit;
       isSwap := true;
     end;
     if vertexOffset < 12 then begin
-       showmessage('Binary PLY files should have at least 12 bytes per vertex');
+       showmessageX('Binary PLY files should have at least 12 bytes per vertex');
        exit;
     end;
     AssignFile(fb, FileName);
@@ -3543,7 +3791,7 @@ begin
           {$IFNDEF FASTPLY}setlength(binByt, indexSectionExtraBytes);{$ENDIF}
           blockread(fb, byt, 1 );
           if byt <> 3 then begin
-                  showmessage('Only able to read triangle-based PLY files. Solution: open and export with MeshLab. Index: '+inttostr(i)+ ' Header Bytes '+inttostr(hdrSz)+' bytesPerVertex: '+inttostr(vertexOffset)+' faces: ' + inttostr(byt));
+                  showmessageX('Only able to read triangle-based PLY files. Solution: open and export with MeshLab. Index: '+inttostr(i)+ ' Header Bytes '+inttostr(hdrSz)+' bytesPerVertex: '+inttostr(vertexOffset)+' faces: ' + inttostr(byt));
                   closefile(fb);
                   setlength(faces,0);
                   setlength(vertices,0);
@@ -3629,25 +3877,25 @@ begin
   //if vstr = '' then
   //   vstr := jsStr('"positions"', s, num_v);
   if (vstr = '') or (num_v < 3) then begin
-     showmessage('Unable to find "vertices" or "positions"');
+     showmessageX('Unable to find "vertices" or "positions"');
      exit;
   end;
-  //showmessage(vstr);
+  //showmessageX(vstr);
   fstr := jsStr('"indices"', s, num_f);
   //if fstr = '' then
   // fstr := jsStr('"cells"', s, num_f);
   if fstr = '' then begin
      fstr := jsStr('"faces"', s, num_f);
      if fstr <> '' then begin
-       showmessage('Wrong JSON format, expected "indices" or "cells" not "faces"');
+       showmessageX('Wrong JSON format, expected "indices" or "cells" not "faces"');
        exit;
      end;
-     showmessage('Unable to find "indices"');
+     showmessageX('Unable to find "indices"');
      exit;
   end;
 
   if (num_f < 1) or (num_v < 3) then begin
-    showmessage('Expected at leat 3 vertices and 3 indices');
+    showmessageX('Expected at leat 3 vertices and 3 indices');
     exit;
   end;
   setlength(vertices, num_v div 3); //this format does not report number of faces/vertices, so we need to guess
@@ -3722,7 +3970,7 @@ begin
      end;
      result := true;
  666:
-     if not result then showmessage('Unable to load PLY2 file '+filename);
+     if not result then showmessageX('Unable to load PLY2 file '+filename);
      CloseFile(f);
 end;
 
@@ -3784,7 +4032,7 @@ var
    rgb: TRGB;
 begin
   if (length(faces) < 1) or (length(vertices) < 3) then begin
-        showmessage('You need to open a mesh before you can save it');
+        showmessageX('You need to open a mesh before you can save it');
         exit;
   end;
   FileNamePly := changeFileExt(FileName, '.ply');
@@ -3880,12 +4128,12 @@ var
   t: TTri;
 begin
   if (length(faces) < 1) or (length(vertices) < 3) then begin
-     showmessage('You need to open a mesh before you can save it');
+     showmessageX('You need to open a mesh before you can save it');
      exit;
   end;
   if (length(vertices) < 3) or (length(faces) < 1) then exit;   //if not CheckMesh then exit;
   if (length(vertexRGBA) > 0) then
-     showmessage('Warning: STL format does not support vertex colors');
+     showmessageX('Warning: STL format does not support vertex colors');
   FileNameStl := changeFileExt(FileName, '.stl');
   {$IFDEF UNIX}
   FileNameStl := ExpandUNCFileNameUTF8(FileNameStl); // ~/tst.pl -> /Users/rorden/home/tst.ply
@@ -3935,12 +4183,12 @@ var
    i : integer;
 begin
   if (length(faces) < 1) or (length(vertices) < 3) then begin
-     showmessage('You need to open a mesh before you can save it');
+     showmessageX('You need to open a mesh before you can save it');
      exit;
   end;
   if (length(vertices) < 3) or (length(faces) < 1) then exit;   //if not CheckMesh then exit;
   if (length(vertexRGBA) > 0) then
-     showmessage('Warning: STL format does not support vertex colors');
+     showmessageX('Warning: STL format does not support vertex colors');
   FileNameStl := changeFileExt(FileName, '.stl');
   {$IFDEF UNIX}
   FileNameStl := ExpandUNCFileNameUTF8(FileNameStl); // ~/tst.pl -> /Users/rorden/home/tst.ply
@@ -3973,7 +4221,7 @@ var
    i : integer;
 begin
   if (length(faces) < 1) or (length(vertices) < 3) then begin
-     showmessage('You need to open a mesh before you can save it');
+     showmessageX('You need to open a mesh before you can save it');
      exit;
   end;
   if (length(vertices) < 3) or (length(faces) < 1) then exit;   //if not CheckMesh then exit;
@@ -4290,7 +4538,7 @@ begin
             isQuad := true;
          n := n + 1;
      end;
-     if isQuad then showmessage('Only designed to read triangular VRML meshes.');
+     if isQuad then showmessageX('Only designed to read triangular VRML meshes.');
      setLength(Faces, nFace);
      //read vertices
      tStart := ParseStartEnd('point', Str, tEnd);
@@ -4345,7 +4593,7 @@ begin
      666:
      sList.free;
      if not result then begin
-        showmessage('Unable to parse VRML image. You may want to convert this to a simpler format.');
+        showmessageX('Unable to parse VRML image. You may want to convert this to a simpler format.');
      end;
 end;
 
@@ -4387,7 +4635,7 @@ begin
   FileNameGii := ExpandUNCFileNameUTF8(FilenameGii);
   {$ENDIF}
   if (length(faces) < 1) or (length(vertices) < 3) then begin
-     showmessage('You need to open a mesh before you can save it');
+     showmessageX('You need to open a mesh before you can save it');
      exit;
   end; //if not CheckMesh then exit;
   FileMode := fmOpenWrite;   //FileMode := fmOpenRead;
@@ -4428,7 +4676,7 @@ begin
     comp.Write(faces[0], nBytes);
     comp.Free;
     base64 :=  EncodeStringBase64(MemoryStreamAsString(outStream));
-    //showmessage('face compression: '+inttostr(nBytes)+' -> '+inttostr(outStream.Size)+' -> '+inttostr(length(base64)));
+    //showmessageX('face compression: '+inttostr(nBytes)+' -> '+inttostr(outStream.Size)+' -> '+inttostr(length(base64)));
     outStream.Free;
   WriteLn(f, '      <Data>', base64, '</Data>');
   WriteLn(f, '   </DataArray>');
@@ -4463,7 +4711,7 @@ begin
     comp.Write(vertices[0], nBytes);
     comp.Free;
     base64 :=  EncodeStringBase64(MemoryStreamAsString(outStream));
-    //showmessage('vertex compression: '+inttostr(nBytes)+' -> '+inttostr(outStream.Size)+' -> '+inttostr(length(base64)));
+    //showmessageX('vertex compression: '+inttostr(nBytes)+' -> '+inttostr(outStream.Size)+' -> '+inttostr(length(base64)));
     outStream.Free;
   WriteLn(f, '      <Data>',base64, '</Data>');
   WriteLn(f, '   </DataArray>');
@@ -4537,7 +4785,7 @@ begin
            nLabel := nLabel + 1;
         end;
   until (lEnd < 1) or (lEnd > tEnd) ;
-  //showmessage(inttostr(nLabel));
+  //showmessageX(inttostr(nLabel));
   if nLabel < 1 then exit;
   //second pass: read labels into dynamic array
   setlength(result,nLabel);
@@ -4659,7 +4907,7 @@ begin
            end;
        matEnd := 0;
        //CustomMat is set to true if matrix is provided and the matrix is not the identity matrix
-       //if isCustomMat then showmessage(format('m=[%g %g %g %g; %g %g %g %g; %g %g %g %g; 0 0 0 1]',[mat[1,1],mat[1,2],mat[1,3],mat[1,4], mat[2,1],mat[2,2],mat[2,3],mat[2,4], mat[3,1],mat[3,2],mat[3,3],mat[3,4]]));
+       //if isCustomMat then showmessageX(format('m=[%g %g %g %g; %g %g %g %g; %g %g %g %g; 0 0 0 1]',[mat[1,1],mat[1,2],mat[1,3],mat[1,4], mat[2,1],mat[2,2],mat[2,3],mat[2,4], mat[3,1],mat[3,2],mat[3,3],mat[3,4]]));
     end;
     if (dhEnd < 1) or (daEnd < 1) then goto 666;
     Hdr := Copy(Str, daStart, dhEnd-daStart+1);
@@ -4709,7 +4957,7 @@ begin
     isTransposed := pos('ColumnMajorOrder"', Hdr) > 0;
     if (Dim1 = 0) then Dim1 := 1;
     if (isOverlay) and (lOverlayIndex = 0) and ((length(vertices) < 1) and (not isVert)) then begin
-        Showmessage('Load mesh before loading a GIFTI overlay.');
+        showmessageX('Load mesh before loading a GIFTI overlay.');
        goto 666;
     end;
     if (isOverlay) and (lOverlayIndex = 0) and ((length(vertices) > 0) or (length(faces) > 0)) then begin
@@ -4718,14 +4966,14 @@ begin
       //load background image first, load on future pass....
     end;
     (*if (isOverlay) and (lOverlayIndex = 0) then begin
-       Showmessage('Please load GIfTI mesh (using File/Open) BEFORE loading the GIFTI overlay (using Overlay/Add)');
+       showmessageX('Please load GIfTI mesh (using File/Open) BEFORE loading the GIFTI overlay (using Overlay/Add)');
        goto 666;
     end;*)
-    //if (isOverlay) then showmessage(format('%d %d', [length(vertices), Dim0]));
+    //if (isOverlay) then showmessageX(format('%d %d', [length(vertices), Dim0]));
     if (isOverlay) and (Dim0 <> length(vertices)) and (length(vertices) > 0) then begin
-       Showmessage(format('GIFTI overlay has a different number of vertices than the background mesh (%d vs %d)',[Dim0 , length(vertices)]));
+       showmessageX(format('GIFTI overlay has a different number of vertices than the background mesh (%d vs %d)',[Dim0 , length(vertices)]));
        if surfaceID <> '' then
-          Showmessage('Hint: first open the background mesh '+ surfaceID);
+          showmessageX('Hint: first open the background mesh '+ surfaceID);
        goto 666;
     end;
     if  (isAscii) and (isOverlay) and (Dim1 > 0) then begin
@@ -4746,17 +4994,17 @@ begin
     end else if (isAscii) and ((isVert) or (isOverlay)  or (isVertColor) or (isFace)) then begin
       //cuban
       {$IFDEF NOTXT}
-       Showmessage('Unable to read GIFTI files with ASCII data. Solution: convert to more efficient BINARY data');
+       showmessageX('Unable to read GIFTI files with ASCII data. Solution: convert to more efficient BINARY data');
        {$ELSE}
 
        if (lOverlayIndex > 0) and (ddEnd > ddStart) then begin
-         Showmessage('Unable to read GIFTI overlays with ASCII data. Solution: convert to more efficient BINARY data');
+         showmessageX('Unable to read GIFTI overlays with ASCII data. Solution: convert to more efficient BINARY data');
        end;
        if (isVertColor) and (ddEnd > ddStart) then begin
-          Showmessage('Unable to read colored GIFTI with ASCII data. Solution: convert to more efficient BINARY data');
+          showmessageX('Unable to read colored GIFTI with ASCII data. Solution: convert to more efficient BINARY data');
        end;
        if (isFace) and (ddStart > 6) and (ddEnd > ddStart) then begin
-          //showmessage('f'+inttostr(ddStart)+'..'+inttostr(ddEnd)+ '  '+inttostr(Dim0));
+          //showmessageX('f'+inttostr(ddStart)+'..'+inttostr(ddEnd)+ '  '+inttostr(Dim0));
           setlength(faces, Dim0);
           if isTransposed then begin
              j := Dim0-1;
@@ -4771,7 +5019,7 @@ begin
                 faces[i].X := ReadNextInt(Str, ddStart, ddEnd);
                 faces[i].Y := ReadNextInt(Str, ddStart, ddEnd);
                 faces[i].Z := ReadNextInt(Str, ddStart, ddEnd);
-                //if i < 3 then showmessage(format('%g %g %g',[vertices[i].X, vertices[i].Y, vertices[i].Z]));
+                //if i < 3 then showmessageX(format('%g %g %g',[vertices[i].X, vertices[i].Y, vertices[i].Z]));
             end;
           end;
        end;
@@ -4803,18 +5051,18 @@ begin
          if externalFileName = '' then begin
            debase64 :=  DecodeStringBase64(Copy(Str, ddStart, ddEnd-ddStart)); //raw GZ binary, see  http://lazarus-ccr.sourceforge.net/docs/fcl/base64/decodestringbase64.html
            if (not isRGBA) and (Dim1 <> 3) and (isVertColor) and (length(labelTable) < 1) then begin
-             showmessage('Error found Intent="NIFTI_INTENT_LABEL" without a "<LabelTable>"');
+             showmessageX('Error found Intent="NIFTI_INTENT_LABEL" without a "<LabelTable>"');
              goto 666;
           end;
           if (length(debase64) < 4)  then begin
-             showmessage('Impossibly small deflated stream');
+             showmessageX('Impossibly small deflated stream');
              goto 666;
           end;
        end;
        szExpected :=  4 * Dim0 * Dim1;
        if externalFileName <> '' then begin
           if not (isBinary) then begin
-              showmessage('Unknown encoding style for external GIfTI file');
+              showmessageX('Unknown encoding style for external GIfTI file');
               goto 666;
           end;
           externalFilePath := externalFileName;
@@ -4823,7 +5071,7 @@ begin
           if not fileexists(externalFilePath) then
              externalFilePath := extractfilepath(FileName)+ extractfilename(externalFileName);
           if not fileexists(externalFilePath) then begin
-            showmessage('Unable to find '+externalFilePath);
+            showmessageX('Unable to find '+externalFilePath);
             goto 666;
           end;
           szRead := Dim0 * Dim1 * 4;
@@ -4836,7 +5084,7 @@ begin
            //ExternalFileName
         end else if isBase64Gz then begin
           if (length(debase64) < 1) or (ord(debase64[1]) <> $78) then begin
-            showmessage('Deflate compressed stream should begin with 0x78, not '+inttohex(ord(debase64[1]), 2));
+            showmessageX('Deflate compressed stream should begin with 0x78, not '+inttohex(ord(debase64[1]), 2));
             goto 666;
           end;
           {$IFDEF FASTGZ}
@@ -4871,7 +5119,7 @@ begin
            big endian not tested - please check!!!!
        {$ENDIF}
           if szExpected <> szRead then begin
-             showmessage(format('decompressed size incorrect %d != %d',[szExpected, szRead]));
+             showmessageX(format('decompressed size incorrect %d != %d',[szExpected, szRead]));
              goto 666;
           end;
           if (isTransposed) and (Dim1 > 1) then
@@ -4889,7 +5137,7 @@ begin
                    s := 1
                 else
                     s := 255;
-                //if isTransposed then showmessage('x');
+                //if isTransposed then showmessageX('x');
                 j := 0;
                 for i := 0 to (Dim0-1) do begin
                     vertexRGBA[i].R := round(s *asSingle(dat[j])); inc(j);
@@ -4992,7 +5240,7 @@ begin
     if (isCustomMat) and (length(vertices) > 0) then begin
        for i := 0 to (length(vertices) - 1) do
            vectorTransform(vertices[i],mat);
-       //showmessage('t');
+       //showmessageX('t');
     end;
     isCustomMat := false;
     daStart := posEx('<DataArray', Str, daEnd); //attempt to read next dataArray
@@ -5000,24 +5248,24 @@ begin
   str := ''; //free
   gz.Free;
   if ((nOverlays > 0) or (HasOverlays) or (length(vertexRGBA) > 0)) and (length(vertices) = 0) then begin
-     showmessage('Please load GIfTI mesh (using File/Open) BEFORE loading the GIFTI overlay (using Overlay/Add)');
+     showmessageX('Please load GIfTI mesh (using File/Open) BEFORE loading the GIFTI overlay (using Overlay/Add)');
      setlength(vertexRGBA,0);
      goto 666;
   end;
   if (length(vertexRGBA) > 0) and (length(vertexRGBA) <> length(vertices)) then begin
-     showmessage(format('Number of vertices in NIFTI_INTENT_LABEL (%d) does not match number of vertices in NIFTI_INTENT_POINTSET (%d). Use File/Open to load the correct background image before loading your overlay.', [length(vertexRGBA), length(vertices)]));
+     showmessageX(format('Number of vertices in NIFTI_INTENT_LABEL (%d) does not match number of vertices in NIFTI_INTENT_POINTSET (%d). Use File/Open to load the correct background image before loading your overlay.', [length(vertexRGBA), length(vertices)]));
      setlength(vertexRGBA,0);
   end;
   if  (length(vertices) < 3) and (length(faces) > 0) then begin
-      showmessage('Error: this GIFTI image describes faces but not vertices. Solution: merge separate GIFTI files into a single file.');
+      showmessageX('Error: this GIFTI image describes faces but not vertices. Solution: merge separate GIFTI files into a single file.');
       goto 666;
   end;
   if  (length(vertices) > 2) and (length(faces) < 1) then begin
-      showmessage('Error: this GIFTI image describes vertices but not faces. Solution: merge separate GIFTI files into a single file.');
+      showmessageX('Error: this GIFTI image describes vertices but not faces. Solution: merge separate GIFTI files into a single file.');
       goto 666;
   end;
   if (length(vertices) < 3) or (length(faces) < 1) then begin //just in case vertices OR faces set but not both
-     showmessage('Unable to interpret this GIFTI file: it does not seem to describe faces, vertices, labels or intensities');
+     showmessageX('Unable to interpret this GIFTI file: it does not seem to describe faces, vertices, labels or intensities');
      goto 666;
   end;
   isRebuildList := true;
@@ -5093,7 +5341,7 @@ begin
   result := true;
   666 :
   CloseFile(f);
-  if not result then showmessage('Unable to decode VBO '+ FileName);
+  if not result then showmessageX('Unable to decode VBO '+ FileName);
 end; //LoadVbo()  *)
 
 
@@ -5164,7 +5412,7 @@ begin
         else if ( indicesNumber <> 0 ) then
              goto 666; //( 'PRWM decoder: Number of indices must be set to 0 for non-indexed geometries' );
   end;
-  //showmessage(format('%d %d %d %d -> %d %d',[x(indexedGeometry), x(indicesType), x(bigEndian), attributesNumber, valuesNumber, indicesNumber]));
+  //showmessageX(format('%d %d %d %d -> %d %d',[x(indexedGeometry), x(indicesType), x(bigEndian), attributesNumber, valuesNumber, indicesNumber]));
   for a := 1 to attributesNumber do begin
     attributeName := '';
     i := 1;
@@ -5265,7 +5513,7 @@ begin
   result := true;
   666 :
   CloseFile(f);
-  if not result then showmessage('Error '+eStr+ ': '+FileName);
+  if not result then showmessageX('Error '+eStr+ ': '+FileName);
 end; //LoadPrwm()
 
 function LoadMz3Core(const FileName: string; var Faces: TFaces; var Vertices: TVertices; var vertexRGBA: TVertexRGBA; var intensity: TFloats; var vertexAtlas: TInts; var atlasMaxIndex: integer; out isAOMap: boolean; nVertBackground: integer = 0): boolean;
@@ -5293,7 +5541,7 @@ begin
      mStream := TMemoryStream.Create;
      ExtractGz(FileName,mStream, kMagic);
      if mStream.Size < 28 then begin
-       //showmessage('MZ3 file too small'+inttostr(mStream.Size));
+       //showmessageX('MZ3 file too small'+inttostr(mStream.Size));
        printf('MZ3 file too small'+inttostr(mStream.Size));
        exit; //16 byte header, 3 vertices, single 4-byte scalar per vertex vertices
      end;
@@ -5313,11 +5561,11 @@ begin
      //   Attr := Attr + 8;
      isAOMap := (Attr and 32) > 0;
      if (Attr > 63) then begin
-        showmessage('Unsupported future format '+ inttostr(Attr));
+        showmessageX('Unsupported future format '+ inttostr(Attr));
         goto 666;
      end;
      if (isScalar and isDoubleScalar) then begin
-        showmessage('Broken or Unsupported future format '+ inttostr(Attr));
+        showmessageX('Broken or Unsupported future format '+ inttostr(Attr));
         goto 666;
      end;
      if (nFace = 0) and (isFace) then goto 666;
@@ -5391,7 +5639,7 @@ begin
      result := LoadMz3Core(Filename, Faces,Vertices,vertexRGBA,floats, vertexAtlas, atlasMaxIndex, isAOMap);
      if not result then exit;
      if (length(Faces) < 1) and (length(floats) > 0) then
-        Showmessage('Please load mesh (using File/Open) BEFORE loading the overlay (using Overlay/Add).')
+        showmessageX('Please load mesh (using File/Open) BEFORE loading the overlay (using Overlay/Add).')
      else if  (length(floats) >=  length(Vertices)) then begin
           if OpenOverlays < kMaxOverlays then begin
             OpenOverlays := OpenOverlays + 1;
@@ -5407,7 +5655,7 @@ begin
             if isAOMap then  Overlay[OpenOverlays].LUTindex := 0;
             Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex, Overlay[OpenOverlays].LUTinvert);
           end else //will never happen: we close all overlays when we open a mesh
-             Showmessage('Too many overlays open to show the intensity map.');
+             showmessageX('Too many overlays open to show the intensity map.');
      end;
      setlength(floats,0);
      exit;
@@ -5421,7 +5669,7 @@ begin
   if (length(overlay[lOverlayIndex].intensity)  >= length(Vertices)) and ((length(overlay[lOverlayIndex].intensity) mod length(Vertices)) = 0) then
      i := length(overlay[lOverlayIndex].intensity) div length(Vertices);
   if (length(Overlay[lOverlayIndex].Vertices) < 3) and (length(Overlay[lOverlayIndex].intensity) > 0) and (i < 1) then begin
-     showmessage(format('This overlay has a different number of vertices (%d) than the background mesh (%d).', [length(overlay[lOverlayIndex].intensity), length(Vertices) ]));
+     showmessageX(format('This overlay has a different number of vertices (%d) than the background mesh (%d).', [length(overlay[lOverlayIndex].intensity), length(Vertices) ]));
      setlength(overlay[lOverlayIndex].intensity, 0);
      result := false;
   end;
@@ -5492,7 +5740,7 @@ begin
   result := true;
   666 :
   CloseFile(f);
-  if not result then showmessage('Unable to decode Shaiya_Online/Model '+ FileName);
+  if not result then showmessageX('Unable to decode Shaiya_Online/Model '+ FileName);
   //UnifyVertices(faces, vertices);
 end; // Load3Do()
 
@@ -5520,7 +5768,7 @@ begin
       Readln(f);
   setlength(vertices, npoints);
   result := true;
-  //showmessage(format('%d', [npoints]));
+  //showmessageX(format('%d', [npoints]));
   //this code reads modern BYU files - it can fail with original files that have no space between values that take precisely 12 digits
   for i := 0 to (npoints-1) do begin
       try
@@ -5532,26 +5780,26 @@ begin
       end;
       if not result then goto 666;
   end;
-  //showmessage(format('%g %g %g',[vertices[npoints-1].X, vertices[npoints-1].Y, vertices[npoints-1].Z]));
+  //showmessageX(format('%g %g %g',[vertices[npoints-1].X, vertices[npoints-1].Y, vertices[npoints-1].Z]));
   setlength(faces, kBlockSz);
   num_f := 0;
   nPos := 0;
   fFirst := 1;
   fPrev := 1;
-  //showmessage(inttostr(nconnects));
+  //showmessageX(inttostr(nconnects));
   //ITK also differs from the spec, which demanded 16 indices per line
   if (nconnects < 3) then nconnects := maxint; //afni ConvertSurface sets as -1!
   i := 0;
   while (i < nconnects) and (not EOF(f))do begin
       read(f, fCurrent);
       inc(nPos);
-      //showmessage(format('%d %d',[nPos, fCurrent]));
+      //showmessageX(format('%d %d',[nPos, fCurrent]));
       if nPos = 1 then fFirst := abs(fCurrent);
       if nPos > 2 then begin//new face
         if (num_f) >= length(faces) then
            setlength(faces, num_f + kBlockSz); //non-triangular meshes will be composed of more triangles than num_f
         faces[num_f] := pti(fFirst, fPrev, abs(fCurrent));
-         //showmessage(format('%d %d %d',[faces[num_f].X, faces[num_f].Y, faces[num_f].Z]));
+         //showmessageX(format('%d %d %d',[faces[num_f].X, faces[num_f].Y, faces[num_f].Z]));
          num_f := num_f + 1;
       end;
       fPrev := abs(fCurrent);
@@ -5559,13 +5807,13 @@ begin
       i := i + 1;
   end;
   setlength(faces, num_f);
-  //showmessage(format('%d %d %d',[faces[num_f-1].X, faces[num_f-1].Y, faces[num_f-1].Z]));
+  //showmessageX(format('%d %d %d',[faces[num_f-1].X, faces[num_f-1].Y, faces[num_f-1].Z]));
   666:
   closefile(f);
   if not result then
-     showmessage('Unable to read BYU file (decoder assumes ITK data and can fail when vertices are packed with twelve digits and no spaces)'+fileName)
+     showmessageX('Unable to read BYU file (decoder assumes ITK data and can fail when vertices are packed with twelve digits and no spaces)'+fileName)
   else if num_f < 1 then begin
-     showmessage('Only able to read triangular BYU files: maybe this is points or lines');
+     showmessageX('Only able to read triangular BYU files: maybe this is points or lines');
      result := false;
   end;
 end;
@@ -5591,7 +5839,7 @@ begin
      Readln(f,s);
      s := trim(s);
      if (pos('AC3Db', s) < 1) then begin
-        showmessage('Corrupt file: AC files must begin with AC3Db not "'+s+'"');
+        showmessageX('Corrupt file: AC files must begin with AC3Db not "'+s+'"');
         CloseFile(f);
         exit;
      end;
@@ -5634,7 +5882,7 @@ begin
   666:
      CloseFile(f);
      if not result then
-        showmessage('Unable to read AC file '+fileName);
+        showmessageX('Unable to read AC file '+fileName);
 end;
 
 function TMesh.LoadDae(const FileName: string): boolean;
@@ -5835,7 +6083,7 @@ begin
          k := k + maxOffset;
          faces[nF + j].Z := indx[k]+nVstart;
          k := k + maxOffset;
-         //showmessage(inttostr(faces[nF + j].X)+' '+inttostr(faces[nF + j].Y)+' '+inttostr(faces[nF + j].Z))
+         //showmessageX(inttostr(faces[nF + j].X)+' '+inttostr(faces[nF + j].Y)+' '+inttostr(faces[nF + j].Z))
      end;
      nF := nF + newF;
   end else begin
@@ -5935,7 +6183,7 @@ begin
      if not result then begin
         setlength(vertices, 0);
         setlength(faces, 0);
-        showmessage('Unable to import as GTS file '+ FileName);
+        showmessageX('Unable to import as GTS file '+ FileName);
      end;
      UnifyVertices(faces, vertices);
 end; // LoadGts()
@@ -5946,12 +6194,16 @@ function TMesh.LoadDxf(const FileName: string): boolean;
 //Does not read all files, see wuson.dxf
 //  https://github.com/assimp/assimp/tree/master/test/models/DXF
 const kBlockSz = 32768; //must be >2, larger is faster (fewer memory reallocations)
+label
+   123;
 var
    f: TextFile;
    nV, nF, groupCode: integer;
    groupValue: single;
    groupCodeStr, groupValueStr: string;
+   is3DFace: boolean = false;
    v : array[0..3] of TPoint3f;
+
 procedure AddTri (var v1, v2, v3: TPoint3f);
 begin
   if nF >= length(faces) then setlength(faces, length(faces) + kBlockSz);
@@ -5980,6 +6232,12 @@ begin
            if EOF(f) then break;
            Readln(f, groupValueStr);
            groupCode := StrToIntDef (groupCodeStr, 0);
+           //if (groupCode = 0) and (nV > 1 ) and (posEx('ENDSEC', groupValueStr) > 0) then goto 123;
+           if (groupCode = 0) then begin
+             is3DFace := (posEx('3DFACE', groupValueStr) > 0);
+             if (nV > 1 ) and (not is3DFace) then goto 123;
+           end;
+           if (not is3DFace) then continue;
            if (groupCode < 10) or (groupCode > 33) then continue;
            if (groupCode mod 10) > 3 then continue;//last digit should be in range [0,1,2,3]
            groupValue := StrToFloatDef(groupValueStr, 0.0);
@@ -6002,12 +6260,13 @@ begin
                    AddTri (v[0], v[2], v[3]);
            end;
      end;
+     123:
      CloseFile(f);
      setlength(vertices, nV); //avoid constantly resizing arrays
      setlength(faces, nF);
      if (nF > 0) and (nV > 2) then result := true;
      if not result then
-        showmessage('Unable to import DXF file (perhaps not a 3D mesh) '+ FileName);
+        showmessageX('Unable to import DXF file (perhaps not a 3D mesh) '+ FileName);
      UnifyVertices(faces, vertices);
 end; // LoadDxf()
 
@@ -6116,8 +6375,8 @@ begin
      CloseFile(f);
      exit;
   end;
-  //showmessage(format('%d %d', [hdr.nTriangles,hdr.nVertices]));
-  //showmessage(format('%d %d',[(sizeof(hdr) + (int64(hdr.nVertices) * 3 * 4)+ (int64(hdr.nTriangles) * 3 * 4)), sz]));
+  //showmessageX(format('%d %d', [hdr.nTriangles,hdr.nVertices]));
+  //showmessageX(format('%d %d',[(sizeof(hdr) + (int64(hdr.nVertices) * 3 * 4)+ (int64(hdr.nTriangles) * 3 * 4)), sz]));
   //szX = expected size: header + vertices*4(float32)*3
   //  header size
   //  6*nV*4 = each vertex has 6 coordinates (x,y,z) 3 normals (x,y,z), each as 32-bit float
@@ -6127,7 +6386,7 @@ begin
   if (sizeof(hdr) + (int64(hdr.nVertices) * 6 * 4)+ (int64(hdr.nTriangles) * 3 * 4)) > sz then goto 666;
   setlength(vertices, hdr.nVertices);
   setlength(floats, hdr.nVertices);
-  //showmessage(format('%g %g %g',[hdr.meshCenterX, hdr.meshCenterY, hdr.meshCenterZ]));
+  //showmessageX(format('%g %g %g',[hdr.meshCenterX, hdr.meshCenterY, hdr.meshCenterZ]));
   blockread(f, floats[0],  int64(hdr.nVertices) * sizeof(single)); //coord X
   for i := 0 to high(floats) do
       vertices[i].Y := -(floats[i]-hdr.meshCenterX);
@@ -6184,7 +6443,7 @@ begin
   666:
   CloseFile(f);
   if not result then begin
-       showmessage('Unable to decode BrainVoyager SRF file '+ FileName);
+       showmessageX('Unable to decode BrainVoyager SRF file '+ FileName);
        faces := nil;
        vertexRGBA := nil;
        vertices := nil;
@@ -6280,7 +6539,7 @@ begin
          faces[i].Y := round(f2);
          faces[i].Z := round(f3);
      end;
-     //i :=  num_f -1; showmessage(format('%d %d %d',[faces[i].X, faces[i].Y, faces[i].Z]));
+     //i :=  num_f -1; showmessageX(format('%d %d %d',[faces[i].X, faces[i].Y, faces[i].Z]));
      result := true;
      666:
      CloseFile(f);
@@ -6314,13 +6573,13 @@ begin
   Reset(f);
   Readln(f,s);  //ascii
   if pos('ASCII', UpperCase(s)) < 1 then begin
-    showmessage('Not an ASCII BrainVisa file');
+    showmessageX('Not an ASCII BrainVisa file');
     goto 666;
   end;
   Readln(f,s);  //VOID  textureType
   i :=strtointdef(ReadNum(f),0); //3
   if i <> 3 then begin
-     showmessage('Only able to read triangulated BrainVisa files');
+     showmessageX('Only able to read triangulated BrainVisa files');
      goto 666;
   end;
   Readln(f,s);  //1 numberOfTimeSteps
@@ -6383,7 +6642,7 @@ begin
   Reset(f);
   Readln(f,s);  //ascii
   if pos('-', UpperCase(s)) <> 1 then begin
-    showmessage('Not an ASCII TRI BrainVisa file');
+    showmessageX('Not an ASCII TRI BrainVisa file');
     goto 666;
   end;
   s := copy(s, 2, length(s)-1);
@@ -6400,7 +6659,7 @@ begin
   Readln(f,s);
   strlst.DelimitedText := s;
   if (strlst.Count < 4) or (strlst[0] <> '-') then begin
-    showmessage('Fatal error reading TRI');
+    showmessageX('Fatal error reading TRI');
     goto 666;
   end;
   num_f := strtointdef(strlst[1],0);
@@ -6455,11 +6714,11 @@ begin
   if (uppercase(hdr.sig) = 'ASCII') then begin
      CloseFile(f);
      result := LoadMeshAscii(FileName);
-     //showmessage('This is a ASCII format mesh: only able to read binary meshes '+filename);
+     //showmessageX('This is a ASCII format mesh: only able to read binary meshes '+filename);
      exit;
   end;
   if (uppercase(hdr.sig) <> 'BINAR') or (uppercase(hdr.texTxt) <> 'VOID') or (hdr.texLen <> 4) or ( (hdr.endian <> kNativeEnd) and (hdr.endian <> kSwapEnd))  then begin
-     showmessage(format('sig=%s tex=%s endian=%d',[uppercase(hdr.sig), uppercase(hdr.texTxt), hdr.endian]));
+     showmessageX(format('sig=%s tex=%s endian=%d',[uppercase(hdr.sig), uppercase(hdr.texTxt), hdr.endian]));
      goto 666;
   end;
   swapEnd := hdr.endian = kNativeEnd;
@@ -6468,7 +6727,7 @@ begin
      SwapLongWord(hdr.vertex_number);
   end;
   if (hdr.vertex_per_face <> 3) then begin
-     showmessage('Only able to read triangular BrainVisa meshes');
+     showmessageX('Only able to read triangular BrainVisa meshes');
      goto 666;
   end;
   setlength(vertices, hdr.vertex_number);
@@ -6503,7 +6762,7 @@ begin
   666:
   CloseFile(f);
   if not result then
-       showmessage('Unable to decode BrainVisa file '+ FileName);
+       showmessageX('Unable to decode BrainVisa file '+ FileName);
 end; //LoadMesh()
 
 function TMesh.LoadDfs(const FileName: string): boolean;
@@ -6589,7 +6848,7 @@ begin
   666:
   CloseFile(f);
   if not result then
-       showmessage('Unable to decode BrainSuite DFS file ('+err+') '+ FileName);
+       showmessageX('Unable to decode BrainSuite DFS file ('+err+') '+ FileName);
 end; // LoadDfs()
 
 function TMesh.LoadLwo(const FileName: string): boolean;
@@ -6701,9 +6960,9 @@ begin
   CloseFile(f);
   if not result then begin
      if (uppercase(chunk.ID) <> 'LWOB') then
-        showmessage('Unable to decode LightWave LWO2 file '+ FileName)
+        showmessageX('Unable to decode LightWave LWO2 file '+ FileName)
      else
-         showmessage('Expected LWO2 format, not LWOB format '+ FileName);
+         showmessageX('Expected LWO2 format, not LWOB format '+ FileName);
   end;
   UnifyVertices(faces, vertices);
 end; // LoadLwo()
@@ -6761,7 +7020,7 @@ begin
   result := true;
   666 :
   CloseFile(f);
-  if not result then showmessage('Unable to decode MilkShape file '+ FileName);
+  if not result then showmessageX('Unable to decode MilkShape file '+ FileName);
   UnifyVertices(faces, vertices);
 end; // LoadMs3d()
 
@@ -6847,7 +7106,7 @@ begin
   end;
  666:
   CloseFile(f);
-  if not result then showmessage('Unable to decode 3DS file '+ FileName);
+  if not result then showmessageX('Unable to decode 3DS file '+ FileName);
   UnifyVertices(faces, vertices);
 end; // Load3ds()
 
@@ -6924,9 +7183,9 @@ begin
   setlength(faces, num_f);
   blockread(f, faces[0], num_f * sizeof(TPoint3i));
   result := true;
-  //showmessage(format('%g %g %g %g',[hdr.mat[1], hdr.mat[ 2], hdr.mat[ 3], hdr.mat[ 4]] ));
-  //showmessage(format('%g %g %g %g',[hdr.mat[5], hdr.mat[ 6], hdr.mat[ 7], hdr.mat[ 8]] ));
-  //showmessage(format('%g %g %g %g',[hdr.mat[9], hdr.mat[10], hdr.mat[11], hdr.mat[12]] ));
+  //showmessageX(format('%g %g %g %g',[hdr.mat[1], hdr.mat[ 2], hdr.mat[ 3], hdr.mat[ 4]] ));
+  //showmessageX(format('%g %g %g %g',[hdr.mat[5], hdr.mat[ 6], hdr.mat[ 7], hdr.mat[ 8]] ));
+  //showmessageX(format('%g %g %g %g',[hdr.mat[9], hdr.mat[10], hdr.mat[11], hdr.mat[12]] ));
   for i := 0 to (num_v - 1) do begin
     vertices[i].X := -vertices[i].X;
     vertices[i].Y := -vertices[i].Y;
@@ -6939,7 +7198,7 @@ begin
   666:
   CloseFile(f);
   if not result then
-       showmessage('Unable to decode Mango SURF file ('+err+') '+ FileName);
+       showmessageX('Unable to decode Mango SURF file ('+err+') '+ FileName);
 end; // LoadSurf()
 
 procedure TMesh.LoadStlAscii(const FileName: string);
@@ -6961,7 +7220,7 @@ begin
   Reset(f);
   Readln(f,s);
   if pos('SOLID', UpperCase(s)) < 1 then begin
-    showmessage('Not an ASCII STL file');
+    showmessageX('Not an ASCII STL file');
     closefile(f);
     exit;
   end;
@@ -7032,13 +7291,13 @@ begin
      Reset(f,1);
      sz := FileSize(f);
      if sz < 134 then begin//smallest file is 84 byte header + 50 byte triangle
-        ShowMessage(format('File too small to be STL format: %s', [FileName]));
+        showmessageX(format('File too small to be STL format: %s', [FileName]));
         CloseFile(f);
         exit;
      end;
      blockread(f, txt80, SizeOf(txt80) );
      if pos('SOLID', UpperCase(txt80)) = 1 then begin //this is a TEXT stl file
-        //Showmessage(format('Error: only able to read binary STL files (not ASCII text). Please convert your image: %s', [FileName]));
+        //showmessageX(format('Error: only able to read binary STL files (not ASCII text). Please convert your image: %s', [FileName]));
         CloseFile(f);
         LoadStlAscii(FileName);
         exit;
@@ -7047,7 +7306,7 @@ begin
     //50 bytes for each triangle there are 12 fp32 and 1 unit16
     min_sz := 80+4+(50*num_f);
     if sz < min_sz then begin
-       Showmessage(format('STL file too small to have %d faces (expected at least %d bytes) %s', [num_f, min_sz, FileName]));
+       showmessageX(format('STL file too small to have %d faces (expected at least %d bytes) %s', [num_f, min_sz, FileName]));
        CloseFile(f);
        exit;
     end;
@@ -7107,7 +7366,7 @@ begin
     Reset(f);
     Readln(f,str);
     if pos('"IDTF"', UpperCase(str)) = 0 then begin
-      showmessage('Not a IDTF file');
+      showmessageX('Not a IDTF file');
       goto 666;
     end;
     num_f := 0;
@@ -7119,12 +7378,12 @@ begin
           if pos('FACE_COUNT', UpperCase(str)) <> 0 then begin
               strlst.DelimitedText := str;
               num_f := StrToIntDef(strlst[1],0);
-              //showmessage('f'+inttostr(num_f));
+              //showmessageX('f'+inttostr(num_f));
           end;
           if pos('MODEL_POSITION_COUNT', UpperCase(str)) <> 0 then begin
               strlst.DelimitedText := str;
               num_v := StrToIntDef(strlst[1],0);
-              //showmessage('v'+inttostr(num_v));
+              //showmessageX('v'+inttostr(num_v));
           end;
           if (num_f >0) and (pos('MESH_FACE_POSITION_LIST', UpperCase(str)) <> 0) then begin
             setlength(faces, num_f);
@@ -7177,22 +7436,22 @@ begin
     Reset(f);
     Readln(f,str);
     if pos('VTK', UpperCase(str)) <> 3 then begin
-      showmessage('Not a VTK file');
+      showmessageX('Not a VTK file');
       goto 666;
     end;
     ReadLn(f, str); //comment: 'Comment: created with MRIcroS'
     ReadLn(f, str); //kind: 'BINARY' or 'ASCII'
     if pos('BINARY', UpperCase(str)) <> 0 then begin
-       showmessage('Use LoadVtk() to read binary files');
+       showmessageX('Use LoadVtk() to read binary files');
        goto 666;
     end else if pos('ASCII', UpperCase(str)) = 0 then begin
-       showmessage('VTK data should be ASCII or BINARY, not "'+str+'"');
+       showmessageX('VTK data should be ASCII or BINARY, not "'+str+'"');
        goto 666;
     end;
     ReadLn(f, str); // kind, e.g. "DATASET POLYDATA" or "DATASET STRUCTURED_ POINTS"
     while (str='') and (not eof(f)) do ReadLn(f, str);
     if pos('POLYDATA', UpperCase(str)) = 0 then begin
-       showmessage('Only able to read VTK images saved as POLYDATA, not '+ str);
+       showmessageX('Only able to read VTK images saved as POLYDATA, not '+ str);
        goto 666;
     end;
     i := 0;
@@ -7201,13 +7460,13 @@ begin
             i := i + 1;
     end;
     if pos('POINTS', UpperCase(str)) <> 1 then begin
-       showmessage('Expected header to report "POINTS" not '+ str);
+       showmessageX('Expected header to report "POINTS" not '+ str);
        goto 666;
     end;
     strlst.DelimitedText := str;
     num_v := StrToIntDef(strlst[1],0);
     if (num_v < 3) then begin
-      showmessage('Expected at least 3 vertices '+ str);
+      showmessageX('Expected at least 3 vertices '+ str);
       goto 666;
     end;
     setlength(vertices, num_v);
@@ -7218,15 +7477,15 @@ begin
     end;
     ReadLnVtk(f,str);
     if pos('POLYGONS', UpperCase(str)) <> 1 then begin
-       showmessage('Expected header to report "POLYGONS" (hint: open with Slicer and save as conventional format) "'+ str+'"');
+       showmessageX('Expected header to report "POLYGONS" (hint: open with Slicer and save as conventional format) "'+ str+'"');
        goto 666;
     end;
     strlst.DelimitedText := str;
     num_f := StrToIntDef(strlst[1],0);
     sz := StrToIntDef(strlst[2],0);
-    //showmessage(inttostr());
+    //showmessageX(inttostr());
     if (num_f < 1) then begin
-       showmessage('Expected at least 1 polygon not '+ str);
+       showmessageX('Expected at least 1 polygon not '+ str);
        goto 666;
     end;
     setlength(faces, num_f);
@@ -7324,7 +7583,7 @@ begin
   Reset(f,1);
   ReadLnBinVTK(f, str); //signature: '# vtk DataFile'
   if pos('VTK', UpperCase(str)) <> 3 then begin
-    showmessage('Not a VTK file');
+    showmessageX('Not a VTK file');
     goto 666;
   end;
   ReadLnBinVTK(f, str); //comment: 'Comment: created with MRIcroS'
@@ -7339,26 +7598,26 @@ begin
      LoadVtkTxt(FileName);
      exit;
   end else begin  // '# vtk DataFile'
-     showmessage('VTK data should be ASCII or binary, not "'+str+'"');
+     showmessageX('VTK data should be ASCII or binary, not "'+str+'"');
      goto 666;
   end;
   ok := ReadLnBinVTK(f, str); // kind, e.g. "DATASET POLYDATA" or "DATASET STRUCTURED_ POINTS"
   if not ok then goto 666;
   while (str='') and (not eof(f)) do ReadLnBinVTK(f, str);
   if pos('POLYDATA', UpperCase(str)) = 0 then begin
-    showmessage('Only able to read VTK images saved as POLYDATA, not '+ str);
+    showmessageX('Only able to read VTK images saved as POLYDATA, not '+ str);
     goto 666;
   end;
   ReadLnBin(f, str); // number of vertices, e.g. "POINTS 685462 float"
   if pos('POINTS', UpperCase(str)) <> 1 then begin
-    showmessage('Expected header to report "POINTS" not '+ str);
+    showmessageX('Expected header to report "POINTS" not '+ str);
     goto 666;
   end;
   num_v := 0;
   strlst.DelimitedText := str;
   num_v := StrToIntDef(strlst[1],0);
   if (num_v < 1) or (pos('FLOAT', UpperCase(strlst[2])) <> 1) then begin
-    showmessage('Expected at least 1 point of type FLOAT, not '+ str);
+    showmessageX('Expected at least 1 point of type FLOAT, not '+ str);
     goto 666;
   end;
   setlength(vertices, num_v); //vertices = zeros(num_f, 9);
@@ -7382,7 +7641,7 @@ begin
   ReadLnBin(f, str); // number of vertices, e.g. "POLYGONS 1380 5520"
   while (str = '') and (not EOF(f)) do ReadLnBin(f, str);
   if pos('LINES', UpperCase(str)) > 0 then begin
-    showmessage('This is a fiber file: rename with a ".fib" extension and use Tracks/Open to view: '+ str);
+    showmessageX('This is a fiber file: rename with a ".fib" extension and use Tracks/Open to view: '+ str);
     goto 666;
   end;
   if pos('METADATA', UpperCase(str)) = 1 then begin //ParaView inserts a metadata block
@@ -7396,7 +7655,7 @@ begin
      cnt := StrToIntDef(strlst[2],0);
      num_f_allocated := cnt;
      (*if isBinary then begin
-        showmessage(format('Unable to read VTK binary "TRIANGLE_STRIPS" %d %d', [num_strip, cnt]));
+        showmessageX(format('Unable to read VTK binary "TRIANGLE_STRIPS" %d %d', [num_strip, cnt]));
         goto 666;
      end;*)
      setlength(faces, num_f_allocated); //not sure how many triangles, lets guess
@@ -7485,14 +7744,14 @@ begin
 
   end;
   if pos('POLYGONS', UpperCase(str)) <> 1 then begin
-    showmessage('Expected header to report "TRIANGLE_STRIPS" or "POLYGONS" not '+ str);
+    showmessageX('Expected header to report "TRIANGLE_STRIPS" or "POLYGONS" not '+ str);
     goto 666;
   end;
   strlst.DelimitedText := str;
   num_f := StrToIntDef(strlst[1],0);
   cnt := StrToIntDef(strlst[2],0);
   if cnt <> (num_f * 4) then begin
-     showmessage('Only able to read triangular meshes, not '+ str);
+     showmessageX('Only able to read triangular meshes, not '+ str);
      goto 666;
   end;
   setlength(faces, num_f);
@@ -7514,7 +7773,7 @@ begin
         SwapLongInt(nV);
         {$ENDIF}
         if (nV <> 3) then begin
-           showmessage('VTK file is borked');
+           showmessageX('VTK file is borked');
            goto 666;
         end;
         blockread(f, faces[i],  3 * 4);
@@ -7593,7 +7852,7 @@ begin
   Reset(f,1);
   ReadLnBin(f, str); //signature: '# vtk DataFile'
   if pos('VTK', UpperCase(str)) <> 3 then begin
-    showmessage('Not a VTK file');
+    showmessageX('Not a VTK file');
     goto 666;
   end;
   ReadLnBin(f, str); //comment: 'Comment: created with MRIcroS'
@@ -7608,13 +7867,13 @@ begin
      LoadVtkTxt(FileName); exit;
      exit;
   end else begin  // '# vtk DataFile'
-     showmessage('VTK data should be ASCII or binary, not '+str);
+     showmessageX('VTK data should be ASCII or binary, not '+str);
      goto 666;
   end;
   ReadLnBin(f, str); // kind, e.g. "DATASET POLYDATA" or "DATASET STRUCTURED_ POINTS"
   while (str='') and (not eof(f)) do ReadLnBin(f, str);
   if pos('POLYDATA', UpperCase(str)) = 0 then begin
-    showmessage('Only able to read VTK images saved as POLYDATA, not '+ str);
+    showmessageX('Only able to read VTK images saved as POLYDATA, not '+ str);
     goto 666;
   end;
   c := 0;
@@ -7624,19 +7883,19 @@ begin
   end;
   //ReadLnBin(f, str); // number of vertices, e.g. "POINTS 685462 float"
   if pos('POINTS', UpperCase(str)) <> 1 then begin
-    showmessage('Expected header to report "POINTS" not '+ str);
+    showmessageX('Expected header to report "POINTS" not '+ str);
     goto 666;
   end;
   num_v := 0;
   strlst.DelimitedText := str;
   num_v := StrToIntDef(strlst[1],0);
   if (num_v < 1) or (pos('FLOAT', UpperCase(strlst[2])) <> 1) then begin
-    showmessage('Expected at least 1 point of type FLOAT, not '+ str);
+    showmessageX('Expected at least 1 point of type FLOAT, not '+ str);
     goto 666;
   end;
   setlength(vertices, num_v); //vertices = zeros(num_f, 9);
   if isBinary then begin
-    showmessage(inttostr(filepos(f)));
+    showmessageX(inttostr(filepos(f)));
      blockread(f, vertices[0], 3 * 4 * num_v);
      {$IFDEF ENDIAN_LITTLE} // VTK is ALWAYS big endian!
      for i := 0 to (num_v -1) do begin
@@ -7657,7 +7916,7 @@ begin
   ReadLnBin(f, str); // number of vertices, e.g. "POLYGONS 1380 5520"
   while (str = '') and (not EOF(f)) do ReadLnBin(f, str);
   if pos('LINES', UpperCase(str)) > 0 then begin
-    showmessage('This is a fiber file: rename with a ".fib" extension and use Tracks/Open to view: '+ str);
+    showmessageX('This is a fiber file: rename with a ".fib" extension and use Tracks/Open to view: '+ str);
     goto 666;
   end;
   if pos('METADATA', UpperCase(str)) = 1 then begin //ParaView inserts a metadata block
@@ -7671,7 +7930,7 @@ begin
      cnt := StrToIntDef(strlst[2],0);
      num_f_allocated := cnt;
      (*if isBinary then begin
-        showmessage(format('Unable to read VTK binary "TRIANGLE_STRIPS" %d %d', [num_strip, cnt]));
+        showmessageX(format('Unable to read VTK binary "TRIANGLE_STRIPS" %d %d', [num_strip, cnt]));
         goto 666;
      end;*)
      setlength(faces, num_f_allocated); //not sure how many triangles, lets guess
@@ -7760,14 +8019,14 @@ begin
 
   end;
   if pos('POLYGONS', UpperCase(str)) <> 1 then begin
-    showmessage('Expected header to report "TRIANGLE_STRIPS" or "POLYGONS" not '+ str);
+    showmessageX('Expected header to report "TRIANGLE_STRIPS" or "POLYGONS" not '+ str);
     goto 666;
   end;
   strlst.DelimitedText := str;
   num_f := StrToIntDef(strlst[1],0);
   cnt := StrToIntDef(strlst[2],0);
   if cnt <> (num_f * 4) then begin
-     showmessage('Only able to read triangular meshes, not '+ str);
+     showmessageX('Only able to read triangular meshes, not '+ str);
      goto 666;
   end;
   setlength(faces, num_f);
@@ -7789,7 +8048,7 @@ begin
         SwapLongInt(nV);
         {$ENDIF}
         if (nV <> 3) then begin
-           showmessage('VTK file is borked');
+           showmessageX('VTK file is borked');
            goto 666;
         end;
         blockread(f, faces[i],  3 * 4);
@@ -7887,7 +8146,7 @@ begin
          MinMax(faces[i], mn, mx);
      end;
      if ((mx - mn)+1) > length(vertices) then begin
-        showmessage(format('Range of vertex indices (%d..%d) exceeds number of vertices (%d).',[mn,mx,length(vertices)]));
+        showmessageX(format('Range of vertex indices (%d..%d) exceeds number of vertices (%d).',[mn,mx,length(vertices)]));
         result := false;
      end;
      if (result) and (mn <> 0) and (mx >= length(vertices)) then begin //incase faces indexed from 1, not 0!
@@ -7901,7 +8160,7 @@ begin
         mn := mn - mn;
      end;
      if (result) and ((mn < 0) or (mx >= length(vertices))) then begin
-        showmessage('Error: mesh does not make sense: '+inttostr(length(vertices))+' vertices but '+inttostr(mx-mn+1)+' indices ('+inttostr(mn)+'..'+inttostr(mx)+')');
+        showmessageX('Error: mesh does not make sense: '+inttostr(length(vertices))+' vertices but '+inttostr(mx-mn+1)+' indices ('+inttostr(mn)+'..'+inttostr(mx)+')');
         result := false;
      end;
      isNan := false;
@@ -7909,7 +8168,7 @@ begin
          if specialsingle( vertices[i].X) or specialsingle( vertices[i].Y) or specialsingle( vertices[i].Z) then
             isNan := true;
      if result and isNan then begin
-        showmessage('Vertices are corrupted (infinity of NaN values) '+inttostr(length(vertices)));
+        showmessageX('Vertices are corrupted (infinity of NaN values) '+inttostr(length(vertices)));
         result := false;
      end;
      if not result then
@@ -7958,6 +8217,7 @@ begin
      if fileexists(result)then exit;
      result := '';
 end;
+
 
 function TMesh.LoadFromFile(const FileName: string): boolean;
 var
@@ -8076,7 +8336,7 @@ begin
         SetDescriptives;
 	if not isZDimIsUp then
 	   SwapYZ;
-	//showmessage(Filename+'  '+ inttostr(length(faces))+' '+inttostr(length(vertices)) );
+	//showmessageX(Filename+'  '+ inttostr(length(faces))+' '+inttostr(length(vertices)) );
 	//NormalizeSize;
 	isBusy := false;
         if HasOverlays then
@@ -8128,7 +8388,7 @@ begin
      SwapSingle(sample_period);
      SwapLongWord(n_vertex);
      {$ENDIF}
-     //showmessage(floattostr(epoch_begin_latency)+' '+floattostr(sample_period)+' '+inttostr(n_vertex));
+     //showmessageX(floattostr(epoch_begin_latency)+' '+floattostr(sample_period)+' '+inttostr(n_vertex));
      if (n_vertex < 1) then begin //not the correct format
         CloseFile(f);
         exit;
@@ -8153,11 +8413,11 @@ begin
      {$ENDIF}
      n_timeXn_vertex :=  n_time * n_vertex;
      if (sz < (filepos(f)+(n_timeXn_vertex*4))) then
-        showmessage(inttostr(sz) + '  '+ floattostr(filepos(f)+(n_timeXn_vertex*4)));
+        showmessageX(inttostr(sz) + '  '+ floattostr(filepos(f)+(n_timeXn_vertex*4)));
      if (mn <0) or (mx > length(vertices)) then
-        showmessage(floattostr(mn)+' '+floattostr(mx)+' '+floattostr(length(vertices)) );
+        showmessageX(floattostr(mn)+' '+floattostr(mx)+' '+floattostr(length(vertices)) );
      if (mn <0) or (mx > length(vertices)) or (sz < (filepos(f)+(n_timeXn_vertex*4))) then begin
-        showmessage('File corrupted: overlay does not match background mesh.');
+        showmessageX('File corrupted: overlay does not match background mesh.');
         CloseFile(f);
         exit;
      end;
@@ -8216,7 +8476,8 @@ begin
      CloseFile(f);
      exit;
   end;
-  showmessage('The undocumented FreeSurfer GCS format is not supported. Solution: convert file to annot format using "mris_ca_label -ml-annot '+FileName+' 7 ~/newfile.annot"');
+  printf('The undocumented FreeSurfer GCS format is not supported.');
+  showmessageX('The undocumented FreeSurfer GCS format is not supported. Solution: convert file to annot format using "mris_ca_label -ml-annot '+FileName+' 7 ~/newfile.annot"');
   CloseFile(f);
   result := true;
 end; // LoadGcs()
@@ -8312,6 +8573,7 @@ begin
            if bt = kEnd then exit;
      end;
 end;
+
 function parseBetweenQuotes(s: string; endCh: char = '"'):string; //'ni_type="int"'->'int'
 var
    b,e: integer;
@@ -8429,7 +8691,7 @@ begin
   ReadLnBin(f, st); //signature
   if (not AnsiContainsText(st, '<AFNI_dataset'))  then begin
     printf('Does not appear to be a AFNI dataset');
-    //showmessage('Does not appear to be a AFNI dataset.');
+    //showmessageX('Does not appear to be a AFNI dataset.');
     goto 123;
   end;
   while not eof(f) do begin
@@ -8471,8 +8733,6 @@ begin
       end;
       SetEdgeLayer(0);
       {$ENDIF}
-
-
       strlst.free;
       if afni.ni_type_n = 1 then
          setlength(edgeLayers, 0); //only one layer
@@ -8628,7 +8888,7 @@ begin
   ReadLnBin(f, st); //signature
   if (not AnsiContainsText(st, '<AFNI_dataset'))  then begin
     printf('Does not appear to be a AFNI dataset');
-    //showmessage('Does not appear to be a AFNI dataset.');
+    //showmessageX('Does not appear to be a AFNI dataset.');
     goto 123;
   end;
   {$IFDEF TIMER}startTime := Now;{$ENDIF}
@@ -8828,6 +9088,7 @@ begin
   thresh := 0;
   mn := min(mn1,mx1);
   mx := max(mn1,mx1);
+  //printf(format('>>>> %g %g', [mn, mx]));
   (*if (mn < 0) and (mx > 0) then begin
     for i := 0 to (nFace -1) do begin  //two thresholds, max and min
       if SameVal(v[f[i].x], v[f[i].y], v[f[i].z], mn, mx) then
@@ -9038,11 +9299,11 @@ begin
   SwapLongWord(nVert);
   {$ENDIF}
   if (nVert <> length(vertices)) then begin
-     showmessage('Annot file does not match currently loaded image: it describes '+inttostr(nVert)+' vertices but the mesh has '+inttostr(length(vertices)));
+     showmessageX('Annot file does not match currently loaded image: it describes '+inttostr(nVert)+' vertices but the mesh has '+inttostr(length(vertices)));
      goto 666;
   end;
   if (sz < (4+ (nVert * 8) )) then begin //too small
-     showmessage('Annot file corrupted: file is smaller than expected');
+     showmessageX('Annot file corrupted: file is smaller than expected');
      goto 666;
   end;
   setlength(idx, 2*nVert);
@@ -9054,13 +9315,15 @@ begin
   setlength(vertexRGBA, nVert);
   j := 0;
   for i := 0 to (nVert-1) do begin
+      //if i < 10 then
+      //   printf(format('%d -> %d', [idx[i],idx[j]]));
       v := idx[j];
       if (v < 0) or (v >= nVert) then begin
-         showmessage(inttostr(i)+'/'+inttostr(nVert)+'Index out of range '+inttostr(v));
+         showmessageX(inttostr(i)+'/'+inttostr(nVert)+'Index out of range '+inttostr(v));
          goto 666;
       end;
       vertexRGBA[v] := asRGBA(idx[j+1]);
-      vertexRGBA[i].A := 255;
+      vertexRGBA[v].A := 255;
       j := j + 2;
   end;
   //next ATLAS data
@@ -9077,7 +9340,7 @@ begin
     {$ENDIF}
     //GLForm1.Caption := (format('%d %d %d', [sz, filepos(f),len]));
     if (ctabversion >= 0) or ((filepos(f)+len+8)  > sz) then begin
-      showmessage('Undocumented old ctabversion not supported');
+      showmessageX('Undocumented old ctabversion not supported');
       goto 666;
     end;
     seek(f, filepos(f)+len);
@@ -9086,7 +9349,7 @@ begin
     SwapLongInt(num_entries);
     {$ENDIF}
     if (num_entries < 1) then begin
-      showmessage('Annot file does not make sense');
+      showmessageX('Annot file does not make sense');
       goto 666;
     end;
     //GLForm1.Caption := (format('%d %d %d', [num_entries, filepos(f),len]));
@@ -9112,28 +9375,31 @@ begin
       SwapLongInt(a);
       {$ENDIF}
       labelNum := labelNum + 1; //index from 1 not zero!
-      //GLForm1.ScriptOutputMemo.Lines.Add(format('%d rgba %d %d %d %d',[labelNum, r, g, b, a]));
+      //writeln(format('%d rgb %d %d %d',[labelNum, r, g, b]));
       if i = 0 then atlasMaxIndex := labelNum;
       if labelNum > atlasMaxIndex then atlasMaxIndex := labelNum;
-      labelRGBA := RGBA(r,g,g,a);
+      //labelRGBA := RGBA(r,g,b,a);
+      labelRGBA := RGBA(r,g,b,255);
       //we need to use the RGB not RGBA value to infer label number!
       // mri_annotation2label can use a different alpha for label and vertex!
       for v := 0 to (nVert -1) do
-          if asIntA0(labelRGBA) = asIntA0(vertexRGBA[v]) then
+          //if asIntA0(labelRGBA) = asIntA0(vertexRGBA[v]) then
+          if asInt(labelRGBA) = asInt(vertexRGBA[v]) then
              vertexAtlas[v] := labelNum;
     end;
   end;
   nOK := 0;
+
   if length(vertexAtlas) = nVert then begin
+    j := 0;
     for v := 0 to (nVert -1) do begin
-        if (vertexAtlas[v] >= 0) then
+        if (vertexAtlas[v] >= 0) then begin
            nOK += 1;
-        vertexAtlas[v] :=  0;
+        end;
     end;
     if (nVert <> nOK) then
        GLForm1.ScriptOutputMemo.Lines.Add(format('annot file specifies %d of %d vertices: %s',[nOK, nVert, FileName]));
   end;
-
   (*for v := 0 to (nVert -1) do
       if (vertexAtlas[v] < 0) then begin
         GLForm1.ScriptOutputMemo.Lines.Add(format('annot file ERROR %d rgba %d %d %d %d',[v, vertexRGBA[v].r, vertexRGBA[v].g, vertexRGBA[v].b, vertexRGBA[v].a]));
@@ -9170,11 +9436,11 @@ begin
   SwapLongWord(vtxct);
   {$ENDIF}
   if (vtxct <> length(vertices)) then begin
-     showmessage('Annot file does not match currently loaded image: it describes '+inttostr(vtxct)+' vertices but the mesh has '+inttostr(length(vertices)));
+     showmessageX('Annot file does not match currently loaded image: it describes '+inttostr(vtxct)+' vertices but the mesh has '+inttostr(length(vertices)));
      goto 666;
   end;
   if (sz < (4+ (vtxct * 8) )) then begin //too small
-     showmessage('Annot file corrupted: file is smaller than expected');
+     showmessageX('Annot file corrupted: file is smaller than expected');
      goto 666;
   end;
   setlength(idx, 2*vtxct);
@@ -9188,7 +9454,7 @@ begin
   for i := 0 to (vtxct-1) do begin
       v := idx[j];
       if (v < 0) or (v >= vtxct) then begin
-         showmessage(inttostr(i)+'/'+inttostr(vtxct)+'Index out of range '+inttostr(v));
+         showmessageX(inttostr(i)+'/'+inttostr(vtxct)+'Index out of range '+inttostr(v));
          goto 666;
       end;
       vertexRGBA[v] := asRGBA(idx[j+1]);
@@ -9255,7 +9521,7 @@ begin
  setlength(inFaces, 0);
  setlength(inVertices, 0);
  setlength(inIntensity, 0);
- //showmessage(inttostr(num_ok));
+ //showmessageX(inttostr(num_ok));
  setlength(outIdx, 0);
 end;
 
@@ -9311,12 +9577,12 @@ begin
      result := false;
      num_v := length(vertices);
      if (num_v < 3) or (length(vertexAtlas) <> num_v) then begin
-        showmessage('ROX format requires labelled mesh.');
+        showmessageX('ROX format requires labelled mesh.');
         exit;
      end;
      maxROI := AtlasMaxIndex;
      if (maxROI < 1) then begin
-        showmessage('ROX format requires labelled mesh with varying indices.');
+        showmessageX('ROX format requires labelled mesh with varying indices.');
         exit;
      end;
      setlength(intensityLUT, maxROI+1);
@@ -9335,7 +9601,7 @@ begin
                  i := strtointdef(strlst[0],-1);
                  inten := strtofloatdef(strlst[1],0);
          		if (i < 0) or (i > maxROI) then begin
-         			showmessage('ROX file does not appear to match background mesh: expected indices 1..'+inttostr(maxROI)+' not '+inttostr(i));
+         			showmessageX('ROX file does not appear to match background mesh: expected indices 1..'+inttostr(maxROI)+' not '+inttostr(i));
          			goto 666;
          		end;
          		intensityLUT[i] := inten;
@@ -9347,7 +9613,7 @@ begin
         goto 666;
      LoadAtlasMapCore(lOverlayIndex, intensityLUT);
      if (length(overlay[lOverlayIndex].vertices) < 3) then
-        showmessage('Unable to find any matching indices in atlas')
+        showmessageX('Unable to find any matching indices in atlas')
      else
          result := true;
    666:
@@ -9381,11 +9647,11 @@ begin
      //if not readMGHHeader (fnm, hdr, gzFlag, swapEndian, x64) then exit;
      if not readVoxHeader (fnm, hdr, gzFlag, swapEndian, x64) then exit;
      if (x64 <> length(vertices)) then begin
-        //showmessage(format('Expected %d vertices, not %d.', [length(vertices), x64]));
+        //showmessageX(format('Expected %d vertices, not %d.', [length(vertices), x64]));
         exit;
      end;
      if (gzFlag = K_gzBytes_onlyImageCompressed) then begin
-       showmessage('Unable to read files with uncompressed headers and compressed images.');
+       showmessageX('Unable to read files with uncompressed headers and compressed images.');
        exit;
      end;
      vol := hdr.dim[2];
@@ -9449,7 +9715,7 @@ begin
           overlay[lOverlayIndex].intensity[i] := f64s[i];
         end;
      end else
-         showmessage(format('Unsupported scalar datatype %d', [hdr.datatype]));
+         showmessageX(format('Unsupported scalar datatype %d', [hdr.datatype]));
      imgBytes := nil;
      result := true;
 end;
@@ -9478,7 +9744,7 @@ begin
      Reset(f);
      ReadLn(f, str); //make sure to run CheckMesh after this, as these are indexed from 1!
      strlst.DelimitedText := str;
-     //showmessage(format('%d', [strlst.Count]));
+     //showmessageX(format('%d', [strlst.Count]));
      result := strlst.Count;
      if result < 1 then goto 666;
      if lOverlayItem < result then lOverlayItem := result;
@@ -9502,13 +9768,44 @@ begin
    strlst.Free;
    if (nOK <> num_v) or (result < 1) then begin
 
-      showmessage('COL file does not appear to match background mesh: expected '+inttostr(num_v)+' vertices not '+inttostr(nOK));
+      showmessageX('COL file does not appear to match background mesh: expected '+inttostr(num_v)+' vertices not '+inttostr(nOK));
       //GLForm1.Caption := ('COL file does not appear to match background mesh: expected '+inttostr(num_v)+' vertices not '+inttostr(nOK));
 
       result := 0;
       overlay[lOverlayIndex].intensity := nil;
    end;
    //GLForm1.Caption := ('COL file does not appear to match background mesh: expected '+inttostr(num_v)+' vertices not '+inttostr(nOK));
+
+end;
+
+procedure TMesh.Overlay2Atlas();
+var
+   nVert, mx, i: integer;
+   ranRGBA : array of TRGBA;
+begin
+	 if (OpenOverlays < kMinOverlayIndex) or (OpenOverlays > kMaxOverlays) then exit;
+     nVert := length(vertices);
+     if length(overlay[OpenOverlays].intensity) <> nVert then exit;
+     setlength(vertexAtlas, nVert);
+     mx := 0;
+     for i := 0 to (nVert - 1) do begin
+         vertexAtlas[i] := round(overlay[OpenOverlays].intensity[i]);
+         vertexAtlas[i] := max(vertexAtlas[i], 0);
+         mx := max(mx, vertexAtlas[i]);
+     end;
+     if mx <= 0 then begin
+     	vertexAtlas := nil;
+        exit;
+     end;
+     AtlasMaxIndex := mx;
+     setlength(vertexRGBA, nVert);
+     setlength(ranRGBA, mx+1);
+     for i := 0 to (mx) do
+     	 ranRGBA[i] := RGBA(random(255), random(255), random(255), 255);
+     for i := 0 to (nVert - 1) do
+     	 vertexRGBA[i] := ranRGBA[vertexAtlas[i]];
+     overlay[OpenOverlays].intensity := nil;
+     OpenOverlays := OpenOverlays - 1;
 
 end;
 
@@ -9583,7 +9880,7 @@ begin
      if (idx <> num_v) then begin //when fewer vertices than background image
         str := format('1D file reports %d vertices but background mesh has %d',[idx, num_v]);
         printf(str);
-        showmessage(str)
+        showmessageX(str)
      end else
          result := true;
    666:
@@ -9625,7 +9922,7 @@ begin
          end;
          idx := round(idxf);
          if (idx < 0) or (idx > num_v) then begin //when more vertices than background image
-           showmessage('DPV file does not appear to match background mesh: expected indices 1..'+inttostr(num_v)+' not '+inttostr(idx));
+           showmessageX('DPV file does not appear to match background mesh: expected indices 1..'+inttostr(num_v)+' not '+inttostr(idx));
            goto 666;
          end;
          if idx > iMax then iMax := idx;
@@ -9642,7 +9939,7 @@ begin
      end;
      idx := iMax-iMin+1;
      if (idx <> num_v) then //when fewer vertices than background image
-        showmessage(format('DPV file reports %d vertices but background mesh has %d (%d..%d)',[idx, num_v, iMin, iMax]));
+        showmessageX(format('DPV file reports %d vertices but background mesh has %d (%d..%d)',[idx, num_v, iMin, iMax]));
      result := true;
    666:
      CloseFile(f);
@@ -9714,7 +10011,7 @@ begin
         exit;
      end;
      if (num_v <> length(vertices)) or (num_f <> length(faces)) or (sz < (filepos(f)+(num_v*4))) then begin
-        showmessage('File corrupted: overlay does not match background mesh: '+inttostr(num_v)+' vertices and '+inttostr(num_f)+' triangles');
+        showmessageX('File corrupted: overlay does not match background mesh: '+inttostr(num_v)+' vertices and '+inttostr(num_f)+' triangles');
         CloseFile(f);
         exit;
      end;
@@ -9773,7 +10070,7 @@ begin
      end;
      max_v := length(vertices);
      if (num_v > max_v) then begin
-        showmessage('This W file has MORE vertices than the background image');
+        showmessageX('This W file has MORE vertices than the background image');
         CloseFile(f);
         exit;
      end;
@@ -9783,7 +10080,7 @@ begin
      for i := 0 to (num_v-1) do begin
          idx := fread3(f);
          if (idx > max_v) then begin
-            showmessage('This W file describes MORE vertices than the background image');
+            showmessageX('This W file describes MORE vertices than the background image');
             CloseFile(f);
             exit;
          end;
@@ -9817,7 +10114,7 @@ begin
      Readln(f, version, file_type);  //'3\t4000\n'
      Readln(f, minor_rev);  //'3\n'
      if ((file_type <> 4000) and (file_type <> 8000)) or (minor_rev <> 3) then begin
-       showmessage(format('cannot read WFR file type: %d revision %d',[file_type, minor_rev]));
+       showmessageX(format('cannot read WFR file type: %d revision %d',[file_type, minor_rev]));
        goto 666;
      end;
      Readln(f, meshtype); //meshtype - 0=unknown, 40=scalp, 80=outerskull, 100=innerskull, 200=brain
@@ -9907,7 +10204,7 @@ var
    cnt: array [0..kBins] of integer;
 begin
    range := mx - mn;
-   //showmessage(format('%g %g', [mn, mx]));
+   //showmessageX(format('%g %g', [mn, mx]));
    if (range <= 0) or (num_v < 2) then exit;
    for i := 0 to kBins do
        cnt[i] := 0;
@@ -10017,11 +10314,11 @@ begin
       overlay[lOverlayIndex].windowScaledMax := roundto(mx,lLog10);
   end;
   (*if (mn = mx) then begin
-     showmessage('Error: no variability in overlay '+floattostr(mn));
+     showmessageX('Error: no variability in overlay '+floattostr(mn));
      overlay[lOverlayIndex].intensity := nil; //release
      exit;
   end;*)
-  //showmessage('overlay'+floattostr(mn)+'  '+floattostr(mx));
+  //showmessageX('overlay'+floattostr(mn)+'  '+floattostr(mx));
 end; // SetOverlayDescriptives()
 
 {$Include cifti.inc}
@@ -10161,12 +10458,12 @@ var
   clr: TRGBA;
   x: string;
 begin
-  //showmessage(format ('%dx%d', [length(vertexRGBA), Self.OpenOverlays]));
+  //showmessageX(format ('%dx%d', [length(vertexRGBA), Self.OpenOverlays]));
   x := UpperCase(ExtractFileExt(Filename));
   vRGBA := nil;
   if (length(vertexRGBA) > 0) and (x = '.MZ3') and (PosEx('AOMap',Filename) > 0) then begin
      //save RGB as ambient occlusion map
-    //showmessage('xx');
+    //showmessageX('xx');
      setlength(intensities, length(Vertices));
      for i := 0 to (length(Vertices)-1) do
          intensities[i] := vertexRGBA[i].G / 255.0;
@@ -10212,11 +10509,18 @@ begin
   vRGBA := nil;
 end;
 
+procedure TMesh.LoadDummyOverlay(layer: integer; ov: TOverlay);
+begin
+  overlay[layer].minIntensity := ov.minIntensity;
+  overlay[layer].maxIntensity := ov.maxIntensity;
+  overlay[layer].filename := ov.filename;
+end;
+
 function TMesh.LoadOverlay(const FileName: string; lLoadSmooth: boolean): boolean; //; isSmooth: boolean
 var
    i, nOverlays: integer;
    isLUTinvert: boolean = false;
-   ext, ext2: string;
+   fnm, ext, ext2: string;
    isCiftiNii, HasOverlays: boolean;
 begin
   result := false;
@@ -10230,15 +10534,16 @@ begin
      isCiftiNii := isCIfTI(FileName);
   if (length(vertices) < 3) then begin
      if isCiftiNii then
-       showmessage('Unable to load overlay: load background mesh (.surf.gii) first')
+       showmessageX('Unable to load overlay: load background mesh (.surf.gii) first')
      else
-         showmessage('Unable to load overlay: load background mesh first');
+         showmessageX('Unable to load overlay: load background mesh first');
      exit; //load background first
   end;
   if (OpenOverlays >= kMaxOverlays) then begin
-     showmessage('Unable to add overlay: too many overlays open');
+     showmessageX('Unable to add overlay: too many overlays open');
      exit;
   end;
+  isRebuildList := true;
   if (ext = '.ANNOT') then
      if LoadAnnot(FileName) then begin
         result := true;
@@ -10330,7 +10635,7 @@ begin
         exit;
      end;
      {$IFDEF UNIX}writeln('.NIML.DSET format not supported: use ConvertDset to convert to GIfTI.');  {$ENDIF}
-     {$IFNDEF Darwin}Showmessage('.NIML.DSET format not supported: use ConvertDset to convert to GIfTI.'); {$ENDIF}
+     {$IFNDEF Darwin}showmessageX('.NIML.DSET format not supported: use ConvertDset to convert to GIfTI.'); {$ENDIF}
     OpenOverlays := OpenOverlays - 1;
     exit;  *)
   end;
@@ -10338,6 +10643,11 @@ begin
      if not Load1D(FileName, OpenOverlays) then begin
        OpenOverlays := OpenOverlays - 1;
        exit;
+     end;
+     fnm := extractfilename(FileName);
+     if PosEx('annot', fnm) > 0 then begin
+     	Overlay2Atlas();
+     	exit;
      end;
 
   end;
@@ -10429,7 +10739,7 @@ begin
   if (isLUTinvert) then Overlay[OpenOverlays].LUTinvert := true;
   Overlay[OpenOverlays].LUT := UpdateTransferFunction (Overlay[OpenOverlays].LUTindex, Overlay[OpenOverlays].LUTinvert); //set color scheme
   isRebuildList := true;
-  //showmessage(format('%d %d', [length(Overlay[OpenOverlays].intensity), length(Overlay[OpenOverlays].vertices) ]));
+  //showmessageX(format('%d %d', [length(Overlay[OpenOverlays].intensity), length(Overlay[OpenOverlays].vertices) ]));
   result :=  (length(Overlay[OpenOverlays].intensity) > 0) or (length(Overlay[OpenOverlays].vertices) > 0);
   if not result then
      OpenOverlays := OpenOverlays - 1;

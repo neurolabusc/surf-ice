@@ -3,13 +3,12 @@
   <ProjectSession>
     <Version Value="12"/>
     <BuildModes Active="Default"/>
-    <Units Count="14">
+    <Units Count="15">
       <Unit0>
         <Filename Value="tracktion.lpr"/>
         <IsPartOfProject Value="True"/>
         <IsVisibleTab Value="True"/>
-        <TopLine Value="490"/>
-        <CursorPos X="63" Y="508"/>
+        <CursorPos X="43" Y="9"/>
         <UsageCount Value="297"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -17,8 +16,7 @@
         <Filename Value="track.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="3"/>
-        <TopLine Value="1770"/>
-        <CursorPos X="26" Y="1776"/>
+        <CursorPos X="56" Y="11"/>
         <UsageCount Value="179"/>
         <Loaded Value="True"/>
       </Unit1>
@@ -31,8 +29,7 @@
       <Unit3>
         <Filename Value="nifti_loader.pas"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="3"/>
-        <CursorPos X="50" Y="25"/>
+        <CursorPos X="49" Y="7"/>
         <UsageCount Value="148"/>
         <Loaded Value="True"/>
       </Unit3>
@@ -40,7 +37,7 @@
         <Filename Value="define_types.pas"/>
         <EditorIndex Value="5"/>
         <TopLine Value="82"/>
-        <CursorPos X="21" Y="92"/>
+        <CursorPos X="90" Y="84"/>
         <UsageCount Value="146"/>
         <Loaded Value="True"/>
       </Unit4>
@@ -55,7 +52,8 @@
       <Unit6>
         <Filename Value="nifti_types.pas"/>
         <EditorIndex Value="2"/>
-        <CursorPos X="3" Y="10"/>
+        <TopLine Value="70"/>
+        <CursorPos X="40" Y="7"/>
         <UsageCount Value="147"/>
         <Loaded Value="True"/>
       </Unit6>
@@ -63,22 +61,22 @@
         <Filename Value="matmath.pas"/>
         <EditorIndex Value="4"/>
         <TopLine Value="37"/>
-        <CursorPos X="94" Y="38"/>
+        <CursorPos X="114" Y="39"/>
         <UsageCount Value="125"/>
         <Loaded Value="True"/>
       </Unit7>
       <Unit8>
         <Filename Value="/usr/local/share/fpcsrc/rtl/objpas/math.pp"/>
-        <EditorIndex Value="6"/>
+        <UnitName Value="Math"/>
+        <EditorIndex Value="-1"/>
         <CursorPos X="10" Y="106"/>
         <UsageCount Value="105"/>
-        <Loaded Value="True"/>
       </Unit8>
       <Unit9>
         <Filename Value="track_simplify.pas"/>
-        <EditorIndex Value="7"/>
+        <EditorIndex Value="6"/>
         <TopLine Value="2"/>
-        <CursorPos X="131" Y="5"/>
+        <CursorPos X="104" Y="4"/>
         <UsageCount Value="102"/>
         <Loaded Value="True"/>
       </Unit9>
@@ -111,135 +109,137 @@
         <CursorPos X="25" Y="57"/>
         <UsageCount Value="10"/>
       </Unit13>
+      <Unit14>
+        <Filename Value="/usr/local/share/fpcsrc/packages/fv/src/app.pas"/>
+        <UnitName Value="App"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="7"/>
+        <CursorPos X="44" Y="23"/>
+        <UsageCount Value="10"/>
+      </Unit14>
     </Units>
     <OtherDefines Count="1">
       <Define0 Value="isTerminalApp"/>
     </OtherDefines>
-    <JumpHistory Count="30" HistoryIndex="29">
+    <JumpHistory Count="29" HistoryIndex="28">
       <Position1>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="368" Column="39" TopLine="354"/>
+        <Caret Line="709" Column="66" TopLine="674"/>
       </Position1>
       <Position2>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="369" Column="67" TopLine="355"/>
+        <Caret Line="18" Column="63"/>
       </Position2>
       <Position3>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="373" Column="77" TopLine="359"/>
+        <Caret Line="214" Column="19" TopLine="179"/>
       </Position3>
       <Position4>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="578" Column="19" TopLine="569"/>
+        <Caret Line="564" Column="67" TopLine="541"/>
       </Position4>
       <Position5>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="595" Column="16" TopLine="581"/>
+        <Caret Line="663" Column="11" TopLine="627"/>
       </Position5>
       <Position6>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="606" Column="23" TopLine="591"/>
+        <Caret Line="707" Column="71" TopLine="672"/>
       </Position6>
       <Position7>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="574" Column="48" TopLine="574"/>
+        <Caret Line="19" Column="22"/>
       </Position7>
       <Position8>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="658" Column="10" TopLine="636"/>
+        <Caret Line="325" Column="53" TopLine="290"/>
       </Position8>
       <Position9>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="709" Column="66" TopLine="674"/>
+        <Caret Line="354" Column="51" TopLine="319"/>
       </Position9>
       <Position10>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="18" Column="63"/>
+        <Caret Line="368" Column="53" TopLine="333"/>
       </Position10>
       <Position11>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="214" Column="19" TopLine="179"/>
+        <Caret Line="376" Column="57" TopLine="341"/>
       </Position11>
       <Position12>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="564" Column="67" TopLine="541"/>
+        <Caret Line="453" Column="60" TopLine="418"/>
       </Position12>
       <Position13>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="663" Column="11" TopLine="627"/>
+        <Caret Line="513" Column="13" TopLine="482"/>
       </Position13>
       <Position14>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="707" Column="71" TopLine="672"/>
+        <Filename Value="track.pas"/>
+        <Caret Line="61" Column="20" TopLine="41"/>
       </Position14>
       <Position15>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="19" Column="22"/>
+        <Caret Line="514" Column="56" TopLine="482"/>
       </Position15>
       <Position16>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="325" Column="53" TopLine="290"/>
+        <Caret Line="479" Column="21" TopLine="451"/>
       </Position16>
       <Position17>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="354" Column="51" TopLine="319"/>
+        <Caret Line="50" Column="10" TopLine="46"/>
       </Position17>
       <Position18>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="368" Column="53" TopLine="333"/>
+        <Caret Line="517" Column="21" TopLine="480"/>
       </Position18>
       <Position19>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="376" Column="57" TopLine="341"/>
+        <Filename Value="track.pas"/>
+        <Caret Line="62" Column="33" TopLine="40"/>
       </Position19>
       <Position20>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="453" Column="60" TopLine="418"/>
+        <Caret Line="518" Column="19" TopLine="489"/>
       </Position20>
       <Position21>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="513" Column="13" TopLine="482"/>
+        <Filename Value="track.pas"/>
+        <Caret Line="55" Column="24" TopLine="34"/>
       </Position21>
       <Position22>
-        <Filename Value="track.pas"/>
-        <Caret Line="61" Column="20" TopLine="41"/>
+        <Filename Value="tracktion.lpr"/>
+        <Caret Line="4" Column="37"/>
       </Position22>
       <Position23>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="514" Column="56" TopLine="482"/>
+        <Caret Line="508" Column="63" TopLine="490"/>
       </Position23>
       <Position24>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="479" Column="21" TopLine="451"/>
+        <Caret Line="9" Column="38"/>
       </Position24>
       <Position25>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="50" Column="10" TopLine="46"/>
+        <Filename Value="nifti_loader.pas"/>
       </Position25>
       <Position26>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="517" Column="21" TopLine="480"/>
+        <Filename Value="nifti_loader.pas"/>
+        <Caret Line="7" Column="48"/>
       </Position26>
       <Position27>
         <Filename Value="track.pas"/>
-        <Caret Line="62" Column="33" TopLine="40"/>
+        <Caret Line="2" Column="128"/>
       </Position27>
       <Position28>
         <Filename Value="tracktion.lpr"/>
-        <Caret Line="518" Column="19" TopLine="489"/>
+        <Caret Line="9" Column="43"/>
       </Position28>
       <Position29>
-        <Filename Value="track.pas"/>
-        <Caret Line="55" Column="24" TopLine="34"/>
+        <Filename Value="nifti_loader.pas"/>
       </Position29>
-      <Position30>
-        <Filename Value="tracktion.lpr"/>
-        <Caret Line="4" Column="37"/>
-      </Position30>
     </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>
-      <Modes Count="0" ActiveMode="default"/>
+      <Modes ActiveMode="default"/>
     </RunParams>
   </ProjectSession>
 </CONFIG>

@@ -520,7 +520,7 @@ procedure ATLAS2NODE(lFilename: string);
 begin
    if not IsReadable(lFilename) then exit;
   if not GLForm1.Atlas2Node(lFilename) then begin
-     GLForm1.ScriptOutputMemo.Lines.Add('Unable to convert labels to nodes (make sure .annot file is loaded)');
+     GLForm1.ScriptOutputMemo.Lines.Add('Unable to convert mesh to nodes (make sure mesh is not watertight or that .annot file is loaded)');
    end;
 end;
 

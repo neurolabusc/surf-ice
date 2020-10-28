@@ -1,6 +1,6 @@
 begin
 	resetdefaults();
-	meshload('BrainMesh_ICBM152Right.mz3');
+	meshload('BrainMesh_ICBM152.rh.mz3');
 	meshcurv();
 	overlayminmax(1,-1,1);
 	overlaycolorname(1,'surface');

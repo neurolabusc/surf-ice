@@ -14,6 +14,7 @@ uses
   //{$ENDIF}
   {$IFNDEF UNIX} shellapi, {$ELSE}  Process,  {$ENDIF}
   {$IFDEF COREGL} gl_core_3d, {$ELSE}     gl_legacy_3d, {$ENDIF}
+  {$IFDEF LHRH} meshlhrh, {$ENDIF}
   uPSComponent,Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
   math, ExtCtrls, OpenGLContext, mesh, LCLintf, ComCtrls, Menus, graphtype,
   curv, ClipBrd, shaderui, shaderu, prefs, userdir, LCLtype, Spin,
@@ -38,6 +39,10 @@ LayerOptionsBtn: TButton;
  LayerPainHideMenu: TMenuItem;
  ExitFullScreenMenu: TMenuItem;
  EdgeLayerDrop: TComboBox;
+ BilateralMenu: TMenuItem;
+ BilateralEitherMenu: TMenuItem;
+ BilateralLeftOnlyMenu: TMenuItem;
+ BilateralRightOnlyMenu: TMenuItem;
  PasteMenu: TMenuItem;
  overlayoverlapoverwrite1: TMenuItem;
  overlayopacity1: TMenuItem;
@@ -321,6 +326,7 @@ ScriptOpenDialog: TOpenDialog;
 LayerPopup: TPopupMenu;
 LayerInvertColorsMenu: TMenuItem;
 LayerShowHeaderMenu: TMenuItem;
+procedure BilateralMenuClick(Sender: TObject);
 procedure CenterPanelClick(Sender: TObject);
 procedure EdgeLayerDropChange(Sender: TObject);
 procedure ExitFullScreenMenuClick(Sender: TObject);
@@ -448,7 +454,11 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     //procedure SaveMz3(var mesh: TMesh; isSaveOverlays: boolean);
     procedure SaveTrack (var lTrack: TTrack);
     function SaveMeshCore(lFilename: string): boolean;
+    {$IFDEF LHRH}
+    procedure SaveMeshLHRH(var mesh: TMeshLHRH; isSaveOverlays: boolean);
+	{$ENDIF}
     procedure SaveMesh(var mesh: TMesh; isSaveOverlays: boolean);
+
     procedure SaveMeshMenuClick(Sender: TObject);
     procedure SaveTracksMenuClick(Sender: TObject);
     procedure ScalarDropChange(Sender: TObject);
@@ -508,7 +518,11 @@ var
   gPrefs : TPrefs;
   gElevation : integer =20;
   gAzimuth : integer = 250;
-  gMesh: TMesh;
+  {$IFDEF LHRH}
+  gMesh: TMeshLHRH;
+  {$ELSE}
+   gMesh: TMesh;
+  {$ENDIF}
 implementation
 //{$IFDEF COREGL}
 {$IFDEF LCLcarbon}
@@ -1737,6 +1751,22 @@ begin
     end;
 end;
 
+function PyHEMISPHEREVISIBLE(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  A: integer;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 'i:hemispherevisible', @A)) then begin
+       if A = 1 then
+       	  GLForm1.BilateralLeftOnlyMenu.click
+       else if A = 2 then
+       		GLForm1.BilateralRightOnlyMenu.click
+       else
+         GLForm1.BilateralEitherMenu.click;
+    end;
+end;
+
 function PyOVERLAYVISIBLE(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A,B: integer;
@@ -1747,6 +1777,15 @@ begin
        OVERLAYVISIBLE(A,BOOL(B));
 end;
 
+function PyMESHLOADBILATERAL(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  A: integer;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 'i:meshloadbilateral', @A)) then
+       gPrefs.LoadBilateralLHRH := (A = 1)
+end;
 
 
 function PyVIEWSAGITTAL(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1784,10 +1823,12 @@ begin
     AddMethod('exists', @PyEXISTS, ' exists(filename) -> Returns true if filename is found.');
     AddMethod('fontname', @PyFONTNAME, ' fontname(name) -> Set typeface for display.');
     AddMethod('fullscreen', @PyFULLSCREEN, ' fullscreen(max) -> Form expands to size of screen (1) or size is maximized (0).');
+    AddMethod('hemispherevisible', @PyHEMISPHEREVISIBLE, ' hemispherevisible(v) -> View both hemispheres (0), left (1) or right (2) hemisphere.');
     AddMethod('meshcolor', @PyMESHCOLOR, ' meshcolor(r, g, b) -> Set red/green/blue components of main image. Each component is an integer 0..255.');
     AddMethod('meshcreate', @PyMESHCREATE, ' meshcreate(niiname, meshname, threshold, decimateFrac, minimumClusterVox, smoothStyle) -> Convert a NIfTI voxel-based image into a mesh.');
     AddMethod('meshcurv', @PyMESHCURV, ' meshcurv() -> Displays mesh curvature, so crevices appear dark.');
     AddMethod('meshload', @PyMESHLOAD, ' meshload(imageName) -> Close all open images and load new background image.');
+    AddMethod('meshloadbilateral', @PyMESHLOADBILATERAL, ' meshloadbilateral(v) -> If v=1, load both hemispheres (*.lh *.rh), otherwise  only load named mesh.');
     AddMethod('meshoverlayorder', @PyMESHOVERLAYORDER, ' meshoverlayorder (flip) -> If flip=1, the mesh will be drawn after the overlay, and xray sliders will influence overlay not mesh.');
     AddMethod('meshreversefaces', @PyMESHREVERSEFACES, ' meshreversefaces() -> reverse triangle winding to reverse front/back faces.');
     AddMethod('meshsave', @PyMESHSAVE, ' meshsave(filename) -> Saves currently open mesh to disk.');
@@ -2167,6 +2208,19 @@ end;
 procedure TGLForm1.CenterPanelClick(Sender: TObject);
 begin
 
+end;
+
+procedure TGLForm1.BilateralMenuClick(Sender: TObject);
+begin
+ {$IFDEF LHRH}
+ gMesh.isShowLH:=true;
+ gMesh.isShowRH:=true;
+ if (sender as TMenuItem).tag = 1 then
+    gMesh.isShowRH:=false;
+ if (sender as TMenuItem).tag = 2 then
+    gMesh.isShowLH:=false;
+ GLInvalidate;
+ {$ENDIF}
 end;
 
 procedure TGLForm1.EdgeLayerDropChange(Sender: TObject);
@@ -3024,11 +3078,20 @@ begin
   CloseOverlaysMenuClick(nil);
   CloseTracksMenuClick(nil);
   CloseNodesMenuClick(nil);
+  {$IFDEF LHRH}
+  if not gMesh.LoadFromFile(Filename, gPrefs.LoadBilateralLHRH) then begin  //only add successful loads to MRU
+   	 BilateralMenu.Visible := (length(gMesh.RH.faces) > 0);
+  {$ELSE}
   if not gMesh.LoadFromFile(Filename) then begin  //only add successful loads to MRU
+  {$ENDIF}
      UpdateToolbar;
      GLBoxRequestUpdate(nil);
      exit;
   end;
+  {$IFDEF LHRH}
+  BilateralMenu.Visible := (length(gMesh.RH.faces) > 0);
+
+  {$ENDIF}
   OpenDialog.InitialDir:= ExtractFileDir(Filename);
   UpdateToolbar;
   if gMesh.OpenOverlays > 0 then begin //e.g. MZ3 with both MESH and SCALAR intensity
@@ -4033,6 +4096,7 @@ var
   PrefForm: TForm;
   OkBtn, AdvancedBtn: TButton;
   {$IFDEF LCLCocoa} DarkModeCheck, RetinaCheck,{$ENDIF}
+  LoadBilateralCheck,
   OverlappingOverlaysOverwriteCheck, BlackDefaultBackgroundCheck, BitmapAlphaCheck, SmoothVoxelwiseDataCheck, TracksAreTubesCheck: TCheckBox;
   bmpEdit: TEdit;
   s: string;
@@ -4296,6 +4360,20 @@ begin
   OverlappingOverlaysOverwriteCheck.AnchorSide[akLeft].Control := PrefForm;
   OverlappingOverlaysOverwriteCheck.BorderSpacing.Left := 6;
   OverlappingOverlaysOverwriteCheck.Parent:=PrefForm;
+  {$IFDEF LHRH}
+
+  LoadBilateralCheck:=TCheckBox.create(PrefForm);
+  LoadBilateralCheck.Checked := gPrefs.LoadBilateralLHRH;
+  LoadBilateralCheck.Caption:='Load bilateral meshes ("lh."/"rh.")';
+  LoadBilateralCheck.AutoSize := true;
+  LoadBilateralCheck.AnchorSide[akTop].Side := asrBottom;
+  LoadBilateralCheck.AnchorSide[akTop].Control := OverlappingOverlaysOverwriteCheck;
+  LoadBilateralCheck.BorderSpacing.Top := 6;
+  LoadBilateralCheck.AnchorSide[akLeft].Side := asrLeft;
+  LoadBilateralCheck.AnchorSide[akLeft].Control := PrefForm;
+  LoadBilateralCheck.BorderSpacing.Left := 6;
+  LoadBilateralCheck.Parent:=PrefForm;
+  {$ENDIF}
   {$IFDEF LCLCocoa}
   RetinaCheck:=TCheckBox.create(PrefForm);
   RetinaCheck.Checked := gPrefs.RetinaDisplay;
@@ -4304,7 +4382,11 @@ begin
   //RetinaCheck.Top := 308;
   RetinaCheck.AutoSize := true;
   RetinaCheck.AnchorSide[akTop].Side := asrBottom;
+  {$IFDEF LHRH}
+  RetinaCheck.AnchorSide[akTop].Control := LoadBilateralCheck;
+  {$ELSE}
   RetinaCheck.AnchorSide[akTop].Control := OverlappingOverlaysOverwriteCheck;
+  {$ENDIF}
   RetinaCheck.BorderSpacing.Top := 6;
   RetinaCheck.AnchorSide[akLeft].Side := asrLeft;
   RetinaCheck.AnchorSide[akLeft].Control := PrefForm;
@@ -4391,7 +4473,8 @@ begin
   gPrefs.ScreenCaptureTransparentBackground :=  BitmapAlphaCheck.Checked;
   gPrefs.SmoothVoxelwiseData := SmoothVoxelwiseDataCheck.Checked;
   gPrefs.BlackDefaultBackground := BlackDefaultBackgroundCheck.Checked;
-  gPrefs.ScreenCaptureZoom:= strtointdef(bmpEdit.Text,1);
+  gPrefs.ScreenCaptureZoom := strtointdef(bmpEdit.Text,1);
+  gPrefs.LoadBilateralLHRH := LoadBilateralCheck.Checked;
   (*if ShaderForBackgroundOnlyCombo.ItemIndex = 1 then
      gPrefs.ShaderForBackgroundOnly := false
   else
@@ -5452,6 +5535,7 @@ end;
 
 procedure TGLForm1.CurvMenuClick(Sender: TObject);
 var
+  {$IFDEF LHRH}fnmLH, fnmRH: string; {$ENDIF}
   fnm: string;
   isTemp: boolean;
 begin
@@ -5473,10 +5557,22 @@ begin
     //if (length(gMesh.vertexRGBA) > 0) then
     //   GenerateCurvRGB(fnm, gMesh.vertexRGBA, length(gMesh.faces))
     //else
-    	GenerateCurv(fnm, gMesh.faces, gMesh.vertices, gPrefs.GenerateSmoothCurves);
+    {$IFDEF LHRH}
+    LHRHNameChange(fnm, fnmLH, fnmRH);
+    if (fnmLH <> '') and (fnmRH <> '') then begin
+	   GenerateCurv(fnmRH, gMesh.faces, gMesh.vertices, gPrefs.GenerateSmoothCurves);
+       fnm := fnmLH;
+    end;
+    {$ENDIF}
+    GenerateCurv(fnm, gMesh.faces, gMesh.vertices, gPrefs.GenerateSmoothCurves);
     OpenOverlay(fnm);
-    if isTemp then
+    if isTemp then begin
       deletefile(fnm);
+      {$IFDEF LHRH}
+      if (fnmRH <> '') then
+      	 deletefile(fnmRH);
+      {$ENDIF}
+    end;
 end;
 
 procedure TGLForm1.NewWindowMenuClick(Sender: TObject);
@@ -6243,10 +6339,9 @@ begin
   Caption := SaveMeshDialog.Filename;
 end; *)
 {$ELSE}
-procedure TGLForm1.SaveMesh(var mesh: TMesh; isSaveOverlays: boolean);
+{$IFDEF LHRH}
+procedure TGLForm1.SaveMeshLHRH(var mesh: TMeshLHRH; isSaveOverlays: boolean);
 const
-     //kMeshFilter = 'OBJ (Widely supported)|*.obj|GIfTI (Neuroimaging)|*.gii|MZ3 (Small and fast)|*.mz3|PLY (Widely supported)|*.ply|VRML (Shapeways color printing)|*.wrl|WebGL PRWM|*.prwm';
-     //prwm expects normals
      kMeshFilter = 'OBJ (Widely supported)|*.obj|GIfTI (Neuroimaging)|*.gii|MZ3 (Small and fast)|*.mz3|PLY (Widely supported)|*.ply|VRML (Shapeways color printing)|*.wrl|STL (Large and slow)|*.stl';
 var
    pth, nam, ext, x: string;
@@ -6296,16 +6391,60 @@ begin
          end;
      end;
   end;
-  (*if (x = '.WRL') then
-     mesh.SaveVrml(SaveMeshDialog.Filename, gPrefs.ObjColor)
-  else if (x = '.MZ3') then
-     SaveMz3(mesh, isSaveOverlays)
-  else if (x = '.GII') then
-     mesh.SaveGii(SaveMeshDialog.Filename)
-  else if (x = '.PLY') then
-     mesh.SavePly(SaveMeshDialog.Filename)
+end;
+{$ENDIF}
+
+procedure TGLForm1.SaveMesh(var mesh: TMesh; isSaveOverlays: boolean);
+const
+     kMeshFilter = 'OBJ (Widely supported)|*.obj|GIfTI (Neuroimaging)|*.gii|MZ3 (Small and fast)|*.mz3|PLY (Widely supported)|*.ply|VRML (Shapeways color printing)|*.wrl|STL (Large and slow)|*.stl';
+var
+   pth, nam, ext, x: string;
+   i: integer;
+begin
+  //mesh.SaveMesh('/Users/rorden/nrrdify/tst.prwm'); exit;
+  if length(mesh.Faces) < 1 then begin
+     showmessage('Unable to save: no mesh is loaded (use File/Open).');
+     exit;
+  end;
+  SaveMeshDialog.Filter  := kMeshFilter;
+  SaveMeshDialog.FilterIndex := gPrefs.SaveAsFormat + 1;
+  if gPrefs.SaveAsFormat = 4 then
+     ext := '.ply'
+  else if gPrefs.SaveAsFormat = 0 then
+     ext := '.obj'
+  else if gPrefs.SaveAsFormat = 1 then
+    ext := '.gii'
   else
-      mesh.SaveObj(SaveMeshDialog.Filename); *)
+    ext := '.mz3'; //2
+  SaveMeshDialog.DefaultExt := ext;
+  if (fileexists(gPrefs.PrevFilename[1])) or (not isSaveOverlays) then begin
+     if isSaveOverlays then
+      nam := gPrefs.PrevFilename[1]
+    else
+      nam := SaveMeshDialog.Filename;
+    SaveMeshDialog.InitialDir:= ExtractFileDir(nam);
+    //nam := ChangeFileExtX(extractfilename (nam), ext);
+    nam := ChangeFileExtX(extractfilename (nam), '');
+    SaveMeshDialog.Filename := nam;
+  end else
+      SaveMeshDialog.Filename := '';
+  if not SaveMeshDialog.Execute then exit;
+  if length(SaveMeshDialog.Filename) < 1 then exit;
+  //caption := inttostr(SaveMeshDialog.FilterIndex)+' '+SaveMeshDialog.Filename; exit; //666
+  x := UpperCase(ExtractFileExt(SaveMeshDialog.Filename));
+  if (x <> '.STL') and (x <> '.MZ3') and (x <> '.PLY') and (x <> '.OBJ')  and (x <> '.GII') and (x <> '.WRL') and (x <> '.PRWM')then begin
+     x := ext;
+     SaveMeshDialog.Filename := SaveMeshDialog.Filename + x;
+  end;
+  mesh.SaveMesh(SaveMeshDialog.Filename);
+  if (x = '.MZ3') and (isSaveOverlays) and (mesh.OpenOverlays > 0) then begin
+     FilenameParts (SaveMeshDialog.Filename, pth,nam,ext);
+     for i := 1 to mesh.OpenOverlays do begin
+         if (length(mesh.overlay[i].intensity) > 1) and (length(mesh.overlay[i].faces) < 1) then begin
+            mesh.SaveOverlay(pth+nam+inttostr(i)+'.mz3', i);
+         end;
+     end;
+  end;
 end;
 {$ENDIF}
 
@@ -6343,7 +6482,12 @@ end; *)
 
 procedure TGLForm1.SaveMeshMenuClick(Sender: TObject);
 begin
-     SaveMesh(gMesh, true);
+ {$IFDEF LHRH}
+   SaveMeshLHRH(gMesh, true);
+ {$ELSE}
+ SaveMesh(gMesh, true);
+ {$ENDIF}
+
 end;
 
 (*procedure TGLForm1.SaveMeshMenuClick(Sender: TObject);
@@ -6446,6 +6590,7 @@ begin
      GLForm1.WindowState:= wsFullScreen;
      {$IFNDEF LCLCocoa}ExitFullScreenMenu.Visible:=true;{$ENDIF} //Linux has issues getting out of full screen
   end;
+ {$IFDEF LHRH} BilateralMenu.Visible := true;{$ENDIF}
  {$IFDEF LCLCocoa}{$IFDEF DARKMODE} SetDarkMode; {$ENDIF}{$ENDIF}
  //{$IFDEF Windows}UpdateOverlaySpread;{$ENDIF}//July2017 - scripting on High-dpi, reset scaling
  if (gPrefs.initScript <> '' ) then
@@ -6513,7 +6658,12 @@ begin
   GLForm1.OnDropFiles:= nil; //avoid drop for form and application
   {$ENDIF}
   clipPlane.X := 2;
+  {$IFDEF LHRH}
+  gMesh := TMeshLHRH.Create;
+  {$ELSE}
   gMesh := TMesh.Create;
+  {$ENDIF}
+
   gMesh.isBusy := true;
   gNode := TMesh.Create;
   gMesh.OverlappingOverlaysOverwrite:= gPrefs.OverlappingOverlaysOverwrite;
@@ -6642,8 +6792,15 @@ end;
 
 procedure TGLForm1.FormDropFiles(Sender: TObject;
   const FileNames: array of String);
+var
+  ss: TShiftState;
 begin
-   OpenMesh(Filenames[0]);
+   ss := getKeyshiftstate;
+   if (ssMeta in ss) or (ssCtrl in ss) then
+   	  OpenOverlay(Filenames[0])
+   else
+   	   OpenMesh(Filenames[0]);
+
    //caption := 'abba'+inttostr(random(888));
 end;
 
