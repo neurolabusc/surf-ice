@@ -81,7 +81,7 @@ type
     atlasTransparentFilter: TBools;
     atlasHideFilter: TInts; //atlas show these atlas regions, e.g. if [7, 8, 22] then only regions 7,8 and 22 will be visible
     tempIntensityLUT : TFloats; //only used to load without external files - flushed after LoadOverlay
-  	errorString: string;
+  	shortName, errorString: string;
     //overlay: array of single;
   private
     //procedure DBug();
@@ -162,6 +162,7 @@ type
     procedure LoadW(const FileName: string; lOverlayIndex: integer);
 
   public
+    bilateralOffset: single;
     nodePrefs: TNodePrefs;
     isBilateral: boolean;
     OverlappingOverlaysOverwrite: boolean;
@@ -465,6 +466,8 @@ begin
 end;
 
 function TMesh.Mesh2Node(const FileName: string; isAppend: boolean = true): boolean;
+label
+  123;
 const
   kT = chr(9);
 var
@@ -476,12 +479,28 @@ var
    txt: TextFile;
 begin
   result := false;
+  nVert := length(vertices);
+  if nVert < 3 then exit;
   borderVertices := FindBorderVertices;
   if borderVertices = nil then begin
-    printf('Unable to generate nodes for watertight meshes');
-    exit; //e.g. watertight mesh
+    printf('Finding vertex closest to center-of-gravity');
+    cog := ptf(0,0,0);
+    for i := 0 to (nVert -1) do
+        cog := AddPt3f(cog, vertices[i]);
+    cog.x := cog.x / nVert;
+    cog.y := cog.y / nVert;
+    cog.z := cog.z / nVert;
+    maxCogDX := infinity;
+    maxIdx := 0;
+    for i := 0 to (nVert -1) do begin
+    	cogDx := DistanceBetween(vertices[i], cog);
+       	if (cogDx > maxCogDx) then continue;
+        maxCogDx := cogDx;
+        maxIdx := i;
+  	end;
+    goto 123; //e.g. watertight mesh
   end;
-  nVert := length(vertices);
+
   //
   setlength(borderIdxs, nVert); //worst case scenario: all edges
   nEdge := 0;
@@ -510,7 +529,6 @@ begin
     vert := vertices[i];
     for j := 0 to (nEdge - 1) do //find closest distance to edge
     	dx := min(dx, DistanceBetween(vert, vertices[borderIdxs[j]]));
-
     if (dx < maxEdgeDx) then continue; //a previous vertex is closer to edge
     cogDx := DistanceBetween(vert, cog);
     if (dx = maxEdgeDx) then begin //we have a tie - is this closer to the center of gravity
@@ -520,12 +538,13 @@ begin
     maxEdgeDx := dx;
     maxIdx := i;
   end;
-  printf(format('xyz %g %g %g', [vertices[maxIdx].x, vertices[maxIdx].y, vertices[maxIdx].z]));
   borderVertices := nil;
   borderIdxs := nil;
+123:
   result := true;
+  printf(format('xyz %g %g %g', [vertices[maxIdx].x, vertices[maxIdx].y, vertices[maxIdx].z]));
   AssignFile(txt, FileName);
-  if isAppend then
+  if (isAppend) and (FileExists(FileName)) then
      append(txt)
   else
   	  rewrite(txt);
@@ -630,10 +649,6 @@ begin
                 nroiEdges := nroiEdges + 1;
          //printf(roi, ' has ', nroiVerts, ' vertices and ', nroiEdges, ' edges' );
          if nroiVerts < 1 then continue;
-         if nroiEdges < 1 then begin
-           printf(format('Region %d has no edges (it is a closed surface)',[roi]));
-           continue; //no edges found!
-         end;
          //compute total number of edges, faces...
          nroiEdges := 0;
          for i := 0 to (nVert-1) do
@@ -657,6 +672,23 @@ begin
          maxCogDX := infinity;
          maxRoiDx := -infinity;
          maxRoiDxIdx := 0;
+         //if no edges, center of gravity is our only metric
+         if nroiEdges < 1 then begin
+           printf(format('Region %d has no edges (%d vertices, CoG %g %g %g)',[roi,nroiVerts, cog.x, cog.y, cog.z ]));
+           for i := 0 to (nroiVerts -1) do begin
+               cogDx := DistanceBetween(vertices[roiVerts[i]], cog);
+			   if (cogDx > maxCogDx) then continue;
+               maxCogDx := cogDx;
+               maxRoiDxIdx := roiVerts[i];
+           end;
+           COGs[nCOGs].x := vertices[maxRoiDxIdx].x;
+           COGs[nCOGs].y := vertices[maxRoiDxIdx].y;
+           COGs[nCOGs].z := vertices[maxRoiDxIdx].z;
+           COGs[nCOGs].w := roi+1;
+           nCOGs := nCOGs + 1;
+           continue; //no edges found: only use CoG
+         end;
+
          for i := 0 to (nroiVerts -1) do begin
              //compute cost function for each vertex - furtherst from edges
              // who on the island has the longest walk to the beach?
@@ -684,13 +716,14 @@ begin
          COGs[nCOGs].w := roi+1;
          nCOGs := nCOGs + 1;
      end;
+
      if isOverlayAsAtlas then
      	vertexAtlas := nil;
-     GLForm1.OverlayBox.Caption := 'nCOGs'+inttostr(nCOGs);
      if nCOGs < 1 then goto 123;
+     //GLForm1.Caption := 'nCOGs'+inttostr(nCOGs);
      result := true;
      AssignFile(txt, FileName);
-     if isAppend then
+     if (isAppend) and (FileExists(FileName)) then
         append(txt)
      else
      	 rewrite(txt);
@@ -699,6 +732,7 @@ begin
          writeln(txt, format('%g%s%g%s%g%s%d%s1', [COGs[i].x,kT,COGs[i].y,kT,COGs[i].z,kT,round(COGs[i].w),kT ]));
      end;
      CloseFile(txt);
+     //if result then GLForm1.Caption := 'nCOGs'+inttostr(nCOGs);
      {$IFDEF TIMER}GLForm1.Caption :=  inttostr(MilliSecondsBetween(Now,StartTime)); {$ENDIF}
      123:
      roiEdges := nil;
@@ -1804,18 +1838,36 @@ begin
   isBusy := false;
 end; // ReverseFaces()
 
+function Hemisphere(fnm: string): integer; //-1 = "LH.", 1 = "RH.", else 0
+//determine if left or right hemisphere from filename
+begin
+	 fnm := upcase(fnm) ;
+     if (PosEx('LH.', fnm) > 0) or (PosEx('LH.', fnm) > 0) then exit(-1);
+     if (PosEx('RH.', fnm) > 0) or (PosEx('RH.', fnm) > 0) then exit(1);
+     exit(0);
+end;
+
 procedure TMesh.SetDescriptives;
 var
    mn, mx: TPoint3f;
-   i: integer;
+   i, lhrh: integer;
 begin
      if length(vertices) < 1 then exit;
      mx := vertices[0];
+     lhrh := 0;
      mn := mx;
+     bilateralOffset := 0.0;
      for i := 0 to (length(vertices) - 1) do
          minMax(vertices[i], mn, mx);
      if isBilateral then begin
-	 	mx.X := max(abs(mx.X), abs(mn.X));
+       	lhrh :=  Hemisphere(Shortname);
+        if (lhrh < 0) and (mx.X > 0.0) then //LH: max should be negative
+           bilateralOffset := -mx.X
+        else if (lhrh > 0) and (mn.X < 0.0) then //RH: min should be positive
+            bilateralOffset := -mn.X;
+        mn.X += bilateralOffset;
+        mx.X += bilateralOffset;
+        mx.X := max(abs(mx.X), abs(mn.X));
         mn.X := -mx.X;
      end;
      origin.X := (0.5 * (mx.X - mn.X)) + mn.X;
@@ -1826,6 +1878,9 @@ begin
         Scale := abs(mx.Y - origin.Y);
      if abs(mx.Z - origin.Z) > Scale then
         Scale := abs(mx.Z - origin.Z);
+     bilateralOffset := abs(bilateralOffset / scale);
+     //printf(format('!!!!!!>>>%d  %g',[lhrh, bilateralOffset]));
+
     mnV := mn;
     mxV := mx;
 end; // SetDescriptives()
@@ -2116,6 +2171,7 @@ begin
      isZDimIsUp := true;
      OverlappingOverlaysOverwrite := true;
      isBilateral := false;
+     bilateralOffset := 0.0;
      isVisible := true;
      OpenOverlays := 0;
      OverlayTransparency := 0;
@@ -8231,6 +8287,7 @@ begin
 	isEmbeddedEdge := false;
 	isNode := false;
 	isFreeSurferMesh := false;
+    shortName := extractfilename(FileName);
         if (FileName = '-') then begin
   	   isRebuildList := true;
   	   CloseOverlays;
@@ -10165,6 +10222,7 @@ begin
       nii.LoadFromFile(FileName, kNiftiSmoothMaskZero)
    else
        nii.LoadFromFile(FileName, kNiftiSmoothNone);
+   //printf(format('>>> %d %d %d', [nii.hdr.dim[1], nii.hdr.dim[2], nii.hdr.dim[3]]));
    num_v := length(vertices);
    setlength(overlay[lOverlayIndex].intensity, num_v);
    for i := 0 to (num_v-1) do
@@ -10262,6 +10320,7 @@ var
 begin
   overlay[lOverlayIndex].LUTinvert := false;
   overlay[lOverlayIndex].aoMap := false;
+  overlay[lOverlayIndex].OpacityPercent := kLUTopaque;
   overlay[lOverlayIndex].PaintMode := kPaintHideDefaultBehavior;
   num_v := length(overlay[lOverlayIndex].intensity);
   if (num_v < 3) then exit;
@@ -10742,7 +10801,9 @@ begin
   //showmessageX(format('%d %d', [length(Overlay[OpenOverlays].intensity), length(Overlay[OpenOverlays].vertices) ]));
   result :=  (length(Overlay[OpenOverlays].intensity) > 0) or (length(Overlay[OpenOverlays].vertices) > 0);
   if not result then
-     OpenOverlays := OpenOverlays - 1;
+     OpenOverlays := OpenOverlays - 1
+  else
+  	  SetOverlayDescriptives(OpenOverlays);
 end; // LoadOverlay()
 
 procedure TMesh.CloseOverlaysCore;
@@ -10756,6 +10817,10 @@ begin
          setlength(overlay[i].vertexRGBA,0);
          setlength(overlay[i].vertexAtlas,0);
          overlay[i].atlasMaxIndex := 0;
+         overlay[i].LUTinvert := false;
+         overlay[i].LUTindex := 0;
+         overlay[i].aoMap := false;
+         overlay[i].OpacityPercent := kLUTopaque;
          setlength(overlay[i].atlasTransparentFilter,0);
          setlength(overlay[i].atlasHideFilter,0); //atlas show these atlas regions, e.g. if [7, 8, 22] then only regions 7,8 and 22 will be visible
      end;
@@ -10784,6 +10849,7 @@ begin
   setlength(atlasHideFilter,0);
   setlength(atlasTransparentFilter,0);
   setlength(tempIntensityLUT,0); //only used to load without external files - flushed after LoadOverlay
+  bilateralOffset := 0.0;
 end; // Close()
 
 destructor TMesh.Destroy;

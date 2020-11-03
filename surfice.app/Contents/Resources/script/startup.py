@@ -1,15 +1,29 @@
 import gl
 gl.resetdefaults()
-#gl.meshload('BrainMesh_ICBM152.rh.mz3')
-#gl.meshcurv()
+gl.meshhemisphere(1)
 
-#gl.meshload('/Users/chris/Neuro/export/teapot.obj')
-#gl.meshload('/Users/chris/Desktop/datasets/std.60.lh.white.gii');
-#gl.overlayload('/Users/chris/Desktop/datasets/std.60.lh.Schaefer2018_400Parcels_17Networks_order.annot_REN.1D.dset');
-#gl.meshload('/Users/chris/Neuro/Surfice/Surfice/fs/lh.pial')
-#gl.overlayload('/Users/chris/Neuro/Surfice/Surfice/fs/motor_4t95mesh.mz3')
+#gl.meshloadbilateral(1)
+#gl.hemispheredistance(0.5)
+gl.meshload("/Users/chris/aa/_rh.inflated")
 
-gl.hemispherevisible(1)
-gl.meshload('/Users/chris/Desktop/datasets/std.60.rh.white.gii')
-gl.overlayload('/Users/chris/Desktop/datasets/std.60.lh.Schaefer2018_400Parcels_17Networks_order.annot_REN.1D.dset');
-gl.atlas2node('/Users/chris/test.node')
+gl.overlayload('fs7converted_fs5_sct2in_fwhm10_npc_cft3.1_rh_dpv_npc_fisher_cfdrp_d1_c1.mgz')
+gl.overlayminmax(1,2.301,4)
+gl.overlaycolor(1,128,255,128,255,0,255)
+
+gl.overlayload('fs7converted_fs5_sct2in_fwhm10_npc_cft3.1_rh_dpv_npc_fisher_cfdrp_d1_c2.mgz')
+gl.overlayminmax(2,2.301,4)
+gl.overlaycolor(2,255,0,255,128,128,128)
+
+gl.overlayload('fs7converted_fs5_sct2in_fwhm10_npc_cft3.1_rh_dpv_npc_fisher_cfdrp_d1_c3.mgz')
+gl.overlayminmax(3,2.301,4)
+gl.overlaycolor(3,255,0,0,128,255,128)
+
+gl.overlayload('fs7converted_fs5_sct2in_fwhm10_npc_cft3.1_rh_dpv_npc_fisher_cfdrp_d1_c4.mgz')
+gl.overlayminmax(4,2.301,4)
+gl.overlaycolor(4,0,0,255,128,255,128)
+
+gl.shadername('mixmatch')
+gl.viewsagittal(1)
+gl.colorbarvisible(1)
+gl.orientcubevisible(0)
+gl.overlayadditive(0)

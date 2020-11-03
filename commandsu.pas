@@ -1,5 +1,5 @@
 unit commandsu;
-
+{$Include opts.inc}
 interface
 
 function EXISTS(lFilename: string): boolean; //function
@@ -28,10 +28,15 @@ procedure EDGETHRESH (LO, HI: single);
 procedure ELEVATION (DEG: integer);
 procedure FONTNAME(name: string);
 procedure FULLSCREEN (isFullScreen: boolean);
+procedure HEMISPHEREDISTANCE (DX: single);
+procedure HEMISPHEREPRY(DEG: single);
+procedure PITCH(DEG: single);
 procedure ATLAS2NODE(lFilename: string);
 function MESHCREATE(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer): boolean;
 procedure MESHCURV;
+procedure MESHHEMISPHERE (VAL: integer);
 procedure MESHLOAD(lFilename: string);
+procedure MESHLOADBILATERAL(BILAT: boolean);
 procedure MESHOVERLAYORDER (FLIP: boolean);
 procedure MESHREVERSEFACES;
 procedure MESHSAVE(lFilename: string);
@@ -51,6 +56,7 @@ procedure ORIENTCUBEVISIBLE (VISIBLE: boolean);
 procedure OVERLAYADDITIVE (ADD: boolean);
 procedure OVERLAYCLOSEALL;
 procedure OVERLAYCOLORNAME(lOverlay: integer; lFilename: string);
+procedure OVERLAYCOLOR(lOverlay: integer; rLo, gLo, bLo, rHi, gHi, bHi: byte);
 procedure OVERLAYLOAD(lFilename: string);
 procedure OVERLAYEXTREME (lOverlay, lMode: integer);
 procedure OVERLAYMINMAX (lOverlay: integer; lMin,lMax: single);
@@ -93,7 +99,7 @@ const
                (Ptr:@VERSION;Decl:'VERSION';Vars:'(): string')
              );
 
-knProc = 72;
+knProc = 78;
   kProcRA : array [1..knProc] of TScriptRec = (
   (Ptr:@ATLASSTATMAP;Decl:'ATLASSTATMAP';Vars:'(ATLASNAME, STATNAME: string; const Intensities: array of integer; const Intensities: array of single)'),
   (Ptr:@ATLASSATURATIONALPHA;Decl:'ATLASSATURATIONALPHA';Vars:'(lSaturation, lTransparency: single)'),
@@ -117,14 +123,19 @@ knProc = 72;
    (Ptr:@EDGELOAD;Decl:'EDGELOAD';Vars:'(lFilename: string)'),
    (Ptr:@FONTNAME;Decl:'FONTNAME';Vars:'(name: string)'),
    (Ptr:@FULLSCREEN;Decl:'FULLSCREEN';Vars:'(isFullScreen: boolean)'),
+   (Ptr:@HEMISPHEREDISTANCE;Decl:'HEMISPHEREDISTANCE';Vars:'(DX: single)'),
+   (Ptr:@HEMISPHEREPRY;Decl:'HEMISPHEREPRY';Vars:'(DEG: single)'),
+   (Ptr:@PITCH;Decl:'PITCH';Vars:'(DEG: single)'),
    (Ptr:@ATLAS2NODE;Decl:'ATLAS2NODE';Vars:'(lFilename: string)'),
    (Ptr:@MESHCURV;Decl:'MESHCURV';Vars:''),
    (Ptr:@MESHREVERSEFACES;Decl:'MESHREVERSEFACES';Vars:''),
    (Ptr:@MESHLOAD;Decl:'MESHLOAD';Vars:'(lFilename: string)'),
    (Ptr:@MESHCREATE;Decl:'MESHCREATE';Vars:'(niiname, meshname: string; threshold, decimateFrac: single; minimumClusterVox, smoothStyle: integer)'),
+   (Ptr:@MESHHEMISPHERE;Decl:'MESHHEMISPHERE';Vars:'(VAL: integer)'),
    (Ptr:@MESHOVERLAYORDER;Decl:'MESHOVERLAYORDER';Vars:'(FLIP: boolean)'),
    (Ptr:@MESHSAVE;Decl:'MESHSAVE';Vars:'(lFilename: string)'),
    (Ptr:@NODELOAD;Decl:'NODELOAD';Vars:'(lFilename: string)'),
+   (Ptr:@MESHLOADBILATERAL;Decl:'MESHLOADBILATERAL';Vars:'(BILAT: boolean)'),
    (Ptr:@MODALMESSAGE;Decl:'MODALMESSAGE';Vars:'(STR: string)'),
    (Ptr:@MODELESSMESSAGE;Decl:'MODELESSMESSAGE';Vars:'(STR: string)'),
    (Ptr:@NODECOLOR;Decl:'NODECOLOR';Vars:'(name: string; varies: boolean)'),
@@ -138,6 +149,7 @@ knProc = 72;
    (Ptr:@ORIENTCUBEVISIBLE;Decl:'ORIENTCUBEVISIBLE';Vars:'(VISIBLE: boolean)'),
    (Ptr:@OVERLAYADDITIVE;Decl:'OVERLAYADDITIVE';Vars:'(ADD: boolean)'),
    (Ptr:@OVERLAYCLOSEALL;Decl:'OVERLAYCLOSEALL';Vars:''),
+   (Ptr:@OVERLAYCOLOR;Decl:'OVERLAYCOLOR';Vars:'(lOverlay: integer; rLo, gLo, bLo, rHi, gHi, bHi: byte)'),
    (Ptr:@OVERLAYCOLORNAME;Decl:'OVERLAYCOLORNAME';Vars:'(lOverlay: integer; lFilename: string)'),
    (Ptr:@OVERLAYLOAD;Decl:'OVERLAYLOAD';Vars:'(lFilename: string)'),
    (Ptr:@OVERLAYEXTREME;Decl:'OVERLAYEXTREME';Vars:'(lOverlay, lMode: integer)'),
@@ -261,14 +273,25 @@ var
   i: integer;
 begin
   setlength(gMesh.atlasHideFilter, length(Filt));
+  gMesh.isRebuildList:= true;
+  {$IFDEF LHRH}
+  if length(gMesh.RH.faces) > 0 then begin
+     setlength(gMesh.RH.atlasHideFilter, length(Filt));
+     gMesh.RH.isRebuildList:= true;
+  end;
+  {$ENDIF}
   if length(Filt) < 1 then begin //release filter
-    gMesh.isRebuildList:= true;
     GLForm1.GLboxRequestUpdate(nil);
     exit;
   end;
   for i := Low(Filt) to High(Filt) do
      gMesh.atlasHideFilter[i] := Filt[i];//ScriptForm.Memo2.Lines.Add('F= '+inttostr(Filt[i]));
-  gMesh.isRebuildList:= true;
+  {$IFDEF LHRH}
+   if length(gMesh.RH.faces) > 0 then begin
+      for i := Low(Filt) to High(Filt) do
+         gMesh.RH.atlasHideFilter[i] := Filt[i];//ScriptForm.Memo2.Lines.Add('F= '+inttostr(Filt[i]));
+   end;
+  {$ENDIF}
   GLForm1.GLboxRequestUpdate(nil);
 end;
 
@@ -283,15 +306,26 @@ begin
      ATLASHIDEBG(FILT);
      exit;
   end;
+  gMesh.isRebuildList:= true;
   setlength(gMesh.overlay[OVERLAY].atlasHideFilter, length(Filt));
+  {$IFDEF LHRH}
+   if length(gMesh.RH.faces) > 0 then begin
+      setlength(gMesh.RH.overlay[OVERLAY].atlasHideFilter, length(Filt));
+   	  gMesh.RH.isRebuildList:= true;
+   end;
+  {$ENDIF}
   if length(Filt) < 1 then begin //release filter
-    gMesh.isRebuildList:= true;
     GLForm1.GLboxRequestUpdate(nil);
     exit;
   end;
   for i := Low(Filt) to High(Filt) do
      gMesh.overlay[OVERLAY].atlasHideFilter[i] := Filt[i];//ScriptForm.Memo2.Lines.Add('F= '+inttostr(Filt[i]));
-  gMesh.isRebuildList:= true;
+  {$IFDEF LHRH}
+   if length(gMesh.RH.faces) > 0 then begin
+      for i := Low(Filt) to High(Filt) do
+         gMesh.RH.overlay[OVERLAY].atlasHideFilter[i] := Filt[i];//ScriptForm.Memo2.Lines.Add('F= '+inttostr(Filt[i]));
+   end;
+  {$ENDIF}
   GLForm1.GLboxRequestUpdate(nil);
 end;
 
@@ -414,6 +448,34 @@ begin
      GLForm1.GLboxRequestUpdate(nil);
 end;
 
+procedure HEMISPHEREDISTANCE (DX: single);
+begin
+     gPrefs.DisplaceLHRH:=DX;
+     GLForm1.GLboxRequestUpdate(nil);
+end;
+
+procedure HEMISPHEREPRY (DEG: single);
+begin
+     gPrefs.PryLHRH:=DEG;
+     GLForm1.GLboxRequestUpdate(nil);
+end;
+
+procedure PITCH (DEG: single);
+begin
+     gPrefs.PITCH:=DEG;
+     GLForm1.GLboxRequestUpdate(nil);
+end;
+
+procedure MESHHEMISPHERE (VAL: integer);
+begin
+  if VAL < 0 then
+  	  GLForm1.BilateralLeftOnlyMenu.click
+  else if VAL > 0 then
+  		GLForm1.BilateralRightOnlyMenu.click
+  else
+    GLForm1.BilateralEitherMenu.click;
+end;
+
 procedure ELEVATION (DEG: integer);
 begin
      gElevation := gElevation -Deg;
@@ -518,7 +580,11 @@ end;
 
 procedure ATLAS2NODE(lFilename: string);
 begin
-   if not IsReadable(lFilename) then exit;
+   if not IsReadable(lFilename) then begin
+      GLForm1.ScriptOutputMemo.Lines.Add('Unable to create file named "'+lFilename+'"');
+   	  exit;
+   end;
+   GLForm1.ScriptOutputMemo.Lines.Add('Creating file named "'+lFilename+'"');
   if not GLForm1.Atlas2Node(lFilename) then begin
      GLForm1.ScriptOutputMemo.Lines.Add('Unable to convert mesh to nodes (make sure mesh is not watertight or that .annot file is loaded)');
    end;
@@ -531,6 +597,10 @@ begin
    end;
 end;
 
+procedure MESHLOADBILATERAL (BILAT: boolean);
+begin
+    gPrefs.LoadBilateralLHRH := BILAT;
+end;
 
 procedure MESHOVERLAYORDER (FLIP: boolean);
 begin
@@ -660,8 +730,10 @@ begin
 end;
 
 procedure EDGECOLOR(name: string; varies: boolean);
+var
+  OK: boolean;
 begin
-  GLForm1.LUTdropEdge.ItemIndex :=  GLForm1.ComboBoxName2Index(GLForm1.LUTdropEdge, name);
+  GLForm1.LUTdropEdge.ItemIndex :=  GLForm1.ComboBoxName2Index(GLForm1.LUTdropEdge, name, OK);
   GLForm1.EdgeColorVariesCheck.Checked := varies;
 end;
 
@@ -684,8 +756,10 @@ begin
 end;
 
 procedure NODECOLOR(name: string; varies: boolean);
+var
+  OK: boolean;
 begin
-  GLForm1.LUTdropNode.ItemIndex :=  GLForm1.ComboBoxName2Index(GLForm1.LUTdropNode, name);
+  GLForm1.LUTdropNode.ItemIndex :=  GLForm1.ComboBoxName2Index(GLForm1.LUTdropNode, name, OK);
   GLForm1.NodeColorVariesCheck.Checked := varies;
 end;
 
@@ -944,6 +1018,11 @@ begin
         GLForm1.OverlayVisible(lOverlay, kLUTopaque)
      else
          GLForm1.OverlayVisible(lOverlay, kLUTinvisible);
+end;
+
+procedure OVERLAYCOLOR(lOverlay: integer; rLo, gLo, bLo, rHi, gHi, bHi: byte);
+begin
+	 GLForm1.OVERLAYCOLOR(lOverlay, rLo, gLo, bLo, rHi, gHi, bHi);
 end;
 
 procedure OVERLAYCOLORNAME(lOverlay: integer; lFilename: string);

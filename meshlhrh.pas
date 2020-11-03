@@ -34,7 +34,7 @@ type TMeshLHRH = class(TMesh)
     constructor Create;
     destructor  Destroy; override;
 end;
-  procedure LHRHNameChange(FileName: string; out FileNameLH, FileNameRH: string);
+  procedure LHRHNameChange(FileName: string; out FileNameLH, FileNameRH: string; isIgnoreSpheres: boolean = false);
 implementation
 
 destructor TMeshLHRH.Destroy;
@@ -52,6 +52,7 @@ end;
 constructor TMeshLHRH.Create;
 begin
 	 RH := TMesh.Create;
+     RH.isBilateral := true;
      isShowRH := true;
      isShowLH := true;
 	 inherited;
@@ -62,7 +63,7 @@ begin
      {$IFDEF UNIX}writeln(s);{$ENDIF}
 end;
 
-procedure LHRHNameChange(FileName: string; out FileNameLH, FileNameRH: string);
+procedure LHRHNameChange(FileName: string; out FileNameLH, FileNameRH: string; isIgnoreSpheres: boolean = false);
 //  ".LH", ".RH"  std.60.rh.white -> std.60.lh.white
 var
    pos: integer;
@@ -73,7 +74,10 @@ begin
   pth := extractfilepath(Filename);
   FileNameLH := '';
   FileNameRH := '';
+  //if (isIgnoreSpheres) and (PosEx('sphere', upcase(fnm)) > 0) then
+  //  exit;
   pos  := PosEx('LH.', upcase(fnm));
+  if pos < 1  then pos  := PosEx('LH_', upcase(fnm));
   if pos > 0 then begin //LH left is input
   	 if (fnm[pos] = 'l') then
      	ch := 'r'
@@ -84,6 +88,7 @@ begin
      FileNameRH := pth+fnm;
   end else begin
     pos  := PosEx('RH.', upcase(fnm));
+    if pos < 1  then pos  := PosEx('RH_', upcase(fnm));
     if pos > 0 then begin //RH left is input
   	   if (fnm[pos] = 'r') then
      	  ch := 'l'
@@ -137,9 +142,9 @@ end;
 
 function TMeshLHRH.Atlas2Node(const FileName: string; isAppend: boolean = true):boolean;
 begin
-    Inherited;
+    result := Inherited;
     if length(rh.Faces) > 0 then
-    	rh.Atlas2Node(FileName, isAppend);
+    	result := rh.Atlas2Node(FileName, isAppend);
 end;
 
 function TMeshLHRH.Contours(OverlayIndex: integer): boolean;
@@ -157,13 +162,14 @@ var
    filenameLH, filenameRH: string;
 begin
 	 self.isBilateral := false;
+     RH.isBilateral := false;
      RH.Close;
 	 if (not LoadBilateralLHRH) then begin
        result := Inherited LoadFromFile(FileName);
        exit;
   	 end;
-     LHRHNameChange(FileName, filenameLH,  filenameRH);
-     //printf(inttostr(random(888))+'<'+filenameLH+'->>>>'+ filenameRH);
+     LHRHNameChange(FileName, filenameLH,  filenameRH, true);
+     printf(FileName+' LH '+filenameLH+' RH '+ filenameRH);
      if (filenameLH = '') or (filenameRH = '')  then begin
         result := Inherited LoadFromFile(FileName);
         exit;
@@ -174,6 +180,7 @@ begin
         result := Inherited LoadFromFile(FileName);
         exit;
      end;
+     RH.isBilateral := true;
      RH.LoadFromFile( filenameRH);
 	 //inherited;
 end;

@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
-  Left = 377
+  Left = 371
   Height = 705
-  Top = 104
+  Top = 75
   Width = 1004
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -2193,6 +2193,7 @@ object GLForm1: TGLForm1
       end
       object ScriptingPascalMenu: TMenuItem
         Caption = 'Pascal'
+        Visible = False
       end
       object ScriptingInsertMenu: TMenuItem
         Caption = 'Insert'
@@ -2263,6 +2264,12 @@ object GLForm1: TGLForm1
             Tag = 1214
             Caption = 'overlaycolorname'
             Hint = 'overlaycolorname (overlay: integer; filename: string) Set the colorscheme for the target overlay to a specified name.'
+            OnClick = InsertCommand
+          end
+          object MenuItem3: TMenuItem
+            Tag = 72
+            Caption = 'overlaycolor'
+            Hint = 'overlaycolorname (overlay, loR, loG, loB, hiR, hiG, hiB: integer) Set the colorscheme for the target overlay to a specified color range (low and high Red, Green and Blue).'#10
             OnClick = InsertCommand
           end
           object overlayinvert1: TMenuItem

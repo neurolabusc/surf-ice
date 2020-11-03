@@ -23,7 +23,8 @@ type
     OverlayClip, StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube, MultiSample, BlackDefaultBackground,
      Colorbar,TracksAreTubes, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,ColorBarPrecedenceTracksNotOverlays,HideDarkTracks, HideBrightTracks,
      LoadBilateralLHRH,OverlappingOverlaysOverwrite, ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting, isFlipMeshOverlay, DarkMode,
-    RetinaDisplay, GenerateSmoothCurves {$IFDEF LINUX}, isMesaWarned {$ENDIF} : boolean;
+    ShowPascalMenu, RetinaDisplay, GenerateSmoothCurves {$IFDEF LINUX}, isMesaWarned {$ENDIF} : boolean;
+    PryLHRH, DisplaceLHRH, Pitch: single; //shift left and right hemisphere
     TrackTubeSlices, ScreenCaptureZoom,ColorbarColor,ColorBarPosition,
     window_width, window_height, RenderQuality, 
     StartupWindowMode,
@@ -350,6 +351,7 @@ begin
     AdditiveOverlay := false;
     SkipPrefWriting := false;
     isFlipMeshOverlay := false;
+    ShowPascalMenu := false;
     RetinaDisplay := true;
     DarkMode := false;
     BlackDefaultBackground := false;
@@ -358,6 +360,9 @@ begin
     //ObjectBasedClipPlane := false;
     ScreenCaptureTransparentBackground := true;
     SmoothVoxelwiseData := true;
+    PryLHRH := 0.0;
+    Pitch := 0.0;
+    DisplaceLHRH := 0.0;
     PrevTrackname := '';
     PrevOverlayname := '';
     PrevScript := '';
@@ -649,6 +654,7 @@ begin
 	  IniBool(lRead,lIniFile, 'Perspective',lPrefs.Perspective);
 	  IniBool(lRead,lIniFile, 'AdditiveOverlay',lPrefs.AdditiveOverlay);
 	  IniBool(lRead,lIniFile, 'StartupScript',lPrefs.StartupScript);
+      IniBool(lRead,lIniFile, 'ShowPascalMenu',lPrefs.ShowPascalMenu);
           {$IFDEF LINUX}IniBool(lRead,lIniFile, 'MesaWarned', lPrefs.isMesaWarned);{$ENDIF}
           //IniBool(lRead,lIniFile, 'ObjectBasedClipPlane',lPrefs.ObjectBasedClipPlane);
 	  {$IFDEF LCLCocoa}

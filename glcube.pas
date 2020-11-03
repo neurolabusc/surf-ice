@@ -28,6 +28,7 @@ type
          {$IFDEF COREGL}procedure CreateStrips;{$ENDIF}
          procedure CreateCube(sz: single);
   public
+    pitch: Single;
     property TopLeft : boolean read isTopLeft write SetIsTopLeft;
     property Azimuth : single read fAzimuth write SetAzimuth;
     property Elevation : single read fElevation write fElevation;
@@ -252,6 +253,7 @@ begin
      SizeFrac := 0.03;
      isRedraw := true;
      fAzimuth := 30;
+     Pitch := 0;
      fElevation := -15;
      isTopLeft := false;
      {$IFDEF COREGL}
@@ -601,6 +603,7 @@ begin
       nglTranslatef(1.8*sz,1.8*sz,0);
   nglRotatef(fElevation-90,-1,0,0);
   nglRotatef(-fAzimuth,0,0,1);
+  nglRotatef(Pitch,-1,0,0);
   {$IFNDEF COREGL}
   glUseProgram(0);
   glEnable (GL_BLEND);
@@ -619,6 +622,7 @@ begin
       glTranslatef(1.8*sz,1.8*sz,0);
   glRotatef(fElevation-90,-1,0,0);
   glRotatef(-fAzimuth,0,0,1);
+  glRotatef(Pitch,-1,0,0);
   glFrontFace(GL_CW);
   (*glMatrixMode(GL_PROJECTION);
   glLoadIdentity;

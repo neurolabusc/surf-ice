@@ -639,6 +639,7 @@ begin
       glBindVertexArray(0);
       glUseProgram(0);
      {$ELSE}
+     glUseProgram(0);
      glDisable(GL_CULL_FACE);
      glMatrixMode(GL_MODELVIEW);
      glLoadIdentity;

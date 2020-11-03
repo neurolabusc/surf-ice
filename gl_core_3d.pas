@@ -755,6 +755,34 @@ begin
   end;
 end;
 
+procedure SetModelView(w,h: integer; isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; displace,scale, distance, elevation, azimuth: single; isFlipDisplaceLHRH: boolean = false);
+begin
+  nglMatrixMode(nGL_PROJECTION);
+  nglLoadIdentity();
+  nSetOrtho(w, h, Distance, kMaxDistance, isMultiSample, lPrefs.Perspective);
+  nglTranslatef(lPrefs.ScreenPan.X, lPrefs.ScreenPan.Y, 0 );
+  nglMatrixMode (nGL_MODELVIEW);
+  nglLoadIdentity ();
+  //object size normalized to be -1...+1 in largest dimension.
+  //closest/furthest possible vertex is therefore -1.73..+1.73 (e.g. cube where corner is sqrt(1+1+1) from origin)
+
+  nglScalef(0.5/Scale, 0.5/Scale, 0.5/Scale);
+  if lPrefs.Perspective then
+      nglTranslatef(0,0, -Scale*2*Distance )
+  else
+     nglTranslatef(0,0,  -Scale*2 );
+  nglRotatef(90-Elevation,-1,0,0);
+  nglRotatef(-Azimuth,0,0,1);
+  if isFlipDisplaceLHRH then begin
+  	 nglTranslatef(-origin.X+(displace* scale), -origin.Y, -origin.Z);
+     nglRotatef(lPrefs.PryLHRH,0,0,1);
+  end else begin
+  	  nglTranslatef(-origin.X+(-displace* scale), -origin.Y, -origin.Z);
+      nglRotatef(-lPrefs.PryLHRH,0,0,1);
+  end;
+  nglRotatef(lPrefs.Pitch,1,0,0);
+end;
+
 {$IFDEF LHRH}
 procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped,isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh: TMeshLHRH; lNode: TMesh; lTrack: TTrack);
 {$ELSE}
@@ -763,6 +791,7 @@ procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped, isDrawMes
 //procedure DrawScene(w,h: integer; isDrawMesh, isMultiSample: boolean; var lPrefs: TPrefs; origin : TPoint3f; ClipPlane: TPoint4f; scale, distance, elevation, azimuth: single; var lMesh,lNode: TMesh; lTrack: TTrack);
 var
    clr: TRGBA;
+   displace: float;
 begin
   clr := asRGBA(lPrefs.ObjColor);
   //glClearColor( Red(lPrefs.backColor)/255, Green(lPrefs.backColor)/255, Blue(lPrefs.backColor)/255, 1.0); //Set blue background
@@ -770,7 +799,13 @@ begin
   glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
   //distance *= 0.77;
-  nglMatrixMode(nGL_PROJECTION);
+  if  (length(lMesh.faces) > 0) then
+  	  displace := lMesh.bilateralOffset + lPrefs.DisplaceLHRH
+  else
+     displace := lPrefs.DisplaceLHRH ;
+  SetModelView(w,h, isMultiSample, lPrefs, origin, displace, scale, distance, elevation, azimuth);
+
+(*  nglMatrixMode(nGL_PROJECTION);
   nglLoadIdentity();
   nSetOrtho(w, h, Distance, kMaxDistance, isMultiSample, lPrefs.Perspective);
   nglTranslatef(lPrefs.ScreenPan.X, lPrefs.ScreenPan.Y, 0 );
@@ -785,7 +820,7 @@ begin
      nglTranslatef(0,0,  -Scale*2 );
   nglRotatef(90-Elevation,-1,0,0);
   nglRotatef(-Azimuth,0,0,1);
-  nglTranslatef(-origin.X, -origin.Y, -origin.Z);
+  nglTranslatef(-origin.X, -origin.Y, -origin.Z); *)
    if lTrack.n_count > 0 then begin
      if lTrack.isTubes then
          RunMeshGLSL (asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W),  lPrefs.ShaderForBackgroundOnly) //disable clip plane
@@ -821,7 +856,10 @@ begin
     lMesh.isVisible := true;
  end;
  {$IFDEF LHRH}
+ //nglMatrixMode (nGL_MODELVIEW);
   if (lMesh.isShowRH) and (length(lMesh.RH.faces) > 0) then begin
+    displace := lMesh.RH.bilateralOffset + lPrefs.DisplaceLHRH;
+    SetModelView(w,h, isMultiSample, lPrefs, origin, displace, scale, distance, elevation, azimuth, true);
     lMesh.RH.isVisible := isDrawMesh;
     RunMeshGLSL (clipPlane, false);
     if not isOverlayClipped then

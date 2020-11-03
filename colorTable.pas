@@ -23,7 +23,11 @@ type
         intensity: array [0..maxNodes] of integer;
 	end;
 
-function UpdateTransferFunction (var lIndex: integer; isInvert: boolean): TLUT;//change color table
+function UpdateTransferFunction(lLUTnodes :TLUTnodes; isInvert: boolean): TLUT; overload;
+function UpdateTransferFunction (lo, hi: TRGBA; isInvert: boolean): TLUT; overload;
+//function UpdateTransferFunction (var lIndex: integer; fnm: string; isInvert: boolean): TLUT; overload;
+function UpdateTransferFunction (fnm: string; isInvert: boolean): TLUT; overload;
+function UpdateTransferFunction (var lIndex: integer; isInvert: boolean): TLUT; overload;//change color table
 function CLUTDir: string;
 function blendRGBA(c1, c2: TRGBA ): TRGBA;
 function blendRGBAover(ca, cb: TRGBA ): TRGBA;
@@ -207,13 +211,41 @@ begin
   lLUTnodes.intensity[node] := i;
 end;
 
-function loadCustomLUT(var lIndex: integer): TLUTnodes;
+function loadCustomLUT(lFilename: string): TLUTnodes; overload;
 var
- lFilename: string;
  lIniFile: TIniFile;
  numnodes, i: integer;
  inten: byte;
  rgba: TRGBA;
+begin
+ setNode(0,0,0,0,0, 0, result);
+ setNode(255,255,255,255,255, 1, result);
+ result.isFreeSurfer:= false;
+ lIniFile := TIniFile.Create(lFilename);
+ IniInt(true,lIniFile, 'numnodes', numnodes);
+ if (numnodes < 1) or (numnodes > maxNodes) then begin
+   if (numnodes > maxNodes) then
+      showmessage(format('Too many nodes (%d, maximum %d)', [numnodes, maxNodes]));
+     lIniFile.Free;
+    //lIndex := 0;
+    exit;
+ end;
+   for i := 0 to (numnodes-1) do begin
+     IniByte(true,lIniFile, 'nodeintensity'+inttostr(i),inten);
+     IniRGBA(true,lIniFile, 'nodergba'+inttostr(i),rgba);
+     setNode(rgba.r, rgba.g, rgba.b, rgba.a, inten, i, result);
+   end;
+ lIniFile.Free;
+end;
+
+
+function loadCustomLUT(var lIndex: integer): TLUTnodes; overload;
+var
+ lFilename: string;
+ (*lIniFile: TIniFile;
+ numnodes, i: integer;
+ inten: byte;
+ rgba: TRGBA; *)
 begin
  setNode(0,0,0,0,0, 0, result);
  setNode(255,255,255,255,255, 1, result);
@@ -227,7 +259,8 @@ begin
     lIndex := 0;
     exit;
  end;
- lIniFile := TIniFile.Create(lFilename);
+ result := loadCustomLUT(lFilename);
+(* lIniFile := TIniFile.Create(lFilename);
  IniInt(true,lIniFile, 'numnodes', numnodes);
  if (numnodes < 1) or (numnodes > maxNodes) then begin
    if (numnodes > maxNodes) then
@@ -241,7 +274,7 @@ begin
      IniRGBA(true,lIniFile, 'nodergba'+inttostr(i),rgba);
      setNode(rgba.r, rgba.g, rgba.b, rgba.a, inten, i, result);
    end;
- lIniFile.Free;
+ lIniFile.Free; *)
 end;
 
 function defaultLabelLut: TLUT;
@@ -495,16 +528,46 @@ begin
   result.A := round(p1.A + frac * (p2.A - p1.A));
 end;//lerpRGBA()
 
-function UpdateTransferFunction (var lIndex: integer; isInvert: boolean): TLUT;//change color table
+function UpdateTransferFunction (fnm: string; isInvert: boolean): TLUT; overload;//change color table
+var
+   lLUTNodes :TLUTnodes;
+begin
+     lLUTNodes := loadCustomLUT(fnm);
+	 result := UpdateTransferFunction(lLUTNodes, isInvert);
+end;
+
+function UpdateTransferFunction (var lIndex: integer; isInvert: boolean): TLUT; overload;//change color table
+var
+   lLUTNodes :TLUTnodes;
+begin
+     lLUTNodes := makeLUT(lIndex);
+	 result := UpdateTransferFunction(lLUTNodes, isInvert);
+end;
+
+function UpdateTransferFunction (lo, hi: TRGBA; isInvert: boolean): TLUT; overload;
+var
+   lLUTNodes :TLUTnodes;
+   i: integer = 0;
+begin
+  lLUTNodes := makeLUT(i);
+  setNode(lo.r,lo.g,lo.b,0,0, 0, lLUTNodes);
+  setNode(hi.r,hi.g,hi.b,255,255, 1, lLUTNodes);
+  //lLUTNodes.isFreeSurfer:= false;
+  result := UpdateTransferFunction(lLUTnodes, isInvert);
+end;
+
+function UpdateTransferFunction(lLUTnodes :TLUTnodes; isInvert: boolean): TLUT; overload;
 label
      123;
 var
- lLUTnodes :TLUTnodes;
  lInc,lNodeLo: integer;
  frac, f: single;
  rev: TLUT;
 begin
- lLUTNodes := makeLUT(lIndex);
+ (*if fnm <> '' then
+    lLUTNodes := loadCustomLUT(fnm)
+ else
+ 	 lLUTNodes := makeLUT(lIndex);*)
  if (lLUTNodes.rgba[0].R = 7) and  (lLUTNodes.rgba[0].G = 7) and  (lLUTNodes.rgba[0].B = 7) and  (lLUTNodes.rgba[0].A = 255) and (lLUTNodes.intensity[0] = 255) then begin
     result := defaultLabelLut;
     goto 123;
@@ -532,18 +595,59 @@ begin
     result[255].A := rev[255].A;
  end;
  if lLUTNodes.isFreeSurfer then begin
-   //for lInc := 1 to 255 do
-   //    result[lInc].A := 128;
-   //result[255].R := 0;
-   //result[255].G := 0;
-   //result[255].B := 0;
-   //result[255].A := 255;//result[254].A;
    exit; //not for freesurfer
  end;
  //result[0].A := 0; //see LUT[0].A <> 0
  for lInc := 1 to 255 do
      result[lInc].A := 255;
-end;//LoadLUT()
+end;
+
+(*function UpdateTransferFunction (var lIndex: integer; fnm: string; isInvert: boolean): TLUT; overload;
+label
+     123;
+var
+ lLUTnodes :TLUTnodes;
+ lInc,lNodeLo: integer;
+ frac, f: single;
+ rev: TLUT;
+begin
+ if fnm <> '' then
+    lLUTNodes := loadCustomLUT(fnm)
+ else
+ 	 lLUTNodes := makeLUT(lIndex);
+ if (lLUTNodes.rgba[0].R = 7) and  (lLUTNodes.rgba[0].G = 7) and  (lLUTNodes.rgba[0].B = 7) and  (lLUTNodes.rgba[0].A = 255) and (lLUTNodes.intensity[0] = 255) then begin
+    result := defaultLabelLut;
+    goto 123;
+ end;
+ lNodeLo := 0;
+ result[0] := lerpRGBA(lLUTNodes.rgba[0],lLUTNodes.rgba[0],1);
+ for lInc := 1 to 255 do begin
+   f := lInc;
+   if (f < 0) then f := 0;
+   if (f > 255) then f := 255;
+   //if ((lNodeLo+1) < lLUTNodes.numnodes) and ( f > lLUTNodes.intensity[lNodeLo + 1] ) then
+   if ( f > lLUTNodes.intensity[lNodeLo + 1] ) then
+      lNodeLo := lNodeLo + 1;
+   frac := (f-lLUTNodes.Intensity[lNodeLo])/(lLUTNodes.Intensity[lNodeLo+1]-lLUTNodes.Intensity[lNodeLo]);
+   if (frac < 0) then frac := 0;
+   if frac > 1 then frac := 1;
+   result[lInc] := lerpRGBA(lLUTNodes.rgba[lNodeLo],lLUTNodes.rgba[lNodeLo+1],frac);
+ end;
+123:
+ if isInvert then begin
+    rev := result;
+    for lInc := 0 to 255 do
+        result[lInc] := rev[255-lInc];
+    result[0].A := rev[0].A;
+    result[255].A := rev[255].A;
+ end;
+ if lLUTNodes.isFreeSurfer then begin
+   exit; //not for freesurfer
+ end;
+ //result[0].A := 0; //see LUT[0].A <> 0
+ for lInc := 1 to 255 do
+     result[lInc].A := 255;
+end;//LoadLUT() *)
 
 end.
 

@@ -43,6 +43,7 @@ LayerOptionsBtn: TButton;
  BilateralEitherMenu: TMenuItem;
  BilateralLeftOnlyMenu: TMenuItem;
  BilateralRightOnlyMenu: TMenuItem;
+ MenuItem3: TMenuItem;
  PasteMenu: TMenuItem;
  overlayoverlapoverwrite1: TMenuItem;
  overlayopacity1: TMenuItem;
@@ -349,6 +350,7 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     procedure LayerAOMapMenuClick(Sender: TObject);
     procedure MatCapDropChange(Sender: TObject);
     procedure NodeMinEditKeyPress(Sender: TObject; var Key: char);
+    procedure overlays1Click(Sender: TObject);
     procedure PaintModeAutomaticMenu(Sender: TObject);
     procedure PaintModeMenuClick(Sender: TObject);
     procedure PasteMenuClick(Sender: TObject);
@@ -479,11 +481,12 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
    procedure UniformChange(Sender: TObject);
     procedure UpdateTimerTimer(Sender: TObject);
     procedure UpdateImageIntensity;
-    function ComboBoxName2Index(var lCombo: TComboBox; lName: string): integer;
+    function ComboBoxName2Index(var lCombo: TComboBox; lName: string; out OK: boolean): integer;
     procedure SetDistance(Distance: single);
     procedure OVERLAYEXTREME (lOverlay, lMode: integer);
     procedure OVERLAYMINMAX (lOverlay: integer; lMin,lMax: single);
     procedure OVERLAYCOLORNAME(lOverlay: integer; lFilename: string);
+    procedure OVERLAYCOLOR(lOverlay: integer; rLo, gLo, bLo, rHi, gHi, bHi: byte);
     //procedure SetOrtho (w,h: integer; isMultiSample: boolean);
     procedure AddMRU(lFilename: string);
     procedure UpdateMRU;
@@ -546,6 +549,7 @@ var
   PythonIO : TPythonInputOutput;
   PyMod: TPythonModule;
   PyEngine: TPythonEngine = nil;
+  gPyRunning: boolean = false;
   {$ENDIF}
   gNode: TMesh;
   gTrack: TTrack;
@@ -1178,34 +1182,50 @@ begin
       EDGESIZE(A,Bool(I));
 end;
 
+
+function isLayerLoaded(cmd: string; layer: integer; isZeroOK: boolean = true): boolean;
+begin
+	 result := true;
+     if ((layer =0) and (not isZeroOK)) or (layer < 1) or (layer > gMesh.OpenOverlays) then begin
+	 	GLForm1.ScriptOutputMemo.lines.add(cmd+': layer should be in range 0..'+inttostr(gMesh.OpenOverlays));
+        exit(false);
+     end;
+end;
+
 function PyOVERLAYINVERT(Self, Args : PPyObject): PPyObject; cdecl;
 var
-  B,I: integer;
+  B,layer: integer;
 begin
   Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
   with GetPythonEngine do
-    if Bool(PyArg_ParseTuple(Args, 'ii:overlayinvert', @I,@B)) then
-      OVERLAYINVERT(I,Bool(B));
+    if Bool(PyArg_ParseTuple(Args, 'ii:overlayinvert', @layer,@B)) then begin
+      if not isLayerLoaded('overlayinvert', layer, false) then exit;
+      OVERLAYINVERT(layer,Bool(B));
+    end;
 end;
 
 function PyOVERLAYTRANSLUCENT(Self, Args : PPyObject): PPyObject; cdecl;
 var
-  B,I: integer;
+  B,layer: integer;
 begin
   Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
   with GetPythonEngine do
-    if Bool(PyArg_ParseTuple(Args, 'ii:overlayopacity', @I,@B)) then
-      OVERLAYTRANSLUCENT(I,Bool(B));
+    if Bool(PyArg_ParseTuple(Args, 'ii:overlayopacity', @layer,@B)) then begin
+      if not isLayerLoaded('overlayopacity', layer, false) then exit;
+      OVERLAYTRANSLUCENT(layer,Bool(B));
+    end;
 end;
 
 function PyOVERLAYOPACITY(Self, Args : PPyObject): PPyObject; cdecl;
 var
-  B,I: integer;
+  B,layer: integer;
 begin
   Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
   with GetPythonEngine do
-    if Bool(PyArg_ParseTuple(Args, 'ii:overlaytranslucent', @I,@B)) then
-      OVERLAYOPACITY(I,B);
+    if Bool(PyArg_ParseTuple(Args, 'ii:overlaytranslucent', @layer,@B)) then begin
+      if not isLayerLoaded('overlaytranslucent', layer, false) then exit;
+      OVERLAYOPACITY(layer,B);
+    end;
 end;
 
 function PyCONTOUR(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1562,6 +1582,35 @@ begin
     end;
 end;
 
+function PyOVERLAYCOLOR(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  layer, rLo, gLo, bLo, rHi, gHi, bHi: integer;
+  lo, hi: TRGBA;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 'iiiiiii:overlaycolor', @layer, @rLo, @gLo, @bLo, @rHi, @gHi, @bHi)) then begin
+      if (gMesh.OpenOverlays < 1) then begin
+         GLForm1.ScriptOutputMemo.lines.Add('Error: overlaycolor() requires an open overlay');
+      	 exit;
+      end;
+      if (layer < 1) or (layer > gMesh.OpenOverlays)  then begin
+         GLForm1.ScriptOutputMemo.lines.Add('Error: overlaycolor() layer should be in range 1..'+inttostr(gMesh.OpenOverlays));
+      	 exit;
+      end;
+      lo := RGBA(rLo, gLo, bLo, 255);
+      hi := RGBA(rHi, gHi, bHi, 255);
+      gMesh.overlay[layer].LUT := UpdateTransferFunction (lo, hi, gMesh.Overlay[layer].LUTinvert);
+      gMesh.overlay[layer].LUTindex:=  -layer;
+      {$IFDEF LHRH}
+ 	  gMesh.RH.overlay[layer].LUT := UpdateTransferFunction (lo, hi, gMesh.Overlay[layer].LUTinvert);
+      gMesh.RH.overlay[layer].LUTindex:=  -layer;
+      {$ENDIF}
+      gnLUT := -1; //refresh colorbar
+      GLForm1.GLBoxRequestUpdate(nil);
+    end;
+end;
+
 function PySHADERNAME(Self, Args : PPyObject): PPyObject; cdecl;
 var
   PtrName: PChar;
@@ -1736,8 +1785,10 @@ var
 begin
   Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
   with GetPythonEngine do
-    if Bool(PyArg_ParseTuple(Args, 'iff:overlayminmax', @A, @B, @C)) then
+    if Bool(PyArg_ParseTuple(Args, 'iff:overlayminmax', @A, @B, @C)) then begin
+       if not isLayerLoaded('overlayminmax', A, false) then exit;
        OVERLAYMINMAX(A,B,C);
+    end;
 end;
 
 function PyOVERLAYEXTREME(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1751,16 +1802,48 @@ begin
     end;
 end;
 
-function PyHEMISPHEREVISIBLE(Self, Args : PPyObject): PPyObject; cdecl;
+function PyHEMISPHEREDISTANCE(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  F: single;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 'f:hemispheredistance', @F)) then
+       gPrefs.DisplaceLHRH := F;
+end;
+
+function PyHEMISPHEREPRY(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  F: single;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 'f:hemispherepry', @F)) then
+       gPrefs.PryLHRH := F;
+end;
+
+function PyPITCH(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  F : single;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  with GetPythonEngine do
+    if Boolean(PyArg_ParseTuple(Args, 'f:pitch', @F)) then
+       gPrefs.Pitch := F;
+
+end;
+
+function PyMESHHEMISPHERE(Self, Args : PPyObject): PPyObject; cdecl;
+//Set -1 for left hemipshere, 0 for both, 1 for right
 var
   A: integer;
 begin
   Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
   with GetPythonEngine do
     if Bool(PyArg_ParseTuple(Args, 'i:hemispherevisible', @A)) then begin
-       if A = 1 then
+       if A = -1 then
        	  GLForm1.BilateralLeftOnlyMenu.click
-       else if A = 2 then
+       else if A = 1 then
        		GLForm1.BilateralRightOnlyMenu.click
        else
          GLForm1.BilateralEitherMenu.click;
@@ -1798,12 +1881,164 @@ begin
        VIEWSAGITTAL(BOOL(A));
 end;
 
+function PyATLASHIDE(Self, Args : PPyObject; isHide: boolean): PPyObject; cdecl;
+var
+  i, n, layer: integer;
+  ob, obi:PPyObject;
+  Indices: array of integer;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(False));
+  n := GetPythonEngine.PyTuple_Size(args);
+  if (n <> 2) and (n <> 1) then begin
+          GLForm1.ScriptOutputMemo.lines.add('atlashide: requires four arguments [layer, (regions)] ');
+          exit;
+  end;
+  ob :=   GetPythonEngine.PyTuple_GetItem(Args,0);
+  layer := GetPythonEngine.PyLong_AsLong(ob);
+  if (layer < 0) or (layer > gMesh.OpenOverlays) then begin
+     GLForm1.ScriptOutputMemo.lines.add('atlashide: layer should be in range 0..'+inttostr(gMesh.OpenOverlays));
+     exit;
+  end;
+  if n = 1 then begin // for empty array, e.g. gl.atlashide(0)
+  	 setlength(Indices, 0);
+  	 ATLASHIDE(layer, Indices);
+     exit;
+  end;
+  //get indices
+  ob :=   GetPythonEngine.PyTuple_GetItem(Args,1);
+  if not (GetPythonEngine.PyTuple_Check(ob)) then begin  //2nd argument of atlashide(1,(17,22)) is tuple, atlashide(1,(17)) is integer
+  	 setlength(Indices, n);
+  	 Indices[0] := GetPythonEngine.PyLong_AsLong(ob);
+  end else begin
+
+    n := GetPythonEngine.PyTuple_Size(ob);
+    setlength(Indices, n);
+    if n > 0 then begin //not for empty array, e.g. gl.atlashide(0,())
+      for i := 0 to (n-1) do begin
+          obi :=   GetPythonEngine.PyTuple_GetItem(ob,i);
+          Indices[i] := GetPythonEngine.PyLong_AsLong(obi);
+      end;
+    end;
+  end;
+  ATLASHIDE(layer, Indices);
+  Indices := nil;
+end;
+
+function PyATLASSHOW(Self, Args : PPyObject; isHide: boolean): PPyObject; cdecl;
+var
+  mx, i, j, n, layer: integer;
+  ob, obi:PPyObject;
+  isVisible: array of boolean;
+  Indices: array of integer;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(False));
+  n := GetPythonEngine.PyTuple_Size(args);
+  if (n <> 2) and (n <> 1) then begin
+          GLForm1.ScriptOutputMemo.lines.add('atlasshow: requires four arguments [layer, (regions)] ');
+          exit;
+  end;
+  GLForm1.caption := '>'+inttostr(n);
+  ob :=   GetPythonEngine.PyTuple_GetItem(Args,0);
+  layer := GetPythonEngine.PyLong_AsLong(ob);
+  mx := ATLASMAXINDEX(layer);
+  if mx < 1 then exit;
+  if (layer < 0) or (layer > gMesh.OpenOverlays) then begin
+     GLForm1.ScriptOutputMemo.lines.add('atlasshow: layer should be in range 0..'+inttostr(gMesh.OpenOverlays));
+     exit;
+  end;
+  if n = 1 then begin // for empty array, e.g. gl.atlashide(0)
+  	 setlength(Indices, 0);
+  	 ATLASHIDE(layer, Indices);
+     exit;
+  end;
+  //get indices
+  ob :=   GetPythonEngine.PyTuple_GetItem(Args,1);
+  if(ob = nil) then exit;
+  setlength(isVisible, mx+1); //+1 as 0..maxindex
+  if not (GetPythonEngine.PyTuple_Check(ob)) then begin  //2nd argument of atlashide(1,(17,22)) is tuple, atlashide(1,(17)) is integer
+  	 j := GetPythonEngine.PyLong_AsLong(ob);
+     if (j > 0) and (j <= mx) then
+        isVisible[j] := true;
+  end else begin
+    n := GetPythonEngine.PyTuple_Size(ob);
+    if n > 0 then begin //not for empty array, e.g. gl.atlashide(0,())
+      for i := 0 to (n-1) do begin
+          obi :=   GetPythonEngine.PyTuple_GetItem(ob,i);
+          j := GetPythonEngine.PyLong_AsLong(obi);
+          if (j > 0) and (j <= mx) then
+             isVisible[j] := true;
+      end;
+    end;
+  end;
+  n := 0;
+  for i := 1 to mx do
+  	  if not isVisible[i] then n += 1;
+  GLForm1.caption := 'B'+inttostr(n);
+  if n < 1 then begin // for empty array, e.g. gl.atlashide(0)
+  	 setlength(Indices, 0);
+  	 ATLASHIDE(layer, Indices);
+     exit;
+  end;
+  setlength(Indices, n);
+  n := 0;
+  for i := 1 to mx do
+  	  if not isVisible[i] then begin
+      	 Indices[n] := i;
+      	 n += 1;
+      end;
+  ATLASHIDE(layer, Indices);
+  Indices := nil;
+end;
+
+function PyATLASSTATMAP(Self, Args : PPyObject; isHide: boolean): PPyObject; cdecl;
+var
+  i, n: integer;
+  ob, obi:PPyObject;
+  atlasname, statname: string;
+  Indices: array of integer;
+  Intensities: array of single;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(False));
+  n := GetPythonEngine.PyTuple_Size(args);
+  if (n <> 4) then begin
+          GLForm1.ScriptOutputMemo.lines.add('atlasstatmap: requires four arguments [inname, outname, (regions), (values)] ');
+          exit;
+  end;
+  ob :=   GetPythonEngine.PyTuple_GetItem(Args,0);
+  atlasname := GetPythonEngine.PyString_AsDelphiString(ob);
+  ob :=   GetPythonEngine.PyTuple_GetItem(Args,1);
+  statname := GetPythonEngine.PyString_AsDelphiString(ob);
+  //get indices
+  ob :=   GetPythonEngine.PyTuple_GetItem(Args,2);
+  n := GetPythonEngine.PyTuple_Size(ob);
+  setlength(Indices, n);
+  for i := 0 to (n-1) do begin
+      obi :=   GetPythonEngine.PyTuple_GetItem(ob,i);
+      Indices[i] := GetPythonEngine.PyLong_AsLong(obi);
+  	  //GLForm1.ScriptOutputMemo.lines.add(format('%d->%d', [i, Indices[i]]));
+
+  end;
+  //get intensities
+  ob :=   GetPythonEngine.PyTuple_GetItem(Args,3);
+  n := GetPythonEngine.PyTuple_Size(ob);
+  setlength(Intensities, n);
+  for i := 0 to (n-1) do begin
+      obi :=   GetPythonEngine.PyTuple_GetItem(ob,i);
+      Intensities[i] := GetPythonEngine.PyFloat_AsDouble(obi);
+      //GLForm1.ScriptOutputMemo.lines.add(format('%d->%g', [i, Intensities[i]]));
+  end;
+  ATLASSTATMAP(atlasname, statname, Indices, Intensities);
+end;
+
 procedure TGLForm1.PyModInitialization(Sender: TObject);
 begin
   with Sender as TPythonModule do begin
     AddMethod('atlas2node', @PyATLAS2NODE, ' atlas2node(imageName) -> convert .annot file labels to BrainNet Node format.');
+    AddMethod('atlashide', @PyATLASHIDE, ' atlashide(overlayNum, (r1, r2, ...)) -> Hide regions specified atlas. For example, "atlashide(0, (3, 7, 9))" will hide regions 3,7,9 of the background (0th layer) image.');
     AddMethod('atlasmaxindex', @PyATLASMAXINDEX, ' atlasmaxindex(overlayNum) -> Returns maximum region humber in specified atlas. For example, if you load the CIT168 atlas (which has 15 regions) as your background image, then atlasmaxindex(0) will return 15.');
     AddMethod('atlassaturationalpha', @PyATLASSATURATIONALPHA, ' atlassaturationalpha(saturation, transparency) -> Set saturation and transparency of atlas. A desaturated atlas will appear gray, a transparent atlas will reveal the background color.');
+    AddMethod('atlasshow', @PyATLASSHOW, ' atlasshow(overlayNum, (r1, r2, ...)) -> Show regions specified atlas. For example, "atlasshow(1, (3, 7, 9))" will show regions 3,7,9 of the first overlay image.');
+    AddMethod('atlasstatmap', @PyATLASSTATMAP, ' atlasstatmap(atlasname, outname, (r1, r2, ...), (i1, i2, ...)) -> Create mesh named "outname" where regions have specified intensities.');
     AddMethod('azimuth', @PyAZIMUTH, ' azimuthe(azi) -> Rotate image by specified degrees.');
     AddMethod('azimuthelevation', @PyAZIMUTHELEVATION, ' azimuthelevation(azi, elev) -> Sets the camera location.');
     AddMethod('backcolor', @PyBACKCOLOR, ' backcolor(r, g, b) -> changes the background color, for example backcolor(255, 0, 0) will set a bright red background');
@@ -1823,10 +2058,12 @@ begin
     AddMethod('exists', @PyEXISTS, ' exists(filename) -> Returns true if filename is found.');
     AddMethod('fontname', @PyFONTNAME, ' fontname(name) -> Set typeface for display.');
     AddMethod('fullscreen', @PyFULLSCREEN, ' fullscreen(max) -> Form expands to size of screen (1) or size is maximized (0).');
-    AddMethod('hemispherevisible', @PyHEMISPHEREVISIBLE, ' hemispherevisible(v) -> View both hemispheres (0), left (1) or right (2) hemisphere.');
+    AddMethod('hemispheredistance', @PyHEMISPHEREDISTANCE, ' hemispheredistance(v) -> Grow or shrink space between left and right hemisphere (-1..1).');
+    AddMethod('hemispherepry', @PyHEMISPHEREPRY, ' hemispherepry(degrees) -> Rotate hemispheres relative to each other, the SUMA "walnut pry" effect.');
     AddMethod('meshcolor', @PyMESHCOLOR, ' meshcolor(r, g, b) -> Set red/green/blue components of main image. Each component is an integer 0..255.');
     AddMethod('meshcreate', @PyMESHCREATE, ' meshcreate(niiname, meshname, threshold, decimateFrac, minimumClusterVox, smoothStyle) -> Convert a NIfTI voxel-based image into a mesh.');
     AddMethod('meshcurv', @PyMESHCURV, ' meshcurv() -> Displays mesh curvature, so crevices appear dark.');
+    AddMethod('meshhemisphere', @PyMESHHEMISPHERE, ' meshhemisphere(v) -> nodehemisphere (val) -> Set -1 for left hemipshere, 0 for both, 1 for right.');
     AddMethod('meshload', @PyMESHLOAD, ' meshload(imageName) -> Close all open images and load new background image.');
     AddMethod('meshloadbilateral', @PyMESHLOADBILATERAL, ' meshloadbilateral(v) -> If v=1, load both hemispheres (*.lh *.rh), otherwise  only load named mesh.');
     AddMethod('meshoverlayorder', @PyMESHOVERLAYORDER, ' meshoverlayorder (flip) -> If flip=1, the mesh will be drawn after the overlay, and xray sliders will influence overlay not mesh.');
@@ -1835,7 +2072,7 @@ begin
     AddMethod('modalmessage', @PyMODALMESSAGE, ' modalmessage(msg) -> Shows a modal dialog, script stops until user presses ''OK'' button to dismiss dialog.');
     AddMethod('modelessmessage', @PyMODELESSMESSAGE, ' modelessmessage(msg) -> Prints text in the bottom status region of the scripting window.');
     AddMethod('nodecolor', @PyNODECOLOR, ' nodecolor(name, varies) -> set colorscheme used for nodes. If varies=1, the color of nodes will differ depending on size or intensity.');
-    AddMethod('nodehemisphere', @PyNODEHEMISPHERE, ' nodehemisphere (val) -> Set -1 for left hemipshere, 0 for both, 1 for right');
+    AddMethod('nodehemisphere', @PyNODEHEMISPHERE, ' nodehemisphere (val) -> Set -1 for left hemipshere, 0 for both, 1 for right.');
     AddMethod('nodeload', @PyNODELOAD, ' nodeload(filename) -> Loads BrainNet viewer format node file.');
     AddMethod('nodepolarity', @PyNODEPOLARITY, ' nodepolarity(val) -> Set -1 for negative only, 0 for either, 1 for positive only.');
     AddMethod('nodesize', @PyNODESIZE, ' nodesize(size, varies) -> Determine size scaling factor for nodes.');
@@ -1844,6 +2081,7 @@ begin
     AddMethod('orientcubevisible', @PyORIENTCUBEVISIBLE, ' orientcubevisible (visible) -> Show (1) or hide (0) cube that indicates object rotation');
     AddMethod('overlayadditive', @PyOVERLAYADDITIVE, ' overlayadditive (add) -> Determines whether overlay colors are combined by adding or mixing the colors. For example, overlap of red and green overlays will appear yellow if additive is true (1)');
     AddMethod('overlaycloseall', @PyOVERLAYCLOSEALL, ' overlaycloseall() -> Close all open overlays.');
+    AddMethod('overlaycolor', @PyOVERLAYCOLOR, ' overlaycolor(overlayLayer, loR, loG, loB, hiR, hiG, hiB) -> Set the colorscheme (low and high Red, Green, Blue) for the target overlay.');
     AddMethod('overlaycolorname', @PyOVERLAYCOLORNAME, ' overlaycolorname(overlayLayer, filename) -> Set the colorscheme for the target overlay to a specified name.');
     AddMethod('overlaycount', @PyOVERLAYCOUNT, ' overlaycount() -> Return number of overlays currently open.');
     AddMethod('overlayinvert', @PyOVERLAYINVERT, ' overlayinvert(layer, invert) -> Toggle whether overlay color scheme is inverted.');
@@ -1856,6 +2094,7 @@ begin
     AddMethod('overlaytranslucent', @PyOVERLAYTRANSLUCENT, ' overlaytranslucent(overlayLayer, translucent) -> This feature allows you to make individual overlays translucent or opaque.');
     AddMethod('overlaytransparencyonbackground', @PyOVERLAYTRANSPARENCYONBACKGROUND, ' overlaytransparencyonbackground(percent) -> Controls the opacity of the overlays on the background.');
     AddMethod('overlayvisible', @PyOVERLAYVISIBLE, ' overlayvisible(overlayLayer, visible) -> This feature allows you to make individual overlays visible or invisible.');
+    AddMethod('pitch', @PyPITCH, ' pitch(degrees) -> Sets the pitch of object to be rendered.');
     AddMethod('quit', @PyQUIT, ' quit() -> Terminate the application.');
     AddMethod('resetdefaults', @PyRESETDEFAULTS, ' resetdefaults() -> Revert settings to sensible values.');
     AddMethod('savebmp', @PySAVEBMP, ' savebmp(pngName) -> Save screen display as bitmap. For example "savebmp(''test.png'')"');
@@ -1986,11 +2225,13 @@ begin
     end;
   end;
   GLForm1.ScriptOutputMemo.lines.Add('Running Python script');
+  gPyRunning := true;
   try
   PyEngine.ExecStrings(GLForm1.ScriptMemo.Lines);
   except
     caption := 'Python Engine Failed';
   end;
+  gPyRunning := false;
   GLForm1.ScriptOutputMemo.lines.Add('Python Succesfully Executed');
   result := true;
   ToolPanel.refresh;
@@ -2130,6 +2371,13 @@ begin
 end;
 procedure TGLForm1.ScriptingRunMenuClick(Sender: TObject);
 begin
+ {$IFDEF MYPY}
+ if gPyRunning then begin
+   PyEngine.PyErr_SetString(PyEngine.PyExc_KeyboardInterrupt^, 'Operation cancelled') ;
+   ScriptOutputMemo.Lines.Add('Halting script ("Run" called while script still running).');
+   exit;
+ end;
+ {$ENDIF}
   CompileMainClick(Sender);// PyExecMain();
 end;
 
@@ -3015,6 +3263,7 @@ end; //isMz3Mesh
 function TGLForm1.Atlas2Node(FilenameOut: string): boolean;
 begin
      result := gMesh.Atlas2Node(FilenameOut);
+     if result then caption := 'xxxx';
      if result then
         OpenNode(FilenameOut);
 end;
@@ -3090,7 +3339,6 @@ begin
   end;
   {$IFDEF LHRH}
   BilateralMenu.Visible := (length(gMesh.RH.faces) > 0);
-
   {$ENDIF}
   OpenDialog.InitialDir:= ExtractFileDir(Filename);
   UpdateToolbar;
@@ -3175,6 +3423,8 @@ begin
      else
          gPrefs.PrevFilename[i+1] := prev[i];
  end;
+ lFilename := changefileext(extractfilename(lFilename),'');
+ SaveBitmapDialog.FileName:= lFilename;
  UpdateMRU;
 end;
 
@@ -3309,6 +3559,11 @@ begin
   {$ENDIF}
 end;
 
+procedure TGLForm1.overlays1Click(Sender: TObject);
+begin
+
+end;
+
 procedure TGLForm1.PaintModeAutomaticMenu(Sender: TObject);
 var
    i: integer;
@@ -3331,7 +3586,20 @@ var
 begin
  if gMouseX < 0 then exit; //mouse is not down
  X := lX; Y := lY; Mouse2Retina(X,Y);
- if (ssShift in Shift) then begin
+ {$IFDEF LHRH}
+ if ((ssAlt in Shift) or (ssMeta in Shift)) and (length(gMesh.RH.faces) > 0) then begin
+  gPrefs.DisplaceLHRH := gPrefs.DisplaceLHRH - (0.005 * (Y - gMouseY));
+  gPrefs.DisplaceLHRH := min(gPrefs.DisplaceLHRH, 1.0);
+  gPrefs.DisplaceLHRH := max(gPrefs.DisplaceLHRH, 0.0);
+  gPrefs.PryLHRH := gPrefs.PryLHRH -  (0.2 * (X - gMouseX));
+  gPrefs.PryLHRH := min(gPrefs.PryLHRH, 90.0);
+  gPrefs.PryLHRH := max(gPrefs.PryLHRH, -90.0);
+
+ end else {$ENDIF} if (ssCtrl in Shift) then begin
+  gPrefs.Pitch := gPrefs.Pitch - (Y - gMouseY);
+  gPrefs.Pitch := min(gPrefs.Pitch, 180);
+  gPrefs.Pitch := max(gPrefs.Pitch, -180);
+ end else if (ssShift in Shift) then begin
     //Pan image
     gPrefs.ScreenPan.X := gPrefs.ScreenPan.X + (1/GLBoxBackingWidth * (X - gMouseX));
     if (gPrefs.ScreenPan.X > 1) then gPrefs.ScreenPan.X := 1;
@@ -3990,12 +4258,36 @@ begin
 end;
 
 procedure TGLForm1.OverlayInvert(lOverlay: integer; lInvert: boolean);
+var
+  i: integer;
+  tmp:  TLUT;
 begin
   if (lOverlay > gMesh.OpenOverlays) or (lOverlay < 1) then
     exit;
+  {$IFDEF LHRH}
+  if  gMesh.RH.Overlay[lOverlay].LUTindex < 0 then begin
+   	  tmp := gMesh.RH.overlay[lOverlay].LUT;
+  	  if (gMesh.RH.Overlay[lOverlay].LUTinvert <> lInvert) then
+      	 for i := 0 to 255 do
+         	 gMesh.RH.overlay[lOverlay].LUT[i] :=  tmp[255-i];
+      gMesh.RH.overlay[lOverlay].LUT[0].A := tmp[0].A;
+      gMesh.RH.overlay[lOverlay].LUT[255].A := tmp[255].A;
+  end else
+      gMesh.RH.overlay[lOverlay].LUT := UpdateTransferFunction (gMesh.RH.Overlay[lOverlay].LUTindex, gMesh.RH.Overlay[lOverlay].LUTinvert);
+  gMesh.RH.Overlay[lOverlay].LUTinvert := lInvert;
+//FUBAR
+   {$ENDIF}
+  if  gMesh.Overlay[lOverlay].LUTindex < 0 then begin
+   	  tmp := gMesh.overlay[lOverlay].LUT;
+  	  if (gMesh.Overlay[lOverlay].LUTinvert <> lInvert) then
+      	 for i := 0 to 255 do
+         	 gMesh.overlay[lOverlay].LUT[i] :=  tmp[255-i];
+      gMesh.overlay[lOverlay].LUT[0].A := tmp[0].A;
+      gMesh.overlay[lOverlay].LUT[255].A := tmp[255].A;
+  end else
+      gMesh.overlay[lOverlay].LUT := UpdateTransferFunction (gMesh.Overlay[lOverlay].LUTindex, gMesh.Overlay[lOverlay].LUTinvert);
   gMesh.Overlay[lOverlay].LUTinvert := lInvert;
   UpdateLayerBox(false);
-  gMesh.overlay[lOverlay].LUT := UpdateTransferFunction (gMesh.Overlay[lOverlay].LUTindex, gMesh.Overlay[lOverlay].LUTinvert);
   OverlayTimerStart;
 end;
 
@@ -4555,10 +4847,19 @@ begin
          gPrefs.BackColor := RGBToColor(0,0,0)
      else
          gPrefs.BackColor := RGBToColor(255,255,255);
+  {$IFDEF LHRH}
+  gMesh.isShowLH:=true;
+  gMesh.isShowRH:=true;
+  gPrefs.PryLHRH:=0;
+  gPrefs.DisplaceLHRH := 0;
 
+
+  GLForm1.BilateralEitherMenu.checked := true;
+  {$ENDIF}
      //gPrefs.Colorbar := true;
      TransBlackClrbarMenu.Checked:=true;
      gPrefs.ScreenPan.X := 0; gPrefs.ScreenPan.Y := 0; gPrefs.ScreenPan.Z := 0;
+     gPrefs.Pitch := 0;
      gDistance := 1;
      gElevation := 20;
      gAzimuth := 250;
@@ -4639,8 +4940,8 @@ begin
  gNode.isRebuildList := true;
  GLBoxRequestUpdate(Sender);
 end;
-(*86
-function GetFloat(prompt: string; min,def,max: extended): extended;
+
+(*function GetFloat(prompt: string; min,def,max: extended): extended;
 var
     PrefForm: TForm;
     OkBtn: TButton;
@@ -4689,8 +4990,8 @@ begin
       result := max;
   end;
   FreeAndNil(PrefForm);
-end; //GetFloat()*)
-
+end; //GetFloat()
+*)
 function GetFloat(prompt: string; min,def,max: double): double;
 var
     PrefForm: TForm;
@@ -4796,10 +5097,16 @@ begin
     showmessage('Error: reduction factor should be BETWEEN 0 and 1');
     exit;
  end;
+ gMesh.CloseOverlays;
  if not ReducePatch(gMesh.faces, gMesh.vertices, r) then exit;
+ {$IFDEF LHRH}
+ if length(gMesh.RH.faces) > 0 then
+ 	ReducePatch(gMesh.RH.faces, gMesh.RH.vertices, r);
+ {$ENDIF}
  caption := format('Faces %d -> %d (%.3f, %d ms)', [ nTri, length(gMesh.Faces), length(gMesh.Faces)/nTri , gettickcount() - msStart]) ;
  gMesh.isRebuildList:=true;
  GLBoxRequestUpdate(Sender);
+ UpdateToolbar;
 end;
 
 procedure TGLForm1.SwapYZMenuClick(Sender: TObject);
@@ -4874,6 +5181,11 @@ begin
   UpdateLayerBox(false);;
 end;
 
+(*procedure printf(s: string);
+begin
+     {$IFDEF UNIX}writeln(s);{$ENDIF}
+end; *)
+
 function TGLForm1.UpdateClrBar: integer;
 var
   nLUT, lI, lJ: integer;
@@ -4891,7 +5203,7 @@ begin
  if ((gMesh.OpenOverlays < 1) and ((length(gNode.nodes) < 1))) then exit;
 
  if (gMesh.OpenOverlays > 0) then
-    for lI := 1 to gMesh.OpenOverlays do
+    for lI := 1 to gMesh.OpenOverlays do begin
         //https://www.nitrc.org/forum/forum.php?thread_id=10001&forum_id=6713
         if (length(gMesh.overlay[lI].intensity) > 0) and (not gMesh.overlay[lI].aoMap) and (gMesh.overlay[lI].OpacityPercent <> kLUTinvisible) and (not isFreeSurferLUT(gMesh.overlay[lI].LUTindex)) then begin
          isDuplicate := false;
@@ -4905,8 +5217,27 @@ begin
          end;
          if isDuplicate then continue;
          inc(nLUT);
-         gClrbar.SetLUT(nLUT, UpdateTransferFunction(gMesh.overlay[lI].LUTindex,gMesh.overlay[lI].LUTinvert), gMesh.overlay[lI].windowScaledMin,gMesh.overlay[lI].windowScaledMax);
-        end;
+         //20201010 changed for "overlaycolorname(layer, filename)" with cusotm LUT, where LUTindex is not meaningful
+         gClrbar.SetLUT(nLUT,gMesh.overlay[lI].LUT, gMesh.overlay[lI].windowScaledMin,gMesh.overlay[lI].windowScaledMax);
+         //gClrbar.SetLUT(nLUT, UpdateTransferFunction(gMesh.overlay[lI].LUTindex,gMesh.overlay[lI].LUTinvert), gMesh.overlay[lI].windowScaledMin,gMesh.overlay[lI].windowScaledMax);
+        end {$IFDEF LHRH} else begin
+        if (length(gMesh.RH.overlay[lI].intensity) > 0) and (not gMesh.RH.overlay[lI].aoMap) and (gMesh.RH.overlay[lI].OpacityPercent <> kLUTinvisible) and (not isFreeSurferLUT(gMesh.RH.overlay[lI].LUTindex)) then begin
+       		isDuplicate := false;
+
+       		lJ := 1;
+       		while (lJ < lI) do begin
+       			if (gMesh.RH.overlay[lI].LUTindex = gMesh.RH.overlay[lJ].LUTindex)  and(gMesh.RH.overlay[lJ].OpacityPercent <> kLUTinvisible)
+       				and (gMesh.RH.overlay[lI].windowScaledMin = gMesh.RH.overlay[lJ].windowScaledMin)
+       				and (gMesh.RH.overlay[lI].windowScaledMax = gMesh.RH.overlay[lJ].windowScaledMax) then
+       				isDuplicate := true;
+       				lJ := lJ + 1;
+       		end;
+            if isDuplicate then continue;
+            inc(nLUT);
+       		gClrbar.SetLUT(nLUT,gMesh.RH.overlay[lI].LUT, gMesh.RH.overlay[lI].windowScaledMin,gMesh.RH.overlay[lI].windowScaledMax);
+       	end;
+    end{$ENDIF};
+ end;
  result := nLUT;
  if (length(gNode.nodes) < 1) then exit;
  if (gNode.nodePrefs.isNodeColorVaries) then begin
@@ -5094,6 +5425,7 @@ begin
      //DrawCube (w, h,  gAzimuth, gElevation);
      gCube.Azimuth:=gAzimuth;
      gCube.Elevation:=gElevation;
+     gCube.Pitch := gPrefs.Pitch;
      if (gPrefs.ColorbarPosition = 1) or (gPrefs.ColorbarPosition = 2) then
        gCube.TopLeft:= true
      else
@@ -5559,8 +5891,8 @@ begin
     //else
     {$IFDEF LHRH}
     LHRHNameChange(fnm, fnmLH, fnmRH);
-    if (fnmLH <> '') and (fnmRH <> '') then begin
-	   GenerateCurv(fnmRH, gMesh.faces, gMesh.vertices, gPrefs.GenerateSmoothCurves);
+    if (length(gMesh.RH.faces) > 0) and (fnmLH <> '') and (fnmRH <> '') then begin
+	   GenerateCurv(fnmRH, gMesh.RH.faces, gMesh.RH.vertices, gPrefs.GenerateSmoothCurves);
        fnm := fnmLH;
     end;
     {$ENDIF}
@@ -5673,6 +6005,38 @@ begin
          result := ' writeable';
 end;
 {$ENDIF}
+
+(*procedure ShowMessageNonModeless(caption, prompt: string);
+var
+    PrefForm: TForm;
+    OkBtn: TButton;
+    promptLabel: TLabel;
+begin
+  PrefForm:=TForm.Create(nil);
+  //PrefForm.SetBounds(100, 100, 512, 212);
+  PrefForm.AutoSize := True;
+  PrefForm.BorderWidth := 8;
+  PrefForm.Caption:= caption;
+  PrefForm.Position := poScreenCenter;
+  PrefForm.BorderStyle := bsDialog;
+  promptLabel:=TLabel.create(PrefForm);
+  promptLabel.Caption:= prompt;
+  //OK button
+  OkBtn:=TButton.create(PrefForm);
+  OkBtn.Caption:='OK';
+  OkBtn.AutoSize := true;
+  OkBtn.AnchorSide[akTop].Side := asrBottom;
+  OkBtn.AnchorSide[akTop].Control := valEdit;
+  OkBtn.BorderSpacing.Top := 6;
+  OkBtn.AnchorSide[akLeft].Side := asrRight;
+  OkBtn.AnchorSide[akLeft].Control := PrefForm;
+  OkBtn.BorderSpacing.Left := 6;
+  OkBtn.Parent:=PrefForm;
+  OkBtn.ModalResult:= mrOK;
+  PrefForm.Show;
+
+  FreeAndNil(PrefForm);
+end;*)
 
 procedure TGLForm1.AboutMenuClick(Sender: TObject);
 //{$DEFINE TIMEABOUT}
@@ -5997,12 +6361,13 @@ begin
     SetDistance(gDistance * 1.1);
 end;
 
-function TGLForm1.ComboBoxName2Index(var lCombo: TComboBox; lName: string): integer;
+function TGLForm1.ComboBoxName2Index(var lCombo: TComboBox; lName: string; out OK: boolean): integer;
 var
     lNameU, lItem : string;
     i: integer;
 begin
      result := 0;
+     OK := false;
      if lCombo.Items.Count < 2 then exit;
      lNameU := uppercase(lName);
      i := 0;
@@ -6010,21 +6375,44 @@ begin
          lItem := uppercase (lCombo.Items[i]);
          if (lItem = lNameU) then begin
             result := i;
+            OK := true;
             i := maxint-1;
          end;
          i := i + 1;
  end;//for each shader
 end;
 
+procedure TGLForm1.OVERLAYCOLOR(lOverlay: integer; rLo, gLo, bLo, rHi, gHi, bHi: byte);
+var
+    lo, hi: TRGBA;
+begin
+     if (gMesh.OpenOverlays < 1) or (lOverlay < 1) or (lOverlay > gMesh.OpenOverlays)  then exit;
+  lo := RGBA(rLo, gLo, bLo, 255);
+  hi := RGBA(rHi, gHi, bHi, 255);
+  gMesh.overlay[lOverlay].LUT := UpdateTransferFunction (lo, hi, gMesh.Overlay[lOverlay].LUTinvert);
+  gnLUT := -1; //refresh colorbar
+  GLForm1.GLBoxRequestUpdate(nil);
+end;
+
 procedure TGLForm1.OVERLAYCOLORNAME(lOverlay: integer; lFilename: string);
 var
    lLUTIndex: integer;
    //lName, lItem : string;
+   OK: boolean;
 begin
- if (gMesh.OpenOverlays < 1) or (lOverlay > gMesh.OpenOverlays)  then exit;
- lLUTIndex := ComboBoxName2Index(LayerColorDrop, lFilename);
+ if (gMesh.OpenOverlays < 1) or (lOverlay < 1) or (lOverlay > gMesh.OpenOverlays)  then exit;
+ lLUTIndex := ComboBoxName2Index(LayerColorDrop, lFilename, OK);
+ if (not OK) and (fileexists(lFilename)) then begin
+ 	gMesh.overlay[lOverlay].LUT := UpdateTransferFunction (lFilename, gMesh.Overlay[lOverlay].LUTinvert);
+    gnLUT := -1; //refresh colorbar
+    GLForm1.GLBoxRequestUpdate(nil);
+    //UpdateClrBar();
+    //UpdateLayerBox(false);
+    //gMesh.overlay[lOverlay].LUT := UpdateTransferFunction (gMesh.Overlay[lOverlay].LUTindex, gMesh.Overlay[lOverlay].LUTinvert);
+    //gMesh.Overlay[lOverlay].LUTindex:= 0;
+    exit;
+ end;
  UpdateLUT(lOverlay,lLUTIndex);
- //LayerWidgetChange(nil);
  UpdateLayerBox(false);
 end;
 
@@ -6554,6 +6942,12 @@ begin
         	OpenMesh(ParamStr(ParamCount));
         	exit;
        	end;
+    end else if not fileexists(gPrefs.InitScript) then begin
+      ScriptMemo.Lines.Clear;
+      ScriptMemo.Lines.Add(gPrefs.InitScript);
+      gPrefs.InitScript:='';
+      ScriptingRunMenuClick(nil);
+      exit;
     end;
      OpenScript(gPrefs.initScript);
      gPrefs.initScript := '';
@@ -6590,6 +6984,7 @@ begin
      GLForm1.WindowState:= wsFullScreen;
      {$IFNDEF LCLCocoa}ExitFullScreenMenu.Visible:=true;{$ENDIF} //Linux has issues getting out of full screen
   end;
+  ScriptingPascalMenu.Visible := gPrefs.ShowPascalMenu;
  {$IFDEF LHRH} BilateralMenu.Visible := true;{$ENDIF}
  {$IFDEF LCLCocoa}{$IFDEF DARKMODE} SetDarkMode; {$ENDIF}{$ENDIF}
  //{$IFDEF Windows}UpdateOverlaySpread;{$ENDIF}//July2017 - scripting on High-dpi, reset scaling
@@ -6761,7 +7156,7 @@ begin
   ScriptingRunMenu.ShortCut := ShortCut(Word('R'), [ssMeta]);
   CurvMenuTemp.ShortCut:= ShortCut(Word('K'), [ssMeta]);
   CloseMenu.ShortCut :=  ShortCut(Word('W'), [ssMeta]);
-  SwapYZMenu.ShortCut :=  ShortCut(Word('X'), [ssMeta]);
+  //SwapYZMenu.ShortCut :=  ShortCut(Word('X'), [ssMeta]);
   //ScriptMenu.ShortCut :=  ShortCut(Word('Z'), [ssMeta]);
   //ScriptMenu.ShortCut :=  ShortCut(Word('J'), [ssMeta]);
   OpenMenu.ShortCut :=  ShortCut(Word('O'), [ssMeta]);
