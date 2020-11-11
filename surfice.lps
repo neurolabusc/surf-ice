@@ -7,10 +7,9 @@
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="13"/>
+        <EditorIndex Value="-1"/>
         <CursorPos X="28" Y="10"/>
         <UsageCount Value="212"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit0>
       <Unit1>
@@ -19,8 +18,8 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <TopLine Value="6059"/>
-        <CursorPos X="24" Y="6083"/>
+        <TopLine Value="5274"/>
+        <CursorPos X="17" Y="5274"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -29,11 +28,10 @@
       <Unit2>
         <Filename Value="meshlhrh.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="12"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="221"/>
         <CursorPos X="31" Y="246"/>
         <UsageCount Value="200"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit2>
       <Unit3>
@@ -55,35 +53,34 @@
       </Unit4>
       <Unit5>
         <Filename Value="prefs.pas"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="318"/>
         <CursorPos X="21" Y="333"/>
         <UsageCount Value="105"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit5>
       <Unit6>
         <Filename Value="colorTable.pas"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="571"/>
         <CursorPos Y="594"/>
         <UsageCount Value="113"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit6>
       <Unit7>
         <Filename Value="track.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="2334"/>
-        <CursorPos X="10" Y="2339"/>
+        <EditorIndex Value="3"/>
+        <TopLine Value="90"/>
+        <CursorPos X="12" Y="106"/>
         <UsageCount Value="89"/>
+        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit7>
       <Unit8>
         <Filename Value="mesh.pas"/>
-        <EditorIndex Value="11"/>
-        <TopLine Value="8657"/>
-        <CursorPos X="21" Y="8681"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="855"/>
+        <CursorPos Y="866"/>
         <UsageCount Value="108"/>
         <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
@@ -98,11 +95,9 @@
       </Unit9>
       <Unit10>
         <Filename Value="define_types.pas"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="1"/>
-        <CursorPos X="25" Y="13"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="15" Y="4"/>
         <UsageCount Value="96"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit10>
       <Unit11>
@@ -115,28 +110,27 @@
       </Unit11>
       <Unit12>
         <Filename Value="opts.inc"/>
-        <EditorIndex Value="6"/>
-        <CursorPos X="111" Y="15"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="2"/>
+        <CursorPos X="38" Y="16"/>
         <UsageCount Value="100"/>
         <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit12>
       <Unit13>
         <Filename Value="gl_core_3d.pas"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="746"/>
         <CursorPos Y="758"/>
         <UsageCount Value="100"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit13>
       <Unit14>
         <Filename Value="commandsu.pas"/>
-        <EditorIndex Value="10"/>
-        <TopLine Value="571"/>
-        <CursorPos X="28" Y="588"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="958"/>
+        <CursorPos X="24" Y="983"/>
         <UsageCount Value="100"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit14>
       <Unit15>
@@ -187,11 +181,10 @@
       </Unit20>
       <Unit21>
         <Filename Value="gl_legacy_3d.pas"/>
-        <EditorIndex Value="7"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="288"/>
         <CursorPos X="20" Y="313"/>
         <UsageCount Value="101"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit21>
       <Unit22>
@@ -227,11 +220,10 @@
       </Unit25>
       <Unit26>
         <Filename Value="glcube.pas"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="592"/>
         <CursorPos Y="609"/>
         <UsageCount Value="100"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit26>
       <Unit27>
@@ -252,10 +244,9 @@
       </Unit28>
       <Unit29>
         <Filename Value="curv.pas"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="-1"/>
         <CursorPos X="23" Y="6"/>
         <UsageCount Value="80"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit29>
       <Unit30>
@@ -267,134 +258,133 @@
       </Unit30>
       <Unit31>
         <Filename Value="glclrbar.pas"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="636"/>
         <CursorPos Y="642"/>
         <UsageCount Value="42"/>
-        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit31>
     </Units>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="glclrbar.pas"/>
-        <Caret Line="302" Column="14" TopLine="277"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="6412" Column="102" TopLine="6387"/>
       </Position1>
       <Position2>
-        <Filename Value="glclrbar.pas"/>
-        <Caret Line="607" Column="14" TopLine="583"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="6417" Column="129" TopLine="6392"/>
       </Position2>
       <Position3>
-        <Filename Value="mesh.pas"/>
-        <Caret Line="1858" Column="86" TopLine="1853"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="1603" Column="97" TopLine="1585"/>
       </Position3>
       <Position4>
-        <Filename Value="mesh.pas"/>
-        <Caret Line="1882" Column="31" TopLine="1858"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="1606" Column="98" TopLine="1585"/>
       </Position4>
       <Position5>
-        <Filename Value="mesh.pas"/>
-        <Caret Line="3067" Column="41" TopLine="3042"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="2405" Column="65" TopLine="2384"/>
       </Position5>
       <Position6>
-        <Filename Value="mesh.pas"/>
-        <Caret Line="3089" Column="110" TopLine="3064"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="2409" Column="125" TopLine="2384"/>
       </Position6>
       <Position7>
-        <Filename Value="mesh.pas"/>
-        <Caret Line="4953" Column="25" TopLine="4929"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="2412" Column="65" TopLine="2396"/>
       </Position7>
       <Position8>
-        <Filename Value="mesh.pas"/>
-        <Caret Line="4980" Column="25" TopLine="4956"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="1580" Column="23" TopLine="1569"/>
       </Position8>
       <Position9>
-        <Filename Value="meshlhrh.pas"/>
-        <Caret Line="190" Column="93" TopLine="187"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="1573" Column="8" TopLine="1569"/>
       </Position9>
       <Position10>
-        <Filename Value="meshlhrh.pas"/>
-        <Caret Line="246" Column="33" TopLine="221"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="6418" Column="129" TopLine="6412"/>
       </Position10>
       <Position11>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="5429" Column="14" TopLine="5427"/>
+        <Caret Line="81" Column="14" TopLine="67"/>
       </Position11>
       <Position12>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="5216" Column="27" TopLine="5210"/>
+        <Caret Line="328" Column="12" TopLine="304"/>
       </Position12>
       <Position13>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="5434" Column="14" TopLine="5409"/>
+        <Caret Line="336" Column="22" TopLine="312"/>
       </Position13>
       <Position14>
-        <Filename Value="glcube.pas"/>
-        <Caret Line="41" Column="28" TopLine="20"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="440" Column="55" TopLine="416"/>
       </Position14>
       <Position15>
-        <Filename Value="glcube.pas"/>
-        <Caret Line="95" Column="20" TopLine="70"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="1203" Column="14" TopLine="1185"/>
       </Position15>
       <Position16>
-        <Filename Value="glcube.pas"/>
-        <Caret Line="108" Column="91" TopLine="82"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="1188" Column="2" TopLine="1185"/>
       </Position16>
       <Position17>
-        <Filename Value="glcube.pas"/>
-        <Caret Line="126" Column="100" TopLine="112"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="4282" Column="65" TopLine="4280"/>
       </Position17>
       <Position18>
-        <Filename Value="glcube.pas"/>
-        <Caret Line="175" Column="17" TopLine="150"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="4616" Column="35" TopLine="4593"/>
       </Position18>
       <Position19>
-        <Filename Value="glcube.pas"/>
-        <Caret Line="217" Column="38" TopLine="192"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="5296" Column="33" TopLine="5272"/>
       </Position19>
       <Position20>
-        <Filename Value="glcube.pas"/>
-        <Caret Line="223" Column="40" TopLine="198"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="5297" Column="20" TopLine="5273"/>
       </Position20>
       <Position21>
-        <Filename Value="glcube.pas"/>
-        <Caret Line="229" Column="39" TopLine="204"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="5" Column="137"/>
       </Position21>
       <Position22>
-        <Filename Value="glcube.pas"/>
-        <Caret Line="235" Column="38" TopLine="210"/>
+        <Filename Value="track.pas"/>
+        <Caret Line="2339" Column="10" TopLine="2334"/>
       </Position22>
       <Position23>
-        <Filename Value="glcube.pas"/>
-        <Caret Line="247" Column="14" TopLine="222"/>
+        <Filename Value="track.pas"/>
+        <Caret Line="86" Column="20" TopLine="72"/>
       </Position23>
       <Position24>
-        <Filename Value="glcube.pas"/>
-        <Caret Line="254" Column="14" TopLine="229"/>
+        <Filename Value="track.pas"/>
+        <Caret Line="76" Column="73" TopLine="74"/>
       </Position24>
       <Position25>
-        <Filename Value="glcube.pas"/>
-        <Caret Line="368" Column="7" TopLine="347"/>
+        <Filename Value="track.pas"/>
+        <Caret Line="86" Column="20" TopLine="72"/>
       </Position25>
       <Position26>
-        <Filename Value="glclrbar.pas"/>
-        <Caret Line="628" Column="86" TopLine="627"/>
+        <Filename Value="track.pas"/>
+        <Caret Line="88" Column="17" TopLine="72"/>
       </Position26>
       <Position27>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="5410" Column="15" TopLine="5409"/>
+        <Filename Value="track.pas"/>
+        <Caret Line="91" Column="15" TopLine="72"/>
       </Position27>
       <Position28>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="6" Column="105"/>
+        <Filename Value="track.pas"/>
+        <Caret Line="106" Column="11" TopLine="90"/>
       </Position28>
       <Position29>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="5201" Column="93" TopLine="5196"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="10" Column="36" TopLine="2"/>
       </Position29>
       <Position30>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="6083" Column="24" TopLine="6059"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="204" Column="27" TopLine="180"/>
       </Position30>
     </JumpHistory>
     <RunParams>

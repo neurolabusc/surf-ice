@@ -13,3 +13,4 @@
 {$DEFINE CTM} //support OpenCTM format, requires LZMA decoding
 //{$DEFINE TUBES}
 {$DEFINE MATCAP}
+//{$DEFINE TIMER} //report load times

@@ -4273,9 +4273,8 @@ begin
       gMesh.RH.overlay[lOverlay].LUT[0].A := tmp[0].A;
       gMesh.RH.overlay[lOverlay].LUT[255].A := tmp[255].A;
   end else
-      gMesh.RH.overlay[lOverlay].LUT := UpdateTransferFunction (gMesh.RH.Overlay[lOverlay].LUTindex, gMesh.RH.Overlay[lOverlay].LUTinvert);
+      gMesh.RH.overlay[lOverlay].LUT := UpdateTransferFunction (gMesh.RH.Overlay[lOverlay].LUTindex, lInvert);
   gMesh.RH.Overlay[lOverlay].LUTinvert := lInvert;
-//FUBAR
    {$ENDIF}
   if  gMesh.Overlay[lOverlay].LUTindex < 0 then begin
    	  tmp := gMesh.overlay[lOverlay].LUT;
@@ -4285,7 +4284,7 @@ begin
       gMesh.overlay[lOverlay].LUT[0].A := tmp[0].A;
       gMesh.overlay[lOverlay].LUT[255].A := tmp[255].A;
   end else
-      gMesh.overlay[lOverlay].LUT := UpdateTransferFunction (gMesh.Overlay[lOverlay].LUTindex, gMesh.Overlay[lOverlay].LUTinvert);
+      gMesh.overlay[lOverlay].LUT := UpdateTransferFunction (gMesh.Overlay[lOverlay].LUTindex, lInvert);
   gMesh.Overlay[lOverlay].LUTinvert := lInvert;
   UpdateLayerBox(false);
   OverlayTimerStart;
@@ -6316,6 +6315,12 @@ end;
 
 procedure TGLForm1.DisplayMenuClick(Sender: TObject);
 begin
+  	 if (ScriptMemo.Focused) and ((Sender as TMenuItem).tag = 3) then begin
+       if (ScriptMemo.SelLength < 1) then
+          ScriptMemo.SelectAll();
+       ScriptMemo.CopyToClipboard;
+       exit;
+    end;
      case (Sender as TMenuItem).tag of
           0: gAzimuth := 270; //left
           1: gAzimuth := 90; //right
@@ -6404,6 +6409,7 @@ begin
  lLUTIndex := ComboBoxName2Index(LayerColorDrop, lFilename, OK);
  if (not OK) and (fileexists(lFilename)) then begin
  	gMesh.overlay[lOverlay].LUT := UpdateTransferFunction (lFilename, gMesh.Overlay[lOverlay].LUTinvert);
+    gMesh.overlay[lOverlay].LUTindex:= -lOverlay; //custom
     gnLUT := -1; //refresh colorbar
     GLForm1.GLBoxRequestUpdate(nil);
     //UpdateClrBar();

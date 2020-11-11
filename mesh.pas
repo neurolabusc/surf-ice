@@ -864,7 +864,6 @@ begin
 end;
 {$ENDIF}
 
-
 //{$IFDEF COREGL}
 function mixRGBA(c1, c2: TRGBA; frac2: single): TRGBA;
 var
