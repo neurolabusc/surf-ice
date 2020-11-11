@@ -18,8 +18,9 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <TopLine Value="5274"/>
-        <CursorPos X="17" Y="5274"/>
+        <IsVisibleTab Value="True"/>
+        <TopLine Value="6606"/>
+        <CursorPos X="9" Y="6629"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -109,9 +110,8 @@
       </Unit11>
       <Unit12>
         <Filename Value="opts.inc"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="2"/>
-        <CursorPos X="38" Y="16"/>
+        <CursorPos X="38" Y="15"/>
         <UsageCount Value="100"/>
         <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
@@ -265,7 +265,7 @@
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit31>
     </Units>
-    <JumpHistory Count="20" HistoryIndex="19">
+    <JumpHistory Count="23" HistoryIndex="22">
       <Position1>
         <Filename Value="mainunit.pas"/>
         <Caret Line="1606" Column="98" TopLine="1585"/>
@@ -346,6 +346,18 @@
         <Filename Value="mesh.pas"/>
         <Caret Line="204" Column="27" TopLine="180"/>
       </Position20>
+      <Position21>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="5274" Column="17" TopLine="5274"/>
+      </Position21>
+      <Position22>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="6630" Column="9" TopLine="6607"/>
+      </Position22>
+      <Position23>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="3266" Column="6" TopLine="3252"/>
+      </Position23>
     </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>

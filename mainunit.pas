@@ -2065,7 +2065,7 @@ begin
     AddMethod('meshcurv', @PyMESHCURV, ' meshcurv() -> Displays mesh curvature, so crevices appear dark.');
     AddMethod('meshhemisphere', @PyMESHHEMISPHERE, ' meshhemisphere(v) -> nodehemisphere (val) -> Set -1 for left hemipshere, 0 for both, 1 for right.');
     AddMethod('meshload', @PyMESHLOAD, ' meshload(imageName) -> Close all open images and load new background image.');
-    AddMethod('meshloadbilateral', @PyMESHLOADBILATERAL, ' meshloadbilateral(v) -> If v=1, load both hemispheres (*.lh *.rh), otherwise  only load named mesh.');
+    AddMethod('meshloadbilateral', @PyMESHLOADBILATERAL, ' meshloadbilateral(v) -> If v=1, load both hemispheres (*.lh *.rh), otherwise only load named mesh.');
     AddMethod('meshoverlayorder', @PyMESHOVERLAYORDER, ' meshoverlayorder (flip) -> If flip=1, the mesh will be drawn after the overlay, and xray sliders will influence overlay not mesh.');
     AddMethod('meshreversefaces', @PyMESHREVERSEFACES, ' meshreversefaces() -> reverse triangle winding to reverse front/back faces.');
     AddMethod('meshsave', @PyMESHSAVE, ' meshsave(filename) -> Saves currently open mesh to disk.');
@@ -3263,7 +3263,6 @@ end; //isMz3Mesh
 function TGLForm1.Atlas2Node(FilenameOut: string): boolean;
 begin
      result := gMesh.Atlas2Node(FilenameOut);
-     if result then caption := 'xxxx';
      if result then
         OpenNode(FilenameOut);
 end;
