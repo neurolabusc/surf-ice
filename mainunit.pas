@@ -5085,7 +5085,6 @@ var
   //s: string;
   r: single;
 begin
- msStart := gettickcount();
  nTri := length(gMesh.Faces);
  r := GetFloat('Enter reduction factor (e.g. 0.2 will decimate 80% of all triangles)', 0.001,0.3,0.999);
  //s := '.3';
@@ -5096,6 +5095,7 @@ begin
     exit;
  end;
  gMesh.CloseOverlays;
+ msStart := gettickcount();
  if not ReducePatch(gMesh.faces, gMesh.vertices, r) then exit;
  {$IFDEF LHRH}
  if length(gMesh.RH.faces) > 0 then
@@ -6093,6 +6093,7 @@ begin
    {$IFDEF LCLCocoa} + ' Cocoa'{$ENDIF}
    {$IFDEF Linux} + ' Linux'{$ENDIF}
    {$IFDEF Windows} + ' Windows'{$ENDIF}
+   {$IFDEF CPULLVM} + ' LLVM' {$ENDIF}
    {$IFDEF DGL} + ' DGL'{$ENDIF}
    {$IFNDEF COREGL}+' (Legacy '+{$IFDEF LEGACY_INDEXING}'Indexed '+{$ENDIF}'OpenGL)'{$ENDIF}
    {$IFDEF Darwin}

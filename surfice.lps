@@ -19,8 +19,8 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <IsVisibleTab Value="True"/>
-        <TopLine Value="6606"/>
-        <CursorPos X="9" Y="6629"/>
+        <TopLine Value="6073"/>
+        <CursorPos X="32" Y="6087"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -169,6 +169,7 @@
         <EditorIndex Value="-1"/>
         <CursorPos X="10" Y="30"/>
         <UsageCount Value="85"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit19>
       <Unit20>
         <Filename Value="cifti.inc"/>
@@ -255,6 +256,7 @@
         <TopLine Value="86"/>
         <CursorPos X="9" Y="95"/>
         <UsageCount Value="1"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit30>
       <Unit31>
         <Filename Value="glclrbar.pas"/>
@@ -265,7 +267,7 @@
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit31>
     </Units>
-    <JumpHistory Count="23" HistoryIndex="22">
+    <JumpHistory Count="25" HistoryIndex="24">
       <Position1>
         <Filename Value="mainunit.pas"/>
         <Caret Line="1606" Column="98" TopLine="1585"/>
@@ -358,6 +360,14 @@
         <Filename Value="mainunit.pas"/>
         <Caret Line="3266" Column="6" TopLine="3252"/>
       </Position23>
+      <Position24>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="7" Column="137"/>
+      </Position24>
+      <Position25>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="404" Column="25" TopLine="375"/>
+      </Position25>
     </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>
