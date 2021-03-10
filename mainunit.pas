@@ -2810,23 +2810,25 @@ end;
 function TGLForm1.GLBoxBackingWidth: integer;
 begin
    {$IFDEF LCLCocoa}
-     result := Round(GLBox.Width * LBackingScaleFactor(GLBox.Handle));
+     result := Round(GLBox.Width * LBackingScaleFactorX(GLBox.Handle));
    {$ELSE}
     result := GLBox.Width;
    {$ENDIF}
 end;
 
 procedure TGLForm1.FormChangeBounds(Sender: TObject);
-{$IFDEF LCLCocoa} var lprev: single; {$ENDIF}
+{$IFDEF LCLCocoa}
+//var lprev: single;
+{$ENDIF}
 begin
    {$IFDEF LCLCocoa}
-   if (gPrefs.RetinaDisplay)  then begin //detect if window moved between retina and non-retina display
+   (*if (gPrefs.RetinaDisplay)  then begin //detect if window moved between retina and non-retina display
       lprev := gRetinaScale;
       SetRetina;
       if (lprev <> gRetinaScale) then
         GLBox.Invalidate;
-        //GLboxResize(Sender);
-   end;
+   end;*)
+   GLBox.Invalidate;
    {$ENDIF}
 end;
 
@@ -2879,7 +2881,7 @@ end;
 function TGLForm1.GLBoxBackingHeight: integer;
 begin
    {$IFDEF LCLCocoa}
-   result := Round(GLBox.Height * LBackingScaleFactor(GLBox.Handle));
+   result := Round(GLBox.Height * LBackingScaleFactorX(GLBox.Handle));
    {$ELSE}
     result := GLBox.Height;
    {$ENDIF}

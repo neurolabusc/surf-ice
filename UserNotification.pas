@@ -8,7 +8,7 @@ interface
 {$linkframework Foundation}
 
 uses
-  Classes, SysUtils, MacOSAll, CocoaAll, CocoaUtils, LCLType;//, CarbonProc;
+  Classes, SysUtils, MacOSAll, CocoaAll, CocoaUtils, LCLType, GLCocoaNSContext;//, CarbonProc;
 
 
 
@@ -111,7 +111,7 @@ procedure DeliverUserNotification(const Title, Subtitle, Message: string);
 procedure DeliverUserNotification(const Title, Subtitle, Message, Sound: string);
 procedure ShowAlertSheet(FormHandle: HWND; const TitleStr, MessageStr: string);
 
-
+function LBackingScaleFactorX(Handle: HWND): single;
 
 var
   NSUserNotificationDefaultSoundName: NSString { available in 10_8, NA }; cvar; external;
@@ -121,6 +121,20 @@ var
 implementation
 
 {$ifdef Darwin}
+function LBackingScaleFactorX(Handle: HWND): single;
+var
+  pt, ptHiDPI:NSPoint;
+begin
+  pt.x := TCocoaOpenGLView(Handle).frame.size.width;
+  pt.y := TCocoaOpenGLView(Handle).frame.size.height;
+  ptHiDPI := TCocoaOpenGLView(Handle).convertPointToBacking(pt);
+  if (pt.y > pt.x) and (ptHiDPI.y > pt.y) then
+     result := round(ptHiDPI.y / pt.y)
+  else if ptHiDPI.x > pt.x then
+     result := round(ptHiDPI.x / pt.x)
+  else
+      result := 1.0;
+end;
 
 procedure ShowAlertSheet(FormHandle: HWND; const TitleStr, MessageStr: string);
 var

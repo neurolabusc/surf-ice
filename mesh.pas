@@ -1042,7 +1042,7 @@ begin
           for i := 0 to (length(v)-1) do
               vRGBA[i].A := 0;
           for c :=  OpenOverlays downto 1 do begin
-              if (not overlay[c].aoMap) and (overlay[c].OpacityPercent <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then begin
+                if (not overlay[c].aoMap) and (overlay[c].OpacityPercent <> kLUTinvisible) and (length(overlay[c].intensity) >= length(v)) then begin
                  frac := overlay[c].OpacityPercent / 100;
                  if overlay[c].windowScaledMax > overlay[c].windowScaledMin then begin
                     mn := overlay[c].windowScaledMin;

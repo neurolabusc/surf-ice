@@ -22,7 +22,14 @@ procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped,isDrawMesh
 procedure SetTrackUniforms (lineWidth, ScreenPixelX, ScreenPixelY: integer);
 //procedure BuildDisplayListStrip(Indices: TInts; Verts, vNorms: TVertices; vRGBA: TVertexRGBA; LineWidth: integer; var vao, vbo: gluint);
 procedure BuildDisplayListStrip(Indices: TInts; vertices, vNorm: TVertices; vRGBA: TVertexRGBA; vType: TInts; LineWidth: integer; var vao, vbo: gluint);
-
+//{$DEFINE V4}
+{$IFDEF V4}
+const kVertVec = 'vec4';
+const kVertSz = sizeof(TPoint4f);
+{$ELSE}
+const kVertVec = 'vec3';
+const kVertSz = sizeof(TPoint3f);
+{$ENDIF}
 const
   kPrimitiveRestart = 2147483647;
 const
@@ -30,8 +37,9 @@ kVert3d = '#version 330'
 +#10'layout(location = 0) in vec3 Vert;'
 +#10'layout(location = 3) in vec3 Norm;'
 +#10'layout(location = 6) in vec4 Clr;'
-+#10'out vec3 vN, vL, vV;'
-+#10'out vec4 vClr, vP;'
++#10'out mediump vec3 vN, vL, vV;'
++#10'out lowp vec4 vClr;'
++#10'out vec4 vP;'
 +#10'uniform mat4 ModelViewProjectionMatrix;'
 +#10'uniform mat4 ModelViewMatrix;'
 +#10'uniform mat3 NormalMatrix;'
@@ -46,8 +54,9 @@ kVert3d = '#version 330'
 +#10'}';
 
 kFrag3d = '#version 330'
-+#10' in vec4 vClr, vP;'
-+#10' in vec3 vN, vL, vV;'
++#10' in vec4 vP;'
++#10' in lowp vec4 vClr;'
++#10' in mediump vec3 vN, vL, vV;'
 +#10' out vec4 color;'
 +#10' uniform float Ambient = 0.5;'
 +#10' uniform float Diffuse = 0.7;'
@@ -126,7 +135,7 @@ const kTrackShaderFrag = '#version 330'
 {$ELSE}
  const kTrackShaderVert = '#version 330'
 +#10'#define M_PI 3.1415926535897932384626433832795'
-+#10'layout(location = 0) in vec3 Vert;'
++#10'layout(location = 0) in '+kVertVec+' Vert;'
 +#10'layout(location = 3) in vec4 Norm;'
 +#10'layout(location = 6) in vec4 Clr;'
 +#10'uniform mat4 ModelViewProjectionMatrix;'
@@ -135,9 +144,9 @@ const kTrackShaderFrag = '#version 330'
 +#10'uniform float Radius;'
 +#10'uniform mat3 NormalMatrix;'
 +#10'uniform vec3 LightPos = vec3(0.0, 20.0, 30.0); //LR, -DU+, -FN+'
-+#10'out vec4 vClr;'
++#10'out lowp vec4 vClr;'
 +#10'out vec4 vP;'
-+#10'out vec3 vN;'
++#10'out mediump vec3 vN;'
 +#10'out float TextCordCylinder;'
 +#10'out vec2 TextCordEnd;'
 +#10'out float fType;'
@@ -171,7 +180,7 @@ const kTrackShaderFrag = '#version 330'
 +#10'	float rScale = 0.001;'
 +#10'	float vType = Norm.a;'
 +#10'	vec3 VectorPoints = normalize(NormalMatrix*Norm.xyz);'
-+#10'	vec4 VertexPosition = ModelViewMatrix*vec4(Vert, 1.0);'
++#10'	vec4 VertexPosition = ModelViewMatrix*vec4(Vert.xyz, 1.0);'
 +#10'	vec3 vecCameraPoint = vec3(0,0,1);'
 +#10'	vec4 VectorBillboard = normalize(vec4(cross(VectorPoints, vecCameraPoint),0.0));'
 +#10'	float kind = mod(gl_VertexID,2);'
@@ -229,8 +238,8 @@ const kTrackShaderFrag = '#version 330'
  const  kTrackShaderGeom = '';
 
  const kTrackShaderFrag = '#version 330'
-+#10'in vec4 vClr;'
-+#10'in vec3 vN;'
++#10'in lowp vec4 vClr;'
++#10'in mediump vec3 vN;'
 +#10'in vec4 vP;'
 +#10'in float TextCordCylinder;'
 +#10'in float fType;'
@@ -441,11 +450,93 @@ begin
   glUniformMatrix3fv(normMat, 1, kGL_FALSE, @n[0,0]);
 end; *)
 
+
+
+{$IFNDEF USE_GL_INT_2_10_10_10}
+{$DEFINE USE_FLOAT16}
 type
+TPoint4h = packed record
+  X,Y,Z,W: word;
+end;
+
+function f32tof16(v: single): word;assembler; nostackframe;
+asm
+    .long 0x1e23c000 //fcvt h0, s0
+    .long 0x1ee60000 //fmov w0, h0
+end;
+
+function pt3_pt4f(v: TPoint3f; a: float ):TPoint4f;
+begin
+     result.X := v.X;
+     result.Y := v.Y;
+     result.Z := v.Z;
+     result.W := a;
+end;
+
+{$IFDEF USE_FLOAT16}
+//{$DEFINE SCALR_F16} //unable to detect difference: both very fast
+{$IFDEF SCALAR_F16}
+function f16tof32(v: word): single;assembler; nostackframe;
+asm
+    .long 0x1ee70000 // fmov h0, w0
+    .long 0x1ee24000 // fcvt s0, h0
+end;
+
+function pt4f_pt4h(v: TPoint4f): TPoint4h;
+begin
+  result.x := f32tof16(v.x);
+  result.y := f32tof16(v.y);
+  result.z := f32tof16(v.z);
+  result.w := f32tof16(v.w);
+end;
+
+function pt3_pt4(v3: TPoint3f; a: float ):TPoint4h;
+var
+  v4: TPoint4f;
+begin
+  v4 := pt3_pt4f(v3,a);
+  result := pt4f_pt4h(v4);
+end;
+{$ELSE}
+procedure f32tof16Neon2(var output: TPoint4h; constref f32x4: TPoint4f );assembler; nostackframe;
+asm
+	ldr q0, [x1]
+	.long 0x0e216800 // fcvtn   v0.4h, v0.4s
+	str d0, [x0]
+end;
+
+function pt3_pt4(v3: TPoint3f; a: float ):TPoint4h; inline;
+begin
+  f32tof16Neon2(result,pt3_pt4f(v3,a));
+end;
+{$ENDIF}
+
+{$ELSE}
+function pt3_pt4(v: TPoint3f; a: float ):TPoint4f;
+begin
+     result := pt3_pt4f(v,a);
+end;
+{$ENDIF}
+
+{$ENDIF}
+
+type
+
 TVtxNormClr = Packed Record
+  {$IFDEF V4}
+  vtx   : TPoint4f; //vertex coordinates
+  {$ELSE}
   vtx   : TPoint3f; //vertex coordinates
-  //norm   : TPoint3f; //vertex normal
+  {$ENDIF}
+  {$IFDEF USE_GL_INT_2_10_10_10}
   norm : int32;
+  {$ELSE}
+    {$IFDEF USE_FLOAT16}
+    norm   : TPoint4h; //vertex normal
+    {$ELSE}
+    norm   : TPoint4f; //vertex normal
+    {$ENDIF}
+  {$ENDIF}
   clr : TRGBA;
 end;
 
@@ -509,6 +600,13 @@ begin
      result := (a shl 30)+ (z shl 20)+ (y shl 10) + (x shl 0);
 end;
 
+{$IFDEF V4}
+function v3v4(v3: TPoint3f): TPoint4f;
+begin
+     result := pt4f(v3.x, v3.y, v3.z, 0.0);
+end;
+
+{$ENDIF}
 procedure BuildDisplayList(var faces: TFaces; vertices: TVertices; vRGBA: TVertexRGBA; var vao, vbo: gluint; Clr: TRGBA);
 const
     kATTRIB_VERT = 0;  //vertex XYZ are positions 0,1,2
@@ -538,8 +636,16 @@ begin
   setlength(vnc, length(vertices));
   //set every vertex
   for i := 0 to (length(vertices) -1) do begin
+      {$IFDEF V4}
+      vnc[i].vtx := v3v4(vertices[i]);
+      {$ELSE}
       vnc[i].vtx := vertices[i];
+      {$ENDIF}
+      {$IFDEF USE_GL_INT_2_10_10_10}
       vnc[i].norm :=  AsGL_INT_2_10_10_10_REV(vNorm[i]);
+      {$ELSE}
+      vnc[i].norm :=  pt3_pt4(vNorm[i], 1.0);
+      {$ENDIF}
       vnc[i].clr := clr;
       //fNorm := getSurfaceNormal(vertices[faces[i].X], vertices[faces[i].Y], vertices[faces[i].Z]);
   end;
@@ -560,16 +666,28 @@ begin
   //glBindBuffer(GL_ARRAY_BUFFER, gShader.vbo_point3d);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_point);
   //Vertices
+  {$IFDEF V4}
+  glVertexAttribPointer(kATTRIB_VERT, 4, GL_FLOAT, kGL_FALSE, sizeof(TVtxNormClr), PChar(0));
+  {$ELSE}
   glVertexAttribPointer(kATTRIB_VERT, 3, GL_FLOAT, kGL_FALSE, sizeof(TVtxNormClr), PChar(0));
-
+  {$ENDIF}
   glEnableVertexAttribArray(kATTRIB_VERT);
   //Normals typically stored as 3*32 bit floats (96 bytes), but we will pack them as 10-bit integers in a single 32-bit value with GL_INT_2_10_10_10_REV
   //  https://www.opengl.org/wiki/Vertex_Specification_Best_Practices
-
+  {$IFDEF USE_GL_INT_2_10_10_10}
   glVertexAttribPointer(kATTRIB_NORM, 4, GL_INT_2_10_10_10_REV, kGL_FALSE, sizeof(TVtxNormClr), PChar(sizeof(TPoint3f)));
+  glVertexAttribPointer(kATTRIB_CLR, 4, GL_UNSIGNED_BYTE, kGL_TRUE, sizeof(TVtxNormClr), PChar(sizeof(int32)+ sizeof(TPoint3f)));
+  {$ELSE}
+    {$IFDEF USE_FLOAT16}
+    glVertexAttribPointer(kATTRIB_NORM, 4, GL_HALF_FLOAT, kGL_FALSE, sizeof(TVtxNormClr), PChar(kVertSz));
+    glVertexAttribPointer(kATTRIB_CLR, 4, GL_UNSIGNED_BYTE, kGL_TRUE, sizeof(TVtxNormClr), PChar(sizeof(TPoint4h) + kVertSz));
+    {$ELSE}
+    glVertexAttribPointer(kATTRIB_NORM, 4, GL_FLOAT, kGL_FALSE, sizeof(TVtxNormClr), PChar(sizeof(TPoint3f)));
+    glVertexAttribPointer(kATTRIB_CLR, 4, GL_UNSIGNED_BYTE, kGL_TRUE, sizeof(TVtxNormClr), PChar(sizeof(TPoint4f)+ sizeof(TPoint3f)));
+    {$ENDIF}
+  {$ENDIF}
   glEnableVertexAttribArray(kATTRIB_NORM);
   //Color
-  glVertexAttribPointer(kATTRIB_CLR, 4, GL_UNSIGNED_BYTE, kGL_TRUE, sizeof(TVtxNormClr), PChar(sizeof(int32)+ sizeof(TPoint3f)));
   glEnableVertexAttribArray(kATTRIB_CLR);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
@@ -599,18 +717,29 @@ var
   RenderTexture: array [0..1] of GLuint;
   angle, rad,tx,tz,d: single;
   fx: single;
+  //{$DEFINE TIMEX}
+  {$IFDEF TIMEX}startTime: QWord; {$ENDIF}
 begin
   //create VBO that combines vertex, normal and color information
   if length(vRGBA) <> length(vertices) then
      exit;
   setlength(vnc, length(vertices));
   //set every vertex
+  {$IFDEF TIMEX}startTime := GetTickCount64();{$ENDIF}
   for i := 0 to (length(vertices) -1) do begin
+      {$IFDEF V4}
+      vnc[i].vtx := v3v4(vertices[i]);
+      {$ELSE}
       vnc[i].vtx := vertices[i];
+      {$ENDIF}
+      {$IFDEF USE_GL_INT_2_10_10_10}
       vnc[i].norm :=  AsGL_INT_2_10_10_10_REV_T(vNorm[i],vType[i]);
-      //vnc[i].norm :=  AsGL_INT_2_10_10_10_REV(vNorm[i]);
-      vnc[i].clr := vRGBA[i];;
+      {$ELSE}
+      vnc[i].norm :=  pt3_pt4(vNorm[i], vType[i]); //TODO vType
+      {$ENDIF}
+      vnc[i].clr := vRGBA[i];
   end;
+  {$IFDEF TIMEX}writeln('Tracks Time ', (GetTickCount64-startTime)); {$ENDIF}
   //Generating Cylinder Normal Map
   for i := 0 to 256 do begin
      angle := 180/256.0*i;
@@ -709,14 +838,28 @@ begin
   //glBindBuffer(GL_ARRAY_BUFFER, gShader.vbo_point3d);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_point);
   //Vertices
+  {$IFDEF V4}
+  glVertexAttribPointer(kATTRIB_VERT, 4, GL_FLOAT, kGL_FALSE, sizeof(TVtxNormClr), PChar(0));
+  {$ELSE}
   glVertexAttribPointer(kATTRIB_VERT, 3, GL_FLOAT, kGL_FALSE, sizeof(TVtxNormClr), PChar(0));
+  {$ENDIF}
   glEnableVertexAttribArray(kATTRIB_VERT);
   //Normals typically stored as 3*32 bit floats (96 bytes), but we will pack them as 10-bit integers in a single 32-bit value with GL_INT_2_10_10_10_REV
   //  https://www.opengl.org/wiki/Vertex_Specification_Best_Practices
+  {$IFDEF USE_GL_INT_2_10_10_10}
   glVertexAttribPointer(kATTRIB_NORM, 4, GL_INT_2_10_10_10_REV, kGL_FALSE, sizeof(TVtxNormClr), PChar(sizeof(TPoint3f)));
+  glVertexAttribPointer(kATTRIB_CLR, 4, GL_UNSIGNED_BYTE, kGL_TRUE, sizeof(TVtxNormClr), PChar(sizeof(int32)+ sizeof(TPoint3f)));
+  {$ELSE}
+    {$IFDEF USE_FLOAT16}
+    glVertexAttribPointer(kATTRIB_NORM, 4, GL_HALF_FLOAT, kGL_FALSE, sizeof(TVtxNormClr), PChar(kVertSz));
+    glVertexAttribPointer(kATTRIB_CLR, 4, GL_UNSIGNED_BYTE, kGL_TRUE, sizeof(TVtxNormClr), PChar(sizeof(TPoint4h)+ kVertSz));
+    {$ELSE}
+    glVertexAttribPointer(kATTRIB_NORM, 4, GL_FLOAT, kGL_FALSE, sizeof(TVtxNormClr), PChar(sizeof(TPoint3f)));
+    glVertexAttribPointer(kATTRIB_CLR, 4, GL_UNSIGNED_BYTE, kGL_TRUE, sizeof(TVtxNormClr), PChar(sizeof(TPoint4f)+ sizeof(TPoint3f)));
+    {$ENDIF}
+  {$ENDIF}
   glEnableVertexAttribArray(kATTRIB_NORM);
   //Color
-  glVertexAttribPointer(kATTRIB_CLR, 4, GL_UNSIGNED_BYTE, kGL_TRUE, sizeof(TVtxNormClr), PChar(sizeof(int32)+ sizeof(TPoint3f)));
   glEnableVertexAttribArray(kATTRIB_CLR);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
