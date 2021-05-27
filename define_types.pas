@@ -10,7 +10,7 @@ interface
 {$endif}
 
 const
-  kVers = 'v1.0.20201102+';
+  kVers = 'v1.0.20201102++a';
   NaN : double = 1/0;
   kTab = chr(9);
   kCR = chr (13);

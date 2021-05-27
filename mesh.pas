@@ -9703,13 +9703,14 @@ begin
      //if not readMGHHeader (fnm, hdr, gzFlag, swapEndian, x64) then exit;
      if not readVoxHeader (fnm, hdr, gzFlag, swapEndian, x64) then exit;
      if (x64 <> length(vertices)) then begin
-        //showmessageX(format('Expected %d vertices, not %d.', [length(vertices), x64]));
-        exit;
+       printf(format('Error loading MGH overlay: Mesh has %d vertices, but MGH file has %d.', [length(vertices), x64]));
+       exit;
      end;
      if (gzFlag = K_gzBytes_onlyImageCompressed) then begin
        showmessageX('Unable to read files with uncompressed headers and compressed images.');
        exit;
      end;
+     printf(format('Loading MGH overlay with %d vertices.', [x64]));
      vol := hdr.dim[2];
      if (vol < 1) then vol := 1;
      overlay[lOverlayIndex].volumes := vol;

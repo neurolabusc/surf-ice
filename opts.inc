@@ -9,6 +9,7 @@
 {$DEFINE COREGL}
 {$DEFINE LEGACY_INDEXING}
 {$DEFINE GEOM_GLEXT}
+{$DEFINE FOREIGNVOL}
 //{$DEFINE HEMISSAO}  //for hemispherical SSAO - requires shaders that save surface normal - see hemiAO3 and hemiAO
 {$DEFINE CTM} //support OpenCTM format, requires LZMA decoding
 //{$DEFINE TUBES}

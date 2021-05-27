@@ -789,6 +789,11 @@ begin
      result := true;
 end;
 
+procedure printf(s: string);
+begin
+     {$IFDEF UNIX}writeln(s);{$ENDIF}
+end;
+
 function TNIFTI.LoadFromFile(const FileName: string; smoothMethod: integer): boolean; //smoothMethod is one of kNiftiSmooth...  options
 var
    ext, hdrName, imgName: string;
@@ -842,8 +847,15 @@ begin
      if not FixDataType (hdr) then exit;
      *)
      imgName := FileName;
-     if not readVoxHeader (imgName, hdr, gzFlag, isSwap, xDim64) then
+     if not readVoxHeader (imgName, hdr, gzFlag, isSwap, xDim64) then begin
+       printf(format('Unable to load as voxelwise data: %s', [FileName]));
        exit(false);
+     end;
+     printf(format('voxel dimensions %d %d %d', [hdr.dim[1],hdr.dim[2],hdr.dim[3]]));
+     if (hdr.dim[1] < 2) or (hdr.dim[2] < 2) or (hdr.dim[3] < 2) then begin
+       printf(format('Not a 3D voxel-based image: %s', [FileName]));
+       exit(false);
+     end;
      if not ReadImg(imgName, isSwap, gzFlag) then exit(false);
      setMatrix;
      if smoothMethod = kNiftiSmoothMaskZero  then

@@ -4,8 +4,12 @@ unit mainunit;
   warning: GTK3 only supports OpenGL core - enable COREGL inn opts.inc
 {$ENDIF}{$ENDIF}
 {$mode delphi}{$H+}
+{$IFDEF Darwin}
+{$modeswitch objectivec1}
+{$ENDIF}
 //{$DEFINE DARKMODE}
 interface
+
 uses
   {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
   fphttpclient, strutils,
@@ -13,6 +17,7 @@ uses
   //{$IFDEF SCRIPTING}
   //{$ENDIF}
   {$IFNDEF UNIX} shellapi, {$ELSE}  Process,  {$ENDIF}
+  {$IFDEF Linux} LazFileUtils, {$ENDIF}
   {$IFDEF COREGL} gl_core_3d, {$ELSE}     gl_legacy_3d, {$ENDIF}
   {$IFDEF LHRH} meshlhrh, {$ENDIF}
   uPSComponent,Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
@@ -539,7 +544,7 @@ implementation
 
 uses
 {$IFDEF LCLCocoa}
-  UserNotification, {$IFDEF DARKMODE}nsappkitext,{$ENDIF} glcocoanscontext,
+  CocoaAll, UserNotification, {$IFDEF DARKMODE}nsappkitext,{$ENDIF} glcocoanscontext,
 {$ENDIF}
   commandsu;
 
@@ -785,13 +790,26 @@ function InitPyLibraryPath: string;
 {$ENDIF}
 
 {$IFDEF Darwin}
-function findMacOSLibPython3: string;
+function findMacOSLibPython27: string;
 const
      kPth = '/System/Library/Frameworks/Python.framework/Versions/Current/lib/libpython2.7.dylib';
 begin
  result := '';
  if not FileExists(kPth) then exit;
  result := kPth;
+end;
+
+function findMacOSLibPython3x: string;
+var
+  N: integer;
+  S: string;
+begin
+ for N:= 5 to 9 do
+  begin
+    S:= Format('/Library/Frameworks/Python.framework/Versions/3.%d/lib/libpython3.%d.dylib',[N, N]);
+    if FileExists(S) then exit(S);
+  end;
+  result := '';
 end;
 
 //Catalina sandbox restrictions make do not allow this for Notarized apps:
@@ -819,26 +837,40 @@ end; *)
 {$ENDIF}
 
 {$IFDEF LINUX}
-function findLinuxLibPython3(pthroot: string = '/usr/lib/'): string;
-label
-  121;
+function findFirstRecursive(const SearchPath: String; SearchMask: String): string;
+//example findFirstRecursive('/usr/lib/', 'libpython3*so')
+//uses LazFileUtils
 var
-  pths: TStringList;
-  i: integer;
+  ret: string;
+procedure find1(Dir: string);
+var
+   SR: TSearchRec;
 begin
-  result := '';
-  if not DirectoryExists(pthroot) then exit;
-  pths := TStringList.Create;
-  FindAllFiles(pths, pthroot, 'libpython3*so', true); //find e.g. all pascal sourcefiles
-  if pths.Count < 1 then goto 121;
-  for i := pths.Count -1 downto 0 do
-      if AnsiContainsText(pths[i],'loader') then
-         pths.Delete(i);
-  if pths.Count < 1 then goto 121;
-  result := pths[0];
-  //printf(pths);
-  121:
-  pths.Free;
+     if (ret <> '') or (FileIsSymlink(Dir)) then exit;
+     if FindFirst(IncludeTrailingBackslash(Dir) + SearchMask, faAnyFile or faDirectory, SR) = 0 then begin
+         ret := IncludeTrailingBackslash(Dir) +SR.Name;
+         FindClose(SR);
+         exit;
+      end;
+      if FindFirst(IncludeTrailingBackslash(Dir) + '*.*', faAnyFile or faDirectory, SR) = 0 then
+         try
+           repeat
+             if ((SR.Attr and faDirectory) <> 0) and (SR.Name <> '.') and (SR.Name <> '..') then
+               find1(IncludeTrailingBackslash(Dir) + SR.Name);  // recursive call!
+           until FindNext(Sr) <> 0;
+         finally
+           FindClose(SR);
+         end;
+end;
+begin
+ ret := '';
+ find1(SearchPath);
+ result := ret;
+end;
+
+function findLinuxLibPython3(pthroot: string = '/usr/lib/'): string;
+begin
+     result := findFirstRecursive(pthroot, 'libpython3*so');
 end;
 {$ENDIF}
 
@@ -885,7 +917,9 @@ end;
                if length(result) > 0 then exit;
           end;
         {$IFDEF Darwin}
-        result := findMacOSLibPython3();
+        result := findMacOSLibPython3x();
+        if length(result) > 0 then exit;
+        result := findMacOSLibPython27();
         if length(result) > 0 then exit;
         {$ENDIF}
         {$IFDEF LINUX}
@@ -2918,14 +2952,18 @@ const
 {$ELSE}
  kVolFilter = 'NIfTI volume|*.hdr;*.nii;*nii.gz';
 {$ENDIF}
+var
+  ok: boolean;
 begin
   OpenDialog.Filter := kVolFilter;
   OpenDialog.Title := 'Select volume to convert';
   if not OpenDialog.Execute then exit;
   if (sender as TMenuItem).tag = 1 then
-     Atlas2Mesh(OpenDialog.FileName)
+     ok := Atlas2Mesh(OpenDialog.FileName)
   else
-      Nii2Mesh(OpenDialog.FileName);
+      ok := Nii2Mesh(OpenDialog.FileName);
+  if (not ok) then
+        showmessage('Unable to convert '+OpenDialog.FileName);
 end;
 
 procedure TGLForm1.ShaderForBackgroundOnlyClick(Sender: TObject);
@@ -5968,7 +6006,7 @@ begin
      lProcess.Free;
 end;
 
-function GetOSVersion: string;
+(*function GetOSVersion: string;
 //returns number of CPUs for MacOSX computer
 //example - will return 4 if the computer has two dual core CPUs
 //requires Process in Uses Clause
@@ -5988,6 +6026,10 @@ begin
        result := lStringList.Strings[1];
      lStringList.Free;
      lProcess.Free;
+end; *)
+function GetOSVersion: string;
+begin
+  result :=  NSProcessInfo.ProcessInfo.operatingSystemVersionString.UTF8String;
 end;
 {$ENDIF}
 
@@ -6517,7 +6559,7 @@ end;
 
 procedure TGLForm1.OverlayBoxCreate;
 var
-   lSearchRec: TSearchRec;
+	   lSearchRec: TSearchRec;
    lStr: string;
 begin
   LUTdropNode.Items.Clear;

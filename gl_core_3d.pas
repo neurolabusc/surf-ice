@@ -2,6 +2,9 @@ unit gl_core_3d;
 
 {$mode objfpc}{$H+}
 {$Include opts.inc}
+{$IFNDEF CPUAARCH64} //Apple M1 has poor 10_10_10_2 performance
+ {$DEFINE USE_GL_INT_2_10_10_10} 
+{$ENDIF}
 interface
 
 uses
@@ -458,6 +461,7 @@ type
 TPoint4h = packed record
   X,Y,Z,W: word;
 end;
+
 
 function f32tof16(v: single): word;assembler; nostackframe;
 asm
