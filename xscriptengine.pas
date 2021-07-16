@@ -483,7 +483,7 @@ end;
 function PyVERSION(Self, Args : PPyObject): PPyObject; cdecl;
 begin
   with GetPythonEngine do
-    Result:= PyString_FromString(kVers);
+    Result:= PyUnicode_FromString(kVers);
 end;
 
 function PyRESETDEFAULTS(Self, Args : PPyObject): PPyObject; cdecl;

@@ -989,13 +989,13 @@ end;
 function PyVERSION(Self, Args : PPyObject): PPyObject; cdecl;
 begin
   with GetPythonEngine do
-    Result:= PyString_FromString(kVers);
+    Result:= PyUnicode_FromString(kVers);
 end;
 
 function PyOVERLAYCOUNT(Self, Args : PPyObject): PPyObject; cdecl;
 begin
   with GetPythonEngine do
-    Result:= PyInt_FromLong(gMesh.OpenOverlays);
+    Result:= PyLong_FromLong(gMesh.OpenOverlays);
 end;
 
 function PyRESETDEFAULTS(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1075,10 +1075,10 @@ function PyATLASMAXINDEX(Self, Args : PPyObject): PPyObject; cdecl;
 var
   i: integer;
 begin
-  Result:= GetPythonEngine.PyInt_FromLong(-1);
+  Result:= GetPythonEngine.PyLong_FromLong(-1);
   with GetPythonEngine do
     if Bool(PyArg_ParseTuple(Args, 'i:atlasmaxindex', @I)) then
-      Result:= GetPythonEngine.PyInt_FromLong(ATLASMAXINDEX(I));
+      Result:= GetPythonEngine.PyLong_FromLong(ATLASMAXINDEX(I));
 end;
 
 function PyEXISTS(Self, Args : PPyObject): PPyObject; cdecl;
@@ -2049,9 +2049,9 @@ begin
           exit;
   end;
   ob :=   GetPythonEngine.PyTuple_GetItem(Args,0);
-  atlasname := GetPythonEngine.PyString_AsDelphiString(ob);
+  atlasname := GetPythonEngine.PyUnicode_AsUTF8(ob);
   ob :=   GetPythonEngine.PyTuple_GetItem(Args,1);
-  statname := GetPythonEngine.PyString_AsDelphiString(ob);
+  statname := GetPythonEngine.PyUnicode_AsUTF8(ob);
   //get indices
   ob :=   GetPythonEngine.PyTuple_GetItem(Args,2);
   n := GetPythonEngine.PyTuple_Size(ob);
