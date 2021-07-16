@@ -834,6 +834,16 @@ begin
       COLORBARVISIBLE(BOOL(A));
 end;
 
+function PyCOLORBARCOLOR(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  A: integer;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 'i:colorbarcolor', @A)) then
+      COLORBARCOLOR(A);
+end;
+
 function PyFONTNAME(Self, Args : PPyObject): PPyObject; cdecl;
 var
   PtrName: PChar;
@@ -1230,6 +1240,7 @@ begin
     AddMethod('clipazimuthelevation', @PyCLIPAZIMUTHELEVATION, ' clipazimuthelevation(depth, azi, elev) -> Set a view-point independent clip plane.');
     AddMethod('colorbarposition', @PyCOLORBARPOSITION, '');
     AddMethod('colorbarvisible', @PyCOLORBARVISIBLE, '');
+    AddMethod('colorbarcolor', @PyCOLORBARCOLOR, '');
     AddMethod('edgecolor', @PyEDGECOLOR, '');
     AddMethod('edgeload', @PyEDGELOAD, '');
     AddMethod('edgesize', @PyEDGESIZE, '');

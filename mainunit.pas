@@ -1392,6 +1392,16 @@ begin
       COLORBARVISIBLE(BOOL(A));
 end;
 
+function PyCOLORBARCOLOR(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  A: integer;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 'i:colorbarcolor', @A)) then
+      COLORBARCOLOR(A);
+end;
+
 function PyFONTNAME(Self, Args : PPyObject): PPyObject; cdecl;
 var
   PtrName: PChar;
@@ -2083,6 +2093,7 @@ begin
     AddMethod('clipazimuthelevation', @PyCLIPAZIMUTHELEVATION, ' clipazimuthelevation(depth, azi, elev) -> Set a view-point independent clip plane.');
     AddMethod('colorbarposition', @PyCOLORBARPOSITION, ' colorbarposition(p) -> Set colorbar position (1=bottom, 2=left, 3=top, 4=right).');
     AddMethod('colorbarvisible', @PyCOLORBARVISIBLE, ' colorbarvisible(v) -> Show (1) or hide (0) the color bar.');
+    AddMethod('colorbarcolor', @PyCOLORBARCOLOR, ' colorbarcolor(c) -> Set color of the color bar.');
     AddMethod('contour', @PyCONTOUR, ' contour(layer) -> Create edge map for atlas or overlay.');
     AddMethod('edgecolor', @PyEDGECOLOR, ' edgecolor(name, varies) -> Select color scheme for connectome edge map. If varies=1 then edge color depends on strength of connection.');
     AddMethod('edgeload', @PyEDGELOAD, ' edgeload(filename) -> Loads a BrainNet Viewer format Edge file, e.g. connectome map.');

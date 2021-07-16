@@ -20,6 +20,7 @@ procedure CLIP (DEPTH: single);
 procedure CLIPAZIMUTHELEVATION (DEPTH,AZI,ELEV: single);
 procedure COLORBARPOSITION(P: integer);
 procedure COLORBARVISIBLE (VISIBLE: boolean);
+procedure COLORBARCOLOR (COLOR: integer);
 procedure CONTOUR(layer: integer);
 procedure EDGECOLOR(name: string; varies: boolean);
 procedure EDGELOAD(lFilename: string);
@@ -99,7 +100,7 @@ const
                (Ptr:@VERSION;Decl:'VERSION';Vars:'(): string')
              );
 
-knProc = 78;
+knProc = 79;
   kProcRA : array [1..knProc] of TScriptRec = (
   (Ptr:@ATLASSTATMAP;Decl:'ATLASSTATMAP';Vars:'(ATLASNAME, STATNAME: string; const Intensities: array of integer; const Intensities: array of single)'),
   (Ptr:@ATLASSATURATIONALPHA;Decl:'ATLASSATURATIONALPHA';Vars:'(lSaturation, lTransparency: single)'),
@@ -115,6 +116,7 @@ knProc = 78;
    (Ptr:@CLIPAZIMUTHELEVATION;Decl:'CLIPAZIMUTHELEVATION';Vars:'(DEPTH,AZI,ELEV: single)'),
    (Ptr:@COLORBARPOSITION;Decl:'COLORBARPOSITION';Vars:'(P: integer)'),
    (Ptr:@COLORBARVISIBLE;Decl:'COLORBARVISIBLE';Vars:'(VISIBLE: boolean)'),
+   (Ptr:@COLORBARCOLOR;Decl:'COLORBARCOLOR';Vars:'(COLOR: integer)'),
    (Ptr:@EDGECOLOR;Decl:'EDGECOLOR';Vars:'(name: string; varies: boolean)'),
    (Ptr:@EDGECREATE;Decl:'EDGECREATE';Vars:'(filename: string; const mtx: array of single)'),
    (Ptr:@EDGESIZE;Decl:'EDGESIZE';Vars:'(size: single; varies: boolean)'),
@@ -949,6 +951,17 @@ procedure COLORBARVISIBLE (VISIBLE: boolean);
 begin
   gPrefs.Colorbar := VISIBLE;
   GLForm1.ColorBarVisibleMenu.Checked := VISIBLE;
+  GLForm1.GLBoxRequestUpdate(nil);
+end;
+
+procedure COLORBARCOLOR (COLOR: integer);
+begin
+  gPrefs.ColorbarColor := COLOR;
+  GLForm1.ClrbarClr(gPrefs.ColorbarColor);
+  if (gPrefs.ColorbarColor = GLForm1.WhiteClrbarMenu.tag) then GLForm1.WhiteClrbarMenu.checked := true;
+  if (gPrefs.ColorbarColor = GLForm1.TransWhiteClrbarMenu.tag) then GLForm1.TransWhiteClrbarMenu.checked := true;
+  if (gPrefs.ColorbarColor = GLForm1.BlackClrbarMenu.tag) then GLForm1.BlackClrbarMenu.checked := true;
+  if (gPrefs.ColorbarColor = GLForm1.TransBlackClrbarMenu.tag) then GLForm1.TransBlackClrbarMenu.checked := true;
   GLForm1.GLBoxRequestUpdate(nil);
 end;
 
