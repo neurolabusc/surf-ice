@@ -25,7 +25,7 @@ The Windows and Linux releases includes two versions of Surf Ice: "Surfice" requ
 
 ##### Compiling
 
-This project is built using the open source [FreePascal Lazarus](http://www.lazarus-ide.org/) compiler and integrated development environment. You will need to have the LazOpenGLContext and PascalScript packages installed. To do this, launch the Lazarus application and choose Packages/InstallPackages. You will want to select these two packages from the "Available for installation" list. Finally, click the "Save and rebuild" button. Once these are installed, you can load this package and compile it using the Run/Run menu option.
+This project is built using the open source [FreePascal Lazarus](http://www.lazarus-ide.org/) compiler and integrated development environment. You will need to have the `LazOpenGLContext` and `PascalScript` packages installed. To do this, launch the Lazarus application and choose Packages/InstallPackages. You will want to select these two packages from the "Available for installation" list. Finally, click the "Save and rebuild" button. Once these are installed, you can load this package and compile it using the Run/Run menu option.
 
 The latest version also allows [Python Scripting](https://github.com/neurolabusc/surf-ice/blob/master/PYTHON.md). To enable this you will need to download and install the [Python-for-Lazarus package](https://github.com/Alexey-T/Python-for-Lazarus). Once you download the package, you can install it in the same way as LazOpenGLContext and PascalScript (described above). Alternatively, if you do not want to enable Python, edit the `opts.inc` file by removing the line `{$DEFINE MYPY}`.
 
