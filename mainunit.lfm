@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
-  Left = 372
+  Left = 654
   Height = 659
-  Top = 86
+  Top = 25
   Width = 1004
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -15,7 +15,7 @@ object GLForm1: TGLForm1
   OnDropFiles = FormDropFiles
   OnShow = FormShow
   Position = poDesktopCenter
-  LCLVersion = '2.1.0.0'
+  LCLVersion = '2.3.0.0'
   object ToolPanel: TScrollBox
     Left = 0
     Height = 659
@@ -76,7 +76,6 @@ object GLForm1: TGLForm1
         Top = 100
         Width = 47
         Caption = 'Darkest'
-        ParentColor = False
         ParentFont = False
       end
       object LayerDarkEdit: TEdit
@@ -118,7 +117,6 @@ object GLForm1: TGLForm1
         Top = 123
         Width = 55
         Caption = 'Brightest'
-        ParentColor = False
         ParentFont = False
       end
       object LayerColorDrop: TComboBox
@@ -150,7 +148,6 @@ object GLForm1: TGLForm1
         Top = 145
         Width = 47
         Caption = 'Opacity'
-        ParentColor = False
         ParentFont = False
       end
       object LayerAlphaTrack: TTrackBar
@@ -211,7 +208,6 @@ object GLForm1: TGLForm1
         Width = 37
         BorderSpacing.Left = 2
         Caption = 'Depth'
-        ParentColor = False
         ParentFont = False
         OnClick = DepthLabelClick
       end
@@ -224,7 +220,6 @@ object GLForm1: TGLForm1
         Top = 24
         Width = 50
         Caption = 'Azimuth'
-        ParentColor = False
         ParentFont = False
         OnClick = AzimuthLabelClick
       end
@@ -237,7 +232,6 @@ object GLForm1: TGLForm1
         Top = 45
         Width = 55
         Caption = 'Elevation'
-        ParentColor = False
         ParentFont = False
         OnClick = ElevationLabelClick
       end
@@ -325,7 +319,6 @@ object GLForm1: TGLForm1
         Width = 42
         BorderSpacing.Left = 2
         Caption = 'Length'
-        ParentColor = False
         ParentFont = False
       end
       object TrackLengthTrack: TTrackBar
@@ -377,7 +370,6 @@ object GLForm1: TGLForm1
         Top = 24
         Width = 36
         Caption = 'Width'
-        ParentColor = False
         ParentFont = False
       end
       object TrackDitherTrack: TTrackBar
@@ -407,7 +399,6 @@ object GLForm1: TGLForm1
         Top = 45
         Width = 37
         Caption = 'Dither'
-        ParentColor = False
         ParentFont = False
       end
       object TrackScalarLUTdrop: TComboBox
@@ -499,7 +490,6 @@ object GLForm1: TGLForm1
         Width = 33
         BorderSpacing.Left = 2
         Caption = 'Color'
-        ParentColor = False
         ParentFont = False
       end
       object LUTdropNode: TComboBox
@@ -585,7 +575,6 @@ object GLForm1: TGLForm1
         Alignment = taRightJustify
         BorderSpacing.Left = 2
         Caption = 'Size'
-        ParentColor = False
         ParentFont = False
       end
       object NodeThreshDrop: TComboBox
@@ -638,7 +627,6 @@ object GLForm1: TGLForm1
         Width = 42
         BorderSpacing.Left = 4
         Caption = 'Thresh'
-        ParentColor = False
         ParentFont = False
       end
       object NodeMaxEdit: TFloatSpinEdit
@@ -706,7 +694,6 @@ object GLForm1: TGLForm1
         Width = 33
         BorderSpacing.Left = 2
         Caption = 'Color'
-        ParentColor = False
         ParentFont = False
       end
       object LUTdropEdge: TComboBox
@@ -771,7 +758,6 @@ object GLForm1: TGLForm1
         Width = 42
         BorderSpacing.Left = 2
         Caption = 'Thresh'
-        ParentColor = False
         ParentFont = False
       end
       object EdgeMinEdit: TFloatSpinEdit
@@ -840,7 +826,6 @@ object GLForm1: TGLForm1
         Width = 25
         BorderSpacing.Left = 2
         Caption = 'Size'
-        ParentColor = False
         ParentFont = False
       end
       object EdgeSizeVariesCheck: TCheckBox
@@ -918,7 +903,6 @@ object GLForm1: TGLForm1
         Width = 62
         BorderSpacing.Left = 2
         Caption = 'Saturation'
-        ParentColor = False
         ParentFont = False
       end
       object MeshSaturationTrack: TTrackBar
@@ -966,7 +950,6 @@ object GLForm1: TGLForm1
         Top = 24
         Width = 82
         Caption = 'Transparency'
-        ParentColor = False
         ParentFont = False
       end
     end
@@ -1037,7 +1020,6 @@ object GLForm1: TGLForm1
         Width = 31
         BorderSpacing.Left = 2
         Caption = 'XRay'
-        ParentColor = False
         ParentFont = False
         ParentShowHint = False
         ShowHint = True
@@ -1073,7 +1055,6 @@ object GLForm1: TGLForm1
         Top = 24
         Width = 171
         Caption = 'Shader For Background only'
-        ParentColor = False
         ParentFont = False
       end
     end
@@ -1101,7 +1082,6 @@ object GLForm1: TGLForm1
         Width = 31
         BorderSpacing.Left = 2
         Caption = 'Light'
-        ParentColor = False
         ParentFont = False
         ParentShowHint = False
         ShowHint = True
@@ -1200,7 +1180,6 @@ object GLForm1: TGLForm1
         BorderSpacing.Left = 6
         BorderSpacing.Right = 4
         Caption = 'AO'
-        ParentColor = False
         ParentFont = False
         ParentShowHint = False
         ShowHint = True
@@ -1236,7 +1215,6 @@ object GLForm1: TGLForm1
         Width = 14
         BorderSpacing.Left = 2
         Caption = 'S1'
-        ParentColor = False
         ParentFont = False
         ParentShowHint = False
       end
@@ -1250,7 +1228,6 @@ object GLForm1: TGLForm1
         Top = 77
         Width = 16
         Caption = 'S2'
-        ParentColor = False
         ParentFont = False
         ParentShowHint = False
       end
@@ -1298,7 +1275,6 @@ object GLForm1: TGLForm1
         Top = 119
         Width = 16
         Caption = 'S4'
-        ParentColor = False
         ParentFont = False
         ParentShowHint = False
       end
@@ -1329,7 +1305,6 @@ object GLForm1: TGLForm1
         Top = 140
         Width = 16
         Caption = 'S5'
-        ParentColor = False
         ParentFont = False
         ParentShowHint = False
       end
@@ -1360,7 +1335,6 @@ object GLForm1: TGLForm1
         Top = 161
         Width = 16
         Caption = 'S6'
-        ParentColor = False
         ParentFont = False
         ParentShowHint = False
       end
@@ -1374,7 +1348,6 @@ object GLForm1: TGLForm1
         Top = 182
         Width = 16
         Caption = 'S7'
-        ParentColor = False
         ParentFont = False
         ParentShowHint = False
       end
@@ -1388,7 +1361,6 @@ object GLForm1: TGLForm1
         Top = 203
         Width = 16
         Caption = 'S8'
-        ParentColor = False
         ParentFont = False
         ParentShowHint = False
       end
@@ -1402,7 +1374,6 @@ object GLForm1: TGLForm1
         Top = 224
         Width = 16
         Caption = 'S9'
-        ParentColor = False
         ParentFont = False
         ParentShowHint = False
       end
@@ -1416,7 +1387,6 @@ object GLForm1: TGLForm1
         Top = 243
         Width = 22
         Caption = 'S10'
-        ParentColor = False
         ParentFont = False
         ParentShowHint = False
       end
@@ -1528,7 +1498,6 @@ object GLForm1: TGLForm1
         Top = 98
         Width = 16
         Caption = 'S3'
-        ParentColor = False
         ParentFont = False
         ParentShowHint = False
       end
@@ -1768,6 +1737,10 @@ object GLForm1: TGLForm1
         Caption = 'Open'
         ShortCut = 16463
         OnClick = OpenMenuClick
+      end
+      object OpenBilateralMenu: TMenuItem
+        Caption = 'Open Bilateral (.lh, .rh)'
+        OnClick = OpenBilateralMenuClick
       end
       object CloseMenu: TMenuItem
         Caption = 'Close'

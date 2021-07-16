@@ -1,7 +1,7 @@
 unit mainunit;
  {$Include opts.inc} //optiosn: DGL, CoreGL or legacy GL
 {$IFDEF LCLgtk3}{$IFNDEF COREGL}
-  warning: GTK3 only supports OpenGL core - enable COREGL inn opts.inc
+  warning: GTK3 only supports OpenGL core - enable COREGL in opts.inc
 {$ENDIF}{$ENDIF}
 {$mode delphi}{$H+}
 {$IFDEF Darwin}
@@ -49,6 +49,7 @@ LayerOptionsBtn: TButton;
  BilateralLeftOnlyMenu: TMenuItem;
  BilateralRightOnlyMenu: TMenuItem;
  MenuItem3: TMenuItem;
+ OpenBilateralMenu: TMenuItem;
  PasteMenu: TMenuItem;
  overlayoverlapoverwrite1: TMenuItem;
  overlayopacity1: TMenuItem;
@@ -355,6 +356,7 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     procedure LayerAOMapMenuClick(Sender: TObject);
     procedure MatCapDropChange(Sender: TObject);
     procedure NodeMinEditKeyPress(Sender: TObject; var Key: char);
+    procedure OpenBilateralMenuClick(Sender: TObject);
     procedure overlays1Click(Sender: TObject);
     procedure PaintModeAutomaticMenu(Sender: TObject);
     procedure PaintModeMenuClick(Sender: TObject);
@@ -989,13 +991,13 @@ end;
 function PyVERSION(Self, Args : PPyObject): PPyObject; cdecl;
 begin
   with GetPythonEngine do
-    Result:= PyString_FromString(kVers);
+    Result:= PyUnicode_FromString(kVers);
 end;
 
 function PyOVERLAYCOUNT(Self, Args : PPyObject): PPyObject; cdecl;
 begin
   with GetPythonEngine do
-    Result:= PyInt_FromLong(gMesh.OpenOverlays);
+    Result:= PyLong_FromLong(gMesh.OpenOverlays);
 end;
 
 function PyRESETDEFAULTS(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1075,10 +1077,10 @@ function PyATLASMAXINDEX(Self, Args : PPyObject): PPyObject; cdecl;
 var
   i: integer;
 begin
-  Result:= GetPythonEngine.PyInt_FromLong(-1);
+  Result:= GetPythonEngine.PyLong_FromLong(-1);
   with GetPythonEngine do
     if Bool(PyArg_ParseTuple(Args, 'i:atlasmaxindex', @I)) then
-      Result:= GetPythonEngine.PyInt_FromLong(ATLASMAXINDEX(I));
+      Result:= GetPythonEngine.PyLong_FromLong(ATLASMAXINDEX(I));
 end;
 
 function PyEXISTS(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1392,6 +1394,16 @@ begin
       COLORBARVISIBLE(BOOL(A));
 end;
 
+function PyCOLORBARCOLOR(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  A: integer;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 'i:colorbarcolor', @A)) then
+      COLORBARCOLOR(A);
+end;
+ 
 function PyFONTNAME(Self, Args : PPyObject): PPyObject; cdecl;
 var
   PtrName: PChar;
@@ -1463,6 +1475,28 @@ begin
     begin
       StrName:= string(PtrName);
       MESHLOAD(StrName);
+      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+    end;
+end;
+
+
+function PyMESHLOADBILATERAL(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  PtrName: PChar;
+  StrName: string;
+begin
+  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
+  with GetPythonEngine do
+    if Bool(PyArg_ParseTuple(Args, 's:meshload', @PtrName)) then
+    begin
+      StrName:= string(PtrName);
+      gPrefs.LoadBilateralLHRHx:= true;
+      if (StrName = '1') or (StrName = '0') then begin
+        //Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+        GLForm1.ScriptOutputMemo.lines.Add('meshloadbilateral() function has changed: now a filename is expected.');
+      end else
+      	MESHLOAD(StrName);
+      gPrefs.LoadBilateralLHRHx:= true;
       Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
     end;
 end;
@@ -1894,15 +1928,6 @@ begin
        OVERLAYVISIBLE(A,BOOL(B));
 end;
 
-function PyMESHLOADBILATERAL(Self, Args : PPyObject): PPyObject; cdecl;
-var
-  A: integer;
-begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
-    if Bool(PyArg_ParseTuple(Args, 'i:meshloadbilateral', @A)) then
-       gPrefs.LoadBilateralLHRH := (A = 1)
-end;
 
 
 function PyVIEWSAGITTAL(Self, Args : PPyObject): PPyObject; cdecl;
@@ -2039,9 +2064,17 @@ begin
           exit;
   end;
   ob :=   GetPythonEngine.PyTuple_GetItem(Args,0);
+  {$IFDEF PY27} //see notes  in opts.inc
   atlasname := GetPythonEngine.PyString_AsDelphiString(ob);
+  {$ELSE}
+  atlasname := GetPythonEngine.PyUnicode_AsUTF8(ob);
+  {$ENDIF}
   ob :=   GetPythonEngine.PyTuple_GetItem(Args,1);
+  {$IFDEF PY27} //see notes  in opts.inc
   statname := GetPythonEngine.PyString_AsDelphiString(ob);
+  {$ELSE}
+  statname := GetPythonEngine.PyUnicode_AsUTF8(ob);
+  {$ENDIF}
   //get indices
   ob :=   GetPythonEngine.PyTuple_GetItem(Args,2);
   n := GetPythonEngine.PyTuple_Size(ob);
@@ -2083,6 +2116,7 @@ begin
     AddMethod('clipazimuthelevation', @PyCLIPAZIMUTHELEVATION, ' clipazimuthelevation(depth, azi, elev) -> Set a view-point independent clip plane.');
     AddMethod('colorbarposition', @PyCOLORBARPOSITION, ' colorbarposition(p) -> Set colorbar position (1=bottom, 2=left, 3=top, 4=right).');
     AddMethod('colorbarvisible', @PyCOLORBARVISIBLE, ' colorbarvisible(v) -> Show (1) or hide (0) the color bar.');
+    AddMethod('colorbarcolor', @PyCOLORBARCOLOR, ' colorbarcolor(c) -> Set color of the color bar.');
     AddMethod('contour', @PyCONTOUR, ' contour(layer) -> Create edge map for atlas or overlay.');
     AddMethod('edgecolor', @PyEDGECOLOR, ' edgecolor(name, varies) -> Select color scheme for connectome edge map. If varies=1 then edge color depends on strength of connection.');
     AddMethod('edgeload', @PyEDGELOAD, ' edgeload(filename) -> Loads a BrainNet Viewer format Edge file, e.g. connectome map.');
@@ -2099,7 +2133,7 @@ begin
     AddMethod('meshcurv', @PyMESHCURV, ' meshcurv() -> Displays mesh curvature, so crevices appear dark.');
     AddMethod('meshhemisphere', @PyMESHHEMISPHERE, ' meshhemisphere(v) -> nodehemisphere (val) -> Set -1 for left hemipshere, 0 for both, 1 for right.');
     AddMethod('meshload', @PyMESHLOAD, ' meshload(imageName) -> Close all open images and load new background image.');
-    AddMethod('meshloadbilateral', @PyMESHLOADBILATERAL, ' meshloadbilateral(v) -> If v=1, load both hemispheres (*.lh *.rh), otherwise only load named mesh.');
+    AddMethod('meshloadbilateral', @PyMESHLOADBILATERAL, ' meshloadbilateral(imageName) -> load both hemispheres (*.lh *.rh).');
     AddMethod('meshoverlayorder', @PyMESHOVERLAYORDER, ' meshoverlayorder (flip) -> If flip=1, the mesh will be drawn after the overlay, and xray sliders will influence overlay not mesh.');
     AddMethod('meshreversefaces', @PyMESHREVERSEFACES, ' meshreversefaces() -> reverse triangle winding to reverse front/back faces.');
     AddMethod('meshsave', @PyMESHSAVE, ' meshsave(filename) -> Saves currently open mesh to disk.');
@@ -3367,7 +3401,7 @@ begin
   CloseTracksMenuClick(nil);
   CloseNodesMenuClick(nil);
   {$IFDEF LHRH}
-  if not gMesh.LoadFromFile(Filename, gPrefs.LoadBilateralLHRH) then begin  //only add successful loads to MRU
+  if not gMesh.LoadFromFile(Filename, gPrefs.LoadBilateralLHRHX) then begin  //only add successful loads to MRU
    	 BilateralMenu.Visible := (length(gMesh.RH.faces) > 0);
   {$ELSE}
   if not gMesh.LoadFromFile(Filename) then begin  //only add successful loads to MRU
@@ -3669,6 +3703,9 @@ procedure TGLForm1.GLboxMouseDown(Sender: TObject; Button: TMouseButton; Shift: 
 var
    X,Y: integer;
 begin
+ //picker:
+ //https://stackoverflow.com/questions/51736402/opengl-3d-raypicking-with-high-poly-meshes
+
   X := lX; Y := lY; Mouse2Retina(X,Y);
      gMouseX := X;
      gMouseY := Y;
@@ -4426,7 +4463,6 @@ var
   PrefForm: TForm;
   OkBtn, AdvancedBtn: TButton;
   {$IFDEF LCLCocoa} DarkModeCheck, RetinaCheck,{$ENDIF}
-  LoadBilateralCheck,
   OverlappingOverlaysOverwriteCheck, BlackDefaultBackgroundCheck, BitmapAlphaCheck, SmoothVoxelwiseDataCheck, TracksAreTubesCheck: TCheckBox;
   bmpEdit: TEdit;
   s: string;
@@ -4690,20 +4726,6 @@ begin
   OverlappingOverlaysOverwriteCheck.AnchorSide[akLeft].Control := PrefForm;
   OverlappingOverlaysOverwriteCheck.BorderSpacing.Left := 6;
   OverlappingOverlaysOverwriteCheck.Parent:=PrefForm;
-  {$IFDEF LHRH}
-
-  LoadBilateralCheck:=TCheckBox.create(PrefForm);
-  LoadBilateralCheck.Checked := gPrefs.LoadBilateralLHRH;
-  LoadBilateralCheck.Caption:='Load bilateral meshes ("lh."/"rh.")';
-  LoadBilateralCheck.AutoSize := true;
-  LoadBilateralCheck.AnchorSide[akTop].Side := asrBottom;
-  LoadBilateralCheck.AnchorSide[akTop].Control := OverlappingOverlaysOverwriteCheck;
-  LoadBilateralCheck.BorderSpacing.Top := 6;
-  LoadBilateralCheck.AnchorSide[akLeft].Side := asrLeft;
-  LoadBilateralCheck.AnchorSide[akLeft].Control := PrefForm;
-  LoadBilateralCheck.BorderSpacing.Left := 6;
-  LoadBilateralCheck.Parent:=PrefForm;
-  {$ENDIF}
   {$IFDEF LCLCocoa}
   RetinaCheck:=TCheckBox.create(PrefForm);
   RetinaCheck.Checked := gPrefs.RetinaDisplay;
@@ -4712,11 +4734,7 @@ begin
   //RetinaCheck.Top := 308;
   RetinaCheck.AutoSize := true;
   RetinaCheck.AnchorSide[akTop].Side := asrBottom;
-  {$IFDEF LHRH}
-  RetinaCheck.AnchorSide[akTop].Control := LoadBilateralCheck;
-  {$ELSE}
   RetinaCheck.AnchorSide[akTop].Control := OverlappingOverlaysOverwriteCheck;
-  {$ENDIF}
   RetinaCheck.BorderSpacing.Top := 6;
   RetinaCheck.AnchorSide[akLeft].Side := asrLeft;
   RetinaCheck.AnchorSide[akLeft].Control := PrefForm;
@@ -4804,7 +4822,6 @@ begin
   gPrefs.SmoothVoxelwiseData := SmoothVoxelwiseDataCheck.Checked;
   gPrefs.BlackDefaultBackground := BlackDefaultBackgroundCheck.Checked;
   gPrefs.ScreenCaptureZoom := strtointdef(bmpEdit.Text,1);
-  gPrefs.LoadBilateralLHRH := LoadBilateralCheck.Checked;
   (*if ShaderForBackgroundOnlyCombo.ItemIndex = 1 then
      gPrefs.ShaderForBackgroundOnly := false
   else
@@ -6135,6 +6152,9 @@ begin
 
    {$IFDEF LCLCarbon} + ' Carbon'{$ENDIF}
    {$IFDEF LCLCocoa} + ' Cocoa'{$ENDIF}
+   {$IFDEF LCLGTK3} + 'GTK3'; {$ENDIF}
+   {$IFDEF LCLGTK2} + 'GTK2'; {$ENDIF}
+   {$IFDEF LCLQT5} + 'QT5'; {$ENDIF}
    {$IFDEF Linux} + ' Linux'{$ENDIF}
    {$IFDEF Windows} + ' Windows'{$ENDIF}
    {$IFDEF CPULLVM} + ' LLVM' {$ENDIF}
@@ -6555,6 +6575,13 @@ begin
   if FSize(OpenDialog.Filename) < 1 then
      showmessage('Unable to open file (check permissions) '+ OpenDialog.Filename);
   OpenMesh(OpenDialog.Filename);
+end;
+
+procedure TGLForm1.OpenBilateralMenuClick(Sender: TObject);
+begin
+ 	gPrefs.LoadBilateralLHRHx:= true;
+	OpenMenuClick(sender);
+        gPrefs.LoadBilateralLHRHx:= false;
 end;
 
 procedure TGLForm1.OverlayBoxCreate;

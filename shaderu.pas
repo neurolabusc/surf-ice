@@ -474,7 +474,7 @@ end;
 procedure releaseFrame;
 begin
   {$IFDEF COREGL}
-   {$IFDEF GTKlcl3}
+   {$IFDEF LCLGTK3}
    glBindFramebuffer(GL_FRAMEBUFFER, 1);
    {$ELSE}
    glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -492,7 +492,11 @@ begin
   {$IFDEF HEMISSAO} glDeleteTextures(1, @f.tex1); {$ENDIF}
   glDeleteTextures(1, @f.depthBuf);
   {$IFDEF COREGL}
+  {$IFDEF LCLGTK3}
+  glBindFramebuffer(GL_FRAMEBUFFER, 1);
+  {$ELSE}
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  {$ENDIF}
   glDeleteFramebuffers(1, @f.frameBuf);
   {$ELSE}
   glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);

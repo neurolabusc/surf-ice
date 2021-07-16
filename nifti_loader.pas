@@ -30,6 +30,8 @@ TNIFTI = class
     procedure SetDescriptives;
   public
     isBinary: boolean;
+    procedure reportMat();
+    procedure mm2(Xmm,Ymm, Zmm: single);
     function mm2intensity( Xmm, Ymm, Zmm: single; isInterpolate: boolean): single;
     function mm2vox0(Xmm, Ymm, Zmm: single): TPoint3i; //rounded, voxels indexed from 0! e.g. if dim[0]=50 then output will range 0..49
     function validVox0(vox: TPoint3i): boolean; //returns true if voxel [indexed from 0] is inside volume, e.g. if dim[0]=50 then vox.X must be in range 0..49
@@ -155,11 +157,47 @@ begin
    result := true;
 end;
 
+procedure rep(s: string; m: TMatrix);
+begin
+   {$IFDEF UNIX}
+   writeln(format('%s = [%g %g %g %g; %g %g %g %g; %g %g %g %g; 0 0 0 1]', [s,
+   m[1,1], m[1,2], m[1,3], m[1,4],
+   m[2,1], m[2,2], m[2,3], m[2,4],
+   m[3,1], m[3,2], m[3,3], m[3,4]
+   ]));
+   {$ENDIF}
+end;
+
+procedure TNIfTI.mm2(Xmm,Ymm, Zmm: single);
+var
+   Xvox, Yvox, Zvox: single;
+begin
+  {$IFDEF UNIX}
+//  Xvox := Xmm*invMat[1,1] + Xmm*invMat[1,2] + Xmm*invMat[1,3] + invMat[1,4];
+//  Yvox := Ymm*invMat[2,1] + Ymm*invMat[2,2] + Ymm*invMat[2,3] + invMat[2,4];
+//  Zvox := Zmm*invMat[3,1] + Zmm*invMat[3,2] + Zmm*invMat[3,3] + invMat[3,4];
+  Xvox := Xmm*invMat[1,1] + Ymm*invMat[1,2] + Zmm*invMat[1,3] + invMat[1,4];
+  Yvox := Xmm*invMat[2,1] + Ymm*invMat[2,2] + Zmm*invMat[2,3] + invMat[2,4];
+  Zvox := Xmm*invMat[3,1] + Ymm*invMat[3,2] + Zmm*invMat[3,3] + invMat[3,4];
+   writeln(format('%g %g %g -> %g %g %g', [Xmm,Ymm, Zmm,  Xvox, Yvox, ZVox]));
+  {$ENDIF}
+end;
+
+procedure TNIfTI.reportMat();
+begin
+   rep('mat', Mat);
+   rep('inv', invMat);
+end;
+
 function TNIfTI.mm2vox0(Xmm, Ymm, Zmm: single): TPoint3i; //voxels indexed from 0!
 begin
-   result.X := round(Xmm*invMat[1,1] + Xmm*invMat[1,2] + Xmm*invMat[1,3] + invMat[1,4]);
-   result.Y := round(Ymm*invMat[2,1] + Ymm*invMat[2,2] + Ymm*invMat[2,3] + invMat[2,4]);
-   result.Z := round(Zmm*invMat[3,1] + Zmm*invMat[3,2] + Zmm*invMat[3,3] + invMat[3,4]);
+//   result.X := round(Xmm*invMat[1,1] + Xmm*invMat[1,2] + Xmm*invMat[1,3] + invMat[1,4]);
+//   result.Y := round(Ymm*invMat[2,1] + Ymm*invMat[2,2] + Ymm*invMat[2,3] + invMat[2,4]);
+//   result.Z := round(Zmm*invMat[3,1] + Zmm*invMat[3,2] + Zmm*invMat[3,3] + invMat[3,4]);
+      result.X := round(Xmm*invMat[1,1] + Ymm*invMat[1,2] + Zmm*invMat[1,3] + invMat[1,4]);
+      result.Y := round(Xmm*invMat[2,1] + Ymm*invMat[2,2] + Zmm*invMat[2,3] + invMat[2,4]);
+      result.Z := round(Xmm*invMat[3,1] + Ymm*invMat[3,2] + Zmm*invMat[3,3] + invMat[3,4]);
+
 end;
 
 function TNIfTI.mm2intensity( Xmm, Ymm, Zmm: single; isInterpolate: boolean): single;
@@ -170,9 +208,13 @@ var
 begin
    if length(img) < 1 then exit(0);
    result := 0;
-   Xvox := Xmm*invMat[1,1] + Xmm*invMat[1,2] + Xmm*invMat[1,3] + invMat[1,4];
-   Yvox := Ymm*invMat[2,1] + Ymm*invMat[2,2] + Ymm*invMat[2,3] + invMat[2,4];
-   Zvox := Zmm*invMat[3,1] + Zmm*invMat[3,2] + Zmm*invMat[3,3] + invMat[3,4];
+   Xvox := Xmm*invMat[1,1] + Ymm*invMat[1,2] + Zmm*invMat[1,3] + invMat[1,4];
+   Yvox := Xmm*invMat[2,1] + Ymm*invMat[2,2] + Zmm*invMat[2,3] + invMat[2,4];
+   Zvox := Xmm*invMat[3,1] + Ymm*invMat[3,2] + Zmm*invMat[3,3] + invMat[3,4];
+
+   //Xvox := Xmm*invMat[1,1] + Xmm*invMat[1,2] + Xmm*invMat[1,3] + invMat[1,4];
+   //Yvox := Ymm*invMat[2,1] + Ymm*invMat[2,2] + Ymm*invMat[2,3] + invMat[2,4];
+   //Zvox := Zmm*invMat[3,1] + Zmm*invMat[3,2] + Zmm*invMat[3,3] + invMat[3,4];
    if (Xvox < 0) or (Yvox < 0) or (Zvox < 0) then exit;
    if (Xvox >= (hdr.dim[1]-1)) or (Yvox >= (hdr.dim[2]-1)) or (Zvox >= (hdr.dim[3]-1)) then exit;
    sliceVx := hdr.dim[1] * hdr.dim[2]; //voxels per slice
@@ -851,7 +893,7 @@ begin
        printf(format('Unable to load as voxelwise data: %s', [FileName]));
        exit(false);
      end;
-     printf(format('voxel dimensions %d %d %d', [hdr.dim[1],hdr.dim[2],hdr.dim[3]]));
+     printf(format('Voxel dimensions %d %d %d', [hdr.dim[1],hdr.dim[2],hdr.dim[3]]));
      if (hdr.dim[1] < 2) or (hdr.dim[2] < 2) or (hdr.dim[3] < 2) then begin
        printf(format('Not a 3D voxel-based image: %s', [FileName]));
        exit(false);

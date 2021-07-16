@@ -29,6 +29,10 @@ begin
       (Control as TTrackBar).Constraints.MaxHeight := 32;
       (Control as TTrackBar).Height := (Control as TTrackBar).Constraints.MaxHeight;
      {$ENDIF}
+     {$IFDEF LCLGtk3}
+      (Control as TTrackBar).Constraints.MaxHeight := 32;
+      (Control as TTrackBar).Height := (Control as TTrackBar).Constraints.MaxHeight;
+     {$ENDIF}
      {$IFDEF LCLGtk2}
      if ((Control as TTrackBar).TickStyle = tsNone) then begin
         Widget:=GetStyleWidget(lgsHScale);

@@ -22,7 +22,8 @@ type
     SmoothVoxelwiseData,
     OverlayClip, StartupScript, SupportBetterRenderQuality, AdditiveOverlay,Perspective, OrientCube, MultiSample, BlackDefaultBackground,
      Colorbar,TracksAreTubes, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,ColorBarPrecedenceTracksNotOverlays,HideDarkTracks, HideBrightTracks,
-     LoadBilateralLHRH,OverlappingOverlaysOverwrite, ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting, isFlipMeshOverlay, DarkMode,
+     LoadBilateralLHRHx,
+    OverlappingOverlaysOverwrite, ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting, isFlipMeshOverlay, DarkMode,
     ShowPascalMenu, RetinaDisplay, GenerateSmoothCurves {$IFDEF LINUX}, isMesaWarned {$ENDIF} : boolean;
     PryLHRH, DisplaceLHRH, Pitch: single; //shift left and right hemisphere
     TrackTubeSlices, ScreenCaptureZoom,ColorbarColor,ColorBarPosition,
@@ -333,7 +334,7 @@ begin
     ColorBarPosition := 3;
     ZDimIsUp := true;
     OverlappingOverlaysOverwrite := false;
-    LoadBilateralLHRH := true;
+    LoadBilateralLHRHx := false;
     GenerateSmoothCurves := true;
     ShaderForBackgroundOnly := false;
     CoreTrackDisableDepth := false;
@@ -667,7 +668,7 @@ begin
 	  IniBool(lRead,lIniFile, 'TracksAreTubes',lPrefs.TracksAreTubes);
 	  IniBool(lRead,lIniFile, 'ZDimIsUp',lPrefs.ZDimIsUp);
       IniBool(lRead,lIniFile,'OverlappingOverlaysOverwrite',lPrefs.OverlappingOverlaysOverwrite);
-      IniBool(lRead,lIniFile,'LoadBilateralLHRH', lPrefs.LoadBilateralLHRH);
+      //IniBool(lRead,lIniFile,'LoadBilateralLHRH', lPrefs.LoadBilateralLHRH);
 	  IniBool(lRead,lIniFile,'GenerateSmoothCurves',lPrefs.GenerateSmoothCurves);
 	  //IniBool(lRead,lIniFile, 'ShaderForBackgroundOnly',lPrefs.ShaderForBackgroundOnly);
 	  IniBool(lRead,lIniFile, 'CoreTrackDisableDepth',lPrefs.CoreTrackDisableDepth);

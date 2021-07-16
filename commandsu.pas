@@ -20,6 +20,7 @@ procedure CLIP (DEPTH: single);
 procedure CLIPAZIMUTHELEVATION (DEPTH,AZI,ELEV: single);
 procedure COLORBARPOSITION(P: integer);
 procedure COLORBARVISIBLE (VISIBLE: boolean);
+procedure COLORBARCOLOR (COLOR: integer);
 procedure CONTOUR(layer: integer);
 procedure EDGECOLOR(name: string; varies: boolean);
 procedure EDGELOAD(lFilename: string);
@@ -36,7 +37,6 @@ function MESHCREATE(niiname, meshname: string; threshold, decimateFrac: single; 
 procedure MESHCURV;
 procedure MESHHEMISPHERE (VAL: integer);
 procedure MESHLOAD(lFilename: string);
-procedure MESHLOADBILATERAL(BILAT: boolean);
 procedure MESHOVERLAYORDER (FLIP: boolean);
 procedure MESHREVERSEFACES;
 procedure MESHSAVE(lFilename: string);
@@ -115,6 +115,7 @@ knProc = 78;
    (Ptr:@CLIPAZIMUTHELEVATION;Decl:'CLIPAZIMUTHELEVATION';Vars:'(DEPTH,AZI,ELEV: single)'),
    (Ptr:@COLORBARPOSITION;Decl:'COLORBARPOSITION';Vars:'(P: integer)'),
    (Ptr:@COLORBARVISIBLE;Decl:'COLORBARVISIBLE';Vars:'(VISIBLE: boolean)'),
+   (Ptr:@COLORBARCOLOR;Decl:'COLORBARCOLOR';Vars:'(COLOR: integer)'),
    (Ptr:@EDGECOLOR;Decl:'EDGECOLOR';Vars:'(name: string; varies: boolean)'),
    (Ptr:@EDGECREATE;Decl:'EDGECREATE';Vars:'(filename: string; const mtx: array of single)'),
    (Ptr:@EDGESIZE;Decl:'EDGESIZE';Vars:'(size: single; varies: boolean)'),
@@ -135,7 +136,7 @@ knProc = 78;
    (Ptr:@MESHOVERLAYORDER;Decl:'MESHOVERLAYORDER';Vars:'(FLIP: boolean)'),
    (Ptr:@MESHSAVE;Decl:'MESHSAVE';Vars:'(lFilename: string)'),
    (Ptr:@NODELOAD;Decl:'NODELOAD';Vars:'(lFilename: string)'),
-   (Ptr:@MESHLOADBILATERAL;Decl:'MESHLOADBILATERAL';Vars:'(BILAT: boolean)'),
+   //(Ptr:@MESHLOADBILATERAL;Decl:'MESHLOADBILATERAL';Vars:'(BILAT: boolean)'),
    (Ptr:@MODALMESSAGE;Decl:'MODALMESSAGE';Vars:'(STR: string)'),
    (Ptr:@MODELESSMESSAGE;Decl:'MODELESSMESSAGE';Vars:'(STR: string)'),
    (Ptr:@NODECOLOR;Decl:'NODECOLOR';Vars:'(name: string; varies: boolean)'),
@@ -597,11 +598,6 @@ begin
    end;
 end;
 
-procedure MESHLOADBILATERAL (BILAT: boolean);
-begin
-    gPrefs.LoadBilateralLHRH := BILAT;
-end;
-
 procedure MESHOVERLAYORDER (FLIP: boolean);
 begin
      gPrefs.isFlipMeshOverlay:= FLIP;
@@ -950,6 +946,17 @@ begin
   gPrefs.Colorbar := VISIBLE;
   GLForm1.ColorBarVisibleMenu.Checked := VISIBLE;
   GLForm1.GLBoxRequestUpdate(nil);
+end;
+
+procedure COLORBARCOLOR (COLOR: integer);
+begin
+   gPrefs.ColorbarColor := COLOR;
+   GLForm1.ClrbarClr(gPrefs.ColorbarColor);
+   if (gPrefs.ColorbarColor = GLForm1.WhiteClrbarMenu.tag) then GLForm1.WhiteClrbarMenu.checked := true;
+   if (gPrefs.ColorbarColor = GLForm1.TransWhiteClrbarMenu.tag) then GLForm1.TransWhiteClrbarMenu.checked := true;
+   if (gPrefs.ColorbarColor = GLForm1.BlackClrbarMenu.tag) then GLForm1.BlackClrbarMenu.checked := true;
+   if (gPrefs.ColorbarColor = GLForm1.TransBlackClrbarMenu.tag) then GLForm1.TransBlackClrbarMenu.checked := true;
+   GLForm1.GLBoxRequestUpdate(nil);
 end;
 
 procedure OVERLAYADDITIVE (ADD: boolean);

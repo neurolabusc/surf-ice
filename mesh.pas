@@ -9339,6 +9339,7 @@ var
    v,i,j,sz, nOK: integer;
    nVert: LongWord;
    labelRGBA: TRGBA;
+   str: string;
    num_entries, tag, ctabversion, maxstruc, labelNum, len, r,g,b,a: int32;
    idx: array of LongInt;
 begin
@@ -9419,7 +9420,13 @@ begin
       SwapLongInt(labelNum);
       SwapLongInt(len);
       {$ENDIF}
+      {$IFDEF UNIX}
+      setlength(str, len);
+      blockread(f, str[1], len);
+      writeln(labelNum, '=', str);
+      {$ELSE}
       seek(f, filepos(f)+len);
+      {$ENDIF}
       blockread(f, r, 4);
       blockread(f, g, 4);
       blockread(f, b, 4);
@@ -9703,7 +9710,8 @@ begin
      //if not readMGHHeader (fnm, hdr, gzFlag, swapEndian, x64) then exit;
      if not readVoxHeader (fnm, hdr, gzFlag, swapEndian, x64) then exit;
      if (x64 <> length(vertices)) then begin
-       printf(format('Error loading MGH overlay: Mesh has %d vertices, but MGH file has %d.', [length(vertices), x64]));
+       if (hdr.dim[2] < 2) and (hdr.dim[3] < 2) then
+       	printf(format('Error loading overlay: Mesh has %d vertices, but MGH file has %d voxels (probably voxel data).', [length(vertices), x64]));
        exit;
      end;
      if (gzFlag = K_gzBytes_onlyImageCompressed) then begin
@@ -10067,8 +10075,18 @@ begin
         CloseFile(f);
         exit;
      end;
-     if (num_v <> length(vertices)) or (num_f <> length(faces)) or (sz < (filepos(f)+(num_v*4))) then begin
-        showmessageX('File corrupted: overlay does not match background mesh: '+inttostr(num_v)+' vertices and '+inttostr(num_f)+' triangles');
+     if (num_v <> length(vertices)) and (num_f = 0) then begin
+        showmessageX('curv file corrupted: overlay does not match background mesh: '+inttostr(num_v)+' vertices not '+inttostr(length(vertices))+' :'+FileName);
+        CloseFile(f);
+        exit;
+     end;
+     if (sz < (filepos(f)+(num_v*4))) then begin
+        showmessageX('curv file to small: '+inttostr(sz)+' bytes expect at least '+inttostr(filepos(f)+(num_v*4))+' :'+FileName);
+        CloseFile(f);
+        exit;
+     end;
+     if (num_v <> length(vertices)) or ((num_f <> 0) and (num_f <> length(faces))) or (sz < (filepos(f)+(num_v*4))) then begin
+        showmessageX('curv file corrupted: overlay does not match background mesh: '+inttostr(num_v)+' vertices and '+inttostr(num_f)+' triangles :'+FileName);
         CloseFile(f);
         exit;
      end;
@@ -10225,6 +10243,10 @@ begin
    //printf(format('>>> %d %d %d', [nii.hdr.dim[1], nii.hdr.dim[2], nii.hdr.dim[3]]));
    num_v := length(vertices);
    setlength(overlay[lOverlayIndex].intensity, num_v);
+   //nii.reportMat;
+   //nii.mm2(30, 0, 0);
+   //nii.mm2(0, 30, 0);
+   //nii.mm2(0, 0, 30);
    for i := 0 to (num_v-1) do
        overlay[lOverlayIndex].intensity[i] := nii.mm2intensity(vertices[i].X, vertices[i].Y, vertices[i].Z, lLoadSmooth);
    overlay[lOverlayIndex].isBinary := nii.isBinary;
