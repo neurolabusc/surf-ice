@@ -6389,8 +6389,8 @@ begin
           0: gAzimuth := 270; //left
           1: gAzimuth := 90; //right
           3: gAzimuth := 180;//anterior
-          4: gAzimuth := 180;//inferior
-          else gAzimuth := 0; //posterior, inferior, superior
+          4: gAzimuth := 0;//posterior
+          else gAzimuth := 0; //inferior, superior
      end;
      case (Sender as TMenuItem).tag of
           4: gElevation := -90; //inferior
