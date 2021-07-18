@@ -49,6 +49,7 @@ type
     matcap: GLuint;
     isMatCap: boolean;
     {$ENDIF}
+    isXRay,
     isGeometryShaderSupported: boolean;
     AOradiusU: integer;
     FragmentProgram,VertexProgram, GeometryProgram, Note, Vendor: AnsiString;
@@ -1137,6 +1138,7 @@ begin
   Shader.nUniform := 0;
   Shader.OverlayVolume := 0;//false;
   {$IFDEF MATCAP}Shader.isMatCap := false;{$ENDIF}
+  Shader.isXRay := false;
   Shader.FragmentProgram :=  kFrag3d;
 end;
 
@@ -1165,6 +1167,7 @@ begin
   result := false;
   Shader.Note := '';
   {$IFDEF MATCAP}Shader.isMatCap := false;{$ENDIF}
+  Shader.isXRay := false;
   Shader.AOradiusU := 0;
   Shader.VertexProgram := '';
   Shader.GeometryProgram := '';
@@ -1198,6 +1201,10 @@ begin
         {$IFDEF MATCAP}
         if U.Name = 'MatCap' then
           Shader.isMatCap := true;
+        {$ENDIF}
+        {$IFDEF MATCAP}
+        if U.Name = 'XRay' then
+          Shader.isXRay := true;
         {$ENDIF}
         if U.Name = 'overlayVolume' then
           Shader.OverlayVolume:= round(U.min) ; //U.Bool;

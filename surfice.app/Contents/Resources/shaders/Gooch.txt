@@ -55,7 +55,7 @@ void main() {
 	}
 	vec3 v = normalize(vV);
 	vec3 h = normalize(l+v);
-	float specular = pow(dot(n,h),Specular * 80.0);
+	float specular = pow(max(0.0,dot(n,h)),Specular * 80.0);
 	vec3 Color = min(mix(cool,warm,diffuse)+specular,1.0);
 	if (dot(n,v) < OutlineWidth) Color=vec3(0,0,0);
 	color = vec4(Color, 1.0);

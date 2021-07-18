@@ -17,6 +17,10 @@ const
   kLUTinvisible = 0;
   kLUTtranslucent = 50;
   kLUTopaque = 100;
+  kXRayNo = 0;
+  kXRayDarkBackground = -1;
+  kXRayBrightBackground = 1;
+
 type
   TSphere = packed record
      X: single;
@@ -170,7 +174,8 @@ type
     function SetEdgeLayer(layer: integer): boolean;
     //function AtlasStatMapCore(AtlasName, StatName: string; Indices: TInts; Intensities: TFloats): string;
     //function AtlasMaxIndex: integer;
-    procedure DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean);
+    procedure DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean; XRay: integer = kXRayNo);
+    //procedure DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean; XRay: integer);
     procedure Node2Mesh;
     procedure ReverseFaces;
     procedure CenterOrigin;
@@ -1601,23 +1606,32 @@ begin
   {$ENDIF}
 end; // BuildListOverlay()
 
-procedure TMesh.DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean);
-{$IFNDEF COREGL}{$IFDEF LEGACY_INDEXING}
-(*procedure DrawBG;
+procedure SetXRay(XRay: integer);
 begin
-  if not isVisible then exit;
-    glBindBuffer(GL_ARRAY_BUFFER, vertex_vbo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_vbo);
-    glDrawElements(GL_TRIANGLES,  Length(faces)* 3, GL_UNSIGNED_INT, PChar(0));
-end;
-procedure DrawOverlay;
-begin
-  if (index_vboOverlay < 1) and (vertex_vboOverlay < 1) and (nFacesOverlay < 1) then exit;
-  glBindBuffer(GL_ARRAY_BUFFER, vertex_vboOverlay);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_vboOverlay);
-  glDrawElements(GL_TRIANGLES,  nFacesOverlay* 3, GL_UNSIGNED_INT, PChar(0));
-end; *)
+  if (XRay = kXRayNo) then begin
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    {$IFDEF COREGL}
+    //n.b. Windows NVidia and Intel graphics drivers do not support glBlendEquation/glBlendEquationExt for OpenGL 2.1
+    //  GL_FUNC_ADD is the default in any case
+    glBlendEquation(GL_FUNC_ADD);
+    {$ENDIF}
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    exit;
+  end;
+  glDisable(GL_DEPTH_TEST);
+  glEnable(GL_BLEND);
+  {$IFDEF COREGL}
+  glBlendEquation(GL_FUNC_ADD);
+  {$ENDIF}
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE);   //GL_SRC_ALPHA=0x302 GL_ONE=1
+  if (XRay = kXRayBrightBackground) then //dark background
+  glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+end; //SetXRay()
 
+procedure TMesh.DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean; XRay: integer = kXRayNo);
+//procedure TMesh.DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean; XRay: integer);
+{$IFNDEF COREGL}{$IFDEF LEGACY_INDEXING}
 procedure DrawBG(prog: GLuint);
 //unlike modern, the AttribPointer is bound to both the index_vbo and the shader.
 // since we have one shader for BOTH the overlay and the main mesh, we need to set this for each draw call
@@ -1708,9 +1722,13 @@ begin
       BuildListOverlay(Clr);
   end;
   {$IFDEF COREGL}
+  //glDepthFunc
   if (isFlipMeshOverlay) and true then begin
       //if isVisible then begin
+
       if (vaoOverlay <> 0) and (vboOverlay <> 0) and (nFacesOverlay > 0) then begin
+        if not gPrefs.ShaderForBackgroundOnly then
+          SetXRay(XRay);
         glBindVertexArray(vaoOverlay);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboOverlay);
         glDrawElements(GL_TRIANGLES, nFacesOverlay* 3, GL_UNSIGNED_INT, nil);
@@ -1718,6 +1736,7 @@ begin
       end;
       //if (vaoOverlay <> 0) and (vboOverlay <> 0) and (nFacesOverlay > 0) then begin
       if (isVisible) and (nFaces > 0) then begin
+         SetXRay(XRay);
          RunOverlayGLSL(clipPlane);
          glBindVertexArray(vao);
          glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vbo);
@@ -1726,12 +1745,15 @@ begin
       end;
   end else begin
     if (isVisible) and (nFaces > 0) then begin
+      SetXRay(XRay);
       glBindVertexArray(vao);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vbo);
       glDrawElements(GL_TRIANGLES, nFaces * 3, GL_UNSIGNED_INT, nil);
       glBindVertexArray(0);
     end;
     if (vaoOverlay <> 0) and (vboOverlay <> 0) and (nFacesOverlay > 0) then begin
+       if gPrefs.ShaderForBackgroundOnly then
+          SetXRay(kXRayNo);
        RunOverlayGLSL(clipPlane);
        glBindVertexArray(vaoOverlay);
        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,vboOverlay);
@@ -1739,31 +1761,47 @@ begin
        glBindVertexArray(0);
     end;
   end;
+  SetXRay(kXRayNo);
+
   {$ELSE}
   {$IFDEF LEGACY_INDEXING}
   if (isFlipMeshOverlay) and (nFacesOverlay <> 0) then begin
+     if not gPrefs.ShaderForBackgroundOnly then
+       SetXRay(XRay);
      DrawOverlay(gShader.program3dx);
+     SetXRay(XRay);
      DrawBG(RunOverlayGLSL(clipPlane));
   end else begin
+      SetXRay(XRay);
       DrawBG(gShader.program3dx);
+      if gPrefs.ShaderForBackgroundOnly then
+        SetXRay(kXRayNo);
       DrawOverlay(RunOverlayGLSL(clipPlane));
   end;
+  SetXRay(kXRayNo);
   {$ELSE}
   if (isFlipMeshOverlay) and (displayListOverlay <> 0) then begin
+      if not gPrefs.ShaderForBackgroundOnly then
+        SetXRay(XRay);
       if isVisible then
          glCallList(displayListOverlay);
       if (displayListOverlay <> 0) then begin
+        SetXRay(XRay);
         RunOverlayGLSL(clipPlane);
         glCallList(displayList);
       end;
   end else begin
+    SetXRay(XRay);
     if isVisible then
        glCallList(displayList);
     if (displayListOverlay <> 0) then begin
+      if gPrefs.ShaderForBackgroundOnly then
+        SetXRay(kXRayNo);
       RunOverlayGLSL(clipPlane);
       glCallList(displayListOverlay);
     end;
   end;
+  SetXRay(kXRayNo);
   {$ENDIF}
   {$ENDIF}
   isBusy := false;

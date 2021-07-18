@@ -1496,7 +1496,7 @@ begin
         GLForm1.ScriptOutputMemo.lines.Add('meshloadbilateral() function has changed: now a filename is expected.');
       end else
       	MESHLOAD(StrName);
-      gPrefs.LoadBilateralLHRHx:= true;
+      gPrefs.LoadBilateralLHRHx:= false;
       Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
     end;
 end;
@@ -2064,17 +2064,11 @@ begin
           exit;
   end;
   ob :=   GetPythonEngine.PyTuple_GetItem(Args,0);
-  {$IFDEF PY27} //see notes  in opts.inc
-  atlasname := GetPythonEngine.PyString_AsDelphiString(ob);
-  {$ELSE}
+  //atlasname := GetPythonEngine.PyString_AsDelphiString(ob);
   atlasname := GetPythonEngine.PyUnicode_AsUTF8(ob);
-  {$ENDIF}
   ob :=   GetPythonEngine.PyTuple_GetItem(Args,1);
-  {$IFDEF PY27} //see notes  in opts.inc
-  statname := GetPythonEngine.PyString_AsDelphiString(ob);
-  {$ELSE}
+  //statname := GetPythonEngine.PyString_AsDelphiString(ob);
   statname := GetPythonEngine.PyUnicode_AsUTF8(ob);
-  {$ENDIF}
   //get indices
   ob :=   GetPythonEngine.PyTuple_GetItem(Args,2);
   n := GetPythonEngine.PyTuple_Size(ob);
@@ -6383,14 +6377,14 @@ begin
        if (ScriptMemo.SelLength < 1) then
           ScriptMemo.SelectAll();
        ScriptMemo.CopyToClipboard;
-       exit;
+       //exit;
     end;
      case (Sender as TMenuItem).tag of
           0: gAzimuth := 270; //left
           1: gAzimuth := 90; //right
           3: gAzimuth := 180;//anterior
           4: gAzimuth := 180;//inferior
-          else gAzimuth := 0; //posterior, inferior, superior
+          else gAzimuth := 0; //posterior (2), superior (5)
      end;
      case (Sender as TMenuItem).tag of
           4: gElevation := -90; //inferior
@@ -6581,7 +6575,7 @@ procedure TGLForm1.OpenBilateralMenuClick(Sender: TObject);
 begin
  	gPrefs.LoadBilateralLHRHx:= true;
 	OpenMenuClick(sender);
-        gPrefs.LoadBilateralLHRHx:= false;
+    gPrefs.LoadBilateralLHRHx:= false;
 end;
 
 procedure TGLForm1.OverlayBoxCreate;

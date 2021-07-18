@@ -22,7 +22,7 @@ type TMeshLHRH = class(TMesh)
     isShowRH: boolean;
     function LoadFromFile(const FileName: string; LoadBilateralLHRH: boolean): boolean;
     function LoadOverlay(const FileName: string; lLoadSmooth: boolean): boolean;
-    procedure DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean);
+    procedure DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean; XRay: integer= kXRayNo);
     procedure ReverseFaces;
     procedure SwapYZ;
     procedure SwapZY;
@@ -251,10 +251,10 @@ begin
     end;
 end;
 
-procedure TMeshLHRH.DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean);
+procedure TMeshLHRH.DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean; XRay: integer = kXRayNo);
 begin
      SynchronizeOverlays();
-	 Inherited DrawGL(Clr, clipPlane, isFlipMeshOverlay);
+	 Inherited DrawGL(Clr, clipPlane, isFlipMeshOverlay, XRay);
 end;
 
 

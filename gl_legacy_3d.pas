@@ -317,6 +317,7 @@ procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped, isDrawMes
 var
    clr: TRGBA;
    displace: float;
+   XRay : integer = kXRayNo;
 begin
   clr := asRGBA(lPrefs.ObjColor);
    {$IFDEF DGL}
@@ -331,6 +332,12 @@ begin
  //glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT);
  glClear(GL_COLOR_BUFFER_BIT or  GL_DEPTH_BUFFER_BIT or GL_STENCIL_BUFFER_BIT );
  glEnable(GL_NORMALIZE);
+  if (gShader.isXRay) then begin
+    if (red(lPrefs.BackColor) + green(lPrefs.BackColor) + blue(lPrefs.BackColor)) > 384 then
+       XRay := kXRayBrightBackground
+    else
+  		XRay := kXRayDarkBackground;
+  end;
 
 (*  nglMatrixMode(nGL_PROJECTION);
   nglLoadIdentity();
@@ -367,16 +374,16 @@ begin
  end;
  if length(lNode.nodes) > 0 then begin
      RunMeshGLSL (asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W),  lPrefs.ShaderForBackgroundOnly); //disable clip plane
-   lNode.DrawGL(clr, clipPlane, isFlipMeshOverlay);
+   lNode.DrawGL(clr, clipPlane, isFlipMeshOverlay, XRay);
  end;
  if (length(lMesh.faces) > 0) then begin
     lMesh.isVisible := isDrawMesh;
     {$IFDEF LHRH}if not lMesh.isShowLH then lMesh.isVisible := false; {$ENDIF}
     RunMeshGLSL (ClipPlane,  false);
     if not isOverlayClipped then
-       lMesh.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W),isFlipMeshOverlay )
+       lMesh.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W),isFlipMeshOverlay, XRay )
     else
-        lMesh.DrawGL(clr, clipPlane, isFlipMeshOverlay);
+        lMesh.DrawGL(clr, clipPlane, isFlipMeshOverlay, XRay);
     lMesh.isVisible := true;
  end;
  {$IFDEF LHRH}
@@ -386,13 +393,12 @@ begin
     lMesh.RH.isVisible := isDrawMesh;
     RunMeshGLSL (clipPlane, false);
     if not isOverlayClipped then
-       lMesh.RH.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W), isFlipMeshOverlay )
+       lMesh.RH.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W), isFlipMeshOverlay, XRay )
     else
-        lMesh.RH.DrawGL(clr, clipPlane, isFlipMeshOverlay);
+        lMesh.RH.DrawGL(clr, clipPlane, isFlipMeshOverlay, XRay);
     lMesh.RH.isVisible := true;
  end;
  {$ENDIF}
-
 end; //DrawScene
 
 {$IFDEF LEGACY_INDEXING}

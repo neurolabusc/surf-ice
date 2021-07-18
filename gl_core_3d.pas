@@ -939,35 +939,25 @@ procedure DrawScene(w,h: integer; isFlipMeshOverlay, isOverlayClipped, isDrawMes
 var
    clr: TRGBA;
    displace: float;
+   XRay : integer = kXRayNo;
 begin
   clr := asRGBA(lPrefs.ObjColor);
   //glClearColor( Red(lPrefs.backColor)/255, Green(lPrefs.backColor)/255, Blue(lPrefs.backColor)/255, 1.0); //Set blue background
   glClearColor(red(lPrefs.BackColor)/255, green(lPrefs.BackColor)/255, blue(lPrefs.BackColor)/255, 0); //Set background
   glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
+  if (gShader.isXRay) then begin
+    if (red(lPrefs.BackColor) + green(lPrefs.BackColor) + blue(lPrefs.BackColor)) > 384 then
+       XRay := kXRayBrightBackground
+    else
+  		XRay := kXRayDarkBackground;
+  end;
   //distance *= 0.77;
   if  (length(lMesh.faces) > 0) then
   	  displace := lMesh.bilateralOffset + lPrefs.DisplaceLHRH
   else
      displace := lPrefs.DisplaceLHRH ;
   SetModelView(w,h, isMultiSample, lPrefs, origin, displace, scale, distance, elevation, azimuth);
-
-(*  nglMatrixMode(nGL_PROJECTION);
-  nglLoadIdentity();
-  nSetOrtho(w, h, Distance, kMaxDistance, isMultiSample, lPrefs.Perspective);
-  nglTranslatef(lPrefs.ScreenPan.X, lPrefs.ScreenPan.Y, 0 );
-  nglMatrixMode (nGL_MODELVIEW);
-  nglLoadIdentity ();
-  //object size normalized to be -1...+1 in largest dimension.
-  //closest/furthest possible vertex is therefore -1.73..+1.73 (e.g. cube where corner is sqrt(1+1+1) from origin)
-  nglScalef(0.5/Scale, 0.5/Scale, 0.5/Scale);
-  if lPrefs.Perspective then
-      nglTranslatef(0,0, -Scale*2*Distance )
-  else
-     nglTranslatef(0,0,  -Scale*2 );
-  nglRotatef(90-Elevation,-1,0,0);
-  nglRotatef(-Azimuth,0,0,1);
-  nglTranslatef(-origin.X, -origin.Y, -origin.Z); *)
    if lTrack.n_count > 0 then begin
      if lTrack.isTubes then
          RunMeshGLSL (asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W),  lPrefs.ShaderForBackgroundOnly) //disable clip plane
@@ -990,16 +980,16 @@ begin
  end;
  if length(lNode.nodes) > 0 then begin
      RunMeshGLSL (asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W), lPrefs.ShaderForBackgroundOnly); //disable clip plane
-   lNode.DrawGL(clr, clipPlane, isFlipMeshOverlay);
+   lNode.DrawGL(clr, clipPlane, isFlipMeshOverlay, XRay);
  end;
  if  (length(lMesh.faces) > 0) then begin
     lMesh.isVisible := isDrawMesh;
     {$IFDEF LHRH}if not lMesh.isShowLH then lMesh.isVisible := false; {$ENDIF}
     RunMeshGLSL (clipPlane, false);
     if not isOverlayClipped then
-       lMesh.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W), isFlipMeshOverlay )
+       lMesh.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W), isFlipMeshOverlay, XRay )
     else
-        lMesh.DrawGL(clr, clipPlane, isFlipMeshOverlay);
+        lMesh.DrawGL(clr, clipPlane, isFlipMeshOverlay, XRay);
     lMesh.isVisible := true;
  end;
  {$IFDEF LHRH}
@@ -1010,9 +1000,9 @@ begin
     lMesh.RH.isVisible := isDrawMesh;
     RunMeshGLSL (clipPlane, false);
     if not isOverlayClipped then
-       lMesh.RH.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W), isFlipMeshOverlay )
+       lMesh.RH.DrawGL(clr, asPt4f(2,ClipPlane.Y,ClipPlane.Z,ClipPlane.W), isFlipMeshOverlay, XRay )
     else
-        lMesh.RH.DrawGL(clr, clipPlane, isFlipMeshOverlay);
+        lMesh.RH.DrawGL(clr, clipPlane, isFlipMeshOverlay, XRay);
     lMesh.RH.isVisible := true;
  end;
  {$ENDIF}

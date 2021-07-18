@@ -1,0 +1,26 @@
+//pref
+Ambient|float|0.0|0.5|1
+EdgeFallOff|float|0|1|4
+Intensity|float|0|0.5|4
+DimBackfaces|bool|false
+AOradius|float|0|0|16
+XRay|set|1|1|1
+Use with dark background color.|note
+//frag
+#version 120
+varying vec3 vN, vV;
+varying vec4 vP, vClr;
+uniform float Ambient = 0.5;
+uniform float EdgeFallOff = 1.0;
+uniform float Intensity = 60.0;
+uniform bool DimBackfaces;
+uniform vec4 ClipPlane = vec4(2.0, 0.0, 0.0, 0.0);
+void main() {
+	if ((ClipPlane[0] < 1.5) && (dot( ClipPlane, vP) > 0.0)) discard;
+	float opac = dot(normalize(-vN), normalize(-vV));
+	opac = abs(opac);
+	opac = Ambient + Intensity*(1.0-pow(opac, EdgeFallOff));
+	float backface = 1.0 - step(0.0, vN.z);
+	opac = mix(opac, 0.0, backface * float(DimBackfaces)); //reverse normal if backface AND two-sided lighting
+	gl_FragColor = vec4(opac * vClr.rgb, opac);
+}

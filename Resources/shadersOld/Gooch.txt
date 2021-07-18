@@ -35,7 +35,7 @@ void main() {
 	}
 	vec3 v = normalize(vV);
 	vec3 h = normalize(l+v);
-	float specular = pow(dot(n,h),Specular * 80.0);
+	float specular = pow(max(0.0,dot(n,h)),Specular * 80.0);
 	vec4 color = vec4(min(mix(cool,warm,diffuse)+specular,1.0), 1.0);
 	if (dot(n,v) < OutlineWidth) color.rgb *= 0.0;
 	gl_FragColor = color;
