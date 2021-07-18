@@ -3346,6 +3346,11 @@ begin
       Filename := FilenameIN;
   if Filename = '' then exit;
   result := true;
+  {$IFDEF LHRH}
+   gMesh.isShowLH:=true;
+   gMesh.isShowRH:=true;
+   GLForm1.BilateralEitherMenu.checked := true;
+  {$ENDIF}
   ext := ExtractFileExtGzUpper(Filename);
   ext2 := UpCaseExt2(FileName); // "file.gii.dset" -> ".GII.DSET"
   if (ext = '.GLS') then begin
@@ -4901,8 +4906,6 @@ begin
   gMesh.isShowRH:=true;
   gPrefs.PryLHRH:=0;
   gPrefs.DisplaceLHRH := 0;
-
-
   GLForm1.BilateralEitherMenu.checked := true;
   {$ENDIF}
      //gPrefs.Colorbar := true;
@@ -6146,9 +6149,9 @@ begin
 
    {$IFDEF LCLCarbon} + ' Carbon'{$ENDIF}
    {$IFDEF LCLCocoa} + ' Cocoa'{$ENDIF}
-   {$IFDEF LCLGTK3} + 'GTK3'; {$ENDIF}
-   {$IFDEF LCLGTK2} + 'GTK2'; {$ENDIF}
-   {$IFDEF LCLQT5} + 'QT5'; {$ENDIF}
+   {$IFDEF LCLGTK3} + 'GTK3' {$ENDIF}
+   {$IFDEF LCLGTK2} + 'GTK2' {$ENDIF}
+   {$IFDEF LCLQT5} + 'QT5' {$ENDIF}
    {$IFDEF Linux} + ' Linux'{$ENDIF}
    {$IFDEF Windows} + ' Windows'{$ENDIF}
    {$IFDEF CPULLVM} + ' LLVM' {$ENDIF}

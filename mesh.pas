@@ -1625,8 +1625,20 @@ begin
   glBlendEquation(GL_FUNC_ADD);
   {$ENDIF}
   glBlendFunc(GL_SRC_ALPHA, GL_ONE);   //GL_SRC_ALPHA=0x302 GL_ONE=1
-  if (XRay = kXRayBrightBackground) then //dark background
-  glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+  if (XRay = kXRayBrightBackground) then //results with bright backgrounds not satisfying...
+  	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+  (*
+  //if (XRay = kXRayBrightBackground) then begin//dark background
+    glBlendEquation(GL_FUNC_SUBTRACT);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE);   //GL_SRC_ALPHA=0x302 GL_ONE=1
+    //glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_ONE);   //GL_SRC_ALPHA=0x302 GL_ONE=1
+    glBlendFunc(GL_SRC_ALPHA, GL_ZERO);   //GL_SRC_ALPHA=0x302 GL_ONE=1
+
+    //glBlendFunc(GL_ONE, GL_SRC_ALPHA);
+    glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);   //GL_SRC_ALPHA=0x302 GL_ONE=1
+
+  	//glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+  //end;*)
 end; //SetXRay()
 
 procedure TMesh.DrawGL (Clr: TRGBA; clipPlane: TPoint4f; isFlipMeshOverlay: boolean; XRay: integer = kXRayNo);
