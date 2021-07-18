@@ -1,5 +1,5 @@
 object GLForm1: TGLForm1
-  Left = 483
+  Left = 276
   Height = 659
   Top = 25
   Width = 1004
@@ -1830,16 +1830,16 @@ object GLForm1: TGLForm1
         Caption = '-'
       end
       object PrevOverlayMenu: TMenuItem
-        Caption = 'Previous (earlier) volume'
+        Caption = 'Previous volume'
         Enabled = False
-        ShortCut = 16464
+        ShortCut = 24656
         OnClick = PrevOverlayMenuClick
       end
       object NextOverlayMenu: TMenuItem
         Tag = 1
         Caption = 'Next volume'
         Enabled = False
-        ShortCut = 16460
+        ShortCut = 24654
         OnClick = PrevOverlayMenuClick
       end
     end
