@@ -1,8 +1,0 @@
-begin
-	resetdefaults();
-	azimuthelevation(70, 15);
-	meshload('/Users/chris/afni/pial/lh.pial');
-	overlayload('/Users/chris/afni/pial/lh.HCP-MMP1.annot');
-
-end.
-

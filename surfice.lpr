@@ -6,7 +6,7 @@ uses
 {$IFDEF FPC}Graphics, {$ENDIF}
 {$IFDEF UNIX}{$IFDEF UseCThreads}cthreads,{$ENDIF}{$ENDIF}
   Interfaces,
-  Forms, lazopenglcontext, pascalscript, mainunit, Shaderu, prefs, nifti_loader,
+  Forms, lazopenglcontext, mainunit, Shaderu, prefs, nifti_loader,
   uscale, colorTable, track;
 
 {$R *.res}

@@ -14,7 +14,6 @@
       <XPManifest>
         <DpiAware Value="True"/>
       </XPManifest>
-      <Icon Value="0"/>
     </General>
     <VersionInfo>
       <Language Value=""/>
@@ -33,6 +32,19 @@
             <OtherUnitFiles Value="lzma"/>
             <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
           </SearchPaths>
+    <Conditionals Value="// example for adding linker options on Mac OS X
+//if TargetOS=&apos;darwin&apos; then
+//  LinkerOptions := &apos; -framework OpenGL&apos;;
+//
+// -Clflto 
+// -Clfltonosystem
+//if TargetCPU=&apos;aarch64&apos; then
+//  UnitPathXXX += &apos;;win&apos;;
+// example for adding a unit and include path on Windows
+//if SrcOS=&apos;win&apos; then begin
+//  UnitPath += &apos;;win&apos;;
+//  IncPath += &apos;;win&apos;;
+//end;"/>
           <CodeGeneration>
             <TargetCPU Value="x86_64"/>
             <Optimizations>
@@ -61,19 +73,13 @@
         <Mode0 Name="default"/>
       </Modes>
     </RunParams>
-    <RequiredPackages Count="4">
+    <RequiredPackages Count="2">
       <Item1>
-        <PackageName Value="python4lazarus_package"/>
+        <PackageName Value="LazOpenGLContext"/>
       </Item1>
       <Item2>
-        <PackageName Value="pascalscript"/>
-      </Item2>
-      <Item3>
-        <PackageName Value="LazOpenGLContext"/>
-      </Item3>
-      <Item4>
         <PackageName Value="LCL"/>
-      </Item4>
+      </Item2>
     </RequiredPackages>
     <Units Count="3">
       <Unit0>
@@ -100,7 +106,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="lzma"/>
+      <OtherUnitFiles Value="lzma;PythonBridge"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>
@@ -130,9 +136,7 @@
     </Linking>
     <Other>
       <CustomOptions Value="-dDisableLCLGIF 
--dDisableLCLPNM 
--Clflto 
--Clfltonosystem"/>
+-dDisableLCLPNM"/>
     </Other>
   </CompilerOptions>
   <Debugging>

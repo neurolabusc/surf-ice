@@ -1,9 +1,11 @@
 import gl
 gl.resetdefaults()
-gl.resetdefaults()
-gl.meshload('lh.inflated')
-gl.shadername('XRay');
-
-#gl.backcolor(200,200,222);
-#gl.meshcolor(1,200,1);
-#gl.overlayload('motor_4t95mesh.mz3')
+gl.azimuthelevation(70, 15)
+gl.meshload('BrainMesh_ICBM152.rh.mz3')
+gl.overlayload('motor_4t95vol.nii.gz')
+gl.overlayminmax(1,2,12)
+gl.overlayload('motor_4t95vol.nii.gz')
+gl.overlayminmax(2,-1,-2)
+gl.colorbarvisible(1)
+gl.overlaytransparencyonbackground(25)
+gl.meshcurv()

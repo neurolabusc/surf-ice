@@ -1,5 +1,6 @@
 unit prefs;
-{$D-,O+,Q-,R-,S-}   //Delphi L-,Y-
+//{$D-,O+,Q-,R-,S-}   //Delphi L-,Y-
+{$mode delphi}
 {$H+}
 
 interface
@@ -24,7 +25,7 @@ type
      Colorbar,TracksAreTubes, ScreenCaptureTransparentBackground,LoadTrackOnLaunch,ColorBarPrecedenceTracksNotOverlays,HideDarkTracks, HideBrightTracks,
      LoadBilateralLHRHx,
     OverlappingOverlaysOverwrite, ZDimIsUp,  ShaderForBackgroundOnly, CoreTrackDisableDepth, SkipPrefWriting, isFlipMeshOverlay, DarkMode,
-    ShowPascalMenu, RetinaDisplay, GenerateSmoothCurves {$IFDEF LINUX}, isMesaWarned {$ENDIF} : boolean;
+    RetinaDisplay, GenerateSmoothCurves {$IFDEF LINUX}, isMesaWarned {$ENDIF} : boolean;
     PryLHRH, DisplaceLHRH, Pitch: single; //shift left and right hemisphere
     TrackTubeSlices, ScreenCaptureZoom,ColorbarColor,ColorBarPosition,
     window_width, window_height, RenderQuality, 
@@ -352,7 +353,6 @@ begin
     AdditiveOverlay := false;
     SkipPrefWriting := false;
     isFlipMeshOverlay := false;
-    ShowPascalMenu := false;
     RetinaDisplay := true;
     DarkMode := false;
     BlackDefaultBackground := false;
@@ -655,7 +655,6 @@ begin
 	  IniBool(lRead,lIniFile, 'Perspective',lPrefs.Perspective);
 	  IniBool(lRead,lIniFile, 'AdditiveOverlay',lPrefs.AdditiveOverlay);
 	  IniBool(lRead,lIniFile, 'StartupScript',lPrefs.StartupScript);
-      IniBool(lRead,lIniFile, 'ShowPascalMenu',lPrefs.ShowPascalMenu);
           {$IFDEF LINUX}IniBool(lRead,lIniFile, 'MesaWarned', lPrefs.isMesaWarned);{$ENDIF}
           //IniBool(lRead,lIniFile, 'ObjectBasedClipPlane',lPrefs.ObjectBasedClipPlane);
 	  {$IFDEF LCLCocoa}

@@ -25,9 +25,11 @@ The Windows and Linux releases includes two versions of Surf Ice: "Surfice" requ
 
 ##### Compiling
 
-This project is built using the open source [FreePascal Lazarus](http://www.lazarus-ide.org/) compiler and integrated development environment. You will need to have the `LazOpenGLContext` and `PascalScript` packages installed. To do this, launch the Lazarus application and choose Packages/InstallPackages. You will want to select these two packages from the "Available for installation" list. Finally, click the "Save and rebuild" button. Once these are installed, you can load this package and compile it using the Run/Run menu option.
+This project is built using the open source [FreePascal Lazarus](http://www.lazarus-ide.org/) compiler and integrated development environment. You will need to have the `LazOpenGLContext` package installed. To do this, launch the Lazarus application and choose Packages/InstallPackages. You will want to select these two packages from the "Available for installation" list. Finally, click the "Save and rebuild" button. Once these are installed, you can load this package and compile it using the Run/Run menu option.
 
-The latest version also allows [Python Scripting](https://github.com/neurolabusc/surf-ice/blob/master/PYTHON.md). To enable this you will need install the [Python-for-Lazarus package](https://github.com/Alexey-T/Python-for-Lazarus): this should be done automatically by the Lazarus graphical interface. Unfortunately, the recent releases no longer support to legacy Python 2.7. If you want to support both Python 2.7 and modern Python 3.x, you will need to install a [special version of this package](https://github.com/neurolabusc/Python27-for-Lazarus). You may have to comment out the line `{$DEFINE PY27}` in the `opts.inc` file unless you use this special version. Once you download the package, you can install it in the same way as LazOpenGLContext and PascalScript (described above). Alternatively, if you do not want to enable Python, edit the `opts.inc` file by removing the line `{$DEFINE MYPY}`.
+The software allows [Python Scripting](https://github.com/neurolabusc/surf-ice/blob/master/PYTHON.md). By default, it will use [PythonBridge](https://github.com/genericptr/PythonBridge) with all the required files included.
+
+Alternatively, the `surfice_py4laz` project uses[Python-for-Lazarus package](https://github.com/Alexey-T/Python-for-Lazarus). While PythonBridge statitcally links Python for macOS and Linux, Python-For-Lazarus leverages an existing installation (both use dynamic linked libraries for Windows). Unfortunately, the recent releases no longer support to legacy Python 2.7. If you want to support both Python 2.7 and modern Python 3.x, you will need to install a [special version of this package](https://github.com/neurolabusc/Python27-for-Lazarus). You may have to comment out the line `{$DEFINE PY27}` in the `opts.inc` file unless you use this special version. Once you download the package, you can install it in the same way as LazOpenGLContext (described above). Alternatively, if you do not want to enable Python, edit the `opts.inc` file by removing the line `{$DEFINE MYPY}`.
 
 You can also edit your opts.inc file to build either of the [flavors of Surfice](https://www.nitrc.org/plugins/mwiki/index.php/surfice:MainPage#Versions). Uncomment the line `{$DEFINE COREGL}` for OpenGL 3.3 Core specification, or comment the line `//{$DEFINE COREGL}` for OpenGL 2.1.
 
@@ -35,13 +37,13 @@ You can also edit your opts.inc file to build either of the [flavors of Surfice]
 You can also add the required packages from the command line:
 
 ```
-lazbuild --verbose-pkgsearch lazopenglcontext --verbose-pkgsearch pascalscript
+lazbuild --verbose-pkgsearch lazopenglcontext
 if [ $? -eq 0 ]
 then
     echo "required packages already installed"
 else
     echo "installing packages"
-    lazbuild --add-package lazopenglcontext --add-package pascalscript --build-ide=
+    lazbuild --add-package lazopenglcontext --build-ide=
 fi
 if [[ "$OSTYPE" == "darwin"* ]]; then
 	echo "macOS compiling for Cocoa, instead of default Carbon widgetset"

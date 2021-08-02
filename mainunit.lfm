@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
   Left = 276
   Height = 659
-  Top = 25
+  Top = 35
   Width = 1004
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -2162,11 +2162,7 @@ object GLForm1: TGLForm1
         OnClick = ScriptingSaveMenuClick
       end
       object ScriptingPythonMenu: TMenuItem
-        Caption = 'Python'
-      end
-      object ScriptingPascalMenu: TMenuItem
-        Caption = 'Pascal'
-        Visible = False
+        Caption = 'Templates'
       end
       object ScriptingInsertMenu: TMenuItem
         Caption = 'Insert'
@@ -2705,14 +2701,6 @@ object GLForm1: TGLForm1
     Filter = 'Scripts (*.py;*.gls)|*.py;*.gls|Python scripts (*.py)|*.py|Pascal scripts (*.gls)|*.gls'
     Left = 280
     Top = 368
-  end
-  object PSScript1: TPSScript
-    CompilerOptions = []
-    OnCompile = PSScript1Compile
-    Plugins = <>
-    UsePreProcessor = False
-    Left = 39
-    Top = 64
   end
   object SaveScriptDialog: TSaveDialog
     Left = 461

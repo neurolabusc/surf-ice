@@ -7,20 +7,46 @@ unit mainunit;
 {$IFDEF Darwin}
 {$modeswitch objectivec1}
 {$ENDIF}
+
+{$IFDEF MYPY}{$IFNDEF PY4LAZ}
+  {$ifdef darwin}
+    {$ifdef CPUAARCH64}
+      {$linklib ./PythonBridge/aarch64-darwin/libpython3.7m.a}
+    {$else}
+      {$linklib ./PythonBridge/x86_64-darwin/libpython3.7m.a}
+    {$endif}
+  {$endif}
+  {$ifdef linux}
+    {$linklib c}
+    {$linklib m}
+    {$linklib pthread}
+    {$linklib util}
+    {$linklib dl}
+    {$linklib ./PythonBridge/x86_64-linux/libpython3.7m.a}
+  {$endif}
+{$ENDIF}{$ENDIF}
+
 //{$DEFINE DARKMODE}
+//{$DEFINE PY4LAZ}
 interface
 
 uses
   {$IFDEF DGL} dglOpenGL, {$ELSE DGL} {$IFDEF COREGL}glcorearb, {$ELSE} gl, {$ENDIF}  {$ENDIF DGL}
   fphttpclient, strutils,
-  {$IFDEF MYPY}PythonEngine, {$ENDIF}
+  {$IFDEF MYPY}
+    {$IFDEF PY4LAZ}
+      PythonEngine, PyLib, //use PythonForLazarus
+    {$ELSE}
+      Python3Core, PythonBridge, //use PythonPascalBridge
+    {$ENDIF}
+  {$ENDIF}
   //{$IFDEF SCRIPTING}
   //{$ENDIF}
   {$IFNDEF UNIX} shellapi, {$ELSE}  Process,  {$ENDIF}
   {$IFDEF Linux} LazFileUtils, {$ENDIF}
   {$IFDEF COREGL} gl_core_3d, {$ELSE}     gl_legacy_3d, {$ENDIF}
   {$IFDEF LHRH} meshlhrh, {$ENDIF}
-  uPSComponent,Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
   math, ExtCtrls, OpenGLContext, mesh, LCLintf, ComCtrls, Menus, graphtype,
   curv, ClipBrd, shaderui, shaderu, prefs, userdir, LCLtype, Spin,
   Buttons, matmath, colorTable, Track, types, glcube, glclrbar, define_types,
@@ -64,7 +90,6 @@ LayerOptionsBtn: TButton;
  OverlaySep: TMenuItem;
  overlayload1: TMenuItem;
  overlayvisible1: TMenuItem;
-  PSScript1: TPSScript;
   S3Label: TLabel;
   BGShader: TLabel;
   SaveScriptDialog: TSaveDialog;
@@ -150,7 +175,6 @@ resetdefaults1: TMenuItem;
 wait1: TMenuItem;
 
 
- ScriptingPascalMenu: TMenuItem;
 	ScriptPanel: TPanel;
 	ScriptBox: TGroupBox;
 	ScriptMemo: TMemo;
@@ -512,8 +536,8 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     function PyIsPythonScriptMain(): boolean;
     function PyExecMain(): boolean;
     function PyCreate: boolean;
+    procedure GotPythonData(str: UnicodeString);
     procedure PyModInitialization(Sender: TObject);
-    procedure PSScript1Compile(Sender: TPSScript);
 
     private
     { private declarations }
@@ -553,9 +577,13 @@ uses
 
 var
   {$IFDEF MYPY}
+  {$IFDEF PY4LAZ}
   PythonIO : TPythonInputOutput;
   PyMod: TPythonModule;
   PyEngine: TPythonEngine = nil;
+  {$ELSE}
+  PyEngine: TPythonModule = nil;
+  {$ENDIF}
   gPyRunning: boolean = false;
   {$ENDIF}
   gNode: TMesh;
@@ -684,18 +712,6 @@ begin
   {$IFDEF Unix}writeln(s);{$ENDIF}
 end;
 
-procedure TGLForm1.PSScript1Compile(Sender: TPSScript);
-var
-   i: integer;
-begin
-  //Sender.AddFunction( @TScriptForm.MyWriteln,'procedure Writeln(const s: string);');
-  Sender.AddFunction(@MyWriteln, 'procedure Writeln(s: string);');
-  for i := 1 to knFunc do
-      Sender.AddFunction(kFuncRA[i].Ptr,'function '+kFuncRA[i].Decl+kFuncRA[i].Vars+';');
-  for i := 1 to knProc do
-      Sender.AddFunction(kProcRA[i].Ptr,'procedure '+kProcRA[i].Decl+kProcRA[i].Vars+':');
-end;
-
 procedure TGLForm1.InsertCommand(Sender: TObject);
 var
   lStr: string;
@@ -740,282 +756,43 @@ begin
 end;
 
 
-function searchPy(pth: string): string;
-var
-   searchResult : TSearchRec;
-begin
-    result := '';
-    {$IFDEF Darwin}
-    if FindFirst(IncludeTrailingPathDelimiter(pth)+'libpython*.dylib', faDirectory, searchResult) = 0 then
-    {$ELSE}
-    if FindFirst(IncludeTrailingPathDelimiter(pth)+'libpython*.so', faDirectory, searchResult) = 0 then
-    {$ENDIF}
-    result := IncludeTrailingPathDelimiter(pth)+(searchResult.Name);
-    FindClose(searchResult);
-end;
-{$IFDEF Darwin}
-  const
-       kBasePath = '/Library/Frameworks/Python.framework/Versions/';
-{$ENDIF}
-
-  {$IFDEF UNIX}
-
-function InitPyLibraryPath: string;
-    //
-    function GetMacPath(NMinorVersion: integer): string;
-    begin
-      Result:= Format('/Library/Frameworks/Python.framework/Versions/3.%d/lib/libpython3.%d.dylib',
-        [NMinorVersion, NMinorVersion]);
-    end;
-    //
-  var
-    N: integer;
-  begin
-    Result:= '';
-    {$ifdef windows}
-    exit('python35.dll');
-    {$endif}
-    {$ifdef linux}
-    exit('libpython3.6m.so.1.0');
-    {$endif}
-    {$ifdef freebsd}
-    exit('libpython3.6m.so');
-    {$endif}
-    {$ifdef darwin}
-    for N:= 4 to 9 do
-    begin
-      Result:= GetMacPath(N);
-      if FileExists(Result) then exit;
-    end;
-    {$endif}
-  end;
-{$ENDIF}
-
-{$IFDEF Darwin}
-function findMacOSLibPython27: string;
-const
-     kPth = '/System/Library/Frameworks/Python.framework/Versions/Current/lib/libpython2.7.dylib';
-begin
- result := '';
- if not FileExists(kPth) then exit;
- result := kPth;
-end;
-
-function findMacOSLibPython3x: string;
-var
-  N: integer;
-  S: string;
-begin
- for N:= 5 to 9 do
-  begin
-    S:= Format('/Library/Frameworks/Python.framework/Versions/3.%d/lib/libpython3.%d.dylib',[N, N]);
-    if FileExists(S) then exit(S);
-  end;
-  result := '';
-end;
-
-//Catalina sandbox restrictions make do not allow this for Notarized apps:
-(*function findMacOSLibPython3(pthroot: string = '/Library/Frameworks/Python.framework/'): string;
-label
-  121;
-var
-  pths: TStringList;
-  i: integer;
-begin
-  result := '';
-  if not DirectoryExists(pthroot) then exit;
-  pths := TStringList.Create;
-  FindAllFiles(pths, pthroot, 'libpython3*dylib', true); //find e.g. all pascal sourcefiles
-  if pths.Count < 1 then goto 121;
-  for i := pths.Count -1 downto 0 do
-      if AnsiContainsText(pths[i],'loader') then
-         pths.Delete(i);
-  if pths.Count < 1 then goto 121;
-  result := pths[0];
-  //printf(pths);
-  121:
-  pths.Free;
-end; *)
-{$ENDIF}
-
-{$IFDEF LINUX}
-function findFirstRecursive(const SearchPath: String; SearchMask: String): string;
-//example findFirstRecursive('/usr/lib/', 'libpython3*so')
-//uses LazFileUtils
-var
-  ret: string;
-procedure find1(Dir: string);
-var
-   SR: TSearchRec;
-begin
-     if (ret <> '') or (FileIsSymlink(Dir)) then exit;
-     if FindFirst(IncludeTrailingBackslash(Dir) + SearchMask, faAnyFile or faDirectory, SR) = 0 then begin
-         ret := IncludeTrailingBackslash(Dir) +SR.Name;
-         FindClose(SR);
-         exit;
-      end;
-      if FindFirst(IncludeTrailingBackslash(Dir) + '*.*', faAnyFile or faDirectory, SR) = 0 then
-         try
-           repeat
-             if ((SR.Attr and faDirectory) <> 0) and (SR.Name <> '.') and (SR.Name <> '..') then
-               find1(IncludeTrailingBackslash(Dir) + SR.Name);  // recursive call!
-           until FindNext(Sr) <> 0;
-         finally
-           FindClose(SR);
-         end;
-end;
-begin
- ret := '';
- find1(SearchPath);
- result := ret;
-end;
-
-function findLinuxLibPython3(pthroot: string = '/usr/lib/'): string;
-begin
-     result := findFirstRecursive(pthroot, 'libpython3*so');
-end;
-{$ENDIF}
-
-  function findPythonLib(def: string): string;
-  {$IFDEF WINDOWS}
-  var
-    fnm: string;
-  begin
-       result := def;
-       if fileexists(def) then exit;
-       result :=''; //assume failure
-       fnm := ScriptDir + pathdelim + 'python35.dll';
-       if not FileExists(fnm) then exit;
-       if not FileExists(changefileext(fnm,'.zip')) then exit;
-       result := fnm;
-  end;
-  {$ELSE}
-  {$IFDEF Linux}
-    const
-         knPaths = 8;
-         // /usr/lib/i386-linux-gnu/
-         {$IFDEF CPU64}
-         kBasePaths : array [1..knPaths] of string = ('/lib/','/lib64/','/usr/lib64/','/usr/lib/x86_64-linux-gnu/','/usr/lib/','/usr/local/lib/','/usr/lib/python2.7/config-x86_64-linux-gnu/','/opt/gitlab/embedded/lib/');
-         {$ELSE}
-         kBasePaths : array [1..knPaths] of string = ('/lib/','/lib32/','/usr/lib32/','/usr/lib/i386-linux-gnu/','/usr/lib/','/usr/local/lib/','/usr/lib/python2.7/config-i386-linux-gnu/','/opt/gitlab/embedded/lib/');
-         {$ENDIF}
-         kBaseName = 'libpython';
-  {$ENDIF}
-  {$IFDEF Darwin}
-      const
-         knPaths = 3;
-         kBasePaths : array [1..knPaths] of string = ('/System'+kBasePath, kBasePath, '/System/Library/Frameworks/Python.framework/Versions/Current/lib/');
-
-  {$ENDIF}
-      var
-           searchResult : TSearchRec;
-           pth, fnm: string;
-           vers : TStringList;
-           n: integer;
-        begin
-          result := def;
-          if DirectoryExists(def) then begin //in case the user supplies libdir not the library name
-               result := searchPy(def);
-               if length(result) > 0 then exit;
-          end;
-        {$IFDEF Darwin}
-        result := findMacOSLibPython3x();
-        if length(result) > 0 then exit;
-        result := findMacOSLibPython27();
-        if length(result) > 0 then exit;
-        {$ENDIF}
-        {$IFDEF LINUX}
-        result := findLinuxLibPython3();
-        if length(result) > 0 then exit;
-        writeln('If scripts generate "PyUnicode_FromWideChar" errors, install Python3 and reset ("-R") this software.');
-        {$ENDIF}
-
-             {$IFDEF LCLCocoa}
-             result := searchPy('/System/Library/Frameworks/Python.framework/Versions/Current/lib');
-             if fileexists(result) then exit;
-             {$ENDIF}
-             //if fileexists(def) then exit;
-             result := InitPyLibraryPath;
-             if fileexists(result) then exit;
-             vers := TStringList.Create;
-             n := 1;
-             while (n <= knPaths) and (vers.Count < 1) do begin
-               pth := kBasePaths[n];
-               n := n + 1;
-               if not DirectoryExists(pth) then continue;
-               {$IFDEF Linux}
-               if FindFirst(pth+'*.so', faDirectory, searchResult) = 0 then begin
-               {$ELSE}
-               if FindFirst(pth+'*', faDirectory, searchResult) = 0 then begin
-               {$ENDIF}
-                 repeat
-                        //showmessage('?'+searchResult.Name);
-                        if (length(searchResult.Name) < 1) or (searchResult.Name[1] = '.') then continue;
-                        {$IFDEF LINUX}
-                        if (pos(kBaseName,searchResult.Name) < 1) then continue;
-                        {$ELSE}
-                        if (not (searchResult.Name[1] in ['0'..'9'])) then continue;
-                        {$ENDIF}
-                    if (pos('libpython2.6',searchResult.Name) < 1) then
-                       vers.Add(searchResult.Name);
-                  until findnext(searchResult) <> 0;
-               end;
-              FindClose(searchResult);
-            end;
-            if vers.Count < 1 then begin
-               vers.Free;
-               result :=''; //assume failure
-               for n := 1 to knPaths do begin
-                 pth := kBasePaths[n];
-                 result := searchPy(pth);
-                 if fileexists(result) then exit;
-               end;
-               result := '';
-               exit;
-            end;
-            vers.Sort;
-            fnm := vers.Strings[vers.Count-1]; //newest version? what if 3.10 vs 3.9?
-            vers.Free;
-            {$IFDEF Darwin}
-            fnm := kBasePath+fnm+'/lib/libpython'+fnm+'.dylib';
-            {$ENDIF}
-            {$IFDEF LINUX}
-            fnm := pth+ fnm;
-            {$ENDIF}
-            if fileexists(fnm) then
-               result := fnm;
-        end;
-  {$ENDIF}
 
 {$IFDEF MYPY}
+
 function PyVERSION(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  s: string;
 begin
-  with GetPythonEngine do
-    Result:= PyUnicode_FromString(kVers);
+  s := kVers+{$IFDEF PY4LAZ}'Python-for-Lazarus'{$ELSE}'PythonBridge' {$ENDIF}  +' PyLib: '+gPrefs.PyLib;
+  {$IFDEF PY4LAZ}with GetPythonEngine do {$ENDIF}
+    Result:= PyString_FromString(PChar(s));
 end;
 
 function PyOVERLAYCOUNT(Self, Args : PPyObject): PPyObject; cdecl;
 begin
-  with GetPythonEngine do
+  {$IFDEF PY4LAZ}with GetPythonEngine do {$ENDIF}
     Result:= PyLong_FromLong(gMesh.OpenOverlays);
 end;
 
 function PyRESETDEFAULTS(Self, Args : PPyObject): PPyObject; cdecl;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  {$IFDEF PY4LAZ}with GetPythonEngine do {$ENDIF}
+  Result := PyBool_FromLong(Ord(True));
   RESETDEFAULTS;
 end;
 
 function PyMESHCURV(Self, Args : PPyObject): PPyObject; cdecl;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+ {$IFDEF PY4LAZ}with GetPythonEngine do {$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
   MESHCURV;
   //GLForm1.Caption := inttostr(random(888));
 end;
 
 function PyMESHREVERSEFACES(Self, Args : PPyObject): PPyObject; cdecl;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+  {$IFDEF PY4LAZ}with GetPythonEngine do {$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
   MESHREVERSEFACES;
 end;
 
@@ -1030,13 +807,15 @@ var
   PtrName: PChar;
   StrName: string;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+  {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
+  //with GetPythonEngine do
     if Bool(PyArg_ParseTuple(Args, 's:savebmp', @PtrName)) then
     begin
       StrName:= string(PtrName);
       SAVEBMP(StrName);
     end;
+   {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PySAVEBMPXY(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1045,42 +824,47 @@ var
   StrName: string;
   x,y: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
-    if Bool(PyArg_ParseTuple(Args, 'sii:savebmpxy', @PtrName, @x, @y)) then
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
+  if Bool(PyArg_ParseTuple(Args, 'sii:savebmpxy', @PtrName, @x, @y)) then
     begin
       StrName:= string(PtrName);
       SAVEBMPXY(StrName, x, y);
     end;
+  {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
+
 function PyBACKCOLOR(Self, Args : PPyObject): PPyObject; cdecl;
 var
   R,G,B: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
-    if Bool(PyArg_ParseTuple(Args, 'iii:backcolor', @R,@G,@B)) then
-      BACKCOLOR(R,G,B);
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+ Result:=PyBool_FromLong(Ord(True));
+ if Bool(PyArg_ParseTuple(Args, 'iii:backcolor', @R,@G,@B)) then
+    BACKCOLOR(R,G,B);
+ {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyMESHCOLOR(Self, Args : PPyObject): PPyObject; cdecl;
 var
   R,G,B: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
-    if Bool(PyArg_ParseTuple(Args, 'iii:meshcolor', @R,@G,@B)) then
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
+  if Bool(PyArg_ParseTuple(Args, 'iii:meshcolor', @R,@G,@B)) then
       MESHCOLOR(R,G,B);
+  {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyATLASMAXINDEX(Self, Args : PPyObject): PPyObject; cdecl;
 var
   i: integer;
 begin
-  Result:= GetPythonEngine.PyLong_FromLong(-1);
-  with GetPythonEngine do
-    if Bool(PyArg_ParseTuple(Args, 'i:atlasmaxindex', @I)) then
-      Result:= GetPythonEngine.PyLong_FromLong(ATLASMAXINDEX(I));
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyLong_FromLong(-1);
+  if Bool(PyArg_ParseTuple(Args, 'i:atlasmaxindex', @I)) then
+      Result:= PyLong_FromLong(ATLASMAXINDEX(I));
+  {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyEXISTS(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1088,112 +872,123 @@ var
   PtrName: PChar;
   StrName: string;
 begin
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
     if Bool(PyArg_ParseTuple(Args, 's:exists', @PtrName)) then
     begin
-      StrName:= string(PtrName);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(EXISTS(StrName)));
+      StrName := string(PtrName);
+      Result := PyBool_FromLong(Ord(EXISTS(StrName)));
     end;
+   {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyAZIMUTH(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
-    if Bool(PyArg_ParseTuple(Args, 'i:azimuth', @A)) then
+  {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result := PyBool_FromLong(Ord(True));
+  if Bool(PyArg_ParseTuple(Args, 'i:azimuth', @A)) then
       AZIMUTH(A);
+  {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyAZIMUTHELEVATION(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A,E: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'ii:azimuthelevation', @A, @E)) then
       AZIMUTHELEVATION(A,E);
+   {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyBMPZOOM(Self, Args : PPyObject): PPyObject; cdecl;
 var
   Z: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:bmpzoom', @Z)) then
       bmpzoom(Z);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyCAMERADISTANCE(Self, Args : PPyObject): PPyObject; cdecl;
 var
   Z: single;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'f:cameradistance', @Z)) then
       CAMERADISTANCE(Z);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PySHADERAMBIENTOCCLUSION(Self, Args : PPyObject): PPyObject; cdecl;
 var
   Z: single;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'f:shaderambientocclusion', @Z)) then
       SHADERAMBIENTOCCLUSION(Z);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyCLIP(Self, Args : PPyObject): PPyObject; cdecl;
 var
   D: single;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'f:clip', @D)) then
       CLIP(D);
+  {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyCLIPAZIMUTHELEVATION(Self, Args : PPyObject): PPyObject; cdecl;
 var
   D,A,E: single;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'fff:clipazimuthelevation', @D,@A,@E)) then
       CLIPAZIMUTHELEVATION(D,A,E);
+ {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyTRACKPREFS(Self, Args : PPyObject): PPyObject; cdecl;
 var
   D,A,E: single;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'fff:trackprefs', @D,@A,@E)) then
       TRACKPREFS(D,A,E);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyATLASSATURATIONALPHA(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A,B: single;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'ff:atlassaturationalpha', @A,@B)) then
       ATLASSATURATIONALPHA(A,B);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyCAMERAPAN(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A,B: single;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'ff:camerapan', @A,@B)) then
       CAMERAPAN(A,B);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyNODESIZE(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1201,10 +996,11 @@ var
   A: single;
   I: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'fi:nodesize', @A,@I)) then
       NODESIZE(A,Bool(I));
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyEDGESIZE(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1212,12 +1008,12 @@ var
   A: single;
   I: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'fi:edgesize', @A,@I)) then
       EDGESIZE(A,Bool(I));
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
-
 
 function isLayerLoaded(cmd: string; layer: integer; isZeroOK: boolean = true): boolean;
 begin
@@ -1232,176 +1028,193 @@ function PyOVERLAYINVERT(Self, Args : PPyObject): PPyObject; cdecl;
 var
   B,layer: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'ii:overlayinvert', @layer,@B)) then begin
       if not isLayerLoaded('overlayinvert', layer, false) then exit;
       OVERLAYINVERT(layer,Bool(B));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyOVERLAYTRANSLUCENT(Self, Args : PPyObject): PPyObject; cdecl;
 var
   B,layer: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'ii:overlayopacity', @layer,@B)) then begin
       if not isLayerLoaded('overlayopacity', layer, false) then exit;
       OVERLAYTRANSLUCENT(layer,Bool(B));
     end;
+ {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyOVERLAYOPACITY(Self, Args : PPyObject): PPyObject; cdecl;
 var
   B,layer: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'ii:overlaytranslucent', @layer,@B)) then begin
       if not isLayerLoaded('overlaytranslucent', layer, false) then exit;
       OVERLAYOPACITY(layer,B);
     end;
+   {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyCONTOUR(Self, Args : PPyObject): PPyObject; cdecl;
 var
   L: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:contour', @L)) then
       CONTOUR(L);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyEDGETHRESH(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A,B: single;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'ff:edgethresh', @A,@B)) then
       EDGETHRESH(A,B);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PySHADERXRAY(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A,B: single;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'ff:shaderxray', @A,@B)) then
       SHADERXRAY(A,B);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyNODETHRESH(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A,B: single;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'ff:nodethresh', @A,@B)) then
       NODETHRESH(A,B);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyCOLORBARPOSITION(Self, Args : PPyObject): PPyObject; cdecl;
 var
   P: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:colorbarposition', @P)) then
       COLORBARPOSITION (P);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyMESHOVERLAYORDER(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:meshoverlayorder', @A)) then
       MESHOVERLAYORDER(BOOL(A));
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyORIENTCUBEVISIBLE(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:orientcubevisible', @A)) then
       ORIENTCUBEVISIBLE(BOOL(A));
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyOVERLAYADDITIVE(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:overlayadditive', @A)) then
       OVERLAYADDITIVE(BOOL(A));
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyOVERLAYSMOOTHVOXELWISEDATA(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:overlaysmoothvoxelwisedata', @A)) then
       OVERLAYSMOOTHVOXELWISEDATA(BOOL(A));
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyOVERLAYOVERLAPOVERWRITE(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:overlayoverlapoverwrite', @A)) then
       OVERLAYOVERLAPOVERWRITE(BOOL(A));
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PySHADERFORBACKGROUNDONLY(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:shaderforbackgroundonly', @A)) then
       SHADERFORBACKGROUNDONLY(BOOL(A));
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyNODETHRESHBYSIZENOTCOLOR(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:nodethreshbysizenotcolor', @A)) then
       NODETHRESHBYSIZENOTCOLOR(BOOL(A));
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyCOLORBARVISIBLE(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:colorbarvisible', @A)) then
       COLORBARVISIBLE(BOOL(A));
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyCOLORBARCOLOR(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:colorbarcolor', @A)) then
       COLORBARCOLOR(A);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
  
 function PyFONTNAME(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1409,22 +1222,23 @@ var
   PtrName: PChar;
   StrName: string;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 's:fontname', @PtrName)) then
     begin
       StrName:= string(PtrName);
       FONTNAME(StrName);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyFULLSCREEN(Self, Args : PPyObject): PPyObject; cdecl;
 var
   Vis: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Boolean(PyArg_ParseTuple(Args, 'i:fullscreen', @Vis)) then begin
        if (Vis = 1) then begin
           GLForm1.WindowState := wsFullScreen;// wsMaximized
@@ -1432,36 +1246,40 @@ begin
        end else
            GLForm1.WindowState := wsMaximized;
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyELEVATION(Self, Args : PPyObject): PPyObject; cdecl;
 var
   E: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:elevation', @E)) then
       ELEVATION(E);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyNODEHEMISPHERE(Self, Args : PPyObject): PPyObject; cdecl;
 var
   E: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:nodehemisphere', @E)) then
       NODEHEMISPHERE(E);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyNODEPOLARITY(Self, Args : PPyObject): PPyObject; cdecl;
 var
   E: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:nodepolarity', @E)) then
       NODEPOLARITY(E);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyMESHLOAD(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1469,14 +1287,15 @@ var
   PtrName: PChar;
   StrName: string;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 's:meshload', @PtrName)) then
     begin
       StrName:= string(PtrName);
       MESHLOAD(StrName);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 
@@ -1485,20 +1304,21 @@ var
   PtrName: PChar;
   StrName: string;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 's:meshload', @PtrName)) then
     begin
       StrName:= string(PtrName);
       gPrefs.LoadBilateralLHRHx:= true;
       if (StrName = '1') or (StrName = '0') then begin
-        //Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+        //Result:= PyBool_FromLong(Ord(True));
         GLForm1.ScriptOutputMemo.lines.Add('meshloadbilateral() function has changed: now a filename is expected.');
       end else
       	MESHLOAD(StrName);
       gPrefs.LoadBilateralLHRHx:= false;
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyATLAS2NODE(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1506,30 +1326,31 @@ var
   PtrName: PChar;
   StrName: string;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 's:atlas2node', @PtrName)) then
     begin
       StrName:= string(PtrName);
       ATLAS2NODE(StrName);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
-
 
 function PyTRACKLOAD(Self, Args : PPyObject): PPyObject; cdecl;
 var
   PtrName: PChar;
   StrName: string;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 's:trackload', @PtrName)) then
     begin
       StrName:= string(PtrName);
       TRACKLOAD(StrName);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyMESHSAVE(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1537,14 +1358,15 @@ var
   PtrName: PChar;
   StrName: string;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 's:meshsave', @PtrName)) then
     begin
       StrName:= string(PtrName);
       MESHSAVE(StrName);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyNODELOAD(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1552,14 +1374,15 @@ var
   PtrName: PChar;
   StrName: string;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 's:nodeload', @PtrName)) then
     begin
       StrName:= string(PtrName);
       NODELOAD(StrName);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyOVERLAYLOAD(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1567,14 +1390,15 @@ var
   PtrName: PChar;
   StrName: string;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 's:overlayload', @PtrName)) then
     begin
       StrName:= string(PtrName);
       OVERLAYLOAD(StrName);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyEDGELOAD(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1582,14 +1406,15 @@ var
   PtrName: PChar;
   StrName: string;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 's:edgeload', @PtrName)) then
     begin
       StrName:= string(PtrName);
       EDGELOAD(StrName);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyMODALMESSAGE(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1597,14 +1422,15 @@ var
   PtrName: PChar;
   StrName: string;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 's:modalmessage', @PtrName)) then
     begin
       StrName:= string(PtrName);
       MODALMESSAGE(StrName);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyMODELESSMESSAGE(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1612,25 +1438,28 @@ var
   PtrName: PChar;
   StrName: string;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 's:modelessmessage', @PtrName)) then
     begin
       StrName:= string(PtrName);
       MODELESSMESSAGE(StrName);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyOVERLAYCLOSEALL(Self, Args : PPyObject): PPyObject; cdecl;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(TRUE));
+ {$IFDEF PY4LAZ}with GetPythonEngine do {$ENDIF}
+  Result:= PyBool_FromLong(Ord(TRUE));
   OVERLAYCLOSEALL;
 end;
 
 function PyQUIT(Self, Args : PPyObject): PPyObject; cdecl;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(TRUE));
+ {$IFDEF PY4LAZ}with GetPythonEngine do{$ENDIF}
+  Result:= PyBool_FromLong(Ord(TRUE));
   QUIT;
 end;
 
@@ -1640,14 +1469,15 @@ var
   StrName: string;
   V: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 'is:overlaycolorname', @V, @PtrName)) then
     begin
       StrName:= string(PtrName);
       OVERLAYCOLORNAME(V, StrName);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyOVERLAYCOLOR(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1655,8 +1485,8 @@ var
   layer, rLo, gLo, bLo, rHi, gHi, bHi: integer;
   lo, hi: TRGBA;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'iiiiiii:overlaycolor', @layer, @rLo, @gLo, @bLo, @rHi, @gHi, @bHi)) then begin
       if (gMesh.OpenOverlays < 1) then begin
          GLForm1.ScriptOutputMemo.lines.Add('Error: overlaycolor() requires an open overlay');
@@ -1677,6 +1507,7 @@ begin
       gnLUT := -1; //refresh colorbar
       GLForm1.GLBoxRequestUpdate(nil);
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PySHADERNAME(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1685,14 +1516,15 @@ var
   StrName: string;
   V: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 's:shadername', @PtrName)) then
     begin
       StrName:= string(PtrName);
       SHADERNAME(StrName);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PySHADERMATCAP(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1701,14 +1533,15 @@ var
   StrName: string;
   V: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 's:shadermatcap', @PtrName)) then
     begin
       StrName:= string(PtrName);
       SHADERMATCAP(StrName);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PySHADERADJUST(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1717,14 +1550,15 @@ var
   StrName: string;
   f: single;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 'sf:shaderadjust', @PtrName, @f)) then
     begin
       StrName:= string(PtrName);
       SHADERADJUST(StrName, f);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyEDGECOLOR(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1733,14 +1567,15 @@ var
   StrName: string;
   i: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 'si:edgecolor', @PtrName, @i)) then
     begin
       StrName:= string(PtrName);
       EDGECOLOR(StrName, bool(i));
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyNODECOLOR(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1749,14 +1584,15 @@ var
   StrName: string;
   i: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+  {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 'si:nodecolor', @PtrName, @i)) then
     begin
       StrName:= string(PtrName);
       NODECOLOR(StrName, bool(i));
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
+      Result:= PyBool_FromLong(Ord(True));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyMESHCREATE(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1767,8 +1603,8 @@ var
   i,i2: integer;
   b: boolean;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(FALSE));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(FALSE));
     if Bool(PyArg_ParseTuple(Args, 'ssffii:meshcreate', @PtrName, @PtrName2, @f, @f2, @i, @i2)) then
     begin
       StrName:= string(PtrName);
@@ -1782,68 +1618,75 @@ begin
       MyWriteln(format(' smooth: %d', [i2]));
       MyWriteln(' smooth values: 0/1/2 none/smoothMasked/smooth) ');
       b := MESHCREATE(StrName, StrName2, f, f2, i, i2);
-      Result:= GetPythonEngine.PyBool_FromLong(Ord(b));
+      Result:= PyBool_FromLong(Ord(b));
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PySCRIPTFORMVISIBLE(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:scriptformvisible', @A)) then
        SCRIPTFORMVISIBLE(BOOL(A));
+     {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyVIEWAXIAL(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:viewaxial', @A)) then
        VIEWAXIAL(BOOL(A));
+  {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyVIEWCORONAL(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:viewcoronal', @A)) then
        VIEWCORONAL(BOOL(A));
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyOVERLAYTRANSPARENCYONBACKGROUND(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:overlaytransparencyonbackground', @A)) then
        OVERLAYTRANSPARENCYONBACKGROUND(A);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyWAIT(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:wait', @A)) then
        WAIT(A);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PySHADERLIGHTAZIMUTHELEVATION(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A,B: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'ii:shaderlightazimuthelevation', @A, @B)) then
        SHADERLIGHTAZIMUTHELEVATION(A,B);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyOVERLAYMINMAX(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1851,54 +1694,58 @@ var
   A: integer;
   B,C: single;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'iff:overlayminmax', @A, @B, @C)) then begin
        if not isLayerLoaded('overlayminmax', A, false) then exit;
        OVERLAYMINMAX(A,B,C);
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyOVERLAYEXTREME(Self, Args : PPyObject): PPyObject; cdecl;
 var
   layer, mode: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'ii:overlayextreme', @layer, @mode)) then begin
        OVERLAYEXTREME(layer, mode);
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyHEMISPHEREDISTANCE(Self, Args : PPyObject): PPyObject; cdecl;
 var
   F: single;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'f:hemispheredistance', @F)) then
        gPrefs.DisplaceLHRH := F;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyHEMISPHEREPRY(Self, Args : PPyObject): PPyObject; cdecl;
 var
   F: single;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'f:hemispherepry', @F)) then
        gPrefs.PryLHRH := F;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyPITCH(Self, Args : PPyObject): PPyObject; cdecl;
 var
   F : single;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Boolean(PyArg_ParseTuple(Args, 'f:pitch', @F)) then
        gPrefs.Pitch := F;
-
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyMESHHEMISPHERE(Self, Args : PPyObject): PPyObject; cdecl;
@@ -1906,8 +1753,8 @@ function PyMESHHEMISPHERE(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:hemispherevisible', @A)) then begin
        if A = -1 then
        	  GLForm1.BilateralLeftOnlyMenu.click
@@ -1916,28 +1763,29 @@ begin
        else
          GLForm1.BilateralEitherMenu.click;
     end;
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyOVERLAYVISIBLE(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A,B: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'ii:overlayvisible', @A, @B)) then
        OVERLAYVISIBLE(A,BOOL(B));
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
-
-
 
 function PyVIEWSAGITTAL(Self, Args : PPyObject): PPyObject; cdecl;
 var
   A: integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(True));
-  with GetPythonEngine do
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:viewsagittal', @A)) then
        VIEWSAGITTAL(BOOL(A));
+    {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyATLASHIDE(Self, Args : PPyObject; isHide: boolean): PPyObject; cdecl;
@@ -1946,14 +1794,15 @@ var
   ob, obi:PPyObject;
   Indices: array of integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(False));
-  n := GetPythonEngine.PyTuple_Size(args);
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(False));
+  n := PyTuple_Size(args);
   if (n <> 2) and (n <> 1) then begin
           GLForm1.ScriptOutputMemo.lines.add('atlashide: requires four arguments [layer, (regions)] ');
           exit;
   end;
-  ob :=   GetPythonEngine.PyTuple_GetItem(Args,0);
-  layer := GetPythonEngine.PyLong_AsLong(ob);
+  ob :=   PyTuple_GetItem(Args,0);
+  layer := PyLong_AsLong(ob);
   if (layer < 0) or (layer > gMesh.OpenOverlays) then begin
      GLForm1.ScriptOutputMemo.lines.add('atlashide: layer should be in range 0..'+inttostr(gMesh.OpenOverlays));
      exit;
@@ -1964,23 +1813,25 @@ begin
      exit;
   end;
   //get indices
-  ob :=   GetPythonEngine.PyTuple_GetItem(Args,1);
-  if not (GetPythonEngine.PyTuple_Check(ob)) then begin  //2nd argument of atlashide(1,(17,22)) is tuple, atlashide(1,(17)) is integer
-  	 setlength(Indices, n);
-  	 Indices[0] := GetPythonEngine.PyLong_AsLong(ob);
+  ob :=   PyTuple_GetItem(Args,1);
+  //Result := PyObject_TypeCheck(obj, PyTuple_Type);
+  if not (PyTuple_Check(ob)) then begin  //2nd argument of atlashide(1,(17,22)) is tuple, atlashide(1,(17)) is integer
+    setlength(Indices, n);
+  	 Indices[0] := PyLong_AsLong(ob);
   end else begin
 
-    n := GetPythonEngine.PyTuple_Size(ob);
+    n := PyTuple_Size(ob);
     setlength(Indices, n);
     if n > 0 then begin //not for empty array, e.g. gl.atlashide(0,())
       for i := 0 to (n-1) do begin
-          obi :=   GetPythonEngine.PyTuple_GetItem(ob,i);
-          Indices[i] := GetPythonEngine.PyLong_AsLong(obi);
+          obi :=   PyTuple_GetItem(ob,i);
+          Indices[i] := PyLong_AsLong(obi);
       end;
     end;
   end;
   ATLASHIDE(layer, Indices);
   Indices := nil;
+  {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyATLASSHOW(Self, Args : PPyObject; isHide: boolean): PPyObject; cdecl;
@@ -1990,15 +1841,16 @@ var
   isVisible: array of boolean;
   Indices: array of integer;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(False));
-  n := GetPythonEngine.PyTuple_Size(args);
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(False));
+  n := PyTuple_Size(args);
   if (n <> 2) and (n <> 1) then begin
           GLForm1.ScriptOutputMemo.lines.add('atlasshow: requires four arguments [layer, (regions)] ');
           exit;
   end;
   GLForm1.caption := '>'+inttostr(n);
-  ob :=   GetPythonEngine.PyTuple_GetItem(Args,0);
-  layer := GetPythonEngine.PyLong_AsLong(ob);
+  ob :=   PyTuple_GetItem(Args,0);
+  layer := PyLong_AsLong(ob);
   mx := ATLASMAXINDEX(layer);
   if mx < 1 then exit;
   if (layer < 0) or (layer > gMesh.OpenOverlays) then begin
@@ -2011,19 +1863,19 @@ begin
      exit;
   end;
   //get indices
-  ob :=   GetPythonEngine.PyTuple_GetItem(Args,1);
+  ob :=   PyTuple_GetItem(Args,1);
   if(ob = nil) then exit;
   setlength(isVisible, mx+1); //+1 as 0..maxindex
-  if not (GetPythonEngine.PyTuple_Check(ob)) then begin  //2nd argument of atlashide(1,(17,22)) is tuple, atlashide(1,(17)) is integer
-  	 j := GetPythonEngine.PyLong_AsLong(ob);
+  if not (PyTuple_Check(ob)) then begin  //2nd argument of atlashide(1,(17,22)) is tuple, atlashide(1,(17)) is integer
+    j := PyLong_AsLong(ob);
      if (j > 0) and (j <= mx) then
         isVisible[j] := true;
   end else begin
-    n := GetPythonEngine.PyTuple_Size(ob);
+    n := PyTuple_Size(ob);
     if n > 0 then begin //not for empty array, e.g. gl.atlashide(0,())
       for i := 0 to (n-1) do begin
-          obi :=   GetPythonEngine.PyTuple_GetItem(ob,i);
-          j := GetPythonEngine.PyLong_AsLong(obi);
+          obi :=   PyTuple_GetItem(ob,i);
+          j := PyLong_AsLong(obi);
           if (j > 0) and (j <= mx) then
              isVisible[j] := true;
       end;
@@ -2047,6 +1899,7 @@ begin
       end;
   ATLASHIDE(layer, Indices);
   Indices := nil;
+  {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
 function PyATLASSTATMAP(Self, Args : PPyObject; isHide: boolean): PPyObject; cdecl;
@@ -2057,126 +1910,143 @@ var
   Indices: array of integer;
   Intensities: array of single;
 begin
-  Result:= GetPythonEngine.PyBool_FromLong(Ord(False));
-  n := GetPythonEngine.PyTuple_Size(args);
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(False));
+  n := PyTuple_Size(args);
   if (n <> 4) then begin
           GLForm1.ScriptOutputMemo.lines.add('atlasstatmap: requires four arguments [inname, outname, (regions), (values)] ');
           exit;
   end;
-  ob :=   GetPythonEngine.PyTuple_GetItem(Args,0);
-  //atlasname := GetPythonEngine.PyString_AsDelphiString(ob);
-  atlasname := GetPythonEngine.PyUnicode_AsUTF8(ob);
-  ob :=   GetPythonEngine.PyTuple_GetItem(Args,1);
-  //statname := GetPythonEngine.PyString_AsDelphiString(ob);
-  statname := GetPythonEngine.PyUnicode_AsUTF8(ob);
+  ob :=   PyTuple_GetItem(Args,0);
+  //atlasname := PyString_AsDelphiString(ob);
+  atlasname := PyUnicode_AsUTF8(ob);
+  ob :=   PyTuple_GetItem(Args,1);
+  //statname := PyString_AsDelphiString(ob);
+  statname := PyUnicode_AsUTF8(ob);
   //get indices
-  ob :=   GetPythonEngine.PyTuple_GetItem(Args,2);
-  n := GetPythonEngine.PyTuple_Size(ob);
+  ob :=   PyTuple_GetItem(Args,2);
+  n := PyTuple_Size(ob);
   setlength(Indices, n);
   for i := 0 to (n-1) do begin
-      obi :=   GetPythonEngine.PyTuple_GetItem(ob,i);
-      Indices[i] := GetPythonEngine.PyLong_AsLong(obi);
+      obi :=   PyTuple_GetItem(ob,i);
+      Indices[i] := PyLong_AsLong(obi);
   	  //GLForm1.ScriptOutputMemo.lines.add(format('%d->%d', [i, Indices[i]]));
 
   end;
   //get intensities
-  ob :=   GetPythonEngine.PyTuple_GetItem(Args,3);
-  n := GetPythonEngine.PyTuple_Size(ob);
+  ob :=   PyTuple_GetItem(Args,3);
+  n := PyTuple_Size(ob);
   setlength(Intensities, n);
   for i := 0 to (n-1) do begin
-      obi :=   GetPythonEngine.PyTuple_GetItem(ob,i);
-      Intensities[i] := GetPythonEngine.PyFloat_AsDouble(obi);
+      obi :=   PyTuple_GetItem(ob,i);
+      Intensities[i] := PyFloat_AsDouble(obi);
       //GLForm1.ScriptOutputMemo.lines.add(format('%d->%g', [i, Intensities[i]]));
   end;
   ATLASSTATMAP(atlasname, statname, Indices, Intensities);
+  {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
-procedure TGLForm1.PyModInitialization(Sender: TObject);
-begin
-  with Sender as TPythonModule do begin
-    AddMethod('atlas2node', @PyATLAS2NODE, ' atlas2node(imageName) -> convert .annot file labels to BrainNet Node format.');
-    AddMethod('atlashide', @PyATLASHIDE, ' atlashide(overlayNum, (r1, r2, ...)) -> Hide regions specified atlas. For example, "atlashide(0, (3, 7, 9))" will hide regions 3,7,9 of the background (0th layer) image.');
-    AddMethod('atlasmaxindex', @PyATLASMAXINDEX, ' atlasmaxindex(overlayNum) -> Returns maximum region humber in specified atlas. For example, if you load the CIT168 atlas (which has 15 regions) as your background image, then atlasmaxindex(0) will return 15.');
-    AddMethod('atlassaturationalpha', @PyATLASSATURATIONALPHA, ' atlassaturationalpha(saturation, transparency) -> Set saturation and transparency of atlas. A desaturated atlas will appear gray, a transparent atlas will reveal the background color.');
-    AddMethod('atlasshow', @PyATLASSHOW, ' atlasshow(overlayNum, (r1, r2, ...)) -> Show regions specified atlas. For example, "atlasshow(1, (3, 7, 9))" will show regions 3,7,9 of the first overlay image.');
-    AddMethod('atlasstatmap', @PyATLASSTATMAP, ' atlasstatmap(atlasname, outname, (r1, r2, ...), (i1, i2, ...)) -> Create mesh named "outname" where regions have specified intensities.');
-    AddMethod('azimuth', @PyAZIMUTH, ' azimuthe(azi) -> Rotate image by specified degrees.');
-    AddMethod('azimuthelevation', @PyAZIMUTHELEVATION, ' azimuthelevation(azi, elev) -> Sets the camera location.');
-    AddMethod('backcolor', @PyBACKCOLOR, ' backcolor(r, g, b) -> changes the background color, for example backcolor(255, 0, 0) will set a bright red background');
-    AddMethod('bmpzoom', @PyBMPZOOM, ' bmpzoom(z) -> changes resolution of savebmp(), for example bmpzoom(2) will save bitmaps at twice screen resolution');
-    AddMethod('cameradistance', @PyCAMERADISTANCE, ' cameradistance(z) -> Sets the viewing distance from the object.');
-    AddMethod('camerapan', @PyCAMERAPAN, ' camerapan(x, y) -> Translate image horizontally (x) and vertically (y). range -1..+1, where 0 is centered.');
-    AddMethod('clip', @PyCLIP, ' clip(depth) -> Creates a clip plane that hides information close to the viewer.');
-    AddMethod('clipazimuthelevation', @PyCLIPAZIMUTHELEVATION, ' clipazimuthelevation(depth, azi, elev) -> Set a view-point independent clip plane.');
-    AddMethod('colorbarposition', @PyCOLORBARPOSITION, ' colorbarposition(p) -> Set colorbar position (1=bottom, 2=left, 3=top, 4=right).');
-    AddMethod('colorbarvisible', @PyCOLORBARVISIBLE, ' colorbarvisible(v) -> Show (1) or hide (0) the color bar.');
-    AddMethod('colorbarcolor', @PyCOLORBARCOLOR, ' colorbarcolor(c) -> Set color of the color bar.');
-    AddMethod('contour', @PyCONTOUR, ' contour(layer) -> Create edge map for atlas or overlay.');
-    AddMethod('edgecolor', @PyEDGECOLOR, ' edgecolor(name, varies) -> Select color scheme for connectome edge map. If varies=1 then edge color depends on strength of connection.');
-    AddMethod('edgeload', @PyEDGELOAD, ' edgeload(filename) -> Loads a BrainNet Viewer format Edge file, e.g. connectome map.');
-    AddMethod('edgesize', @PyEDGESIZE, ' edgesize (size, varies) -> Set the diameters of the cylinders of the connectome. If varies=1 then edge diameter depends on strength of connection.');
-    AddMethod('edgethresh', @PyEDGETHRESH, ' edgethresh (lo, hi) -> Set minimum and maximum values for connectome edge diameters.');
-    AddMethod('elevation', @PyELEVATION, ' elevation(degrees) -> Rotates volume rendering relative to camera.');
-    AddMethod('exists', @PyEXISTS, ' exists(filename) -> Returns true if filename is found.');
-    AddMethod('fontname', @PyFONTNAME, ' fontname(name) -> Set typeface for display.');
-    AddMethod('fullscreen', @PyFULLSCREEN, ' fullscreen(max) -> Form expands to size of screen (1) or size is maximized (0).');
-    AddMethod('hemispheredistance', @PyHEMISPHEREDISTANCE, ' hemispheredistance(v) -> Grow or shrink space between left and right hemisphere (-1..1).');
-    AddMethod('hemispherepry', @PyHEMISPHEREPRY, ' hemispherepry(degrees) -> Rotate hemispheres relative to each other, the SUMA "walnut pry" effect.');
-    AddMethod('meshcolor', @PyMESHCOLOR, ' meshcolor(r, g, b) -> Set red/green/blue components of main image. Each component is an integer 0..255.');
-    AddMethod('meshcreate', @PyMESHCREATE, ' meshcreate(niiname, meshname, threshold, decimateFrac, minimumClusterVox, smoothStyle) -> Convert a NIfTI voxel-based image into a mesh.');
-    AddMethod('meshcurv', @PyMESHCURV, ' meshcurv() -> Displays mesh curvature, so crevices appear dark.');
-    AddMethod('meshhemisphere', @PyMESHHEMISPHERE, ' meshhemisphere(v) -> nodehemisphere (val) -> Set -1 for left hemipshere, 0 for both, 1 for right.');
-    AddMethod('meshload', @PyMESHLOAD, ' meshload(imageName) -> Close all open images and load new background image.');
-    AddMethod('meshloadbilateral', @PyMESHLOADBILATERAL, ' meshloadbilateral(imageName) -> load both hemispheres (*.lh *.rh).');
-    AddMethod('meshoverlayorder', @PyMESHOVERLAYORDER, ' meshoverlayorder (flip) -> If flip=1, the mesh will be drawn after the overlay, and xray sliders will influence overlay not mesh.');
-    AddMethod('meshreversefaces', @PyMESHREVERSEFACES, ' meshreversefaces() -> reverse triangle winding to reverse front/back faces.');
-    AddMethod('meshsave', @PyMESHSAVE, ' meshsave(filename) -> Saves currently open mesh to disk.');
-    AddMethod('modalmessage', @PyMODALMESSAGE, ' modalmessage(msg) -> Shows a modal dialog, script stops until user presses ''OK'' button to dismiss dialog.');
-    AddMethod('modelessmessage', @PyMODELESSMESSAGE, ' modelessmessage(msg) -> Prints text in the bottom status region of the scripting window.');
-    AddMethod('nodecolor', @PyNODECOLOR, ' nodecolor(name, varies) -> set colorscheme used for nodes. If varies=1, the color of nodes will differ depending on size or intensity.');
-    AddMethod('nodehemisphere', @PyNODEHEMISPHERE, ' nodehemisphere (val) -> Set -1 for left hemipshere, 0 for both, 1 for right.');
-    AddMethod('nodeload', @PyNODELOAD, ' nodeload(filename) -> Loads BrainNet viewer format node file.');
-    AddMethod('nodepolarity', @PyNODEPOLARITY, ' nodepolarity(val) -> Set -1 for negative only, 0 for either, 1 for positive only.');
-    AddMethod('nodesize', @PyNODESIZE, ' nodesize(size, varies) -> Determine size scaling factor for nodes.');
-    AddMethod('nodethresh', @PyNODETHRESH, ' nodethresh(lo, hi) -> Set the minimum and maximum range for nodes.');
-    AddMethod('nodethreshbysizenotcolor', @PyNODETHRESHBYSIZENOTCOLOR, ' nodethreshbysizenotcolor(NodeThresholdBySize) -> If true (1) then nodes will be hidden if they are smaller than the provided threshold. If false (0), they will be hidden if their color intensity is below the provided threshold.');
-    AddMethod('orientcubevisible', @PyORIENTCUBEVISIBLE, ' orientcubevisible (visible) -> Show (1) or hide (0) cube that indicates object rotation');
-    AddMethod('overlayadditive', @PyOVERLAYADDITIVE, ' overlayadditive (add) -> Determines whether overlay colors are combined by adding or mixing the colors. For example, overlap of red and green overlays will appear yellow if additive is true (1)');
-    AddMethod('overlaycloseall', @PyOVERLAYCLOSEALL, ' overlaycloseall() -> Close all open overlays.');
-    AddMethod('overlaycolor', @PyOVERLAYCOLOR, ' overlaycolor(overlayLayer, loR, loG, loB, hiR, hiG, hiB) -> Set the colorscheme (low and high Red, Green, Blue) for the target overlay.');
-    AddMethod('overlaycolorname', @PyOVERLAYCOLORNAME, ' overlaycolorname(overlayLayer, filename) -> Set the colorscheme for the target overlay to a specified name.');
-    AddMethod('overlaycount', @PyOVERLAYCOUNT, ' overlaycount() -> Return number of overlays currently open.');
-    AddMethod('overlayinvert', @PyOVERLAYINVERT, ' overlayinvert(layer, invert) -> Toggle whether overlay color scheme is inverted.');
-    AddMethod('overlayload', @PyOVERLAYLOAD, ' overlayload(filename) -> Load an image on top of prior images.');
-    AddMethod('overlayextreme', @PyOVERLAYEXTREME, ' overlayextreme(layer, mode) -> Behavior of values beyond min..max (-1 automatic, 0 hide dark & bright, 1: hide dark, 2 hide bright, 3 show dark & bright)');
-    AddMethod('overlayminmax', @PyOVERLAYMINMAX, ' overlayminmax(layer, min, max) -> Sets the color range for the overlay (layer 0 = background).');
-    AddMethod('overlayopacity', @PyOVERLAYOPACITY, ' overlayopacity(overlayLayer, opacity) -> This feature allows you to adjust individual overlays transparency from transparent (0) to opaque (100).');
-    AddMethod('overlayoverlapoverwrite', @PyOVERLAYOVERLAPOVERWRITE, ' overlayoverlapoverwrite(overwrite) -> Does an overlapping overlay overwrite existing color (1) or are the colors blanded (0).');
-    AddMethod('overlaysmoothvoxelwisedata', @PyOVERLAYSMOOTHVOXELWISEDATA, ' overlaysmoothvoxelwisedata(smooth) -> Determines if overlays are loaded using interpolation (smooth, 1) or nearest neighbor (un-smoothed, 0) interpolation.');
-    AddMethod('overlaytranslucent', @PyOVERLAYTRANSLUCENT, ' overlaytranslucent(overlayLayer, translucent) -> This feature allows you to make individual overlays translucent or opaque.');
-    AddMethod('overlaytransparencyonbackground', @PyOVERLAYTRANSPARENCYONBACKGROUND, ' overlaytransparencyonbackground(percent) -> Controls the opacity of the overlays on the background.');
-    AddMethod('overlayvisible', @PyOVERLAYVISIBLE, ' overlayvisible(overlayLayer, visible) -> This feature allows you to make individual overlays visible or invisible.');
-    AddMethod('pitch', @PyPITCH, ' pitch(degrees) -> Sets the pitch of object to be rendered.');
-    AddMethod('quit', @PyQUIT, ' quit() -> Terminate the application.');
-    AddMethod('resetdefaults', @PyRESETDEFAULTS, ' resetdefaults() -> Revert settings to sensible values.');
-    AddMethod('savebmp', @PySAVEBMP, ' savebmp(pngName) -> Save screen display as bitmap. For example "savebmp(''test.png'')"');
-    AddMethod('savebmpxy', @PySAVEBMPXY, ' savebmpxy(pngName, x, y) -> Saves the currently viewed image as a PNG bitmap image. Specify the image width (x) and height (y).');
-    AddMethod('scriptformvisible', @PySCRIPTFORMVISIBLE, ' scriptformvisible (visible) -> Show (1) or hide (0) the scripting window.');
-    AddMethod('shaderadjust', @PySHADERADJUST, ' shaderadjust(sliderName, sliderValue) -> Set level of shader property. Example "gl.shaderadjust(''Diffuse'', 0.6)"');
-    AddMethod('shaderambientocclusion', @PySHADERAMBIENTOCCLUSION, ' shaderambientocclusion(amount) -> Specify a value in the range 0..1 to set the strength of the crevice shadows');
-    AddMethod('shaderforbackgroundonly', @PySHADERFORBACKGROUNDONLY, ' shaderforbackgroundonly(onlybg) -> If true (1) selected shader only influeces background image, otherwise shader influences background, overlays, tracks and nodes.');
-    AddMethod('shaderlightazimuthelevation', @PySHADERLIGHTAZIMUTHELEVATION, ' shaderlightazimuthelevation (azimuth, elevation) -> Changes location of light source.');
-    AddMethod('shadermatcap', @PySHADERMATCAP, ' shadermatcap(name) -> Set material capture file (assumes "matcap" shader. For example, "shadermatcap(''mc01'')" selects mc01 matcap.');
-    AddMethod('shadername', @PySHADERNAME, ' shadername(name) -> Choose rendering shader function. For example, "shadername(''phong'')" renders using Phong shading.');
-    AddMethod('shaderxray', @PySHADERXRAY, ' shaderxray (object, overlay) -> See occluded overlays/tracks/nodes by making either object transparent (0..1) or overlay/tracks/nodes emphasized (0..1)');
-    AddMethod('trackload', @PyTRACKLOAD, ' trackload (filename) -> Load fiber steam lines from a file.');
-    AddMethod('trackprefs', @PyTRACKPREFS, ' trackprefs(length, width, dither) -> Set the size and properties for streamlines.');
-    AddMethod('version', @PyVERSION, ' version() -> Return the version of Surfice.');
-    AddMethod('viewaxial', @PyVIEWAXIAL, ' viewaxial(SI) -> Show rendering with camera superior (1) or inferior (0) of volume.');
-    AddMethod('viewcoronal', @PyVIEWCORONAL, ' viewcoronal(AP) -> Show rendering with camera posterior (1) or anterior (0) of volume.');
-    AddMethod('viewsagittal', @PyVIEWSAGITTAL, ' viewsagittal(LR) -> Show rendering with camera left (1) or right (0) of volume.');
-    AddMethod('wait', @PyWAIT, ' wait(ms) -> Pause script for (at least) the desired milliseconds.');
+{$IFDEF PY4LAZ}
+type
+  TPythonBridgeMethod = record
+    name: ansistring;
+    callback: PyCFunction;
+    help: ansistring;
   end;
+{$ENDIF}
+
+var
+  methods: array[0..81] of TPythonBridgeMethod = (
+  (name: 'atlas2node'; callback: @PyATLAS2NODE; help: ' atlas2node(imageName) -> convert .annot file labels to BrainNet Node format.'),
+  (name: 'atlashide'; callback: @PyATLASHIDE; help: ' atlashide(overlayNum, (r1, r2, ...)) -> Hide regions specified atlas. For example, "atlashide(0, (3, 7, 9))" will hide regions 3,7,9 of the background (0th layer) image.'),
+  (name: 'atlasmaxindex'; callback: @PyATLASMAXINDEX; help: ' atlasmaxindex(overlayNum) -> Returns maximum region humber in specified atlas. For example, if you load the CIT168 atlas (which has 15 regions) as your background image, then atlasmaxindex(0) will return 15.'),
+  (name: 'atlassaturationalpha'; callback: @PyATLASSATURATIONALPHA; help: ' atlassaturationalpha(saturation, transparency) -> Set saturation and transparency of atlas. A desaturated atlas will appear gray, a transparent atlas will reveal the background color.'),
+  (name: 'atlasshow'; callback: @PyATLASSHOW; help: ' atlasshow(overlayNum, (r1, r2, ...)) -> Show regions specified atlas. For example, "atlasshow(1, (3, 7, 9))" will show regions 3,7,9 of the first overlay image.'),
+  (name: 'atlasstatmap'; callback: @PyATLASSTATMAP; help: ' atlasstatmap(atlasname, outname, (r1, r2, ...), (i1, i2, ...)) -> Create mesh named "outname" where regions have specified intensities.'),
+  (name: 'azimuth'; callback: @PyAZIMUTH; help: ' azimuthe(azi) -> Rotate image by specified degrees.'),
+  (name: 'azimuthelevation'; callback: @PyAZIMUTHELEVATION; help: ' azimuthelevation(azi, elev) -> Sets the camera location.'),
+  (name: 'backcolor'; callback: @PyBACKCOLOR; help: ' backcolor(r, g, b) -> changes the background color, for example backcolor(255, 0, 0) will set a bright red background'),
+  (name: 'bmpzoom'; callback: @PyBMPZOOM; help: ' bmpzoom(z) -> changes resolution of savebmp(), for example bmpzoom(2) will save bitmaps at twice screen resolution'),
+  (name: 'cameradistance'; callback: @PyCAMERADISTANCE; help: ' cameradistance(z) -> Sets the viewing distance from the object.'),
+  (name: 'camerapan'; callback: @PyCAMERAPAN; help: ' camerapan(x, y) -> Translate image horizontally (x) and vertically (y). range -1..+1, where 0 is centered.'),
+  (name: 'clip'; callback: @PyCLIP; help: ' clip(depth) -> Creates a clip plane that hides information close to the viewer.'),
+  (name: 'clipazimuthelevation'; callback: @PyCLIPAZIMUTHELEVATION; help: ' clipazimuthelevation(depth, azi, elev) -> Set a view-point independent clip plane.'),
+  (name: 'colorbarposition'; callback: @PyCOLORBARPOSITION; help: ' colorbarposition(p) -> Set colorbar position (1=bottom, 2=left, 3=top, 4=right).'),
+  (name: 'colorbarvisible'; callback: @PyCOLORBARVISIBLE; help: ' colorbarvisible(v) -> Show (1) or hide (0) the color bar.'),
+  (name: 'colorbarcolor'; callback: @PyCOLORBARCOLOR; help: ' colorbarcolor(c) -> Set color of the color bar.'),
+  (name: 'contour'; callback: @PyCONTOUR; help: ' contour(layer) -> Create edge map for atlas or overlay.'),
+  (name: 'edgecolor'; callback: @PyEDGECOLOR; help: ' edgecolor(name, varies) -> Select color scheme for connectome edge map. If varies=1 then edge color depends on strength of connection.'),
+  (name: 'edgeload'; callback: @PyEDGELOAD; help: ' edgeload(filename) -> Loads a BrainNet Viewer format Edge file, e.g. connectome map.'),
+  (name: 'edgesize'; callback: @PyEDGESIZE; help: ' edgesize (size, varies) -> Set the diameters of the cylinders of the connectome. If varies=1 then edge diameter depends on strength of connection.'),
+  (name: 'edgethresh'; callback: @PyEDGETHRESH; help: ' edgethresh (lo, hi) -> Set minimum and maximum values for connectome edge diameters.'),
+  (name: 'elevation'; callback: @PyELEVATION; help: ' elevation(degrees) -> Rotates volume rendering relative to camera.'),
+  (name: 'exists'; callback: @PyEXISTS; help: ' exists(filename) -> Returns true if filename is found.'),
+  (name: 'fontname'; callback: @PyFONTNAME; help: ' fontname(name) -> Set typeface for display.'),
+  (name: 'fullscreen'; callback: @PyFULLSCREEN; help: ' fullscreen(max) -> Form expands to size of screen (1) or size is maximized (0).'),
+  (name: 'hemispheredistance'; callback: @PyHEMISPHEREDISTANCE; help: ' hemispheredistance(v) -> Grow or shrink space between left and right hemisphere (-1..1).'),
+  (name: 'hemispherepry'; callback: @PyHEMISPHEREPRY; help: ' hemispherepry(degrees) -> Rotate hemispheres relative to each other, the SUMA "walnut pry" effect.'),
+  (name: 'meshcolor'; callback: @PyMESHCOLOR; help: ' meshcolor(r, g, b) -> Set red/green/blue components of main image. Each component is an integer 0..255.'),
+  (name: 'meshcreate'; callback: @PyMESHCREATE; help: ' meshcreate(niiname, meshname, threshold, decimateFrac, minimumClusterVox, smoothStyle) -> Convert a NIfTI voxel-based image into a mesh.'),
+  (name: 'meshcurv'; callback: @PyMESHCURV; help: ' meshcurv() -> Displays mesh curvature, so crevices appear dark.'),
+  (name: 'meshhemisphere'; callback: @PyMESHHEMISPHERE; help: ' meshhemisphere(v) -> nodehemisphere (val) -> Set -1 for left hemipshere, 0 for both, 1 for right.'),
+  (name: 'meshload'; callback: @PyMESHLOAD; help: ' meshload(imageName) -> Close all open images and load new background image.'),
+  (name: 'meshloadbilateral'; callback: @PyMESHLOADBILATERAL; help: ' meshloadbilateral(imageName) -> load both hemispheres (*.lh *.rh).'),
+  (name: 'meshoverlayorder'; callback: @PyMESHOVERLAYORDER; help: ' meshoverlayorder (flip) -> If flip=1, the mesh will be drawn after the overlay, and xray sliders will influence overlay not mesh.'),
+  (name: 'meshreversefaces'; callback: @PyMESHREVERSEFACES; help: ' meshreversefaces() -> reverse triangle winding to reverse front/back faces.'),
+  (name: 'meshsave'; callback: @PyMESHSAVE; help: ' meshsave(filename) -> Saves currently open mesh to disk.'),
+  (name: 'modalmessage'; callback: @PyMODALMESSAGE; help: ' modalmessage(msg) -> Shows a modal dialog, script stops until user presses ''OK'' button to dismiss dialog.'),
+  (name: 'modelessmessage'; callback: @PyMODELESSMESSAGE; help: ' modelessmessage(msg) -> Prints text in the bottom status region of the scripting window.'),
+  (name: 'nodecolor'; callback: @PyNODECOLOR; help: ' nodecolor(name, varies) -> set colorscheme used for nodes. If varies=1, the color of nodes will differ depending on size or intensity.'),
+  (name: 'nodehemisphere'; callback: @PyNODEHEMISPHERE; help: ' nodehemisphere (val) -> Set -1 for left hemipshere, 0 for both, 1 for right.'),
+  (name: 'nodeload'; callback: @PyNODELOAD; help: ' nodeload(filename) -> Loads BrainNet viewer format node file.'),
+  (name: 'nodepolarity'; callback: @PyNODEPOLARITY; help: ' nodepolarity(val) -> Set -1 for negative only, 0 for either, 1 for positive only.'),
+  (name: 'nodesize'; callback: @PyNODESIZE; help: ' nodesize(size, varies) -> Determine size scaling factor for nodes.'),
+  (name: 'nodethresh'; callback: @PyNODETHRESH; help: ' nodethresh(lo, hi) -> Set the minimum and maximum range for nodes.'),
+  (name: 'nodethreshbysizenotcolor'; callback: @PyNODETHRESHBYSIZENOTCOLOR; help: ' nodethreshbysizenotcolor(NodeThresholdBySize) -> If true (1) then nodes will be hidden if they are smaller than the provided threshold. If false (0), they will be hidden if their color intensity is below the provided threshold.'),
+  (name: 'orientcubevisible'; callback: @PyORIENTCUBEVISIBLE; help: ' orientcubevisible (visible) -> Show (1) or hide (0) cube that indicates object rotation'),
+  (name: 'overlayadditive'; callback: @PyOVERLAYADDITIVE; help: ' overlayadditive (add) -> Determines whether overlay colors are combined by adding or mixing the colors. For example, overlap of red and green overlays will appear yellow if additive is true (1)'),
+  (name: 'overlaycloseall'; callback: @PyOVERLAYCLOSEALL; help: ' overlaycloseall() -> Close all open overlays.'),
+  (name: 'overlaycolor'; callback: @PyOVERLAYCOLOR; help: ' overlaycolor(overlayLayer, loR, loG, loB, hiR, hiG, hiB) -> Set the colorscheme (low and high Red, Green, Blue) for the target overlay.'),
+  (name: 'overlaycolorname'; callback: @PyOVERLAYCOLORNAME; help: ' overlaycolorname(overlayLayer, filename) -> Set the colorscheme for the target overlay to a specified name.'),
+  (name: 'overlaycount'; callback: @PyOVERLAYCOUNT; help: ' overlaycount() -> Return number of overlays currently open.'),
+  (name: 'overlayinvert'; callback: @PyOVERLAYINVERT; help: ' overlayinvert(layer, invert) -> Toggle whether overlay color scheme is inverted.'),
+  (name: 'overlayload'; callback: @PyOVERLAYLOAD; help: ' overlayload(filename) -> Load an image on top of prior images.'),
+  (name: 'overlayextreme'; callback: @PyOVERLAYEXTREME; help: ' overlayextreme(layer, mode) -> Behavior of values beyond min..max (-1 automatic, 0 hide dark & bright, 1: hide dark, 2 hide bright, 3 show dark & bright)'),
+  (name: 'overlayminmax'; callback: @PyOVERLAYMINMAX; help: ' overlayminmax(layer, min, max) -> Sets the color range for the overlay (layer 0 = background).'),
+  (name: 'overlayopacity'; callback: @PyOVERLAYOPACITY; help: ' overlayopacity(overlayLayer, opacity) -> This feature allows you to adjust individual overlays transparency from transparent (0) to opaque (100).'),
+  (name: 'overlayoverlapoverwrite'; callback: @PyOVERLAYOVERLAPOVERWRITE; help: ' overlayoverlapoverwrite(overwrite) -> Does an overlapping overlay overwrite existing color (1) or are the colors blanded (0).'),
+  (name: 'overlaysmoothvoxelwisedata'; callback: @PyOVERLAYSMOOTHVOXELWISEDATA; help: ' overlaysmoothvoxelwisedata(smooth) -> Determines if overlays are loaded using interpolation (smooth, 1) or nearest neighbor (un-smoothed, 0) interpolation.'),
+  (name: 'overlaytranslucent'; callback: @PyOVERLAYTRANSLUCENT; help: ' overlaytranslucent(overlayLayer, translucent) -> This feature allows you to make individual overlays translucent or opaque.'),
+  (name: 'overlaytransparencyonbackground'; callback: @PyOVERLAYTRANSPARENCYONBACKGROUND; help: ' overlaytransparencyonbackground(percent) -> Controls the opacity of the overlays on the background.'),
+  (name: 'overlayvisible'; callback: @PyOVERLAYVISIBLE; help: ' overlayvisible(overlayLayer, visible) -> This feature allows you to make individual overlays visible or invisible.'),
+  (name: 'pitch'; callback: @PyPITCH; help: ' pitch(degrees) -> Sets the pitch of object to be rendered.'),
+  (name: 'quit'; callback: @PyQUIT; help: ' quit() -> Terminate the application.'),
+  (name: 'resetdefaults'; callback: @PyRESETDEFAULTS; help: ' resetdefaults() -> Revert settings to sensible values.'),
+  (name: 'savebmp'; callback: @PySAVEBMP; help: ' savebmp(pngName) -> Save screen display as bitmap. For example "savebmp(''test.png'')"'),
+  (name: 'savebmpxy'; callback: @PySAVEBMPXY; help: ' savebmpxy(pngName, x, y) -> Saves the currently viewed image as a PNG bitmap image. Specify the image width (x) and height (y).'),
+  (name: 'scriptformvisible'; callback: @PySCRIPTFORMVISIBLE; help: ' scriptformvisible (visible) -> Show (1) or hide (0) the scripting window.'),
+  (name: 'shaderadjust'; callback: @PySHADERADJUST; help: ' shaderadjust(sliderName, sliderValue) -> Set level of shader property. Example "gl.shaderadjust(''Diffuse'', 0.6)"'),
+  (name: 'shaderambientocclusion'; callback: @PySHADERAMBIENTOCCLUSION; help: ' shaderambientocclusion(amount) -> Specify a value in the range 0..1 to set the strength of the crevice shadows'),
+  (name: 'shaderforbackgroundonly'; callback: @PySHADERFORBACKGROUNDONLY; help: ' shaderforbackgroundonly(onlybg) -> If true (1) selected shader only influeces background image, otherwise shader influences background, overlays, tracks and nodes.'),
+  (name: 'shaderlightazimuthelevation'; callback: @PySHADERLIGHTAZIMUTHELEVATION; help: ' shaderlightazimuthelevation (azimuth, elevation) -> Changes location of light source.'),
+  (name: 'shadermatcap'; callback: @PySHADERMATCAP; help: ' shadermatcap(name) -> Set material capture file (assumes "matcap" shader. For example, "shadermatcap(''mc01'')" selects mc01 matcap.'),
+  (name: 'shadername'; callback: @PySHADERNAME; help: ' shadername(name) -> Choose rendering shader function. For example, "shadername(''phong'')" renders using Phong shading.'),
+  (name: 'shaderxray'; callback: @PySHADERXRAY; help: ' shaderxray (object, overlay) -> See occluded overlays/tracks/nodes by making either object transparent (0..1) or overlay/tracks/nodes emphasized (0..1)'),
+  (name: 'trackload'; callback: @PyTRACKLOAD; help: ' trackload (filename) -> Load fiber steam lines from a file.'),
+  (name: 'trackprefs'; callback: @PyTRACKPREFS; help: ' trackprefs(length, width, dither) -> Set the size and properties for streamlines.'),
+  (name: 'version'; callback: @PyVERSION; help: ' version() -> Return the version of Surfice.'),
+  (name: 'viewaxial'; callback: @PyVIEWAXIAL; help: ' viewaxial(SI) -> Show rendering with camera superior (1) or inferior (0) of volume.'),
+  (name: 'viewcoronal'; callback: @PyVIEWCORONAL; help: ' viewcoronal(AP) -> Show rendering with camera posterior (1) or anterior (0) of volume.'),
+  (name: 'viewsagittal'; callback: @PyVIEWSAGITTAL; help: ' viewsagittal(LR) -> Show rendering with camera left (1) or right (0) of volume.'),
+  (name: 'wait'; callback: @PyWAIT; help: ' wait(ms) -> Pause script for (at least) the desired milliseconds.')
+  );
+
+procedure TGLForm1.PyModInitialization(Sender: TObject);
+var
+ i: integer;
+begin
+  for i := 0 to (length(methods) -1)  do
+    (Sender as TPythonModule).AddMethod (PAnsiChar(methods[i].name), methods[i].callback, PAnsiChar(methods[i].help));
 end;
 {$ELSE}
 procedure TGLForm1.PyModInitialization(Sender: TObject);
@@ -2198,6 +2068,7 @@ begin
   ScriptOutputMemo.Lines.Add(Data);
 end;
 
+{$IFDEF PY4LAZ}
 function TGLForm1.PyCreate: boolean;
 //const
 // cPyLibraryMac = '/Library/Frameworks/Python.framework/Versions/2.7/lib/libpython2.7.dylib';
@@ -2226,7 +2097,6 @@ begin
   end;
   gPrefs.PyLib := S;
   result := true;
-
   PythonIO := TPythonInputOutput.Create(GLForm1);
   PyMod := TPythonModule.Create(GLForm1);
   PyEngine := TPythonEngine.Create(GLForm1);
@@ -2244,15 +2114,52 @@ begin
   {$ENDIF}
 end;
 
+procedure TGLForm1.GotPythonData(str: UnicodeString);
+begin
+//
+end;
 
+{$ELSE}  //IFDEF PY4LAZ  ...
 
+var
+  gPythonData: UnicodeString = '';
 
+procedure TGLForm1.GotPythonData(str: UnicodeString);
+var
+  i: integer;
+begin
+  if length(str) < 1 then exit;
+  for i := 1 to length(str) do begin
+    if str[i] = LF then begin
+      ScriptOutputMemo.lines.add(gPythonData);
+      {$ifdef unix}
+      //writeln('<<<'+gPythonData);
+      {$endif}
+      gPythonData := '';
+    end else
+      gPythonData += str[i];
+  end;
+end;
+
+function TGLForm1.PyCreate: boolean;
+begin
+ if not PythonLoadAndInitialize(extractfilepath(AppDir), GLForm1.GotPythonData) then begin
+   writeln('Unable to load Python');
+   exit(false);
+ end;
+ PyEngine := PythonAddModule('gl', @methods, length(methods));
+ result := true;
+end;
+
+{$ENDIF}
 function TGLForm1.PyIsPythonScriptMain(): boolean;
 begin
   result := ( Pos('import gl', GLForm1.ScriptMemo.Lines.Text) > 0); //any python project must import gl
 end;
 
 function TGLForm1.PyExecMain(): boolean;
+var
+  str: string;
 begin
   result := false; //assume code is not Python
   {$IFDEF MYPY}
@@ -2261,13 +2168,14 @@ begin
   result := true;
   if PyEngine = nil then begin
     if not PyCreate then begin //do this the first time
+     {$IFDEF PY4LAZ}
       {$IFDEF Windows}
       GLForm1.ScriptOutputMemo.lines.Add('Unable to find Python library [place Python .dll and .zip in Script folder]');
       {$ENDIF}
       {$IFDEF Unix}
       GLForm1.ScriptOutputMemo.lines.Add('Unable to find Python library');
       {$IFDEF Darwin}
-      GLForm1.ScriptOutputMemo.lines.Add('   For MacOS this is typically in: '+kBasePath+'');
+      //GLForm1.ScriptOutputMemo.lines.Add('   For MacOS this is typically in: '+kBasePath+'');
       {$ELSE}
       GLForm1.ScriptOutputMemo.lines.Add('   run ''find -name "*libpython*"'' to find the library');
       GLForm1.ScriptOutputMemo.lines.Add('   if it does not exist, install it (e.g. ''apt-get install libpython2.7'')');
@@ -2281,6 +2189,10 @@ begin
       GLForm1.ScriptOutputMemo.lines.Add('   This file should be in your LIBDIR, which you can detect by running Python from the terminal:');
       GLForm1.ScriptOutputMemo.lines.Add('     ''import sysconfig; print(sysconfig.get_config_var("LIBDIR"))''');
       {$ENDIF}
+     {$ELSE}
+      GLForm1.ScriptOutputMemo.lines.Add('Unable to start Python ');
+
+     {$ENDIF}
       result := true;
       exit;
 
@@ -2289,7 +2201,11 @@ begin
   GLForm1.ScriptOutputMemo.lines.Add('Running Python script');
   gPyRunning := true;
   try
+    {$IFDEF PY4LAZ}
   PyEngine.ExecStrings(GLForm1.ScriptMemo.Lines);
+    {$ELSE}
+  PyRun_SimpleString(PAnsiChar(GLForm1.ScriptMemo.Lines.Text));
+    {$ENDIF}
   except
     caption := 'Python Engine Failed';
   end;
@@ -2315,22 +2231,6 @@ begin
   end;
   {$ENDIF}
   GLForm1.ScriptOutputMemo.Lines.Clear;
-  PSScript1.Script.Text := GLForm1.ScriptMemo.Lines.Text;
-  //PSScript1.Script.Text := Memo1.Lines.GetText; //<- this will leak! requires StrDispose
-  Compiled := PSScript1.Compile;
-  for i := 0 to PSScript1.CompilerMessageCount -1 do
-    MyWriteln( PSScript1.CompilerMessages[i].MessageToString);
-  if Compiled then
-    MyWriteln('Successfully Compiled Script');
-  if Compiled then begin
-    if PSScript1.Execute then
-      MyWriteln('Succesfully Executed')
-    else
-      MyWriteln('Error while executing script: '+
-                  PSScript1.ExecErrorToString);
-  end;
-  GLForm1.Refresh;
-  ToolPanel.refresh;
 end;
 
 procedure TGLForm1.ScriptingGenerateTemplateMenu(isPython: boolean);
@@ -2362,10 +2262,6 @@ var
             newMenu.OnClick := ScriptingTemplatesMenuClick;
             //newMenu.GroupIndex := 132;
             ScriptingPythonMenu.Add(newMenu)
-         end else begin
-            newMenu.OnClick := ScriptingPascalMenuClick;
-            //newMenu.GroupIndex := 133;
-            ScriptingPascalMenu.Add(newMenu);
          end;
      end;
   end;
@@ -2435,7 +2331,11 @@ procedure TGLForm1.ScriptingRunMenuClick(Sender: TObject);
 begin
  {$IFDEF MYPY}
  if gPyRunning then begin
+   {$IFDEF PY4LAZ}
    PyEngine.PyErr_SetString(PyEngine.PyExc_KeyboardInterrupt^, 'Operation cancelled') ;
+   {$ELSE}
+   PyInterrupt();  //TODO!!!!
+   {$ENDIF}
    ScriptOutputMemo.Lines.Add('Halting script ("Run" called while script still running).');
    exit;
  end;
@@ -5233,10 +5133,7 @@ begin
   UpdateLayerBox(false);;
 end;
 
-(*procedure printf(s: string);
-begin
-     {$IFDEF UNIX}writeln(s);{$ENDIF}
-end; *)
+(* *)
 
 function TGLForm1.UpdateClrBar: integer;
 var
@@ -6169,6 +6066,7 @@ begin
            {$ENDIF}
    {$ENDIF}
    +LineEnding+' www.mricro.com :: BSD 2-Clause License (opensource.org/licenses/BSD-2-Clause)'
+   {$IFDEF MYPY}+LineEnding+{$IFDEF PY4LAZ}'Python-for-Lazarus'{$ELSE}'PythonBridge' {$ENDIF}{$ENDIF}
    {$IFDEF TIMEABOUT}+LineEnding+FPSstr {$ENDIF}
    +LineEnding+format(' Scale %.4f',[scale])
    +LineEnding+format(' Origin %.4fx%.4fx%.4f',[origin.X, origin.Y, origin.Z])
@@ -7058,8 +6956,7 @@ begin
      GLForm1.WindowState:= wsFullScreen;
      {$IFNDEF LCLCocoa}ExitFullScreenMenu.Visible:=true;{$ENDIF} //Linux has issues getting out of full screen
   end;
-  ScriptingPascalMenu.Visible := gPrefs.ShowPascalMenu;
- {$IFDEF LHRH} BilateralMenu.Visible := true;{$ENDIF}
+  {$IFDEF LHRH} BilateralMenu.Visible := true;{$ENDIF}
  {$IFDEF LCLCocoa}{$IFDEF DARKMODE} SetDarkMode; {$ENDIF}{$ENDIF}
  //{$IFDEF Windows}UpdateOverlaySpread;{$ENDIF}//July2017 - scripting on High-dpi, reset scaling
  if (gPrefs.initScript <> '' ) then
@@ -7220,9 +7117,6 @@ begin
   isBusy := false;
 
   {$IFDEF Darwin}
-  {$IFDEF CPUAARCH64}
-  ScriptingPascalMenu.Visible := false;
-  {$ENDIF}
   ExitMenu.Visible := false;
   //CopyMenu.enabled := false; //https://bugs.freepascal.org/view.php?id=33632
   NewWindowMenu.ShortCut := ShortCut(Word('N'), [ssShift, ssMeta]);

@@ -1,9 +1,0 @@
-begin
-	resetdefaults();
-	meshload('BrainMesh_ICBM152Left_smoothed.mz3');
-	meshcurv();
-	shadername('hidecurves');
-	overlayload('CIT168.mz3');
-	shaderforbackgroundonly(true);
-	shaderadjust('curvthreshhi', 0.44);
-end.
