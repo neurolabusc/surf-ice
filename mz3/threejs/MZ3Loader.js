@@ -1,6 +1,6 @@
 /**
  * @author Chris Rorden
- * See https://github.com/kchapelier/MZ3 for more informations about this file format
+ * See https://github.com/neurolabusc/surf-ice/tree/master/mz3 for more information about this file format
  */
 
 ( function ( THREE ) {

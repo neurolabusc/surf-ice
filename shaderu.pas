@@ -691,7 +691,7 @@ begin
     glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, f.depthBuf, 0);
     {$ENDIF}
 
-    // Set "renderedTexture" as our colour attachement #0
+    // Set "renderedTexture" as our colour attachment #0
      // Set the list of draw buffers.
 
      //drawBuf := GL_COLOR_ATTACHMENT0;

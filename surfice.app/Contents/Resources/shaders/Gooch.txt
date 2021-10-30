@@ -65,7 +65,7 @@ void main() {
 // Fluxus Shader Library
 // ---------------------
 // Gooch NPR Shading Model
-// Orginally for technical drawing style
+// Originally for technical drawing style
 // rendering, uses warm and cool colours
 // to depict shading to keep detail in the
 // shadowed areas

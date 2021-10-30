@@ -7,13 +7,10 @@
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="3"/>
-        <TopLine Value="2"/>
+        <EditorIndex Value="5"/>
         <CursorPos X="32" Y="17"/>
         <UsageCount Value="212"/>
         <Loaded Value="True"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit0>
       <Unit1>
         <Filename Value="mainunit.pas"/>
@@ -21,11 +18,12 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <CursorPos X="23" Y="4"/>
+        <IsVisibleTab Value="True"/>
+        <TopLine Value="1250"/>
+        <CursorPos X="7" Y="1270"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit1>
       <Unit2>
         <Filename Value="meshlhrh.pas"/>
@@ -41,7 +39,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="168"/>
         <CursorPos X="35" Y="177"/>
-        <UsageCount Value="101"/>
+        <UsageCount Value="100"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit3>
       <Unit4>
@@ -49,69 +47,70 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="571"/>
         <CursorPos Y="594"/>
-        <UsageCount Value="86"/>
+        <UsageCount Value="85"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit4>
       <Unit5>
         <Filename Value="track.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="90"/>
-        <CursorPos X="12" Y="106"/>
-        <UsageCount Value="62"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
+        <EditorIndex Value="10"/>
+        <TopLine Value="507"/>
+        <CursorPos X="7" Y="515"/>
+        <UsageCount Value="69"/>
+        <Loaded Value="True"/>
       </Unit5>
       <Unit6>
         <Filename Value="mesh.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="6144"/>
-        <CursorPos X="14" Y="6161"/>
+        <EditorIndex Value="6"/>
+        <TopLine Value="2940"/>
+        <CursorPos X="104" Y="2951"/>
         <UsageCount Value="108"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
+        <Loaded Value="True"/>
       </Unit6>
       <Unit7>
         <Filename Value="shaderu.pas"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="1106"/>
         <CursorPos X="25" Y="1141"/>
-        <UsageCount Value="206"/>
+        <UsageCount Value="205"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit7>
       <Unit8>
         <Filename Value="define_types.pas"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="4"/>
         <CursorPos X="25" Y="13"/>
         <UsageCount Value="110"/>
         <Loaded Value="True"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit8>
       <Unit9>
         <Filename Value="meshify.pas"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="373"/>
         <CursorPos X="35" Y="396"/>
-        <UsageCount Value="114"/>
+        <UsageCount Value="113"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit9>
       <Unit10>
         <Filename Value="opts.inc"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="9" Y="2"/>
-        <UsageCount Value="100"/>
+        <UsageCount Value="99"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit10>
       <Unit11>
         <Filename Value="gl_core_3d.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="932"/>
-        <CursorPos Y="949"/>
+        <EditorIndex Value="9"/>
+        <TopLine Value="623"/>
+        <CursorPos Y="639"/>
         <UsageCount Value="114"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
+        <Loaded Value="True"/>
       </Unit11>
       <Unit12>
         <Filename Value="commandsu.pas"/>
-        <EditorIndex Value="-1"/>
-        <CursorPos X="24" Y="3"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="597"/>
+        <CursorPos X="27" Y="630"/>
         <UsageCount Value="116"/>
+        <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit12>
       <Unit13>
@@ -119,14 +118,14 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="1993"/>
         <CursorPos X="14" Y="1999"/>
-        <UsageCount Value="56"/>
+        <UsageCount Value="55"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit13>
       <Unit14>
         <Filename Value="uscale.pas"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="7" Y="9"/>
-        <UsageCount Value="43"/>
+        <UsageCount Value="42"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit14>
       <Unit15>
@@ -134,7 +133,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="73"/>
         <CursorPos X="31" Y="80"/>
-        <UsageCount Value="92"/>
+        <UsageCount Value="91"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit15>
       <Unit16>
@@ -142,7 +141,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="1789"/>
         <CursorPos X="21" Y="1789"/>
-        <UsageCount Value="73"/>
+        <UsageCount Value="72"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit16>
       <Unit17>
@@ -150,7 +149,7 @@
         <UnitName Value="StrUtils"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="10" Y="30"/>
-        <UsageCount Value="58"/>
+        <UsageCount Value="57"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit17>
       <Unit18>
@@ -158,7 +157,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="77"/>
         <CursorPos X="30" Y="101"/>
-        <UsageCount Value="47"/>
+        <UsageCount Value="46"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit18>
       <Unit19>
@@ -166,7 +165,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="355"/>
         <CursorPos X="48" Y="389"/>
-        <UsageCount Value="94"/>
+        <UsageCount Value="93"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit19>
       <Unit20>
@@ -174,22 +173,23 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="2"/>
         <CursorPos X="20" Y="18"/>
-        <UsageCount Value="66"/>
+        <UsageCount Value="65"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit20>
       <Unit21>
         <Filename Value="matmath.pas"/>
-        <EditorIndex Value="-1"/>
-        <CursorPos X="15" Y="9"/>
+        <EditorIndex Value="7"/>
+        <TopLine Value="647"/>
+        <CursorPos X="26" Y="674"/>
         <UsageCount Value="100"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
+        <Loaded Value="True"/>
       </Unit21>
       <Unit22>
         <Filename Value="gl_core_matrix.pas"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="16"/>
         <CursorPos X="8" Y="31"/>
-        <UsageCount Value="66"/>
+        <UsageCount Value="65"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit22>
       <Unit23>
@@ -197,7 +197,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="414"/>
         <CursorPos X="18" Y="433"/>
-        <UsageCount Value="84"/>
+        <UsageCount Value="83"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit23>
       <Unit24>
@@ -205,7 +205,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="592"/>
         <CursorPos Y="609"/>
-        <UsageCount Value="73"/>
+        <UsageCount Value="72"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit24>
       <Unit25>
@@ -213,7 +213,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="1086"/>
         <CursorPos X="11" Y="1091"/>
-        <UsageCount Value="82"/>
+        <UsageCount Value="81"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit25>
       <Unit26>
@@ -221,22 +221,23 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="472"/>
         <CursorPos X="60" Y="487"/>
-        <UsageCount Value="45"/>
+        <UsageCount Value="44"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit26>
       <Unit27>
         <Filename Value="curv.pas"/>
-        <EditorIndex Value="-1"/>
-        <CursorPos X="23" Y="6"/>
-        <UsageCount Value="53"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
+        <EditorIndex Value="8"/>
+        <TopLine Value="127"/>
+        <CursorPos X="32" Y="143"/>
+        <UsageCount Value="60"/>
+        <Loaded Value="True"/>
       </Unit27>
       <Unit28>
         <Filename Value="glclrbar.pas"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="636"/>
         <CursorPos Y="642"/>
-        <UsageCount Value="15"/>
+        <UsageCount Value="14"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit28>
       <Unit29>
@@ -245,14 +246,14 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="5"/>
         <CursorPos X="22" Y="19"/>
-        <UsageCount Value="38"/>
+        <UsageCount Value="37"/>
       </Unit29>
       <Unit30>
         <Filename Value="UserNotification.pas"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="112"/>
         <CursorPos X="30" Y="124"/>
-        <UsageCount Value="38"/>
+        <UsageCount Value="37"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit30>
       <Unit31>
@@ -260,184 +261,183 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="4281"/>
         <CursorPos X="21" Y="4306"/>
-        <UsageCount Value="102"/>
+        <UsageCount Value="101"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit31>
       <Unit32>
         <Filename Value="../Python27-for-Lazarus/python4lazarus/PythonEngine.pas"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="12"/>
         <TopLine Value="6522"/>
         <CursorPos X="67" Y="6539"/>
-        <UsageCount Value="53"/>
+        <UsageCount Value="61"/>
         <Loaded Value="True"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit32>
       <Unit33>
-        <Filename Value="../fpc/rtl/unix/dl.pp"/>
-        <EditorIndex Value="-1"/>
-        <CursorPos X="14" Y="2"/>
-        <UsageCount Value="1"/>
-      </Unit33>
-      <Unit34>
         <Filename Value="nifti_loader.pas"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="879"/>
         <CursorPos X="95" Y="894"/>
-        <UsageCount Value="89"/>
+        <UsageCount Value="88"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit34>
-      <Unit35>
+      </Unit33>
+      <Unit34>
         <Filename Value="surfice.app/Contents/Resources/shaders/XRay.txt"/>
         <EditorIndex Value="-1"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="6"/>
         <DefaultSyntaxHighlighter Value="None"/>
-      </Unit35>
-      <Unit36>
+      </Unit34>
+      <Unit35>
         <Filename Value="pylib.pas"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="118"/>
         <CursorPos X="39" Y="5"/>
-        <UsageCount Value="13"/>
+        <UsageCount Value="12"/>
         <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit35>
+      <Unit36>
+        <Filename Value="userdir.pas"/>
+        <EditorIndex Value="3"/>
+        <TopLine Value="281"/>
+        <CursorPos X="13" Y="283"/>
+        <UsageCount Value="18"/>
+        <Loaded Value="True"/>
       </Unit36>
       <Unit37>
-        <Filename Value="userdir.pas"/>
-        <EditorIndex Value="1"/>
-        <CursorPos Y="13"/>
-        <UsageCount Value="10"/>
-        <Loaded Value="True"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
-      </Unit37>
-      <Unit38>
         <Filename Value="PythonBridge/PythonBridge.pas"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="11"/>
         <TopLine Value="101"/>
         <CursorPos X="89" Y="125"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="19"/>
         <Loaded Value="True"/>
-        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit37>
+      <Unit38>
+        <Filename Value="vers.inc"/>
+        <EditorIndex Value="2"/>
+        <UsageCount Value="17"/>
+        <Loaded Value="True"/>
       </Unit38>
     </Units>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="PythonBridge/PythonBridge.pas"/>
-        <Caret Line="195" Column="25" TopLine="180"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="3007" Column="79" TopLine="2974"/>
       </Position1>
       <Position2>
-        <Filename Value="PythonBridge/PythonBridge.pas"/>
-        <Caret Line="333" Column="37" TopLine="317"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="2984" Column="27" TopLine="2977"/>
       </Position2>
       <Position3>
-        <Filename Value="PythonBridge/PythonBridge.pas"/>
-        <Caret Line="161" Column="72" TopLine="153"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="183" Column="29" TopLine="167"/>
       </Position3>
       <Position4>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="2143" Column="21" TopLine="2126"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="3167" Column="24" TopLine="3146"/>
       </Position4>
       <Position5>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="2142" Column="12" TopLine="2137"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="3216" Column="35" TopLine="3187"/>
       </Position5>
       <Position6>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="2159" Column="26" TopLine="2149"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="3329" Column="16" TopLine="3306"/>
       </Position6>
       <Position7>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="7" Column="32"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="61" Column="92" TopLine="40"/>
       </Position7>
       <Position8>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="744" Column="27" TopLine="737"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="2251" Column="35" TopLine="2224"/>
       </Position8>
       <Position9>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="747" Column="13" TopLine="737"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="2951" Column="11" TopLine="2936"/>
       </Position9>
       <Position10>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="4337" Column="29" TopLine="4312"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="2942" Column="26" TopLine="2929"/>
       </Position10>
       <Position11>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="4338" Column="64" TopLine="4313"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="2953" Column="22" TopLine="2929"/>
       </Position11>
       <Position12>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="4342" Column="43" TopLine="4317"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="3029" Column="109" TopLine="3016"/>
       </Position12>
       <Position13>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="4344" Column="60" TopLine="4319"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="3059" Column="21" TopLine="3034"/>
       </Position13>
       <Position14>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="4346" Column="61" TopLine="4321"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="3064" TopLine="3040"/>
       </Position14>
       <Position15>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="6055" Column="38" TopLine="6047"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="3068" Column="8" TopLine="3043"/>
       </Position15>
       <Position16>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="2121" Column="10" TopLine="2106"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="3071" Column="19" TopLine="3055"/>
       </Position16>
       <Position17>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="2124" Column="12" TopLine="2106"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="3061" Column="33" TopLine="3052"/>
       </Position17>
       <Position18>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="2153" Column="44" TopLine="2151"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="2940" Column="24" TopLine="2923"/>
       </Position18>
       <Position19>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="2133" Column="2" TopLine="2114"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="2953" Column="22" TopLine="2925"/>
       </Position19>
       <Position20>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="2122" TopLine="2114"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="2998" Column="29" TopLine="2971"/>
       </Position20>
       <Position21>
-        <Filename Value="PythonBridge/PythonBridge.pas"/>
-        <Caret Line="199" Column="28" TopLine="195"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="3001" Column="23" TopLine="2996"/>
       </Position21>
       <Position22>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="3" Column="30"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="3011" Column="13" TopLine="2987"/>
       </Position22>
       <Position23>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="1927" Column="50" TopLine="1922"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="3109" Column="20" TopLine="3093"/>
       </Position23>
       <Position24>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="2127" Column="55" TopLine="2102"/>
+        <Filename Value="mesh.pas"/>
+        <Caret Line="2951" Column="13" TopLine="2940"/>
       </Position24>
       <Position25>
-        <Filename Value="PythonBridge/PythonBridge.pas"/>
-        <Caret Line="79" Column="61" TopLine="66"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="2982" Column="45" TopLine="2977"/>
       </Position25>
       <Position26>
-        <Filename Value="PythonBridge/PythonBridge.pas"/>
-        <Caret Line="85" Column="49" TopLine="66"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="4886" Column="36" TopLine="4879"/>
       </Position26>
       <Position27>
-        <Filename Value="PythonBridge/PythonBridge.pas"/>
-        <Caret Line="89" Column="59" TopLine="68"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="4895" Column="49" TopLine="4879"/>
       </Position27>
       <Position28>
-        <Filename Value="PythonBridge/PythonBridge.pas"/>
-        <Caret Line="95" Column="17" TopLine="74"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="4897" Column="70" TopLine="4879"/>
       </Position28>
       <Position29>
-        <Filename Value="PythonBridge/PythonBridge.pas"/>
-        <Caret Line="125" Column="89" TopLine="101"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="211" Column="34" TopLine="195"/>
       </Position29>
       <Position30>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="4" Column="23"/>
+        <Caret Line="481" Column="44" TopLine="454"/>
       </Position30>
     </JumpHistory>
     <RunParams>

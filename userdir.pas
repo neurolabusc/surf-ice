@@ -289,10 +289,12 @@ begin
  result := extractfilepath(paramstr(0))+'Resources'+pathdelim;
  {$IFDEF LINUX}
  if  DirectoryExists(result) then exit;
+ result := '/usr/share/surfice'; //e.g. Debian for either GTK2 or QT5
+ if  DirectoryExists(result) then exit;
  //https://wiki.freepascal.org/Multiplatform_Programming_Guide#Unix.2FLinux
  //  /usr/local/share/app_name or /opt/app_name.
  result := '/usr/local/share/'+ExtractFileName(paramstr(0))+pathdelim;
- writeln('>>>'+result);
+ writeln('looking for surfice resources directory:'+result);
  if  DirectoryExists(result) then exit;
  result := '/opt/'+ExtractFileName(paramstr(0))+pathdelim;
  if  DirectoryExists(result) then exit;

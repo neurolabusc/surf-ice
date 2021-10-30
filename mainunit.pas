@@ -749,7 +749,7 @@ begin
   result := AppDir+'script';
   {$IFDEF UNIX}
   if fileexists(result) then exit;
-  result := '/usr/share/mricrogl/script';
+  result := '/usr/share/surfice/script';
   if fileexists(result) then exit;
   result := AppDir+'script'
   {$ENDIF}
@@ -1257,6 +1257,23 @@ begin
   Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'i:elevation', @E)) then
       ELEVATION(E);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
+end;
+
+function PyHIDENODESWITHOUTEDGES(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  E: integer;
+begin
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
+    if Bool(PyArg_ParseTuple(Args, 'i:hidenodeswithoutedges', @E)) then begin
+      GLForm1.RestrictHideNodesWithoutEdges.checked := (E <> 0);
+      gNode.nodePrefs.isNoNodeWithoutEdge := GLForm1.RestrictHideNodesWithoutEdges.checked;
+      if length(gNode.nodes) < 1 then exit;
+      gNode.isRebuildList := true;
+      //GLbox.Invalidate;
+      GLForm1.GLBoxRequestUpdate(nil);
+    end;
     {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
@@ -1956,10 +1973,10 @@ type
 {$ENDIF}
 
 var
-  methods: array[0..81] of TPythonBridgeMethod = (
+  methods: array[0..82] of TPythonBridgeMethod = (
   (name: 'atlas2node'; callback: @PyATLAS2NODE; help: ' atlas2node(imageName) -> convert .annot file labels to BrainNet Node format.'),
   (name: 'atlashide'; callback: @PyATLASHIDE; help: ' atlashide(overlayNum, (r1, r2, ...)) -> Hide regions specified atlas. For example, "atlashide(0, (3, 7, 9))" will hide regions 3,7,9 of the background (0th layer) image.'),
-  (name: 'atlasmaxindex'; callback: @PyATLASMAXINDEX; help: ' atlasmaxindex(overlayNum) -> Returns maximum region humber in specified atlas. For example, if you load the CIT168 atlas (which has 15 regions) as your background image, then atlasmaxindex(0) will return 15.'),
+  (name: 'atlasmaxindex'; callback: @PyATLASMAXINDEX; help: ' atlasmaxindex(overlayNum) -> Returns maximum region number in specified atlas. For example, if you load the CIT168 atlas (which has 15 regions) as your background image, then atlasmaxindex(0) will return 15.'),
   (name: 'atlassaturationalpha'; callback: @PyATLASSATURATIONALPHA; help: ' atlassaturationalpha(saturation, transparency) -> Set saturation and transparency of atlas. A desaturated atlas will appear gray, a transparent atlas will reveal the background color.'),
   (name: 'atlasshow'; callback: @PyATLASSHOW; help: ' atlasshow(overlayNum, (r1, r2, ...)) -> Show regions specified atlas. For example, "atlasshow(1, (3, 7, 9))" will show regions 3,7,9 of the first overlay image.'),
   (name: 'atlasstatmap'; callback: @PyATLASSTATMAP; help: ' atlasstatmap(atlasname, outname, (r1, r2, ...), (i1, i2, ...)) -> Create mesh named "outname" where regions have specified intensities.'),
@@ -1985,6 +2002,7 @@ var
   (name: 'fullscreen'; callback: @PyFULLSCREEN; help: ' fullscreen(max) -> Form expands to size of screen (1) or size is maximized (0).'),
   (name: 'hemispheredistance'; callback: @PyHEMISPHEREDISTANCE; help: ' hemispheredistance(v) -> Grow or shrink space between left and right hemisphere (-1..1).'),
   (name: 'hemispherepry'; callback: @PyHEMISPHEREPRY; help: ' hemispherepry(degrees) -> Rotate hemispheres relative to each other, the SUMA "walnut pry" effect.'),
+  (name: 'hidenodeswithoutedges'; callback: @PyHIDENODESWITHOUTEDGES; help: ' hidenodeswithoutedges(hide) -> Are orphan nodes that are unconnected to other nodes visible (0) or hidden (1)?'),
   (name: 'meshcolor'; callback: @PyMESHCOLOR; help: ' meshcolor(r, g, b) -> Set red/green/blue components of main image. Each component is an integer 0..255.'),
   (name: 'meshcreate'; callback: @PyMESHCREATE; help: ' meshcreate(niiname, meshname, threshold, decimateFrac, minimumClusterVox, smoothStyle) -> Convert a NIfTI voxel-based image into a mesh.'),
   (name: 'meshcurv'; callback: @PyMESHCURV; help: ' meshcurv() -> Displays mesh curvature, so crevices appear dark.'),
@@ -2027,7 +2045,7 @@ var
   (name: 'scriptformvisible'; callback: @PySCRIPTFORMVISIBLE; help: ' scriptformvisible (visible) -> Show (1) or hide (0) the scripting window.'),
   (name: 'shaderadjust'; callback: @PySHADERADJUST; help: ' shaderadjust(sliderName, sliderValue) -> Set level of shader property. Example "gl.shaderadjust(''Diffuse'', 0.6)"'),
   (name: 'shaderambientocclusion'; callback: @PySHADERAMBIENTOCCLUSION; help: ' shaderambientocclusion(amount) -> Specify a value in the range 0..1 to set the strength of the crevice shadows'),
-  (name: 'shaderforbackgroundonly'; callback: @PySHADERFORBACKGROUNDONLY; help: ' shaderforbackgroundonly(onlybg) -> If true (1) selected shader only influeces background image, otherwise shader influences background, overlays, tracks and nodes.'),
+  (name: 'shaderforbackgroundonly'; callback: @PySHADERFORBACKGROUNDONLY; help: ' shaderforbackgroundonly(onlybg) -> If true (1) selected shader only influences background image, otherwise shader influences background, overlays, tracks and nodes.'),
   (name: 'shaderlightazimuthelevation'; callback: @PySHADERLIGHTAZIMUTHELEVATION; help: ' shaderlightazimuthelevation (azimuth, elevation) -> Changes location of light source.'),
   (name: 'shadermatcap'; callback: @PySHADERMATCAP; help: ' shadermatcap(name) -> Set material capture file (assumes "matcap" shader. For example, "shadermatcap(''mc01'')" selects mc01 matcap.'),
   (name: 'shadername'; callback: @PySHADERNAME; help: ' shadername(name) -> Choose rendering shader function. For example, "shadername(''phong'')" renders using Phong shading.'),
@@ -2210,7 +2228,7 @@ begin
     caption := 'Python Engine Failed';
   end;
   gPyRunning := false;
-  GLForm1.ScriptOutputMemo.lines.Add('Python Succesfully Executed');
+  GLForm1.ScriptOutputMemo.lines.Add('Python successfully executed');
   result := true;
   ToolPanel.refresh;
   {$ENDIF}
@@ -2962,7 +2980,8 @@ begin
  result := false;
  Filename := FindFile(FileNameIn);
  if Filename = '' then exit;
-  if not gNode.LoadFromFile(FileName) then exit;
+ if not gNode.LoadFromFile(FileName) then
+	exit;
  result := true;
  gPrefs.PrevNodename := FileName;
  NodeBox.Visible:= true;
@@ -5342,7 +5361,7 @@ begin
     meshBlend := MeshBlendTrack.position/MeshBlendTrack.max;
     ambientOcclusionFrac := occlusionTrack.Position/occlusionTrack.max;
     //first pass: 3D draw all items: framebuffer f1
-    useMultiSample := isToScreen; //the screenshot is explicitly supersampling everything (inlcuding text), the screen just supersamples the objects
+    useMultiSample := isToScreen; //the screenshot is explicitly supersampling everything (including text), the screen just supersamples the objects
     isMultiSample := setFrame (w, h, gShader.f1, useMultiSample, isOK);
     if not isOK then exit;
     DrawScene(w,h, gPrefs.isFlipMeshOverlay, gPrefs.OverlayClip, true,isMultiSample, gPrefs, origin, ClipPlane, scale, gDistance, gElevation, gAzimuth, gMesh,gNode, gTrack);
@@ -6051,7 +6070,7 @@ begin
    {$IFDEF LCLQT5} + 'QT5' {$ENDIF}
    {$IFDEF Linux} + ' Linux'{$ENDIF}
    {$IFDEF Windows} + ' Windows'{$ENDIF}
-   {$IFDEF CPULLVM} + ' LLVM' {$ENDIF}
+   {$IFDEF CPULLVM} + ' LLVM' {$ELSE} + ' FPC' {$ENDIF}
    {$IFDEF DGL} + ' DGL'{$ENDIF}
    {$IFNDEF COREGL}+' (Legacy '+{$IFDEF LEGACY_INDEXING}'Indexed '+{$ENDIF}'OpenGL)'{$ENDIF}
    {$IFDEF Darwin}

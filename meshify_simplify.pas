@@ -810,7 +810,7 @@ end;
 
 function MinimumCostEdge(): integer;
 // Find the edge that when collapsed will affect model the least.
-// This funtion actually returns a VertexID, the second vertex
+// This function actually returns a VertexID, the second vertex
 // of the edge (collapse candidate) is stored in the vertex data.
 // Serious optimization opportunity here: this function currently
 // does a sequential search through an unsorted Array :-(

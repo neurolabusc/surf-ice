@@ -13,9 +13,9 @@ interface
 uses
     Math, define_types;
 
-procedure simplify_mesh(var faces : TFaces; var verts: TVertices; target_count: integer; agressiveness : double=7; resize: boolean=true);
+procedure simplify_mesh(var faces : TFaces; var verts: TVertices; target_count: integer; aggressiveness : double=7; resize: boolean=true);
 // target_count  : target nr. of triangles
-// agressiveness : sharpness to increase the threashold.
+// aggressiveness : sharpness to increase the threshold.
 //                 5..8 are good numbers
 //                 more iterations yield higher quality
 // resize        : scale to unit size before decimation, rescale to original size after (helps threshold)
@@ -419,7 +419,7 @@ begin
       verts[i] := vMult(verts[i], invert);
 end;
 
-procedure simplify_mesh(var faces : TFaces; var verts: TVertices; target_count: integer; agressiveness : double=7; resize: boolean=true);
+procedure simplify_mesh(var faces : TFaces; var verts: TVertices; target_count: integer; aggressiveness : double=7; resize: boolean=true);
 var
   vertices : TVs;
   triangles : TTs;
@@ -468,7 +468,7 @@ begin
 		// All triangles with edges below the threshold will be removed
 		// The following numbers works well for most models.
 		// If it does not, try to adjust the 3 parameters
-		threshold := 0.000000001*power(TFloat(iteration+3),agressiveness);
+		threshold := 0.000000001*power(TFloat(iteration+3),aggressiveness);
 		// remove vertices & mark deleted triangles
 		for i := 0 to high(triangles) do begin
 			t := @triangles[i];
@@ -506,7 +506,7 @@ begin
 					   v0^.tstart := tstart;
 					v0^.tcount := tcount;
 					break;
-				end; //if <theshold
+				end; //if <threshold
 			end; //loop j
 			// done?
 			if(triangle_count-deleted_triangles<=target_count) then  break;
@@ -605,7 +605,7 @@ begin
 					   v0^.tstart := tstart;
 					v0^.tcount := tcount;
 					break;
-				end; //if <theshold
+				end; //if <threshold
 			end; //loop j
 			// done?
 		end;//for i :, each triangle

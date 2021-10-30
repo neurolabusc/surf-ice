@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
   Left = 276
   Height = 659
-  Top = 35
+  Top = 315
   Width = 1004
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -2410,7 +2410,7 @@ object GLForm1: TGLForm1
           object atlasmaxindex1: TMenuItem
             Tag = 2
             Caption = 'atlasmaxindex'
-            Hint = 'atlasmaxindex (overlay: integer): integer Reports maximum region humber in specified atlas. For example, if you load the CIT168 atlas (which has 15 regions) as your background image, then atlasmaxindex(0) will return 15.'
+            Hint = 'atlasmaxindex (overlay: integer): integer Reports maximum region number in specified atlas. For example, if you load the CIT168 atlas (which has 15 regions) as your background image, then atlasmaxindex(0) will return 15.'
             OnClick = InsertCommand
           end
           object atlassaturationalpha1: TMenuItem
@@ -2483,7 +2483,7 @@ object GLForm1: TGLForm1
           object MenuItem1: TMenuItem
             Tag = 1
             Caption = 'shaderforbackgroundonly'
-            Hint = 'shaderforbackgroundonly (onlybg: boolean) If true selected shader only influeces background image, otherwise shader influences background, overlays, tracks and nodes.'
+            Hint = 'shaderforbackgroundonly (onlybg: boolean) If true selected shader only influences background image, otherwise shader influences background, overlays, tracks and nodes.'
             OnClick = InsertCommand
           end
         end

@@ -37,7 +37,7 @@ uses
  procedure matrixTranspose(var a: TMat44); overload;
  //function vectorMult (var A: TPoint3f; B: single): TPoint3f;  inline; //same as vectorScale
  procedure vectorNegate(var v: TPoint3f);  inline;
- function AlignVector(alignmentVector: TPoint3f): TMat33;
+ //function AlignVector(alignmentVector: TPoint3f): TMat33;
  function vectorDistance(A,B: TPoint3f): single; //[euclidean distance] = sqrt(dX^2+dY^2+dZ^2)
  function vectorDistanceSqr(A,B: TPoint3f): single; inline;//[fast as no sqrt]  = (dX^2+dY^2+dZ^2)
  function vectorScale(A: TPoint3f; Scale: single): TPoint3f; overload; //same as vectorMult
@@ -111,6 +111,93 @@ begin
   result := sqrt(sqr(A.X-B.X)+ sqr(A.Y-B.Y) + sqr(A.Z-B.Z));
 end;
 
+{$DEFINE NEWCYL}
+{$IFDEF NEWCYL}
+function Vec3(x,y,z: single): TPoint3f;
+begin
+   result := ptf(x,y, z);
+end;
+
+
+function vectorAdd2 (var A,B: TPoint3f): TPoint3f;
+//sum two vectors
+begin
+     result.X := A.X + B.X;
+     result.Y := A.Y + B.Y;
+     result.Z := A.Z + B.Z;
+end; // vectorAdd()
+
+function  getFirstPerpVector(v1: TPoint3f): TPoint3f;
+//https://stackoverflow.com/questions/1878257/how-can-i-draw-a-cylinder-that-connects-two-points-in-opengl
+//return a vector that is perpendicular to the first
+begin
+ result := Vec3(0.0,0.0,0.0);
+ if ((v1.x = 0.0) or (v1.y = 0.0) or (v1.z = 0.0)) then begin
+   if (v1.x = 0.0) then
+     result.x := 1.0
+   else if (v1.y = 0.0) then
+     result.y := 1.0
+   else
+     result.z := 1.0;
+ end else begin
+   // If xyz is all set, we set the z coordinate as first and second argument .
+   // As the scalar product must be zero, we add the negated sum of x and y as third argument
+   result.x := v1.z;      //scalp = z*x
+   result.y := v1.z;      //scalp = z*(x+y)
+   result.z := -(v1.x+v1.y); //scalp = z*(x+y)-z*(x+y) = 0
+   // Normalize vector
+   vectorNormalize(result);//result := result.Normalize;
+ end;
+end;
+
+procedure makeCylinder(radius: single; start, dest: TPoint3f; var faces: TFaces; var vertices: TVertices; slices: integer = 20); overload;
+//https://stackoverflow.com/questions/1878257/how-can-i-draw-a-cylinder-that-connects-two-points-in-opengl
+var
+	v1, v2, v3, pt: TPoint3f;
+    c, s: single;
+    i, num_v, num_f: integer;
+begin
+	//v1 := (dest - start).Normalize; //principle axis of cylinder
+    v1 := dest;
+    vectorSubtract(v1, start);
+    vectorNormalize(v1);
+    v2 := getFirstPerpVector(v1); //a unit length vector orthogonal to v1
+    // Get the second perp vector by cross product
+    v3 := crossProduct(v1,v2); vectorNormalize(v3);  //(v1.Cross(v2)).Normalize; //a unit length vector orthogonal to v1 and v2
+    num_v := 2 * slices;
+    num_f := 2 * slices;
+    setlength(faces, num_f);
+    setlength(vertices, num_v);
+    for i := 0 to (slices-1) do begin
+      c := cos(i/slices * 2 *PI);
+      s := sin(i/slices * 2 * PI);
+      pt.x := (radius*(c*v2.x+s*v3.x));
+      pt.y := (radius*(c*v2.y+s*v3.y));
+      pt.z := (radius*(c*v2.z+s*v3.z));
+      vertices[i] := vectorAdd2(start,pt);
+      vertices[i + slices] := vectorAdd2(dest,pt);
+      if i < (slices-1) then begin
+        faces[i * 2] := pti( i,  i + 1, i+slices);
+        faces[(i * 2)+1] := pti( i+1,  i + slices + 1, i + slices);
+      end else begin
+        faces[i * 2] := pti( i,  0, i+slices);
+        faces[i * 2 + 1] := pti( 0,  0 + slices, i + slices);
+      end;
+    end;
+end;
+
+procedure MakeCylinder( radius, len: single; var faces: TFaces; var vertices: TVertices; slices : integer = 20); overload;
+//procedure MakeCylinder( radius, len: single; var faces: TFaces; var vertices: TVertices); Overload;
+//make a triangular mesh cylinder of specified radius and length. length is in X-dimension, so center is from (0,0,0)..(len,0,0)
+var
+    start, dest: TPoint3f;
+begin
+	start := Vec3(0.0,0.0,0.0);
+    dest := Vec3(len,0.0,0.0);
+    makeCylinder(radius, start, dest, faces, vertices, slices);
+end;
+
+{$ELSE}
 function lengthCross (A,B: TPoint3f): single;
 var
       v: TPoint3f;
@@ -131,17 +218,6 @@ begin
   if (alignmentVector.Y = 0.0) and (alignmentVector.Z = 0.0) then begin
      alignmentVector.Y := 0.0001;
      alignmentVector.Z := 0.0001;
-
-     (*matrixEye(result);
-
-     if (alignmentVector.X < 0.0) then
-        matrixNegate(result)
-     else begin
-          //result[1,1] := - result[1,1];
-          //result[2,2] := - result[2,2];
-          result[3,3] := - result[3,3];
-     end;
-     exit;*)
   end;
 
   A := ptf(-1, 0, 0);
@@ -165,7 +241,7 @@ begin
   matrixTranspose(result);
 end; //AlignVector
 
-procedure MakeCylinder( radius, len: single; var faces: TFaces; var vertices: TVertices; slices : integer = 20); Overload;
+procedure MakeCylinder( radius, len: single; var faces: TFaces; var vertices: TVertices; slices : integer = 20); overload;
 //procedure MakeCylinder( radius, len: single; var faces: TFaces; var vertices: TVertices); Overload;
 //make a triangular mesh cylinder of specified radius and length. length is in X-dimension, so center is from (0,0,0)..(len,0,0)
 var
@@ -213,6 +289,7 @@ begin
       vertices[i].Z := v.X * m[1,3] + v.Y * m[2,3] + v.Z * m[3,3] + start.Z;
   end;
 end; // makeCylinder()
+{$ENDIF}
 
 function perp_hm(u: TPoint3f): TPoint3f;
 //given vector u return an perpendicular (orthogonal) vector

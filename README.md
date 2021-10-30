@@ -53,7 +53,7 @@ else
 fi
 ```
 
-You can also build this project from the command line (assuming you have FPC Lazarus and the requried packages installed):
+You can also build this project from the command line (assuming you have FPC Lazarus and the required packages installed):
 
 ```
  lazbuild surfice.lpr

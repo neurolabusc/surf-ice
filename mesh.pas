@@ -2187,7 +2187,7 @@ begin
      SetDescriptives;
 end; // MakePyramid()
 
-(*function TMesh.AtlasMaxIndex: integer; //returns maximim atlas region, e.g. JHU has 192 regions labelled 1..192, so 192 - returns 0 if not an atlas
+(*function TMesh.AtlasMaxIndex: integer; //returns maximum atlas region, e.g. JHU has 192 regions labelled 1..192, so 192 - returns 0 if not an atlas
 var
    num_v, i: integer;
 begin
@@ -2948,7 +2948,7 @@ begin
         end;
         if (nodePrefs.isNoRightNodes) and (nodes[ii].X > 0)  then exit;
         if (nodePrefs.isNoLeftNodes) and (nodes[ii].X < 0)  then exit;
-        if (nodePrefs.isNoNodeWithoutEdge) and (not isNodeHasEdge[ii]) then exit;
+        if (nEdgeThresh > 0) and (nodePrefs.isNoNodeWithoutEdge) and (not isNodeHasEdge[ii]) then exit;
         result := true;
 end; //isNodeSurvives()
 function isEdgeSurvives(ii,jj: integer): boolean;
@@ -3026,16 +3026,12 @@ begin
      //draw nodes/balls/spheres
      if nNodeThresh > 0 then begin
        for n := 0 to (nNode-1) do begin
-           if isNodeSurvives(n) then begin //if (nodes[n].Radius >= thresholdNodeSize) then begin
+           if isNodeSurvives(n) then begin
               if nodeColorVaries then begin
                  if nodePrefs.isNodeThresholdBySize then
                     clr := cLUT[round(255 * Value2Frac(nodes[n].Radius, nodePrefs.minNodeThresh, nodePrefs.maxNodeThresh) )]
                  else
                     clr := cLUT[round(255 * Value2Frac(nodes[n].Clr, nodePrefs.minNodeThresh, nodePrefs.maxNodeThresh) )]
-                 (*if nodePrefs.isNodeThresholdBySize then
-                    clr := cLUT[round(255 * Value2Frac(nodes[n].Clr, nodePrefs.minNodeColor, nodePrefs.maxNodeColor) )]
-                 else
-                    clr := cLUT[round(255 * Value2Frac(nodes[n].Clr, nodePrefs.minNodeThresh, nodePrefs.maxNodeThresh) )] *)
               end else
                   clr := cLUT[192];
               lSphere.MakeSphere; //new unit sphere
@@ -3060,6 +3056,8 @@ begin
        end; //for each node
       end; //at least on node
      // draw sticks/cylinders
+
+
      if nEdgeThresh > 0 then begin
        cLUT := UpdateTransferFunction (nodePrefs.edgeLUTindex, false);
        i := nodePrefs.edgeLUTindex + 1;
@@ -3473,7 +3471,7 @@ end; // LoadNode()
 function TMesh.LoadObjMni(const FileName: string): boolean;
 //This is for MNI Obj files, not the WaveFront Obj format
 //This code only reads the most popular ASCII polygon mesh that starts with 'P'
-//Like AFNI SurfMesh we only handle the ACII variant of this format
+//Like AFNI SurfMesh we only handle the ASCII variant of this format
 // http://www.stat.wisc.edu/~mchung/softwares/mesh/mesh.html
 // https://bigbrain.loris.ca/main.php?test_name=brainsurfaces
 // http://www.bic.mni.mcgill.ca/users/mishkin/mni_obj_format.pdf
@@ -3562,9 +3560,9 @@ begin
   num_v := 0;
   num_f := 0;
   strlst:=TStringList.Create;
-  setlength(vertices, (fsz div 70)+kBlockSize); //guess number of faces based on filesize to reduce reallocation frequencey
-  setlength(vertexRGBA, (fsz div 70)+kBlockSize); //guess number of faces based on filesize to reduce reallocation frequencey
-  setlength(faces, (fsz div 35)+kBlockSize); //guess number of vertices based on filesize to reduce reallocation frequencey
+  setlength(vertices, (fsz div 70)+kBlockSize); //guess number of faces based on filesize to reduce reallocation frequency
+  setlength(vertexRGBA, (fsz div 70)+kBlockSize); //guess number of faces based on filesize to reduce reallocation frequency
+  setlength(faces, (fsz div 35)+kBlockSize); //guess number of vertices based on filesize to reduce reallocation frequency
   //load faces and vertices
   FileMode := fmOpenRead;
   AssignFile(f, FileName);
@@ -7521,6 +7519,13 @@ begin
      result := true;
 end;
 
+function revFace(f: TPoint3i): TPoint3i;
+begin
+	result.X := f.Y;
+    result.Y := f.X;
+    result.Z := f.Z;
+end;
+
 function TMesh.LoadVtkTxt(const FileName: string): boolean;
 label
    666;
@@ -7530,7 +7535,7 @@ var
   f: TextFile;
   str: string;
   strlst: TStringList;
-  num_v, num_f, i, n, sz, nx, num_fx: integer;
+  num_v, num_f,  i, n, sz, nx, num_fx, num_strip: integer;
   face: TPoint3i;
 begin
     result := false;
@@ -7581,6 +7586,33 @@ begin
            Read(f,vertices[i].X, vertices[i].Y, vertices[i].Z);
     end;
     ReadLnVtk(f,str);
+    if pos('TRIANGLE_STRIPS', UpperCase(str)) = 1 then begin
+      //see prostate dataset https://www.na-mic.org/wiki/RSNA2012_Planning
+      strlst.DelimitedText := str;
+      num_strip := StrToIntDef(strlst[1],0);
+      num_fx := 0;
+      for i := 0 to (num_strip-1) do begin
+          Read(f,n,face.X, face.Y);
+          if n < 3 then goto 666; //minimum triangle_strip is a single triangle
+          nx := n - 2; //e.g. if "3", one triangle, if "4" then quad = 2 triangles
+          if (num_fx + nx) > length(faces) then
+             setlength(faces, num_fx+nx+kBlockSz);
+          for n := 1 to nx do begin
+              Read(f, face.Z);
+              if odd(n) then
+              	faces[num_fx] := face
+              else
+              	faces[num_fx] := revFace(face); //reverse winding
+              face.X := face.Y;
+              face.Y := face.Z;
+              num_fx := num_fx + 1;
+          end;
+      end;
+      result := true;
+      setlength(faces, num_fx);
+      //printf('triangle strips has '+inttostr(num_fx)+ 'faces');
+      goto 666;
+    end;
     if pos('POLYGONS', UpperCase(str)) <> 1 then begin
        showmessageX('Expected header to report "POLYGONS" (hint: open with Slicer and save as conventional format) "'+ str+'"');
        goto 666;
@@ -7615,7 +7647,6 @@ begin
               face.Y := face.Z;
               num_fx := num_fx + 1;
           end;
-          //num_fx := num_fx + nx; //e.g.
       end;
       setlength(faces, num_fx);
     end;

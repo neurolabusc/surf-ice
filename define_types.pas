@@ -10,7 +10,7 @@ interface
 {$endif}
 
 const
-  kVers = 'v1.0.20210730';
+  {$include vers.inc} //kVers = 'v1.0.20210825';
   NaN : double = 1/0;
   kTab = chr(9);
   kCR = chr (13);

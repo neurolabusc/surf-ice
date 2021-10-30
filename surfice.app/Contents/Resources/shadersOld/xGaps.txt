@@ -15,7 +15,7 @@ Make gaps. Copyright 2018 Chris Rorden, BSD2clause.|note
 // early geometry shaders. Works fine on NVidia GPU on same setup (hybrid laptop) and with
 // Intel drivers that come with OSX.
 
-//#define INTELBUG // <- ENALBE THIS LINE TO WORK WITH BORKED INTEL DRIVERS
+//#define INTELBUG // <- ENABLE THIS LINE TO WORK WITH BORKED INTEL DRIVERS
 #ifdef INTELBUG
 in vec3 vL[3];   //[3] because this makes a triangle
 in vec3 vN[3];

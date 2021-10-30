@@ -13,7 +13,7 @@ Marching Cubes
 
 Marching Tetrahedra
  - Finer Mesh, better feature preservation
- - based on "A new tetrahedral tesselation scheme for isosurface generation"
+ - based on "A new tetrahedral tessellation scheme for isosurface generation"
    by S.L.Chan and E.O.Purisima
  - patent free
 
