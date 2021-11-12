@@ -406,7 +406,8 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     procedure NodeThreshDropChange(Sender: TObject);
     procedure ROImeshMenuClick(Sender: TObject);
     function UpdateClrbar: integer;
-    procedure ClrbarClr(i: integer);
+    procedure ClrbarClr(i: integer); overload;
+    procedure ClrbarClr(r,g,b,a: byte); overload;
     procedure UpdateFont(initialSetup: boolean);
     procedure ClrbarMenuClick(Sender: TObject);
     procedure ColorBarVisibleMenuClick(Sender: TObject);
@@ -834,6 +835,29 @@ begin
   {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
+function PyCOLORBARCOLOR(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  R,G,B,A: integer;
+begin
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+ Result:=PyBool_FromLong(Ord(True));
+ if Bool(PyArg_ParseTuple(Args, 'iiii:colorbarcolor', @R,@G,@B,@A)) then
+    COLORBARCOLOR(R,G,B, A);
+ {$IFDEF PY4LAZ}end;{$ENDIF}
+end;
+(*
+function PyCOLORBARCOLOR(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  A: integer;
+begin
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
+    if Bool(PyArg_ParseTuple(Args, 'i:colorbarcolor', @A)) then
+      COLORBARCOLOR(A);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
+end;
+*)
+
 function PyBACKCOLOR(Self, Args : PPyObject): PPyObject; cdecl;
 var
   R,G,B: integer;
@@ -1206,17 +1230,6 @@ begin
     {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
-function PyCOLORBARCOLOR(Self, Args : PPyObject): PPyObject; cdecl;
-var
-  A: integer;
-begin
- {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
-  Result:= PyBool_FromLong(Ord(True));
-    if Bool(PyArg_ParseTuple(Args, 'i:colorbarcolor', @A)) then
-      COLORBARCOLOR(A);
-    {$IFDEF PY4LAZ}end;{$ENDIF}
-end;
- 
 function PyFONTNAME(Self, Args : PPyObject): PPyObject; cdecl;
 var
   PtrName: PChar;
@@ -1988,9 +2001,9 @@ var
   (name: 'camerapan'; callback: @PyCAMERAPAN; help: ' camerapan(x, y) -> Translate image horizontally (x) and vertically (y). range -1..+1, where 0 is centered.'),
   (name: 'clip'; callback: @PyCLIP; help: ' clip(depth) -> Creates a clip plane that hides information close to the viewer.'),
   (name: 'clipazimuthelevation'; callback: @PyCLIPAZIMUTHELEVATION; help: ' clipazimuthelevation(depth, azi, elev) -> Set a view-point independent clip plane.'),
+  (name: 'colorbarcolor'; callback: @PyCOLORBARCOLOR; help: ' colorbarcolor(r,g,b,a) -> Change background color and translucency of colorbar, e.g. red translucent: "colorbarcolor(255,0,0,128)".'),
   (name: 'colorbarposition'; callback: @PyCOLORBARPOSITION; help: ' colorbarposition(p) -> Set colorbar position (1=bottom, 2=left, 3=top, 4=right).'),
   (name: 'colorbarvisible'; callback: @PyCOLORBARVISIBLE; help: ' colorbarvisible(v) -> Show (1) or hide (0) the color bar.'),
-  (name: 'colorbarcolor'; callback: @PyCOLORBARCOLOR; help: ' colorbarcolor(c) -> Set color of the color bar.'),
   (name: 'contour'; callback: @PyCONTOUR; help: ' contour(layer) -> Create edge map for atlas or overlay.'),
   (name: 'edgecolor'; callback: @PyEDGECOLOR; help: ' edgecolor(name, varies) -> Select color scheme for connectome edge map. If varies=1 then edge color depends on strength of connection.'),
   (name: 'edgeload'; callback: @PyEDGELOAD; help: ' edgeload(filename) -> Loads a BrainNet Viewer format Edge file, e.g. connectome map.'),
@@ -2834,7 +2847,19 @@ begin
         gClrbar.FontColor := (RGBA(255,255,255,255));
       end;
  end;
+end;
 
+procedure TGLForm1.ClrbarClr(R,G,B,A: byte);
+var
+  y: single;
+begin
+  gClrbar.BackColor := (RGBA(R,G,B,A));
+  y := (0.2126*R + 0.7152*G + 0.0722*B); //luminance
+  //y := max(max(R,G),B);
+  if y > 127 then //bright background: use a dark font
+  	gClrbar.FontColor := (RGBA(0,0,0,255))
+  else
+  	gClrbar.FontColor := (RGBA(255,255,255,255));
 end;
 
 procedure TGLForm1.ClrbarMenuClick(Sender: TObject);
@@ -4828,7 +4853,13 @@ begin
   GLForm1.BilateralEitherMenu.checked := true;
   {$ENDIF}
      //gPrefs.Colorbar := true;
-     TransBlackClrbarMenu.Checked:=true;
+     //gPrefs.ColorbarColor := 0;
+     ClrbarClr(gPrefs.ColorbarColor);
+     //BlackClrbarMenu.checked := true;
+    if (gPrefs.ColorbarColor = WhiteClrbarMenu.tag) then WhiteClrbarMenu.checked := true;
+    if (gPrefs.ColorbarColor = TransWhiteClrbarMenu.tag) then TransWhiteClrbarMenu.checked := true;
+    if (gPrefs.ColorbarColor = BlackClrbarMenu.tag) then BlackClrbarMenu.checked := true;
+    if (gPrefs.ColorbarColor = TransBlackClrbarMenu.tag) then TransBlackClrbarMenu.checked := true;
      gPrefs.ScreenPan.X := 0; gPrefs.ScreenPan.Y := 0; gPrefs.ScreenPan.Z := 0;
      gPrefs.Pitch := 0;
      gDistance := 1;
@@ -6052,7 +6083,7 @@ begin
  origin := GetOrigin(scale);
   isAtlasStr := '';
   if (length(gMesh.vertexAtlas) > 0) then isAtlasStr := ' Indexed Atlas ';
-  str :=  'Surf Ice '+kVers+' '
+  str :=  'Surf Ice '+kVers+'+ '
    {$IFDEF CPU64} + '64-bit'
    {$ELSE} + '32-bit'
    {$ENDIF}
