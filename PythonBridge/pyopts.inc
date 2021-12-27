@@ -2,7 +2,8 @@
   {$define PYTHON_DYNAMIC}
 {$endif}
 {$ifdef linux}
-  {$define PYTHON_DYNAMIC}
+  //Only for Debian - set in .lpi
+  //{$define PYTHON_DYNAMIC}
 {$endif}
 {$ifdef darwin}
   //{$define PYTHON_DYNAMIC}

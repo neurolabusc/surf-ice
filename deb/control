@@ -1,0 +1,37 @@
+Source: mricrogl
+Maintainer: Debian Med Packaging Team <debian-med-packaging@lists.alioth.debian.org>
+Uploaders: Yaroslav Halchenko <debian@onerussian.com>
+Section: science
+Priority: optional
+Build-Depends: debhelper-compat (= 13),
+               fp-units-misc,
+               imagemagick,
+               lcl-qt5,
+               lcl-units,
+               lcl-utils,
+Standards-Version: 4.6.0
+Rules-Requires-Root: no
+Vcs-Browser: https://salsa.debian.org/med-team/surf-ice
+Vcs-Git: https://salsa.debian.org/med-team/surf-ice.git
+Homepage: https://www.nitrc.org/plugins/mwiki/index.php/surfice:MainPage
+
+Package: surfice
+Architecture: any
+Depends: surfice-data, python3, ${misc:Depends}, ${shlibs:Depends}
+Recommends: pigz
+Suggests: fsl
+Description: neuroimaging mesh, tractography and connectome viewing.
+.
+ This package provides the Surfice executable.
+
+
+Package: surfice-data
+Architecture: all
+Depends: ${misc:Depends}
+Multi-Arch: foreign
+Description: data files for Surfice
+ This is a GUI-based visualization tool for neuroimaging meshes.
+ .
+ This package provides data files for Surfice, such as brain atlases, anatomy,
+ and color schemes.
+

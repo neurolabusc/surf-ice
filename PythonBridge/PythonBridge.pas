@@ -45,7 +45,7 @@ type
 type
   PythonDataMethodCallback = procedure (data: UnicodeString) of object; 
 
-function PythonLoadAndInitialize(resourceDir: ansistring; callback: PythonDataMethodCallback): boolean;
+function PythonLoadAndInitialize(resourceDir, resourceDir2: ansistring; callback: PythonDataMethodCallback): boolean;
 function PythonInitialize(pythonHome: ansistring; callback: PythonDataMethodCallback): boolean;
 function PythonAddModule(name: ansistring; methods: PPythonBridgeMethodArray; count: integer): TPythonModule;
 function PyString_FromString( str: ansistring): PPyObject;
@@ -74,7 +74,7 @@ var
   DataMethodCallback: PythonDataMethodCallback = nil;
 
 {$ifdef windows}
-function findDll(resourceDir: string): string; //Detect .DLL version
+function findDll(resourceDir: string; silent: boolean): string; //Detect .DLL version
 var
   key: string;
   info : TSearchRec;
@@ -83,8 +83,10 @@ Begin
   key := resourceDir + pathdelim + 'python3*.dll';
   if FindFirst (key,faAnyFile,Info)=0 then
     result := resourceDir+pathdelim+ Info.name
-  else
-      Assert(FileExists(key), 'Unable to find required DLL: ' + key );
+  else begin
+    if (not Silent) and (not FileExists(key)) then
+       Assert(FileExists(key), 'Unable to find required DLL: ' + key );
+  end;
   FindClose(Info);
 end;
 {$endif}
@@ -150,15 +152,20 @@ begin
      result := findFirstRecursive(pthroot, 'libpython3*so');
 end;
 {$endif} {$endif}
-function PythonLoadAndInitialize(resourceDir: ansistring; callback: PythonDataMethodCallback): boolean;
+function PythonLoadAndInitialize(resourceDir, resourceDir2: ansistring; callback: PythonDataMethodCallback): boolean;
 var
-  home: ansistring;
+  home, home2: ansistring;
 begin
   {$ifdef windows}
-    SetDllDirectory(PChar(resourceDir));
+    if not (DirectoryExists(resourceDir)) then
+       SetDllDirectory(PChar(resourceDir2))
+    else
+        SetDllDirectory(PChar(resourceDir));
     //home := resourceDir + pathdelim + 'vcruntime140.dll';
     //LoadLibrary(home, false);
-    home := findDll(resourceDir);
+    home := findDll(resourceDir, true);
+    if not fileexists(home) then
+       home := findDll(resourceDir2, false);
     LoadLibrary(home);
     home := changefileext(home, '.zip');
     Assert(FileExists(home), 'Python home can''t be found at '+home);
@@ -190,11 +197,14 @@ begin
     LoadLibrary(home);
     {$else}
     home := resourceDir + pathdelim + 'python37';
+    home2 := resourceDir2 + pathdelim + 'python37';
+    if (not (DirectoryExists(home))) and (DirectoryExists(home2)) then
+       home := home2;
     if not (DirectoryExists(home)) then begin
       {$ifdef lcl}
-      ShowMessage('Unable to find Python home: '+home);
+      ShowMessage('Static Python: Unable to find Python home: '+home +' : '+home2);
       {$else}
-      writeln('Unable to find Python home: '+home);
+      writeln('Unable to find Python home: '+home +' : '+home2);
       {$endif}
        exit(false);
     end;

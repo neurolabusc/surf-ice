@@ -22,8 +22,8 @@ TScalar = record
 end;
 TTrack = class
   //utime: QWord;
-  scale, minFiberLength, ditherColorFrac, maxObservedFiberLength  : single;
-  origin, mxV, mnV : TPoint3f;
+  scale, minFiberLength, ditherColorFrac, maxObservedFiberLength, restrictAngle  : single;
+  origin, mxV, mnV, restrictXYZ : TPoint3f;
   isBusy, isRebuildList, isTubes, isWorldSpaceMM: boolean;
   TrackTubeSlices, //e.g. if 5 then cross section of fiber is pentagon
   n_count, n_faces, n_vertices, n_indices, minFiberLinks, LineWidth: integer;
@@ -264,9 +264,12 @@ var
   isScalarPerFiberColor : boolean = false;
   isScalarPerVertexColor: boolean = false;
   hideFiber: boolean;
+  restrictRadians: single;
 begin
   randomize;
-
+  restrictRadians := 3.0;
+  if (RestrictAngle < 90) and (RestrictAngle > 0) then
+  	restrictRadians := DegToRad(RestrictAngle); //0..1.57
   //if length(Scalars) > 0 then
   //   GLForm1.Caption := format('selected %d available %d count %d streamline count %d',[ScalarSelected,length(Scalars), length(Scalars[0].scalar), n_count ]);
   if (ScalarSelected >= 0) and (length(Scalars) > ScalarSelected) then begin
@@ -305,6 +308,9 @@ begin
        endPt.Z := tracks[j+i+3];
        normRGB := vector2RGB(startPt, endPt, len);
        hideFiber := false;
+     if (restrictRadians < 2.0) then
+     		if Arccos(abs(vectorDot(normRGB, restrictXYZ))) > restrictRadians then
+            hideFiber := true;
        if len < minFiberLength then hideFiber := true;
        if (isScalarPerFiberColor) and (gPrefs.HideDarkTracks) and (Scalars[ScalarSelected].scalar[nfiber] < Scalars[ScalarSelected].mnView) then
           hideFiber := true;
@@ -497,8 +503,12 @@ var
   perVertexScalars: array of single;
   isScalarPerFiberColor : boolean = false;
   isScalarPerVertexColor: boolean = false;
+  restrictRadians: single;
   hideFiber : boolean;
 begin
+  restrictRadians := 3.0;
+  if (RestrictAngle < 90) and (RestrictAngle > 0) then
+  	restrictRadians := DegToRad(RestrictAngle); //0..1.57
   if (ScalarSelected >= 0) and (length(Scalars) > ScalarSelected) then begin
     if  length(Scalars[ScalarSelected].scalar) = n_count then
         isScalarPerFiberColor := true //one color per fiber
@@ -537,6 +547,9 @@ begin
        endPt.Z := tracks[j+i+3];
        normRGB := vector2RGB(startPt, endPt, len);  //here only used for length
        hideFiber := false;
+      if (restrictRadians < 2.0) then
+      		if Arccos(abs(vectorDot(normRGB, restrictXYZ))) > restrictRadians then
+             hideFiber := true;
        if len < minFiberLength then hideFiber := true;
        if (isScalarPerFiberColor) and (gPrefs.HideDarkTracks) and (Scalars[ScalarSelected].scalar[nfiber] < Scalars[ScalarSelected].mnView) then
           hideFiber := true;
@@ -1257,6 +1270,8 @@ begin
      ditherColorFrac := 0.3;
      minFiberLinks := 1;//minFiberLinks := 2;
      minFiberLength := 20;
+     restrictAngle := 91; //restict 0..90 degrees: 91 means everything visible
+     restrictXYZ.X := 1.0; restrictXYZ.Y := 0.0; restrictXYZ.Z := 0.0;
      isRebuildList := true;
      isBusy := false;
      isTubes := true;

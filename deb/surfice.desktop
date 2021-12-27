@@ -1,0 +1,9 @@
+[Desktop Entry]
+GenericName=Neuroimaging Mesh, Connectome, Tractography Viewer
+Name=Surfice
+Exec=surfice %F
+TryExec=surfice
+Type=Application
+Terminal=false
+Categories=Education;Graphics;Science;DataVisualization;MedicalSoftware;GTK;Viewer;
+Icon=/usr/share/icons/hicolor/scalable/apps/surfice.svg

@@ -321,7 +321,7 @@ begin
             for i := 1 to kNumDefaultMesh do
                 PrevFilename[i] := DefaultMeshName(i, lPrefs, askUserIfMissing);
             FontName := '';
-            PyLib := '';
+            PyLib := ResourceDir();//'';
        end;
   end;
   with lPrefs do begin
@@ -646,7 +646,7 @@ begin
         exit;
   {$IFDEF UNIX}
   if not lRead then
-  	writeln('writing preferences "'+lFilename+'"');
+  	writeln('Writing preferences: "'+lFilename+'"');
   {$ENDIF}
   lIniFile := TIniFile.Create(lFilename);
   try

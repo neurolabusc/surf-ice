@@ -509,6 +509,7 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     procedure SurfaceAppearanceChange(Sender: TObject);
     procedure SwapYZMenuClick(Sender: TObject);
     procedure TrackBoxChange(Sender: TObject);
+    procedure SetTrackAzimuthElevation(ANGLE,AZI,ELEV: single);
     procedure TrackScalarRangeBtnClick(Sender: TObject);
    procedure UniformChange(Sender: TObject);
     procedure UpdateTimerTimer(Sender: TObject);
@@ -713,6 +714,11 @@ begin
   {$IFDEF Unix}writeln(s);{$ENDIF}
 end;
 
+procedure printf(const s: string);
+begin
+	MyWriteln(s);
+end;
+
 procedure TGLForm1.InsertCommand(Sender: TObject);
 var
   lStr: string;
@@ -756,15 +762,13 @@ begin
   {$ENDIF}
 end;
 
-
-
 {$IFDEF MYPY}
 
 function PyVERSION(Self, Args : PPyObject): PPyObject; cdecl;
 var
   s: string;
 begin
-  s := kVers+{$IFDEF PY4LAZ}'Python-for-Lazarus'{$ELSE}'PythonBridge' {$ENDIF}  +' PyLib: '+gPrefs.PyLib;
+  s := kVers+{$IFDEF PY4LAZ}'Python-for-Lazarus'{$ELSE}{$ifdef PYTHON_DYNAMIC} 'DynamicPythonBridge'{$ELSE}{$ENDIF}'StaticPythonBridge' {$ENDIF}  +' PyLib: '+gPrefs.PyLib;
   {$IFDEF PY4LAZ}with GetPythonEngine do {$ENDIF}
     Result:= PyString_FromString(PChar(s));
 end;
@@ -990,6 +994,17 @@ begin
   Result:= PyBool_FromLong(Ord(True));
     if Bool(PyArg_ParseTuple(Args, 'fff:trackprefs', @D,@A,@E)) then
       TRACKPREFS(D,A,E);
+    {$IFDEF PY4LAZ}end;{$ENDIF}
+end;
+
+function PyTRACKAZIMUTHELEVATION(Self, Args : PPyObject): PPyObject; cdecl;
+var
+  ANGLE,AZI,ELEV: single;
+begin
+ {$IFDEF PY4LAZ}with GetPythonEngine do begin{$ENDIF}
+  Result:= PyBool_FromLong(Ord(True));
+    if Bool(PyArg_ParseTuple(Args, 'fff:trackazimuthelevation', @ANGLE,@AZI,@ELEV)) then
+      GLForm1.SetTRACKAZIMUTHELEVATION(ANGLE,AZI,ELEV);
     {$IFDEF PY4LAZ}end;{$ENDIF}
 end;
 
@@ -1986,7 +2001,7 @@ type
 {$ENDIF}
 
 var
-  methods: array[0..82] of TPythonBridgeMethod = (
+  methods: array[0..83] of TPythonBridgeMethod = (
   (name: 'atlas2node'; callback: @PyATLAS2NODE; help: ' atlas2node(imageName) -> convert .annot file labels to BrainNet Node format.'),
   (name: 'atlashide'; callback: @PyATLASHIDE; help: ' atlashide(overlayNum, (r1, r2, ...)) -> Hide regions specified atlas. For example, "atlashide(0, (3, 7, 9))" will hide regions 3,7,9 of the background (0th layer) image.'),
   (name: 'atlasmaxindex'; callback: @PyATLASMAXINDEX; help: ' atlasmaxindex(overlayNum) -> Returns maximum region number in specified atlas. For example, if you load the CIT168 atlas (which has 15 regions) as your background image, then atlasmaxindex(0) will return 15.'),
@@ -2064,6 +2079,7 @@ var
   (name: 'shadername'; callback: @PySHADERNAME; help: ' shadername(name) -> Choose rendering shader function. For example, "shadername(''phong'')" renders using Phong shading.'),
   (name: 'shaderxray'; callback: @PySHADERXRAY; help: ' shaderxray (object, overlay) -> See occluded overlays/tracks/nodes by making either object transparent (0..1) or overlay/tracks/nodes emphasized (0..1)'),
   (name: 'trackload'; callback: @PyTRACKLOAD; help: ' trackload (filename) -> Load fiber steam lines from a file.'),
+  (name: 'trackazimuthelevation'; callback: @PyTRACKAZIMUTHELEVATION; help: ' trackazimuthelevation(angle, azimuth, elevation) -> Restrict streamlines with those oriented parallel to this direction'),
   (name: 'trackprefs'; callback: @PyTRACKPREFS; help: ' trackprefs(length, width, dither) -> Set the size and properties for streamlines.'),
   (name: 'version'; callback: @PyVERSION; help: ' version() -> Return the version of Surfice.'),
   (name: 'viewaxial'; callback: @PyVIEWAXIAL; help: ' viewaxial(SI) -> Show rendering with camera superior (1) or inferior (0) of volume.'),
@@ -2173,9 +2189,14 @@ begin
 end;
 
 function TGLForm1.PyCreate: boolean;
+var
+  PyLib, ReDir: string;
 begin
- if not PythonLoadAndInitialize(extractfilepath(AppDir), GLForm1.GotPythonData) then begin
-   writeln('Unable to load Python');
+ PyLib := gPrefs.PyLib;
+ ReDir := ResourceDir();
+ printf('ResourceDir: '+ReDir +' PyLib: '+PyLib);
+ if not PythonLoadAndInitialize(PyLib, ReDir, GLForm1.GotPythonData) then begin
+   printf('Unable to load Python');
    exit(false);
  end;
  PyEngine := PythonAddModule('gl', @methods, length(methods));
@@ -2226,7 +2247,6 @@ begin
      {$ENDIF}
       result := true;
       exit;
-
     end;
   end;
   GLForm1.ScriptOutputMemo.lines.Add('Running Python script');
@@ -4314,6 +4334,10 @@ var
   p,f: string;
 begin
      p := (ClutDir+pathdelim+gPrefs.FontName+'.png');
+     if (not fileexistsf(p)) then begin
+     	gPrefs.FontName := 'Roboto';
+        p := (ClutDir+pathdelim+gPrefs.FontName+'.png');
+     end;
      f := (ClutDir+pathdelim+gPrefs.FontName+'.json');
      if (gPrefs.FontName = '') or (not fileexistsf(p)) or (not fileexistsf(f)) then begin
        gPrefs.FontName := '';
@@ -5163,9 +5187,22 @@ begin
   Memo1.Lines.clear;
   Memo1.Lines.Add(format('Track min length %d',[TrackLengthTrack.position]));
   Memo1.Lines.Add(format('Track line width %d',[TrackWidthTrack.Position]));
+  if (gTrack.restrictAngle > 0) and (gTrack.restrictAngle < 90) then
+  	Memo1.Lines.Add(format('Track restrict %.0g°  XYZ %.2g %.2g %.2g',[gTrack.restrictAngle, gTrack.restrictXYZ.X, gTrack.restrictXYZ.Y, gTrack.restrictXYZ.Z]));
   Memo1.Lines.Add(format('Track dither %.2g',[gTrack.ditherColorFrac]));
   gTrack.isRebuildList:= true;
   GLBoxRequestUpdate(Sender);
+end;
+
+procedure TGLForm1.SetTrackAzimuthElevation(ANGLE,AZI,ELEV: single);
+begin
+ //caption := floattostr(ANGLE);
+ gTrack.restrictAngle := ANGLE;
+ sph2cartDeg90x(AZI,ELEV,1,gTrack.restrictXYZ.X,gTrack.restrictXYZ.Y,gTrack.restrictXYZ.Z);
+ gTrack.restrictXYZ.X := DefuzzX(gTrack.restrictXYZ.X);
+ gTrack.restrictXYZ.Y := DefuzzX(gTrack.restrictXYZ.Y);
+ gTrack.restrictXYZ.Z := DefuzzX(gTrack.restrictXYZ.Z);
+ TrackBoxChange(nil);
 end;
 
 procedure TGLForm1.OVERLAYEXTREME (lOverlay, lMode: integer);
@@ -6104,6 +6141,18 @@ begin
    {$IFDEF CPULLVM} + ' LLVM' {$ELSE} + ' FPC' {$ENDIF}
    {$IFDEF DGL} + ' DGL'{$ENDIF}
    {$IFNDEF COREGL}+' (Legacy '+{$IFDEF LEGACY_INDEXING}'Indexed '+{$ENDIF}'OpenGL)'{$ENDIF}
+   {$IFDEF MYPY}
+    {$IFDEF PY4LAZ}
+    	+' Py4Laz '
+    {$ELSE}
+      {$IFDEF PYTHON_DYNAMIC}
+  	    +' DynamicPythonBridge '
+
+      {$ELSE}
+  	    +' StaticPythonBridge '
+      {$ENDIF}
+    {$ENDIF}
+   {$ENDIF}
    {$IFDEF Darwin}
            {$IFDEF LCLCocoa}
            +''; titleStr := Str; str := ' '+GetHardwareVersion
@@ -6999,8 +7048,9 @@ begin
  MultiPassRenderingToolsUpdate;
  ShaderDropChange(sender);
   if gPrefs.StartupWindowMode = 1 then begin
-     GLForm1.BoundsRect := Screen.MonitorFromWindow(Handle).BoundsRect;
-     GLForm1.WindowState:= wsMaximized;
+     //GLForm1.BoundsRect := Screen.MonitorFromWindow(Handle).BoundsRect;
+    GLForm1.SetBounds(Screen.WorkAreaLeft, Screen.WorkAreaTop, Screen.WorkAreaWidth, Screen.WorkAreaHeight);
+    GLForm1.WindowState:= wsMaximized;
   end;
   if gPrefs.StartupWindowMode = 2 then begin
      GLForm1.WindowState:= wsFullScreen;
@@ -7045,7 +7095,7 @@ begin
   FormCreateShaders;
   gPrefs.RenderQuality:= kRenderBetter;// kRenderPoor; ;
   if (not ResetIniDefaults) and (not forceReset) then  begin
-     {$IFDEF UNIX} writeln('Loading preferences: '+IniName);{$ENDIF}
+     {$IFDEF UNIX} writeln('Loading preferences: "'+IniName+'"');{$ENDIF}
      IniFile(true,IniName,gPrefs)
   end else begin
     SetDefaultPrefs(gPrefs,true, true);//reset everything to defaults!
@@ -7200,7 +7250,6 @@ begin
   {$ENDIF}
   {$IFDEF COREGL} {$IFDEF LCLCarbon} ERROR - Carbon does not support OpenGL core profile: either switch to Cocoa or comment out "COREGL" in opts.inc{$ENDIF} {$ENDIF}
   OrientCubeMenu.Checked :=  gPrefs.OrientCube;
-
 end;
 
 procedure TGLForm1.FormDropFiles(Sender: TObject;

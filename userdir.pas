@@ -2,7 +2,9 @@ unit userdir;
 //returns directory where user has read/write permissions...
 {$IFDEF FPC} {$mode delphi}{$H+} {$ENDIF}
 {$IFDEF Darwin} {$modeswitch objectivec2} {$ENDIF}
+
 interface
+
 //returns number of cores: a computer with two dual cores will report 4
 function IniName: string;
 function DefaultsDir (lSubFolder: string): string;
@@ -13,8 +15,7 @@ function AppDir: string;  //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder
 function AppDir: string;  //e.g. c:\folder\ for c:\folder\myapp.exe, but /myapp.app/Contents/Resources
 {$ENDIF}
 function AppDir2: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/ for /folder/myapp.app/app
-//function ResourceDir: string; //e.g. /MRIcroGL.app/Contents/Resources
- //function ExeDir: string;
+function ResourceDir (): string;
 
 implementation
 
@@ -309,6 +310,102 @@ end;
 function AppDir2: string; //e.g. c:\folder\ for c:\folder\myapp.exe, but /folder/myapp.app/ for /folder/myapp.app/app
 begin
  result := extractfilepath(paramstr(0));
+end;
+{$ENDIF}
+
+{$IFDEF Darwin}
+
+function ResourceDir (): string;
+begin
+	result := NSBundle.mainBundle.resourcePath.UTF8String;
+end;
+
+function ResourceURL (name: pchar; ofType: pchar): NSURL;
+begin
+	result := NSBundle.mainBundle.URLForResource_withExtension(NSSTR(name), NSSTR(ofType));
+end;
+
+function ResourceFile (name: pchar; ofType: pchar): string;
+var
+	url: NSURL;
+begin
+	url := ResourceURL(name, ofType);
+	result := url.relativePath.UTF8String;
+        if (result = '') then
+        	writeln('Error: unable to load resource "'+StrPas(name)+'.'+StrPas(ofType)+'" in "'+ResourceDir()+'"');
+end;
+{$ELSE}
+ {$IFDEF LINUX}
+ var
+   gResourceDir : string = '';
+
+  function ResourceDir (): string;
+  label
+    111, 222, 333;
+  var
+     pths, nms, exts: TStringList;
+     p,n,x: integer;
+     verbose: boolean = false;
+     str: string;
+  begin
+    if (length(gResourceDir) > 0) then
+      exit(gResourceDir);
+    result := extractfilepath(paramstr(0))+'Resources';
+    if  DirectoryExists(result) then goto 333;
+    str := FpGetEnv('SURFICE_DIR');
+    if (length(str) > 0) then begin
+       result := str;
+       if  DirectoryExists(result) then goto 333;
+    end;
+    pths := TStringList.Create;
+    pths.Add('/opt/');
+    pths.Add('/usr/local/');
+    pths.Add('/usr/local/share/');
+    pths.Add('/usr/share/');
+    nms := TStringList.Create;
+    if (CompareText('Surfice', paramstr(0)) <> 0) then begin
+       nms.Add(ExtractFileName(paramstr(0)));
+       result := '/usr/share/surfice'; //e.g. Debian for either GTK2 or QT5
+       if  DirectoryExists(result) then goto 333;
+    end;
+    nms.Add('Surfice');
+    nms.Add('surfice');
+    exts := TStringList.Create;
+    exts.Add('/Resources');
+    exts.Add('');
+    111:
+    for p := 0 to pths.Count -1 do
+        for n := 0 to nms.Count -1 do
+            for x := 0 to exts.Count -1 do begin
+              result := pths[p]+nms[n]+exts[x];
+              if  DirectoryExists(result) then
+                  goto 222;
+              if (verbose) then
+                 writeln('  '+result)
+            end;
+    if not verbose then begin
+      //report errors for second pass
+      writeln('Unable to find Resources folder:');
+      verbose := true;
+      goto 111;
+    end;
+    222:
+    exts.Free;
+    nms.Free;
+    pths.Free;
+    333:
+    gResourceDir := result;
+  end;
+
+ {$ELSE} //Windows
+ function ResourceDir (): string;
+ begin
+     result := extractfilepath(paramstr(0))+'Resources';
+ end;
+ {$ENDIF}
+function ResourceFile (name: pchar; ofType: pchar): string;
+begin
+     result := ResourceDir + pathdelim + name +'.'+ ofType;
 end;
 {$ENDIF}
 

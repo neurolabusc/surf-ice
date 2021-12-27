@@ -182,7 +182,7 @@ begin
   if fnm = '' then begin
     {$IFDEF FPC}
     r:=LazarusResources.Find('jsn');
-    if r=nil then raise Exception.Create('resource jsn is missing');
+    if r=nil then raise Exception.Create('Font resource jsn is missing');
     str:=r.Value;
     {$ELSE}
      r := TResourceStream.Create(hInstance,'JSN',RT_RCDATA);
@@ -550,6 +550,9 @@ end;
 
 constructor TGLText.Create(fnm: string; out success: boolean; Ctx: TOpenGLControl);
 begin
+  {$IFDEF UNIX}
+  if not (fileexists(fnm)) then writeln('glmtext did not find file:'+fnm);
+  {$ENDIF}
   success := true;
   tex := 0;
   shaderProgram := 0;
@@ -621,6 +624,6 @@ begin
 end;
 
 initialization
- {$I mfnt.lrs}
+ //{$I mfnt.lrs}
 end.
 

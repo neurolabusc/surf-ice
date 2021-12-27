@@ -81,6 +81,7 @@ procedure SHADERMATCAP(lFilename: string);
 procedure SHADERXRAY(lObject, lOverlay: single);
 procedure TRACKLOAD(lFilename: string);
 procedure TRACKPREFS(lLength,lWidth,lDither: single);
+procedure TRACKAZIMUTHELEVATION (ANGLE,AZI,ELEV: single);
 procedure VIEWAXIAL (STD: boolean);
 procedure VIEWCORONAL (STD: boolean);
 procedure VIEWSAGITTAL (STD: boolean);
@@ -99,7 +100,7 @@ const
                (Ptr:@VERSION;Decl:'VERSION';Vars:'(): string')
              );
 
-knProc = 78;
+knProc = 79;
   kProcRA : array [1..knProc] of TScriptRec = (
   (Ptr:@ATLASSTATMAP;Decl:'ATLASSTATMAP';Vars:'(ATLASNAME, STATNAME: string; const Intensities: array of integer; const Intensities: array of single)'),
   (Ptr:@ATLASSATURATIONALPHA;Decl:'ATLASSATURATIONALPHA';Vars:'(lSaturation, lTransparency: single)'),
@@ -176,6 +177,7 @@ knProc = 78;
    (Ptr:@SHADERXRAY;Decl:'SHADERXRAY';Vars:'(lObject, lOverlay: single)'),
    (Ptr:@TRACKLOAD;Decl:'TRACKLOAD';Vars:'(lFilename: string)'),
    (Ptr:@TRACKPREFS;Decl:'TRACKPREFS';Vars:'(lLength,lWidth,lDither: single)'),
+   (Ptr:@TRACKAZIMUTHELEVATION;Decl:'TRACKPREFS';Vars:'(ANGLE,AZI,ELEV: single)'),
    (Ptr:@VIEWAXIAL;Decl:'VIEWAXIAL';Vars:'(STD: boolean)'),
    (Ptr:@VIEWCORONAL;Decl:'VIEWCORONAL';Vars:'(STD: boolean)'),
    (Ptr:@VIEWSAGITTAL;Decl:'VIEWSAGITTAL';Vars:'(STD: boolean)'),
@@ -702,6 +704,11 @@ procedure SAVEBMPXY(lFilename: string; X,Y: integer);
 begin
   GLForm1.SaveBitmap(lFilename, X, Y);
 
+end;
+
+procedure TRACKAZIMUTHELEVATION (ANGLE,AZI,ELEV: single);
+begin
+	GLForm1.SetTrackAzimuthElevation(ANGLE,AZI,ELEV);
 end;
 
 procedure TRACKPREFS(lLength,lWidth,lDither: single);

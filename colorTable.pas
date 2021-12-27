@@ -190,16 +190,26 @@ begin
     result.a := alpha;
 end;
 
+procedure printf(s: string);
+begin
+{$ifdef Unix}
+writeln(s);
+{$endif}
+end;
+
 function CLUTDir: string;
 begin
   //result := extractfilepath(paramstr(0))+'lut';
+  result := ResourceDir+pathdelim+'lut';
+  if DirectoryExists(result) then exit;
   result := AppDir+'lut';
   {$IFDEF UNIX}
-  if fileexists(result) then exit;
+  if DirectoryExists(result) then exit;
   result := '/usr/share/surfice/lut';
-  if fileexists(result) then exit;
+  if DirectoryExists(result) then exit;
   result := AppDir+'lut';
   {$ENDIF}
+  printf('Unable to find "lut" resource folder');
 end;
 
 procedure setNode (r,g,b,a,i, node: integer; var  lLUTnodes : TLUTnodes);

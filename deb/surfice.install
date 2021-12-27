@@ -1,0 +1,4 @@
+debian/*.desktop usr/share/applications
+debian/wrapper/surfice usr/bin
+surfice usr/lib/surfice
+surfice.svg usr/share/icons/hicolor/scalable/apps

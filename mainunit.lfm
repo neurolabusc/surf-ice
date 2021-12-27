@@ -1,7 +1,7 @@
 object GLForm1: TGLForm1
   Left = 276
   Height = 659
-  Top = 315
+  Top = 113
   Width = 1004
   AllowDropFiles = True
   Caption = 'Surf Ice'
@@ -17,9 +17,9 @@ object GLForm1: TGLForm1
   Position = poDesktopCenter
   LCLVersion = '2.3.0.0'
   object ToolPanel: TScrollBox
-    Left = 0
+    Left = clBlack
     Height = 659
-    Top = 0
+    Top = clBlack
     Width = 261
     HorzScrollBar.Page = 1
     HorzScrollBar.Visible = False
@@ -33,10 +33,10 @@ object GLForm1: TGLForm1
     ParentFont = False
     TabOrder = 2
     object OverlayBox: TGroupBox
-      Left = 0
+      Left = clBlack
       Height = 182
       Hint = 'Click on name to hide, control+click to reverse palette'
-      Top = 0
+      Top = clBlack
       Width = 246
       Align = alTop
       AutoSize = True
@@ -50,14 +50,14 @@ object GLForm1: TGLForm1
       TabOrder = 1
       Visible = False
       object LayerList: TCheckListBox
-        Left = 0
+        Left = clBlack
         Height = 72
         Hint = 'Right-click for options'
-        Top = 0
+        Top = clBlack
         Width = 236
         Align = alTop
         Constraints.MaxHeight = 72
-        ItemHeight = 0
+        ItemHeight = clBlack
         OnClickCheck = LayerListClickCheck
         OnSelectionChange = LayerListSelectionChange
         OnShowHint = LayerListShowHint
@@ -71,7 +71,7 @@ object GLForm1: TGLForm1
         AnchorSideLeft.Control = LayerList
         AnchorSideTop.Control = LayerDarkEdit
         AnchorSideTop.Side = asrCenter
-        Left = 0
+        Left = clBlack
         Height = 16
         Top = 100
         Width = 47
@@ -112,7 +112,7 @@ object GLForm1: TGLForm1
         AnchorSideLeft.Control = LayerList
         AnchorSideTop.Control = LayerBrightEdit
         AnchorSideTop.Side = asrCenter
-        Left = 0
+        Left = clBlack
         Height = 16
         Top = 123
         Width = 55
@@ -123,13 +123,13 @@ object GLForm1: TGLForm1
         AnchorSideLeft.Control = LayerList
         AnchorSideTop.Control = LayerList
         AnchorSideTop.Side = asrBottom
-        Left = 0
+        Left = clBlack
         Height = 20
         Top = 76
         Width = 137
         BorderSpacing.Top = 4
         ItemHeight = 26
-        ItemIndex = 0
+        ItemIndex = clBlack
         Items.Strings = (
           'Grayscale'
         )
@@ -143,7 +143,7 @@ object GLForm1: TGLForm1
         AnchorSideLeft.Control = LayerList
         AnchorSideTop.Control = LayerAlphaTrack
         AnchorSideTop.Side = asrCenter
-        Left = 0
+        Left = clBlack
         Height = 16
         Top = 145
         Width = 47
@@ -186,7 +186,7 @@ object GLForm1: TGLForm1
       end
     end
     object ClipBox: TGroupBox
-      Left = 0
+      Left = clBlack
       Height = 82
       Top = 286
       Width = 246
@@ -247,7 +247,7 @@ object GLForm1: TGLForm1
         Width = 172
         Max = 1000
         OnChange = ClipTrackChange
-        Position = 0
+        Position = clBlack
         TickStyle = tsNone
         BorderSpacing.Left = 4
         BorderSpacing.Top = 2
@@ -287,7 +287,7 @@ object GLForm1: TGLForm1
         Max = 180
         Min = -180
         OnChange = ClipTrackChange
-        Position = 0
+        Position = clBlack
         TickStyle = tsNone
         Anchors = [akTop, akLeft, akRight]
         BorderSpacing.Top = 2
@@ -297,7 +297,7 @@ object GLForm1: TGLForm1
     end
     object TrackBox: TGroupBox
       Tag = 270
-      Left = 0
+      Left = clBlack
       Height = 104
       Top = 182
       Width = 246
@@ -365,7 +365,7 @@ object GLForm1: TGLForm1
         AnchorSideLeft.Control = TrackBox
         AnchorSideTop.Control = TrackWidthTrack
         AnchorSideTop.Side = asrCenter
-        Left = 0
+        Left = clBlack
         Height = 16
         Top = 24
         Width = 36
@@ -414,7 +414,7 @@ object GLForm1: TGLForm1
         BorderSpacing.Top = 2
         DropDownCount = 22
         ItemHeight = 26
-        ItemIndex = 0
+        ItemIndex = clBlack
         Items.Strings = (
           'a'
           'b'
@@ -440,7 +440,7 @@ object GLForm1: TGLForm1
         Width = 108
         DropDownCount = 22
         ItemHeight = 26
-        ItemIndex = 0
+        ItemIndex = clBlack
         Items.Strings = (
           'Direction'
         )
@@ -468,7 +468,7 @@ object GLForm1: TGLForm1
     end
     object NodeBox: TGroupBox
       Tag = 270
-      Left = 0
+      Left = clBlack
       Height = 106
       Top = 368
       Width = 246
@@ -508,7 +508,7 @@ object GLForm1: TGLForm1
         BorderSpacing.Right = 2
         DropDownCount = 22
         ItemHeight = 26
-        ItemIndex = 0
+        ItemIndex = clBlack
         Items.Strings = (
           'a'
           'b'
@@ -588,7 +588,7 @@ object GLForm1: TGLForm1
         BorderSpacing.Top = 2
         DropDownCount = 22
         ItemHeight = 26
-        ItemIndex = 0
+        ItemIndex = clBlack
         Items.Strings = (
           'Threshold based on size'
           'Threshold based on color'
@@ -673,7 +673,7 @@ object GLForm1: TGLForm1
     end
     object EdgeBox: TGroupBox
       Tag = 270
-      Left = 0
+      Left = clBlack
       Height = 84
       Top = 474
       Width = 246
@@ -711,7 +711,7 @@ object GLForm1: TGLForm1
         BorderSpacing.Top = 2
         DropDownCount = 22
         ItemHeight = 26
-        ItemIndex = 0
+        ItemIndex = clBlack
         Items.Strings = (
           'a'
           'b'
@@ -863,7 +863,7 @@ object GLForm1: TGLForm1
         BorderSpacing.Left = 4
         DropDownCount = 22
         ItemHeight = 26
-        ItemIndex = 0
+        ItemIndex = clBlack
         Items.Strings = (
           '1'
           '2'
@@ -881,7 +881,7 @@ object GLForm1: TGLForm1
     end
     object MeshColorBox: TGroupBox
       Tag = 270
-      Left = 0
+      Left = clBlack
       Height = 61
       Top = 558
       Width = 246
@@ -954,7 +954,7 @@ object GLForm1: TGLForm1
       end
     end
     object BackgroundBox: TGroupBox
-      Left = 0
+      Left = clBlack
       Height = 60
       Top = 619
       Width = 246
@@ -999,7 +999,7 @@ object GLForm1: TGLForm1
         Width = 92
         Max = 100
         OnChange = SurfaceAppearanceChange
-        Position = 0
+        Position = clBlack
         TickStyle = tsNone
         BorderSpacing.Left = 5
         BorderSpacing.Top = 2
@@ -1059,7 +1059,7 @@ object GLForm1: TGLForm1
       end
     end
     object ShaderBox: TGroupBox
-      Left = 0
+      Left = clBlack
       Height = 282
       Top = 679
       Width = 246
@@ -1135,7 +1135,7 @@ object GLForm1: TGLForm1
         Max = 90
         Min = -90
         OnChange = SurfaceAppearanceChange
-        Position = 0
+        Position = clBlack
         TickStyle = tsNone
         BorderSpacing.Left = 4
         BorderSpacing.Top = 8
@@ -1476,7 +1476,7 @@ object GLForm1: TGLForm1
         TabOrder = 14
       end
       object Memo1: TMemo
-        Left = 0
+        Left = clBlack
         Height = 54
         Top = 209
         Width = 236
@@ -1525,7 +1525,7 @@ object GLForm1: TGLForm1
   object LeftSplitter: TSplitter
     Left = 261
     Height = 659
-    Top = 0
+    Top = clBlack
     Width = 6
     OnCanOffset = LeftSplitterCanOffset
     OnCanResize = LeftSplitterCanResize
@@ -1535,7 +1535,7 @@ object GLForm1: TGLForm1
   object CenterPanel: TPanel
     Left = 267
     Height = 659
-    Top = 0
+    Top = clBlack
     Width = 729
     Align = alClient
     Constraints.MinHeight = 32
@@ -1547,7 +1547,7 @@ object GLForm1: TGLForm1
   object RightSplitter: TSplitter
     Left = 996
     Height = 659
-    Top = 0
+    Top = clBlack
     Width = 6
     Align = alRight
     ResizeAnchor = akRight
@@ -1555,7 +1555,7 @@ object GLForm1: TGLForm1
   object ScriptPanel: TPanel
     Left = 1002
     Height = 659
-    Top = 0
+    Top = clBlack
     Width = 2
     Align = alRight
     BevelOuter = bvNone
@@ -1566,22 +1566,22 @@ object GLForm1: TGLForm1
     TabOrder = 0
     OnDblClick = ScriptPanelDblClick
     object ScriptBox: TGroupBox
-      Left = 0
+      Left = clBlack
       Height = 659
-      Top = 0
+      Top = clBlack
       Width = 2
       Align = alClient
       Caption = 'Scripting'
       ClientHeight = 640
-      ClientWidth = 0
+      ClientWidth = clBlack
       ParentFont = False
       TabOrder = 0
       OnDblClick = ScriptPanelDblClick
       object ScriptMemo: TMemo
-        Left = 0
+        Left = clBlack
         Height = 434
-        Top = 0
-        Width = 0
+        Top = clBlack
+        Width = clBlack
         Align = alClient
         BorderStyle = bsNone
         Lines.Strings = (
@@ -1600,10 +1600,10 @@ object GLForm1: TGLForm1
         WordWrap = False
       end
       object ScriptOutputMemo: TMemo
-        Left = 0
+        Left = clBlack
         Height = 200
         Top = 440
-        Width = 0
+        Width = clBlack
         Align = alBottom
         BorderStyle = bsNone
         Lines.Strings = (
@@ -1617,10 +1617,10 @@ object GLForm1: TGLForm1
       end
       object ScriptSplitter: TSplitter
         Cursor = crVSplit
-        Left = 0
+        Left = clBlack
         Height = 6
         Top = 434
-        Width = 0
+        Width = clBlack
         Align = alBottom
         ResizeAnchor = akBottom
       end

@@ -1,6 +1,0 @@
-Package: surfice-data
-Version: <ver>
-Architecture: all
-Maintainer: NeuroDebian Team <team@neuro.debian.net>
-Description: data files for Surfice
- Surfice GUI-based visualization for neuroimaging meshes
