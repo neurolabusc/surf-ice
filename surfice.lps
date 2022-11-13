@@ -7,7 +7,7 @@
       <Unit0>
         <Filename Value="surfice.lpr"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="7"/>
+        <EditorIndex Value="8"/>
         <CursorPos X="31" Y="6"/>
         <UsageCount Value="212"/>
         <Loaded Value="True"/>
@@ -18,9 +18,8 @@
         <ComponentName Value="GLForm1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
-        <TopLine Value="7080"/>
-        <CursorPos X="33" Y="7099"/>
+        <TopLine Value="2786"/>
+        <CursorPos X="11" Y="2784"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -32,12 +31,14 @@
         <TopLine Value="131"/>
         <CursorPos X="55" Y="137"/>
         <UsageCount Value="200"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit2>
       <Unit3>
         <Filename Value="prefs.pas"/>
-        <EditorIndex Value="1"/>
-        <TopLine Value="601"/>
-        <CursorPos X="19" Y="639"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="205"/>
+        <CursorPos X="17" Y="223"/>
         <UsageCount Value="100"/>
         <Loaded Value="True"/>
       </Unit3>
@@ -51,15 +52,15 @@
       </Unit4>
       <Unit5>
         <Filename Value="track.pas"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="10"/>
         <TopLine Value="302"/>
         <CursorPos X="31" Y="313"/>
-        <UsageCount Value="89"/>
+        <UsageCount Value="91"/>
         <Loaded Value="True"/>
       </Unit5>
       <Unit6>
         <Filename Value="mesh.pas"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="9"/>
         <TopLine Value="779"/>
         <CursorPos X="14" Y="812"/>
         <UsageCount Value="108"/>
@@ -75,8 +76,9 @@
       </Unit7>
       <Unit8>
         <Filename Value="define_types.pas"/>
-        <EditorIndex Value="6"/>
-        <CursorPos X="25" Y="13"/>
+        <EditorIndex Value="7"/>
+        <TopLine Value="72"/>
+        <CursorPos X="82" Y="89"/>
         <UsageCount Value="110"/>
         <Loaded Value="True"/>
       </Unit8>
@@ -90,9 +92,9 @@
       </Unit9>
       <Unit10>
         <Filename Value="opts.inc"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="6"/>
         <CursorPos X="18" Y="4"/>
-        <UsageCount Value="95"/>
+        <UsageCount Value="97"/>
         <Loaded Value="True"/>
       </Unit10>
       <Unit11>
@@ -100,13 +102,16 @@
         <EditorIndex Value="-1"/>
         <CursorPos X="70" Y="4"/>
         <UsageCount Value="114"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit11>
       <Unit12>
         <Filename Value="commandsu.pas"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="690"/>
-        <CursorPos X="37" Y="711"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="546"/>
+        <CursorPos X="26" Y="578"/>
         <UsageCount Value="116"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit12>
       <Unit13>
         <Filename Value="nifti_foreign.pas"/>
@@ -177,6 +182,7 @@
         <TopLine Value="16"/>
         <CursorPos X="32" Y="39"/>
         <UsageCount Value="100"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit21>
       <Unit22>
         <Filename Value="gl_core_matrix.pas"/>
@@ -224,6 +230,7 @@
         <TopLine Value="127"/>
         <CursorPos X="32" Y="143"/>
         <UsageCount Value="79"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit27>
       <Unit28>
         <Filename Value="glclrbar.pas"/>
@@ -240,6 +247,7 @@
         <TopLine Value="5"/>
         <CursorPos X="22" Y="19"/>
         <UsageCount Value="33"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit29>
       <Unit30>
         <Filename Value="UserNotification.pas"/>
@@ -289,154 +297,155 @@
       </Unit35>
       <Unit36>
         <Filename Value="userdir.pas"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="4"/>
         <TopLine Value="360"/>
         <CursorPos X="6" Y="393"/>
-        <UsageCount Value="38"/>
+        <UsageCount Value="40"/>
         <Loaded Value="True"/>
       </Unit36>
       <Unit37>
         <Filename Value="PythonBridge/PythonBridge.pas"/>
-        <EditorIndex Value="4"/>
-        <TopLine Value="87"/>
+        <EditorIndex Value="5"/>
+        <TopLine Value="78"/>
         <CursorPos X="16" Y="96"/>
-        <UsageCount Value="39"/>
+        <UsageCount Value="41"/>
         <Loaded Value="True"/>
       </Unit37>
       <Unit38>
         <Filename Value="vers.inc"/>
         <EditorIndex Value="-1"/>
         <UsageCount Value="37"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
       </Unit38>
       <Unit39>
         <Filename Value="glmtext.pas"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="3"/>
         <TopLine Value="540"/>
         <CursorPos X="66" Y="542"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="12"/>
         <Loaded Value="True"/>
       </Unit39>
     </Units>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="5956" Column="6" TopLine="5936"/>
+        <Caret Line="3387" Column="13" TopLine="3368"/>
       </Position1>
       <Position2>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="5957" Column="11" TopLine="5936"/>
+        <Filename Value="define_types.pas"/>
+        <Caret Line="90" Column="21" TopLine="73"/>
       </Position2>
       <Position3>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="6533" Column="11" TopLine="6512"/>
+        <Filename Value="define_types.pas"/>
+        <Caret Line="164" Column="21" TopLine="147"/>
       </Position3>
       <Position4>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="7100" Column="14" TopLine="7071"/>
+        <Filename Value="define_types.pas"/>
+        <Caret Line="313" Column="20" TopLine="452"/>
       </Position4>
       <Position5>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="5309" Column="12" TopLine="5289"/>
+        <Caret Line="3392" Column="146" TopLine="3368"/>
       </Position5>
       <Position6>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="5957" Column="11" TopLine="5924"/>
+        <Caret Line="98" Column="9" TopLine="81"/>
       </Position6>
       <Position7>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="6533" Column="11" TopLine="6500"/>
+        <Caret Line="1340" Column="15" TopLine="1319"/>
       </Position7>
       <Position8>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="7100" Column="14" TopLine="7067"/>
+        <Caret Line="1347" Column="20" TopLine="1319"/>
       </Position8>
       <Position9>
-        <Filename Value="prefs.pas"/>
-        <Caret Line="2" Column="160"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="1354" Column="47" TopLine="1325"/>
       </Position9>
       <Position10>
-        <Filename Value="prefs.pas"/>
-        <Caret Line="43" Column="82" TopLine="10"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="1360" Column="53" TopLine="1331"/>
       </Position10>
       <Position11>
-        <Filename Value="prefs.pas"/>
-        <Caret Line="640" Column="10" TopLine="601"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="1362" Column="16" TopLine="1333"/>
       </Position11>
       <Position12>
-        <Filename Value="prefs.pas"/>
-        <Caret Line="43" Column="72" TopLine="23"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="2038" Column="61" TopLine="2009"/>
       </Position12>
       <Position13>
-        <Filename Value="prefs.pas"/>
-        <Caret Line="634" Column="18" TopLine="601"/>
+        <Filename Value="mainunit.pas"/>
+        <Caret Line="2039" Column="79" TopLine="2010"/>
       </Position13>
       <Position14>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="5957" Column="36" TopLine="5937"/>
+        <Caret Line="98" Column="9" TopLine="81"/>
       </Position14>
       <Position15>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="6533" Column="40" TopLine="6513"/>
+        <Caret Line="1330" Column="20" TopLine="1301"/>
       </Position15>
       <Position16>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="7089" Column="53" TopLine="7081"/>
+        <Caret Line="1340" Column="13" TopLine="1308"/>
       </Position16>
       <Position17>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="7064" TopLine="7045"/>
+        <Filename Value="commandsu.pas"/>
+        <Caret Line="26" Column="58" TopLine="21"/>
       </Position17>
       <Position18>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="6531" Column="29" TopLine="6513"/>
+        <Filename Value="commandsu.pas"/>
+        <Caret Line="39" Column="19" TopLine="21"/>
       </Position18>
       <Position19>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="460" Column="24" TopLine="441"/>
+        <Filename Value="commandsu.pas"/>
+        <Caret Line="134" Column="33" TopLine="105"/>
       </Position19>
       <Position20>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="6531" Column="29" TopLine="6498"/>
+        <Filename Value="commandsu.pas"/>
+        <Caret Line="140" Column="44" TopLine="111"/>
       </Position20>
       <Position21>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="460" Column="24" TopLine="441"/>
+        <Filename Value="commandsu.pas"/>
+        <Caret Line="578" Column="26" TopLine="546"/>
       </Position21>
       <Position22>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="6534" Column="32" TopLine="6507"/>
+        <Caret Line="433" Column="14" TopLine="416"/>
       </Position22>
       <Position23>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="460" Column="24" TopLine="441"/>
+        <Caret Line="3302" Column="27" TopLine="3273"/>
       </Position23>
       <Position24>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="6531" Column="29" TopLine="6498"/>
+        <Caret Line="3308" Column="24" TopLine="3288"/>
       </Position24>
       <Position25>
         <Filename Value="mainunit.pas"/>
-        <Caret Line="460" Column="24" TopLine="441"/>
+        <Caret Line="2804" Column="19" TopLine="2786"/>
       </Position25>
       <Position26>
         <Filename Value="prefs.pas"/>
-        <Caret Line="43" Column="71" TopLine="25"/>
+        <Caret Line="26" Column="32" TopLine="6"/>
       </Position26>
       <Position27>
         <Filename Value="prefs.pas"/>
-        <Caret Line="55" Column="26" TopLine="25"/>
+        <Caret Line="36" Column="106" TopLine="7"/>
       </Position27>
       <Position28>
         <Filename Value="prefs.pas"/>
-        <Caret Line="639" Column="19" TopLine="601"/>
+        <Caret Line="211" Column="18" TopLine="204"/>
       </Position28>
       <Position29>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="5957" Column="31" TopLine="5937"/>
+        <Filename Value="prefs.pas"/>
+        <Caret Line="321" Column="42" TopLine="292"/>
       </Position29>
       <Position30>
-        <Filename Value="mainunit.pas"/>
-        <Caret Line="6533" Column="31" TopLine="6513"/>
+        <Filename Value="prefs.pas"/>
+        <Caret Line="546" Column="52" TopLine="517"/>
       </Position30>
     </JumpHistory>
     <RunParams>

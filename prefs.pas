@@ -208,7 +208,7 @@ end;
 {$ENDIF}
 
 const
-  kNumDefaultMesh = 6;
+  kNumDefaultMesh = 7;
 function DefaultMeshName (indx: integer; var lPrefs: TPrefs; askUserIfMissing: boolean): string;
   var
     fldr,lPath,lName: string;
@@ -219,14 +219,17 @@ function DefaultMeshName (indx: integer; var lPrefs: TPrefs; askUserIfMissing: b
       fldr := 'sample'
    else if indx < 5 then
       fldr := 'BrainNet'
+   else if indx > 6 then
+      fldr := 'atlas'
    else
        fldr := 'fs';
    case indx of
         2: lName := lPath  +  fldr+ PathDelim + 'BrainMesh_ICBM152_smoothed.mz3';
-        3: lName := lPath  + fldr+ PathDelim + 'BrainMesh_ICBM152Left_smoothed.mz3';
-        4: lName := lPath  +  fldr+ PathDelim + 'BrainMesh_ICBM152Right_smoothed.mz3';
+        3: lName := lPath  + fldr+ PathDelim + 'BrainMesh_ICBM152_smoothed.rh.mz3';
+        4: lName := lPath  +  fldr+ PathDelim + 'BrainMesh_ICBM152_smoothed.lh.mz3';
         5:  lName := lPath  +  fldr+ PathDelim + 'lh.inflated';
         6:  lName := lPath  +  fldr+ PathDelim + 'lh.pial';
+        7:  lName := lPath  +  fldr+ PathDelim + 'AICHAhr.mz3';
     else begin
           lName := lPath  + 'sample'+ PathDelim + 'mni152_2009.mz3';
           {$IFDEF Darwin}
