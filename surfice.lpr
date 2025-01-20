@@ -7,7 +7,7 @@ uses
 {$IFDEF UNIX}{$IFDEF UseCThreads}cthreads,{$ENDIF}{$ENDIF}
   Interfaces,
   Forms, lazopenglcontext, mainunit, Shaderu, prefs, nifti_loader,
-  uscale, colorTable, track;
+  uscale, colorTable, track, trx;
 
 {$R *.res}
 

@@ -8,7 +8,7 @@ uses
   {$ifndef isTerminalApp}
     ClipBrd,dialogs,colorTable,
   {$endif}
-  Classes, SysUtils, math, define_types, matmath, track_simplify, zstream, strutils;
+  trx, Classes, SysUtils, math, define_types, matmath, track_simplify, zstream, strutils;
 {$DEFINE RESTARTIDX}
 Type
 
@@ -50,6 +50,7 @@ TTrack = class
     function LoadDat(const FileName: string): boolean;
     function LoadPdb(const FileName: string): boolean;
     function LoadTck(const FileName: string): boolean;
+    function LoadTrx(const FileName: string): boolean;
     function LoadTrk(const FileName: string): boolean;
     function LoadVtkASCII(const FileName: string): boolean;
     function LoadVtk(const FileName: string): boolean;
@@ -2152,6 +2153,66 @@ begin
  CloseFile(f);
 end; //LoadPdb()
 
+function TTrack.LoadTrx(const FileName: string): boolean;
+// https://github.com/tee-ar-ex/trx-pascal
+var
+  trx: TTRX;
+  n_vtx, nVtx, i, v, offset, inPos, outPos, n_scalar: integer;
+begin
+     trx := TTRX.Create(FileName);
+     if not trx.ok then begin
+       trx.Free;
+       exit(False);
+     end;
+     //showmessage('positions (vertices): '+ inttostr(length(trx.positions) div 3));
+     n_vtx := (length(trx.positions) div 3);
+     n_count := length(trx.offsets) - 1;
+     if ((n_vtx < 2) or (n_count < 1)) then begin
+       trx.Free;
+       exit(False);
+     end;
+     setlength(tracks, n_vtx * 3 + n_count);
+     inPos := 0;
+     outPos := 0;
+     // trx.offsets[0] is ALWAYS 0
+     for offset := 1 to (n_count) do begin
+       nVtx := trx.offsets[offset] - trx.offsets[offset - 1];
+       tracks[outPos] := asSingle(nVtx); inc(outPos);
+       for v := 1 to nVtx do begin
+           // read X,Y,Z position for this vertex
+           tracks[outPos] := trx.positions[inPos]; inc(outPos); inc(inPos);
+           tracks[outPos] := trx.positions[inPos]; inc(outPos); inc(inPos);
+           tracks[outPos] := trx.positions[inPos]; inc(outPos); inc(inPos);
+       end; //for each vertex in fiber
+     end;
+     if (length(trx.scalars) > 0) then begin
+       setlength(scalars,length(trx.scalars));
+       for i := 0 to (length(trx.scalars) - 1) do begin
+         scalars[i].name := trx.scalars[i].Name;
+         //TODO: does not yet support colors (3 components per scalar)
+         n_scalar := length(trx.scalars[i].scalar);
+         if ((trx.scalars[i].isDPV) and ((n_scalar =  n_vtx) or (n_scalar =  3*n_vtx))) then begin //one per vertex
+            setlength(scalars[i].scalar, n_vtx);
+            for v := 0 to (n_vtx - 1) do
+                scalars[i].scalar[v] := trx.scalars[i].scalar[v];
+         end else if ((not trx.scalars[i].isDPV) and ((n_scalar =  n_count) or (n_scalar =  3*n_count))) then begin //one per streamline
+             setlength(scalars[i].scalar, n_count);
+             for v := 0 to (n_count - 1) do
+                 scalars[i].scalar[v] := trx.scalars[i].scalar[v];
+         end else begin
+             showmessage('Tracts with '+inttostr(n_vtx)+ ' vertices and '+inttostr(n_count)+' streamlines unable to add DPV or DPG '+inttostr(i)+' "'+scalars[i].name + '" '+ inttostr(length(trx.scalars[i].scalar)));
+          end;
+         SetScalarDescriptives;
+         //writeln('statistic', i, ' "', trx.scalars[i].Name, '": ',
+         //  length(trx.scalars[i].scalar));
+       end;
+     end;
+
+     //showmessage(inttostr(n_vtx * 3)+':'+inttostr(inPos));
+     trx.Free;
+     exit(true);
+end;
+
 function TTrack.LoadTck(const FileName: string): boolean;
 //Read BINARY TCK fibers
 // https://github.com/MRtrix3/mrtrix3/blob/master/matlab/write_mrtrix_tracks.m
@@ -2646,6 +2707,8 @@ begin
          if not LoadPdb(FileName) then exit;
     end else if (ext = '.TCK') then begin
          if not LoadTck(FileName) then exit;
+    end else if (ext = '.TRX') then begin
+         if not LoadTrx(FileName) then exit;
     end else if (ext = '.TRK') or (ext = '.TRK.GZ') then begin
          if not LoadTrk(FileName) then exit;
     end else  //(ext = '.FIB') 0r (ext = '.FIB') then begin

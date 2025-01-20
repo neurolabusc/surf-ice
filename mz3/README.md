@@ -3,9 +3,9 @@
 ## General Overview
 The MZ3 format is the internal file format for Surfice. The goals are to be simple, fast and small.
 
- - MZ3 only stores triangular meshes. Quads and ngons are not allowed: a quad face with four edges must be stored as two triangles. There are several reasons for this choice. First, the creation of MRI based meshes traditionally creates triangulated meshes (e.g. marching cubes and marching tetrahedra). Further, Any triangle formed from three non-colinear points necessarily define one plane, wheres the four points that form a quad are not necessarily coplanar. As an analogy: a stool with four legs can rock if one leg is short, whereas a stool with three legs will not. For this reason, quads and ngons are not natively supported by modern graphics cards (they are simulated using triangles). While triangles are the required format for native display, storing quad information can be useful: for example subdivision in Blender can be nicer if applied to quad meshes. The mz3 format is ideal for getting data from MRI algorithms and final optimized display. However, it may be useful to convert triangles to quads while editing the meshes with Blender. Future versions of the mz3 format could handle quads by having a face repeat the same index three times - this would indicate that the vertex forms a quad when combined with the three vertices of the previous face.
+ - MZ3 only stores triangular meshes. Quads and ngons are not allowed: a quad face with four edges must be stored as two triangles. There are several reasons for this choice. First, the creation of MRI based meshes traditionally creates triangulated meshes (e.g. marching cubes and marching tetrahedra). Further, Any triangle formed from three non-colinear points necessarily define one plane, wheres the four points that form a quad are not necessarily coplanar. As an analogy: a stool with four legs can rock if one leg is short, whereas a stool with three legs will not. For this reason, quads and ngons are not natively supported by modern graphics cards (they are simulated using triangles). While triangles are the required format for native graphics accelerators, storing quad information can be useful: for example subdivision in Blender can be nicer if applied to quad meshes. The MZ3 format directly mimics the native alignment of vertex position and face indices used by graphics cards, providing a minimal and fast format. Therefore, while it may be useful to convert triangles to quads while editing the meshes with Blender, this is out of scope for the MZ3 format.
  - A mesh is based on a series of vertices and  [indexed](http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-9-vbo-indexing/) faces. The faces are indexed from 0, so the face [0,1,2] defines a triangle which uses the first 3 vertices.
- - The [winding order](https://www.khronos.org/opengl/wiki/Face_Culling) of faces defines the direction the triangle is facing. So faces [0,1,2] and [0,2,1] are at the same location but the front-face of one is the back-face of the other.
+ - The [winding order](https://www.khronos.org/opengl/wiki/Face_Culling#Winding_order) of faces defines the direction the triangle is facing. So faces [0,1,2] and [0,2,1] are at the same location but the front-face of one is the back-face of the other. Mimicking popular graphics languages, MZ3 uses a counter-clockwise winding order.
  - Every face index is stored as a 32-bit integer. For example, consider  a cube with just 8 vertices: even though each index will only be in the range 0..7, each index is saved as a 32-bit integer. Note GZip compression will mitigate this redundancy.
  - An MZ3 file may represent raw binary data or it may be GZip compressed. One can detect whether the file is compressed by reading the first 2-bytes of the file. All GZip files begin with hex = 0x1F8B, all uncompressed MZ3 files begin with hex = 0x4D5A.
  - Data is always stored as little-endian. For example, Intel-based computers can read the raw data directly. On the other hand, PowerPC-based computers will need to byte-swap values when reading and writing.
@@ -27,9 +27,9 @@ The MZ3 format is the internal file format for Surfice. The goals are to be simp
  - If BOTH isSCALAR and isRGBA: both values are stored in the file. However, in this case the mesh is assumed to be a template. The RGBA colors refer to the color of the region, and the scalar intensity value refers to the region number. In this case, one expects the scalar values can be losslessly converted to integers. In other words, one expects the template to have regions `17` and `18`, but one does not expect a region `17.2`.
  - Files can store isSCALAR without having any other data. Since these files do not report vertex position or face indexing, they must be viewed with a corresponding mesh that includes these values. An example includes a [Gaussian curvature](https://en.wikipedia.org/wiki/Gaussian_curvature) measurement. Further, statistics might produce separate isSCALAR files for every contrast: for example consider a brain activation study where we produce statistical maps for both left hand movements relative to rest and right hand movements relative to rest. This would produce two statistical maps that are likely to contain some overlap (e.g. some brain regions are only used by one task, but others are involved with moving either hand).
  - The format does not store vertex normals. It is typically straightforward to compute these based on the mesh (though see next bullet point for potential issues with per-face colors).
- - The format only allows per-vertex colors. This is typical for shader-based per-pixel interpolation. However, if per-face colors are desired one will have to create replicated vertices. For example, a cube with per-vertex colors can be saved as 8 vertices. However, if one wants each face of the cube to have a single unique color, one must save 24 faces (four for each of the six faces). Be aware that using per-face colors may influence the surface normal estimation, depending on the visualization software. If the software does not remove the duplicated vertices when computing normals you will get [jagged per-facet normals rather than smooth per pixel normals](https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/shading-normals). For an example of per-face colors see the mesh 7ColoredMeshPerFace.mz3 described below (and created by the included Matlab software).
- - File consistency checks. The following rules help identify invalid mz3 files:
-   - isFACE and isVERT always have the same value. If both are true, the file contains mesh geometry (the vertices and face indices). If both are false, the file only contains vertex scalars/colors (e.g. it is a statistical map or curvature file designed to be overlaid on top of a mesh). In theory, one could store a point cloud in an mz3 file by storing vertices without any faces. However, in practice mz3 files are assumed to store triangular meshes.
+ - The format only allows per-vertex colors. This is typical for shader-based per-pixel interpolation. However, if per-face colors are desired one will have to create replicated vertices. For example, a cube with per-vertex colors can be saved as 8 vertices. However, if one wants each face of the cube to have a single unique color, one must save 24 vertices (four for each of the six faces). Be aware that using per-face colors may influence the surface normal estimation, depending on the visualization software. If the software does not remove the duplicated vertices when computing normals you will get [jagged per-facet normals rather than smooth per pixel normals](https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/shading-normals). For an example of per-face colors see the mesh 7ColoredMeshPerFace.mz3 described below (and created by the included Matlab software).
+ - File consistency checks. The following rules help identify invalid MZ3 files:
+   - isFACE and isVERT always have the same value. If both are true, the file contains mesh geometry (the vertices and face indices). If both are false, the file only contains vertex scalars/colors (e.g. it is a statistical map or curvature file designed to be overlaid on top of a mesh). In theory, one could store a point cloud in an MZ3 file by storing vertices without any faces. However, in practice mz3 files are assumed to store triangular meshes.
    - If isFACE is true, then NFACE must be at least 1. The minimum mesh has one triangle.
    - Every MZ3 file has NVERT of at least 3. This is because if isVERT, isRGBA or isSCALAR is true, then the number of vertices must be encoded. The minimum mesh is one triangle composed of three different vertices.
  - If isDOUBLE is true, isSCALAR must be false. The isDOUBLE flag denotes double precision scalar values, which precludes single precision scalar values.
@@ -60,16 +60,16 @@ Faces indexed from 0: a triangle of the first 3 vertices is  0,1,2
   12-15: UINT32 : NSKIP bytes to skip (0 for current version)
  The header is 16+NSKIP bytes long
  The total file size in bytes is
- 	FILESIZE = 16+NSKIP+isFACE*NFACE*12+isVERT*NVERT*12+isRGBA*NVERT*4+isSCALAR*NSCALAR*NVERT*4
+   FILESIZE = 16+NSKIP+isFACE*NFACE*12+isVERT*NVERT*12+isRGBA*NVERT*4+isSCALAR*NSCALAR*NVERT*4
  Unless isDOUBLE in which case
- 	FILESIZE = 16+NSKIP+isFACE*NFACE*12+isVERT*NVERT*12+isRGBA*NVERT*4+isSCALAR*NSCALAR*NVERT*8
+   FILESIZE = 16+NSKIP+isFACE*NFACE*12+isVERT*NVERT*12+isRGBA*NVERT*4+isSCALAR*NSCALAR*NVERT*8
 
  Note that the value NSCALAR is not provided in the header: you solve for this by knowing the file size
  Note: for better compression integer data is transposed (interleaved)
   FACE DATA: if isFACE, next 12*NFACE bytes
    +0..3: INT32 : 1st index of 1st triangle
-   +0..3: INT32 : 1st index of 2nd triangle
-   +0..3: INT32 : 1st index of 3rd triangle
+   +4..7: INT32 : 1st index of 2nd triangle
+   +8..11: INT32 : 1st index of 3rd triangle
     ....
    ++     INT32 : 3rd index of NVERT triangle
   VERTEX DATA: if isVERT, next 12*NVERT bytes
@@ -123,7 +123,7 @@ The included Matlab script `demo_mz3.m` will generate a series of simple mz3 fil
 
  ## Alternatives
 
- - The Surfice wiki [compares the size and speed of several formats popular in our field](https://www.nitrc.org/plugins/mwiki/index.php/surfice:MainPage#Supported_Formats).
+ - The Surfice wiki [compares the size and speed of several formats popular in our field](https://www.nitrc.org/plugins/mwiki/index.php/surfice:MainPage#Supported_Formats). Similar benchmarks are available for [JavaScript](https://github.com/neurolabusc/MeshFormatsJS).
  - The emphasis of MZ3 is on simplicity. There are [more efficient methods to encode a mesh](file:///Users/rorden/Downloads/Compression.pdf), for example the [Draco](https://github.com/google/draco) format.
 
 

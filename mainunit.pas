@@ -604,7 +604,7 @@ const
   //kLUT=1;
   //kMin=2;
   //kMax=3;
-  kTrackFilter = 'Camino, VTK, MRTrix, Quench, TrakVis, DTIstudio|*.Bfloat;*.Bfloat.gz;*.trk.gz;*.trk;*.tck;*.pdb;*.fib;*.vtk;*.dat|Any file|*.*';
+  kTrackFilter = 'Camino, VTK, MRTrix, Quench, TrakVis, DTIstudio|*.Bfloat;*.Bfloat.gz;*.trk.gz;*.trk;*.tck;*.trx;*.pdb;*.fib;*.vtk;*.dat|Any file|*.*';
 
 procedure CleanStr (var lStr: string);
 //remove symbols, set lower case...
@@ -3346,7 +3346,7 @@ begin
   end else if (length(gMesh.Faces) > 0) and ((ext2 = '.GII.DSET') or (ext = '.GII')) and (not isGiiMesh (Filename)) then begin
     OpenOverlay(Filename);  //GIfTI files can be meshes or overlays - autodetect
     exit;
-  end else if (ext = '.TRACT') or (ext = '.DAT') or  (ext = '.TRK') or  (ext = '.TRK.GZ') or (ext = '.FIB') or (ext = '.PDB') or (ext = '.TCK') or (ext = '.BFLOAT') or (ext = '.BFLOAT.GZ')  then begin
+  end else if (ext = '.TRACT') or (ext = '.DAT') or  (ext = '.TRK') or  (ext = '.TRK.GZ') or (ext = '.FIB') or (ext = '.PDB') or (ext = '.TCK') or (ext = '.TCK') or (ext = '.BFLOAT') or (ext = '.BFLOAT.GZ')  then begin
     OpenTrack(Filename);
     exit;
   end else if (ext = '.EDGE') then begin

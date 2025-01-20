@@ -111,6 +111,7 @@ implementation
 uses
   {$IFDEF UNIX} BaseUnix, {$ELSE} windows, shlobj, {$ENDIF}
   {$IFDEF Darwin}CocoaAll,{$ENDIF}
+  LazFileUtils,
     fileutil, sysutils, math;
     
 procedure Xswap4r ( var s:single);

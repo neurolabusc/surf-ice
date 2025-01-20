@@ -478,8 +478,8 @@ begin
 end;
 
 {$IFDEF USE_FLOAT16}
-//{$DEFINE SCALR_F16} //unable to detect difference: both very fast
-{$IFDEF SCALAR_F16}
+{$DEFINE SCALR_F16} //unable to detect difference: both very fast
+{$IFDEF SCALR_F16}
 function f16tof32(v: word): single;assembler; nostackframe;
 asm
     .long 0x1ee70000 // fmov h0, w0

@@ -8,18 +8,18 @@ object GLForm1: TGLForm1
   ClientHeight = 659
   ClientWidth = 1004
   Menu = MainMenu1
+  Position = poDesktopCenter
+  LCLVersion = '4.99.0.0'
   OnChangeBounds = FormChangeBounds
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnDropFiles = FormDropFiles
   OnShow = FormShow
-  Position = poDesktopCenter
-  LCLVersion = '2.3.0.0'
   object ToolPanel: TScrollBox
-    Left = clBlack
+    Left = 0
     Height = 659
-    Top = clBlack
+    Top = 0
     Width = 261
     HorzScrollBar.Page = 1
     HorzScrollBar.Visible = False
@@ -33,10 +33,10 @@ object GLForm1: TGLForm1
     ParentFont = False
     TabOrder = 2
     object OverlayBox: TGroupBox
-      Left = clBlack
-      Height = 182
+      Left = 0
+      Height = 190
       Hint = 'Click on name to hide, control+click to reverse palette'
-      Top = clBlack
+      Top = 0
       Width = 246
       Align = alTop
       AutoSize = True
@@ -50,28 +50,28 @@ object GLForm1: TGLForm1
       TabOrder = 1
       Visible = False
       object LayerList: TCheckListBox
-        Left = clBlack
+        Left = 0
         Height = 72
         Hint = 'Right-click for options'
-        Top = clBlack
+        Top = 0
         Width = 236
         Align = alTop
         Constraints.MaxHeight = 72
-        ItemHeight = clBlack
-        OnClickCheck = LayerListClickCheck
-        OnSelectionChange = LayerListSelectionChange
-        OnShowHint = LayerListShowHint
+        ItemHeight = 0
         ParentFont = False
         ParentShowHint = False
         PopupMenu = LayerPopup
         ShowHint = True
         TabOrder = 4
+        OnClickCheck = LayerListClickCheck
+        OnSelectionChange = LayerListSelectionChange
+        OnShowHint = LayerListShowHint
       end
       object LayerDarkLabel: TLabel
         AnchorSideLeft.Control = LayerList
         AnchorSideTop.Control = LayerDarkEdit
         AnchorSideTop.Side = asrCenter
-        Left = clBlack
+        Left = 0
         Height = 16
         Top = 100
         Width = 47
@@ -88,10 +88,10 @@ object GLForm1: TGLForm1
         Width = 116
         BorderSpacing.Left = 122
         BorderSpacing.Top = 2
-        OnKeyUp = LayerContrastKeyUp
         ParentFont = False
         TabOrder = 5
         Text = '20'
+        OnKeyUp = LayerContrastKeyUp
       end
       object LayerBrightEdit: TEdit
         AnchorSideTop.Control = LayerDarkEdit
@@ -103,16 +103,16 @@ object GLForm1: TGLForm1
         Width = 116
         BorderSpacing.Left = 122
         BorderSpacing.Top = 2
-        OnKeyUp = LayerContrastKeyUp
         ParentFont = False
         TabOrder = 0
         Text = '80'
+        OnKeyUp = LayerContrastKeyUp
       end
       object LayerBrightLabel: TLabel
         AnchorSideLeft.Control = LayerList
         AnchorSideTop.Control = LayerBrightEdit
         AnchorSideTop.Side = asrCenter
-        Left = clBlack
+        Left = 0
         Height = 16
         Top = 123
         Width = 55
@@ -123,27 +123,27 @@ object GLForm1: TGLForm1
         AnchorSideLeft.Control = LayerList
         AnchorSideTop.Control = LayerList
         AnchorSideTop.Side = asrBottom
-        Left = clBlack
+        Left = 0
         Height = 20
         Top = 76
         Width = 137
         BorderSpacing.Top = 4
         ItemHeight = 26
-        ItemIndex = clBlack
+        ItemIndex = 0
         Items.Strings = (
           'Grayscale'
         )
-        OnChange = LayerWidgetChange
         ParentFont = False
         Style = csDropDownList
         TabOrder = 1
         Text = 'Grayscale'
+        OnChange = LayerWidgetChange
       end
       object LayerAlphaLabel: TLabel
         AnchorSideLeft.Control = LayerList
         AnchorSideTop.Control = LayerAlphaTrack
         AnchorSideTop.Side = asrCenter
-        Left = clBlack
+        Left = 0
         Height = 16
         Top = 145
         Width = 47
@@ -163,9 +163,9 @@ object GLForm1: TGLForm1
         TickStyle = tsNone
         BorderSpacing.Left = 122
         BorderSpacing.Top = 2
-        OnMouseUp = LayerAlphaTrackMouseUp
         ParentFont = False
         TabOrder = 2
+        OnMouseUp = LayerAlphaTrackMouseUp
       end
       object LayerOptionsBtn: TButton
         AnchorSideLeft.Control = LayerColorDrop
@@ -180,15 +180,15 @@ object GLForm1: TGLForm1
         Width = 88
         BorderSpacing.Left = 6
         Caption = 'Options'
-        OnClick = LayerOptionsBtnClick
         ParentFont = False
         TabOrder = 3
+        OnClick = LayerOptionsBtnClick
       end
     end
     object ClipBox: TGroupBox
-      Left = clBlack
-      Height = 82
-      Top = 286
+      Left = 0
+      Height = 90
+      Top = 302
       Width = 246
       Align = alTop
       AutoSize = True
@@ -246,9 +246,9 @@ object GLForm1: TGLForm1
         Top = 2
         Width = 172
         Max = 1000
-        OnChange = ClipTrackChange
-        Position = clBlack
+        Position = 0
         TickStyle = tsNone
+        OnChange = ClipTrackChange
         BorderSpacing.Left = 4
         BorderSpacing.Top = 2
         BorderSpacing.Right = 2
@@ -266,9 +266,9 @@ object GLForm1: TGLForm1
         Top = 23
         Width = 172
         Max = 360
-        OnChange = ClipTrackChange
         Position = 180
         TickStyle = tsNone
+        OnChange = ClipTrackChange
         Anchors = [akTop, akLeft, akRight]
         BorderSpacing.Top = 2
         ParentFont = False
@@ -286,9 +286,9 @@ object GLForm1: TGLForm1
         Width = 172
         Max = 180
         Min = -180
-        OnChange = ClipTrackChange
-        Position = clBlack
+        Position = 0
         TickStyle = tsNone
+        OnChange = ClipTrackChange
         Anchors = [akTop, akLeft, akRight]
         BorderSpacing.Top = 2
         ParentFont = False
@@ -297,9 +297,9 @@ object GLForm1: TGLForm1
     end
     object TrackBox: TGroupBox
       Tag = 270
-      Left = clBlack
-      Height = 104
-      Top = 182
+      Left = 0
+      Height = 112
+      Top = 190
       Width = 246
       Align = alTop
       AutoSize = True
@@ -332,9 +332,9 @@ object GLForm1: TGLForm1
         Top = 2
         Width = 172
         Max = 100
-        OnChange = TrackBoxChange
         Position = 20
         TickStyle = tsNone
+        OnChange = TrackBoxChange
         BorderSpacing.Left = 6
         BorderSpacing.Top = 2
         BorderSpacing.Right = 2
@@ -353,9 +353,9 @@ object GLForm1: TGLForm1
         Width = 172
         Max = 12
         Min = 1
-        OnChange = TrackBoxChange
         Position = 2
         TickStyle = tsNone
+        OnChange = TrackBoxChange
         Anchors = [akTop, akLeft, akRight]
         BorderSpacing.Top = 2
         ParentFont = False
@@ -365,7 +365,7 @@ object GLForm1: TGLForm1
         AnchorSideLeft.Control = TrackBox
         AnchorSideTop.Control = TrackWidthTrack
         AnchorSideTop.Side = asrCenter
-        Left = clBlack
+        Left = 0
         Height = 16
         Top = 24
         Width = 36
@@ -382,9 +382,9 @@ object GLForm1: TGLForm1
         Height = 19
         Top = 44
         Width = 172
-        OnChange = TrackBoxChange
         Position = 5
         TickStyle = tsNone
+        OnChange = TrackBoxChange
         Anchors = [akTop, akLeft, akRight]
         BorderSpacing.Top = 2
         ParentFont = False
@@ -414,7 +414,7 @@ object GLForm1: TGLForm1
         BorderSpacing.Top = 2
         DropDownCount = 22
         ItemHeight = 26
-        ItemIndex = clBlack
+        ItemIndex = 0
         Items.Strings = (
           'a'
           'b'
@@ -424,11 +424,11 @@ object GLForm1: TGLForm1
           'f'
           'g'
         )
-        OnChange = ScalarDropChange
         ParentFont = False
         Style = csDropDownList
         TabOrder = 3
         Text = 'a'
+        OnChange = ScalarDropChange
       end
       object TrackScalarNameDrop: TComboBox
         AnchorSideLeft.Control = TrackLengthLabel
@@ -440,15 +440,15 @@ object GLForm1: TGLForm1
         Width = 108
         DropDownCount = 22
         ItemHeight = 26
-        ItemIndex = clBlack
+        ItemIndex = 0
         Items.Strings = (
           'Direction'
         )
-        OnChange = ScalarDropChange
         ParentFont = False
         Style = csDropDownList
         TabOrder = 4
         Text = 'Direction'
+        OnChange = ScalarDropChange
       end
       object TrackScalarRangeBtn: TButton
         AnchorSideLeft.Control = TrackScalarLUTdrop
@@ -461,16 +461,16 @@ object GLForm1: TGLForm1
         Width = 28
         BorderSpacing.Left = 2
         Caption = '...'
-        OnClick = TrackScalarRangeBtnClick
         ParentFont = False
         TabOrder = 5
+        OnClick = TrackScalarRangeBtnClick
       end
     end
     object NodeBox: TGroupBox
       Tag = 270
-      Left = clBlack
-      Height = 106
-      Top = 368
+      Left = 0
+      Height = 114
+      Top = 392
       Width = 246
       Align = alTop
       AutoSize = True
@@ -508,7 +508,7 @@ object GLForm1: TGLForm1
         BorderSpacing.Right = 2
         DropDownCount = 22
         ItemHeight = 26
-        ItemIndex = clBlack
+        ItemIndex = 0
         Items.Strings = (
           'a'
           'b'
@@ -518,11 +518,11 @@ object GLForm1: TGLForm1
           'f'
           'g'
         )
-        OnChange = NodePrefChange
         ParentFont = False
         Style = csDropDownList
         TabOrder = 0
         Text = 'a'
+        OnChange = NodePrefChange
       end
       object NodeColorVariesCheck: TCheckBox
         AnchorSideLeft.Control = NodeColorLabel
@@ -537,12 +537,12 @@ object GLForm1: TGLForm1
         Width = 18
         BorderSpacing.Left = 4
         Checked = True
-        OnChange = NodePrefChange
         ParentFont = False
         ParentShowHint = False
         ShowHint = True
         State = cbChecked
         TabOrder = 1
+        OnChange = NodePrefChange
       end
       object NodeScaleTrack: TTrackBar
         AnchorSideLeft.Control = NodeSizeVariesCheck
@@ -555,9 +555,9 @@ object GLForm1: TGLForm1
         Top = 2
         Width = 92
         Max = 200
-        OnChange = NodePrefChange
         Position = 20
         TickStyle = tsNone
+        OnChange = NodePrefChange
         BorderSpacing.Left = 4
         BorderSpacing.Top = 2
         BorderSpacing.Right = 2
@@ -588,16 +588,16 @@ object GLForm1: TGLForm1
         BorderSpacing.Top = 2
         DropDownCount = 22
         ItemHeight = 26
-        ItemIndex = clBlack
+        ItemIndex = 0
         Items.Strings = (
           'Threshold based on size'
           'Threshold based on color'
         )
-        OnChange = NodeThreshDropChange
         ParentFont = False
         Style = csDropDownList
         TabOrder = 3
         Text = 'Threshold based on size'
+        OnChange = NodeThreshDropChange
       end
       object NodeMinEdit: TFloatSpinEdit
         AnchorSideLeft.Control = NodeThreshLabel
@@ -612,10 +612,10 @@ object GLForm1: TGLForm1
         BorderSpacing.Left = 5
         BorderSpacing.Right = 2
         MaxValue = 65535
-        OnChange = NodePrefChange
-        OnKeyPress = NodeMinEditKeyPress
         ParentFont = False
         TabOrder = 4
+        OnChange = NodePrefChange
+        OnKeyPress = NodeMinEditKeyPress
       end
       object NodeThreshLabel: TLabel
         AnchorSideLeft.Control = NodeScaleLabel
@@ -643,10 +643,10 @@ object GLForm1: TGLForm1
         BorderSpacing.Left = 4
         BorderSpacing.Top = 2
         MaxValue = 65535
-        OnChange = NodePrefChange
         ParentFont = False
         TabOrder = 5
         Value = 1
+        OnChange = NodePrefChange
       end
       object NodeSizeVariesCheck: TCheckBox
         AnchorSideLeft.Control = NodeColorLabel
@@ -662,20 +662,20 @@ object GLForm1: TGLForm1
         BorderSpacing.Left = 4
         BorderSpacing.Right = 4
         Checked = True
-        OnChange = NodePrefChange
         ParentFont = False
         ParentShowHint = False
         ShowHint = True
         State = cbChecked
         TabOrder = 6
         Visible = False
+        OnChange = NodePrefChange
       end
     end
     object EdgeBox: TGroupBox
       Tag = 270
-      Left = clBlack
-      Height = 84
-      Top = 474
+      Left = 0
+      Height = 92
+      Top = 506
       Width = 246
       Align = alTop
       AutoSize = True
@@ -711,7 +711,7 @@ object GLForm1: TGLForm1
         BorderSpacing.Top = 2
         DropDownCount = 22
         ItemHeight = 26
-        ItemIndex = clBlack
+        ItemIndex = 0
         Items.Strings = (
           'a'
           'b'
@@ -721,11 +721,11 @@ object GLForm1: TGLForm1
           'f'
           'g'
         )
-        OnChange = NodePrefChange
         ParentFont = False
         Style = csDropDownList
         TabOrder = 0
         Text = 'a'
+        OnChange = NodePrefChange
       end
       object EdgeColorVariesCheck: TCheckBox
         AnchorSideLeft.Control = EdgeColorLabel
@@ -741,12 +741,12 @@ object GLForm1: TGLForm1
         BorderSpacing.Left = 4
         BorderSpacing.Right = 4
         Checked = True
-        OnChange = NodePrefChange
         ParentFont = False
         ParentShowHint = False
         ShowHint = True
         State = cbChecked
         TabOrder = 1
+        OnChange = NodePrefChange
       end
       object EdgeThreshLabel: TLabel
         AnchorSideLeft.Control = EdgeBox
@@ -773,9 +773,9 @@ object GLForm1: TGLForm1
         BorderSpacing.Left = 4
         BorderSpacing.Right = 2
         MaxValue = 65535
-        OnChange = NodePrefChange
         ParentFont = False
         TabOrder = 2
+        OnChange = NodePrefChange
       end
       object EdgeMaxEdit: TFloatSpinEdit
         AnchorSideLeft.Control = EdgeMinEdit
@@ -791,10 +791,10 @@ object GLForm1: TGLForm1
         BorderSpacing.Left = 4
         BorderSpacing.Top = 2
         MaxValue = 65535
-        OnChange = NodePrefChange
         ParentFont = False
         TabOrder = 3
         Value = 1
+        OnChange = NodePrefChange
       end
       object edgeScaleTrack: TTrackBar
         AnchorSideLeft.Control = EdgeSizeVariesCheck
@@ -807,9 +807,9 @@ object GLForm1: TGLForm1
         Top = 2
         Width = 92
         Max = 100
-        OnChange = NodePrefChange
         Position = 10
         TickStyle = tsNone
+        OnChange = NodePrefChange
         BorderSpacing.Left = 4
         BorderSpacing.Top = 2
         BorderSpacing.Right = 2
@@ -842,12 +842,12 @@ object GLForm1: TGLForm1
         BorderSpacing.Left = 4
         BorderSpacing.Right = 4
         Checked = True
-        OnChange = NodePrefChange
         ParentFont = False
         ParentShowHint = False
         ShowHint = True
         State = cbChecked
         TabOrder = 5
+        OnChange = NodePrefChange
       end
       object EdgeLayerDrop: TComboBox
         AnchorSideLeft.Control = edgeScaleTrack
@@ -863,7 +863,7 @@ object GLForm1: TGLForm1
         BorderSpacing.Left = 4
         DropDownCount = 22
         ItemHeight = 26
-        ItemIndex = clBlack
+        ItemIndex = 0
         Items.Strings = (
           '1'
           '2'
@@ -871,19 +871,19 @@ object GLForm1: TGLForm1
           '4'
           '5'
         )
-        OnChange = EdgeLayerDropChange
         ParentFont = False
         Style = csDropDownList
         TabOrder = 6
         Text = '1'
         Visible = False
+        OnChange = EdgeLayerDropChange
       end
     end
     object MeshColorBox: TGroupBox
       Tag = 270
-      Left = clBlack
-      Height = 61
-      Top = 558
+      Left = 0
+      Height = 69
+      Top = 598
       Width = 246
       Align = alTop
       AutoSize = True
@@ -916,9 +916,9 @@ object GLForm1: TGLForm1
         Top = 2
         Width = 160
         Max = 100
-        OnChange = MeshColorBoxChange
         Position = 100
         TickStyle = tsNone
+        OnChange = MeshColorBoxChange
         BorderSpacing.Left = 4
         BorderSpacing.Top = 2
         BorderSpacing.Right = 2
@@ -934,9 +934,9 @@ object GLForm1: TGLForm1
         Top = 23
         Width = 160
         Max = 100
-        OnChange = MeshColorBoxChange
         Position = 100
         TickStyle = tsNone
+        OnChange = MeshColorBoxChange
         BorderSpacing.Top = 2
         ParentFont = False
         TabOrder = 1
@@ -954,9 +954,9 @@ object GLForm1: TGLForm1
       end
     end
     object BackgroundBox: TGroupBox
-      Left = clBlack
-      Height = 60
-      Top = 619
+      Left = 0
+      Height = 68
+      Top = 667
       Width = 246
       Align = alTop
       AutoSize = True
@@ -977,9 +977,9 @@ object GLForm1: TGLForm1
         Top = 2
         Width = 92
         Max = 100
-        OnChange = SurfaceAppearanceChange
         Position = 100
         TickStyle = tsNone
+        OnChange = SurfaceAppearanceChange
         BorderSpacing.Left = 4
         BorderSpacing.Right = 4
         ParentFont = False
@@ -998,9 +998,9 @@ object GLForm1: TGLForm1
         Top = 2
         Width = 92
         Max = 100
-        OnChange = SurfaceAppearanceChange
-        Position = clBlack
+        Position = 0
         TickStyle = tsNone
+        OnChange = SurfaceAppearanceChange
         BorderSpacing.Left = 5
         BorderSpacing.Top = 2
         BorderSpacing.Right = 2
@@ -1039,12 +1039,12 @@ object GLForm1: TGLForm1
         BorderSpacing.Left = 4
         BorderSpacing.Top = 2
         Checked = True
-        OnChange = ShaderForBackgroundOnlyClick
         ParentFont = False
         ParentShowHint = False
         ShowHint = True
         State = cbChecked
         TabOrder = 2
+        OnChange = ShaderForBackgroundOnlyClick
       end
       object BGShader: TLabel
         AnchorSideLeft.Control = XRayLabel
@@ -1059,9 +1059,9 @@ object GLForm1: TGLForm1
       end
     end
     object ShaderBox: TGroupBox
-      Left = clBlack
-      Height = 282
-      Top = 679
+      Left = 0
+      Height = 290
+      Top = 735
       Width = 246
       Align = alClient
       AutoSize = True
@@ -1097,11 +1097,10 @@ object GLForm1: TGLForm1
         BorderSpacing.Top = 6
         DropDownCount = 36
         ItemHeight = 26
-        OnChange = ShaderDropChange
         ParentFont = False
         Style = csDropDownList
         TabOrder = 0
-        Text = '0'
+        OnChange = ShaderDropChange
       end
       object LightElevTrack: TTrackBar
         AnchorSideLeft.Control = LightLabel
@@ -1114,9 +1113,9 @@ object GLForm1: TGLForm1
         Width = 92
         Max = 90
         Min = -90
-        OnChange = SurfaceAppearanceChange
         Position = 25
         TickStyle = tsNone
+        OnChange = SurfaceAppearanceChange
         BorderSpacing.Left = 4
         BorderSpacing.Right = 4
         ParentFont = False
@@ -1134,9 +1133,9 @@ object GLForm1: TGLForm1
         Width = 92
         Max = 90
         Min = -90
-        OnChange = SurfaceAppearanceChange
-        Position = clBlack
+        Position = 0
         TickStyle = tsNone
+        OnChange = SurfaceAppearanceChange
         BorderSpacing.Left = 4
         BorderSpacing.Top = 8
         ParentFont = False
@@ -1155,9 +1154,9 @@ object GLForm1: TGLForm1
         Top = 7
         Width = 92
         Max = 100
-        OnChange = SurfaceAppearanceChange
         Position = 25
         TickStyle = tsNone
+        OnChange = SurfaceAppearanceChange
         BorderSpacing.Left = 4
         BorderSpacing.Top = 2
         BorderSpacing.Right = 2
@@ -1196,9 +1195,9 @@ object GLForm1: TGLForm1
         Top = 55
         Width = 88
         Max = 100
-        OnChange = UniformChange
         Position = 51
         TickStyle = tsNone
+        OnChange = UniformChange
         BorderSpacing.Top = 4
         BorderSpacing.Right = 2
         ParentFont = False
@@ -1241,9 +1240,9 @@ object GLForm1: TGLForm1
         Top = 76
         Width = 88
         Max = 100
-        OnChange = UniformChange
         Position = 50
         TickStyle = tsNone
+        OnChange = UniformChange
         BorderSpacing.Top = 2
         ParentFont = False
         TabOrder = 6
@@ -1258,9 +1257,9 @@ object GLForm1: TGLForm1
         Top = 97
         Width = 88
         Max = 100
-        OnChange = UniformChange
         Position = 50
         TickStyle = tsNone
+        OnChange = UniformChange
         BorderSpacing.Top = 2
         ParentFont = False
         TabOrder = 7
@@ -1288,9 +1287,9 @@ object GLForm1: TGLForm1
         Top = 118
         Width = 88
         Max = 100
-        OnChange = UniformChange
         Position = 50
         TickStyle = tsNone
+        OnChange = UniformChange
         BorderSpacing.Top = 2
         ParentFont = False
         TabOrder = 8
@@ -1318,9 +1317,9 @@ object GLForm1: TGLForm1
         Top = 139
         Width = 88
         Max = 100
-        OnChange = UniformChange
         Position = 50
         TickStyle = tsNone
+        OnChange = UniformChange
         BorderSpacing.Top = 2
         ParentFont = False
         TabOrder = 9
@@ -1400,9 +1399,9 @@ object GLForm1: TGLForm1
         Top = 160
         Width = 88
         Max = 100
-        OnChange = UniformChange
         Position = 50
         TickStyle = tsNone
+        OnChange = UniformChange
         BorderSpacing.Top = 2
         ParentFont = False
         TabOrder = 10
@@ -1417,9 +1416,9 @@ object GLForm1: TGLForm1
         Top = 181
         Width = 88
         Max = 100
-        OnChange = UniformChange
         Position = 50
         TickStyle = tsNone
+        OnChange = UniformChange
         BorderSpacing.Top = 2
         ParentFont = False
         TabOrder = 11
@@ -1434,9 +1433,9 @@ object GLForm1: TGLForm1
         Top = 202
         Width = 88
         Max = 100
-        OnChange = UniformChange
         Position = 50
         TickStyle = tsNone
+        OnChange = UniformChange
         BorderSpacing.Top = 2
         ParentFont = False
         TabOrder = 12
@@ -1451,9 +1450,9 @@ object GLForm1: TGLForm1
         Top = 223
         Width = 88
         Max = 100
-        OnChange = UniformChange
         Position = 50
         TickStyle = tsNone
+        OnChange = UniformChange
         BorderSpacing.Top = 2
         ParentFont = False
         TabOrder = 13
@@ -1468,15 +1467,15 @@ object GLForm1: TGLForm1
         Top = 242
         Width = 88
         Max = 100
-        OnChange = UniformChange
         Position = 50
         TickStyle = tsNone
+        OnChange = UniformChange
         BorderSpacing.Bottom = 2
         ParentFont = False
         TabOrder = 14
       end
       object Memo1: TMemo
-        Left = clBlack
+        Left = 0
         Height = 54
         Top = 209
         Width = 236
@@ -1513,19 +1512,18 @@ object GLForm1: TGLForm1
         BorderSpacing.Left = 8
         DropDownCount = 36
         ItemHeight = 26
-        OnChange = MatCapDropChange
         ParentFont = False
         Style = csDropDownList
         TabOrder = 15
-        Text = '0'
         Visible = False
+        OnChange = MatCapDropChange
       end
     end
   end
   object LeftSplitter: TSplitter
     Left = 261
     Height = 659
-    Top = clBlack
+    Top = 0
     Width = 6
     OnCanOffset = LeftSplitterCanOffset
     OnCanResize = LeftSplitterCanResize
@@ -1535,7 +1533,7 @@ object GLForm1: TGLForm1
   object CenterPanel: TPanel
     Left = 267
     Height = 659
-    Top = clBlack
+    Top = 0
     Width = 729
     Align = alClient
     Constraints.MinHeight = 32
@@ -1547,7 +1545,7 @@ object GLForm1: TGLForm1
   object RightSplitter: TSplitter
     Left = 996
     Height = 659
-    Top = clBlack
+    Top = 0
     Width = 6
     Align = alRight
     ResizeAnchor = akRight
@@ -1555,7 +1553,7 @@ object GLForm1: TGLForm1
   object ScriptPanel: TPanel
     Left = 1002
     Height = 659
-    Top = clBlack
+    Top = 0
     Width = 2
     Align = alRight
     BevelOuter = bvNone
@@ -1566,22 +1564,22 @@ object GLForm1: TGLForm1
     TabOrder = 0
     OnDblClick = ScriptPanelDblClick
     object ScriptBox: TGroupBox
-      Left = clBlack
+      Left = 0
       Height = 659
-      Top = clBlack
+      Top = 0
       Width = 2
       Align = alClient
       Caption = 'Scripting'
-      ClientHeight = 640
-      ClientWidth = clBlack
+      ClientHeight = 632
+      ClientWidth = 0
       ParentFont = False
       TabOrder = 0
       OnDblClick = ScriptPanelDblClick
       object ScriptMemo: TMemo
-        Left = clBlack
-        Height = 434
-        Top = clBlack
-        Width = clBlack
+        Left = 0
+        Height = 426
+        Top = 0
+        Width = 0
         Align = alClient
         BorderStyle = bsNone
         Lines.Strings = (
@@ -1592,18 +1590,18 @@ object GLForm1: TGLForm1
           'gl.resetdefaults()'
           'gl.meshload(''BrainMesh_ICBM152Right.mz3'')'
         )
-        OnKeyUp = ScriptMemoKeyUp
         ParentFont = False
         ScrollBars = ssAutoBoth
         TabOrder = 0
         WantTabs = True
         WordWrap = False
+        OnKeyUp = ScriptMemoKeyUp
       end
       object ScriptOutputMemo: TMemo
-        Left = clBlack
+        Left = 0
         Height = 200
-        Top = 440
-        Width = clBlack
+        Top = 432
+        Width = 0
         Align = alBottom
         BorderStyle = bsNone
         Lines.Strings = (
@@ -1617,10 +1615,10 @@ object GLForm1: TGLForm1
       end
       object ScriptSplitter: TSplitter
         Cursor = crVSplit
-        Left = clBlack
+        Left = 0
         Height = 6
-        Top = 434
-        Width = clBlack
+        Top = 426
+        Width = 0
         Align = alBottom
         ResizeAnchor = akBottom
       end
