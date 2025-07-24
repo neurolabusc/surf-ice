@@ -69,4 +69,4 @@ This software includes a [BSD license](https://opensource.org/licenses/BSD-2-Cla
 
 ##### Citation
 
- - Rorden C (2025) Surfice: visualizing neuroimaging meshes, tractography streamlines and connectomes.Nature Methods. [doi: 10.1038/s41592-025-02764-6](doi.org/10.1038/s41592-025-02764-6)
+ - Rorden C (2025) Surfice: visualizing neuroimaging meshes, tractography streamlines and connectomes. Nature Methods. [doi: 10.1038/s41592-025-02764-6](https://doi.org/10.1038/s41592-025-02764-6).
