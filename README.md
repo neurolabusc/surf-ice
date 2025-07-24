@@ -66,3 +66,7 @@ The [releases](https://github.com/neurolabusc/surf-ice/releases) page provides v
 ##### License
 
 This software includes a [BSD license](https://opensource.org/licenses/BSD-2-Clause)
+
+##### Citation
+
+ - Rorden C (2024) Surfice: visualizing neuroimaging meshes, tractography streamlines and connectomes.Nature Methods. [doi: 10.1038/s41592-025-02764-6](doi.org/10.1038/s41592-025-02764-6)

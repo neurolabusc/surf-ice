@@ -9,7 +9,7 @@ object GLForm1: TGLForm1
   ClientWidth = 1004
   Menu = MainMenu1
   Position = poDesktopCenter
-  LCLVersion = '4.99.0.0'
+  LCLVersion = '4.0.0.3'
   OnChangeBounds = FormChangeBounds
   OnClose = FormClose
   OnCreate = FormCreate
