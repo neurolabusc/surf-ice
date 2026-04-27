@@ -55,6 +55,8 @@ Faces indexed from 0: a triangle of the first 3 vertices is  0,1,2
         bitand(ATTR,4) = 4 : isRGBA File includes RGBA values (one per vertex)
         bitand(ATTR,8) = 8 : isSCALAR File includes 32-bit SCALAR values (NSCALAR per vertex)
         bitand(ATTR,16) = 16 : isDOUBLE File includes 64-bit SCALAR values (NSCALAR per vertex)
+        bitand(ATTR,32) = 32 : isAOMAP File includes 32-bit SCALAR values (NSCALAR per vertex)
+        bitand(ATTR,64) = 64 : isLOOKUP File includes JSON file in the skip bytes (skip must be greater than zero)
   4-7: UINT32 : NFACE number of faces (one face per triangle)
   8-11: UINT32 : NVERT number of vertices
   12-15: UINT32 : NSKIP bytes to skip (0 for current version)

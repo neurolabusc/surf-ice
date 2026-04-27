@@ -7722,7 +7722,7 @@ begin
     showmessageX('Not a VTK file');
     goto 666;
   end;
-  ReadLnBinVTK(f, str); //comment: 'Comment: created with MRIcroS'
+  ReadLnBinVTK(f, str, false); //title, can be blank: issue49
   ReadLnBinVTK(f, str); //kind: 'BINARY' or 'ASCII'
   if pos('BINARY', UpperCase(str)) <> 0 then
      isBinary := true

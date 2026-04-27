@@ -537,10 +537,11 @@ procedure LayerAlphaTrackMouseUp(Sender: TObject; Button: TMouseButton; Shift: T
     //procedure PythonEngineAfterInit(Sender: TObject);
     function PyIsPythonScriptMain(): boolean;
     function PyExecMain(): boolean;
+      {$IFDEF MYPY}
     function PyCreate: boolean;
     procedure GotPythonData(str: UnicodeString);
     procedure PyModInitialization(Sender: TObject);
-
+    {$ENDIF}
     private
     { private declarations }
   public
@@ -2096,10 +2097,10 @@ begin
     (Sender as TPythonModule).AddMethod (PAnsiChar(methods[i].name), methods[i].callback, PAnsiChar(methods[i].help));
 end;
 {$ELSE}
-procedure TGLForm1.PyModInitialization(Sender: TObject);
-begin
+//procedure TGLForm1.PyModInitialization(Sender: TObject);
+//begin
      //
-end;
+//end;
 {$ENDIF}
 
 
@@ -2167,13 +2168,15 @@ begin
 end;
 
 {$ELSE}  //IFDEF PY4LAZ  ...
-
+{$IFDEF MYPY}
 var
   gPythonData: UnicodeString = '';
 
 procedure TGLForm1.GotPythonData(str: UnicodeString);
 var
   i: integer;
+const
+  LF = #10;
 begin
   if length(str) < 1 then exit;
   for i := 1 to length(str) do begin
@@ -2202,7 +2205,7 @@ begin
  PyEngine := PythonAddModule('gl', @methods, length(methods));
  result := true;
 end;
-
+ {$ENDIF}
 {$ENDIF}
 function TGLForm1.PyIsPythonScriptMain(): boolean;
 begin
@@ -3346,7 +3349,7 @@ begin
   end else if (length(gMesh.Faces) > 0) and ((ext2 = '.GII.DSET') or (ext = '.GII')) and (not isGiiMesh (Filename)) then begin
     OpenOverlay(Filename);  //GIfTI files can be meshes or overlays - autodetect
     exit;
-  end else if (ext = '.TRACT') or (ext = '.DAT') or  (ext = '.TRK') or  (ext = '.TRK.GZ') or (ext = '.FIB') or (ext = '.PDB') or (ext = '.TCK') or (ext = '.TCK') or (ext = '.BFLOAT') or (ext = '.BFLOAT.GZ')  then begin
+  end else if (ext = '.TRACT') or (ext = '.DAT') or  (ext = '.TRX') or  (ext = '.TRK') or  (ext = '.TRK.GZ') or (ext = '.FIB') or (ext = '.PDB') or (ext = '.TCK') or (ext = '.TCK') or (ext = '.BFLOAT') or (ext = '.BFLOAT.GZ')  then begin
     OpenTrack(Filename);
     exit;
   end else if (ext = '.EDGE') then begin

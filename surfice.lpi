@@ -99,6 +99,7 @@
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
       <OtherUnitFiles Value="lzma;PythonBridge"/>
+      <Libraries Value="PythonBridge/$(TargetCPU)-$(TargetOS)"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Conditionals Value="// example for adding linker options on Mac OS X
@@ -140,7 +141,8 @@
     </Linking>
     <Other>
       <CustomOptions Value="-dDisableLCLGIF 
--dDisableLCLPNM"/>
+-dDisableLCLPNM
+-k-ld_classic"/>
     </Other>
   </CompilerOptions>
   <Debugging>
